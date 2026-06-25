@@ -1,0 +1,4 @@
+name: krakentools
+channels: [conda-forge, bioconda]
+dependencies:
+  - krakentools>=1.2

@@ -1,0 +1,12 @@
+name: dadaism3-taxonomy
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base
+  - bioconductor-dada2
+  # 5.1.9 bundles TBB 2020.x needed by bioconda's DADA2; 5.1.11+ bundles oneTBB
+  # which dropped tbb::task and breaks dada2.so at load time.
+  - r-rcppparallel=5.1.9
+  - r-data.table
+  - r-pacman

@@ -1,0 +1,6 @@
+name: dadaism3-falco
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - falco=1.2.4

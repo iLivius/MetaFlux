@@ -1,0 +1,5 @@
+name: kraken-biom
+channels: [conda-forge, bioconda]
+dependencies:
+  - kraken-biom>=1.2
+  - biom-format>=2.1.15

@@ -1,0 +1,5 @@
+name: sra-tools
+channels: [conda-forge, bioconda]
+dependencies:
+  - sra-tools>=3.1
+  - pigz>=2.8

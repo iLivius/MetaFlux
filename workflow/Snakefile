@@ -1,0 +1,43 @@
+# MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow.
+#
+# Invocation (from repo root, code/MetaFlux_1.0.0/):
+#   snakemake --sdm conda --cores N --configfile config/config.yaml
+# (--sdm is the short alias for --software-deployment-method, which replaced
+#  the deprecated --use-conda flag in modern Snakemake.)
+#
+# Mode is selected via config["mode"]: 'amplicon' or 'shotgun'.
+#   amplicon → rules/amplicon/*.smk  (DADA2-based 16S/ITS workflow)
+#   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken-based shotgun workflow)
+# Shared modules (rules/shared/*.smk) are always included.
+
+import glob
+
+print(r"""
+______  ___    _____       _______________
+___   |/  /______  /______ ___  ____/__  /___  _____  __
+__  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
+_  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
+/_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
+
+MetaFlux v1.0.0
+Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow
+
+Livio Antonielli, May 2026
+""")
+
+# Resolve config path relative to invocation dir, not Snakefile dir.
+configfile: "config/config.yaml"
+
+# Shared: 00_common resolves MODE + paths + helpers; everything else depends on it.
+include: "rules/shared/00_common.smk"
+
+# Mode-specific rule modules — sorted glob preserves numeric order (10_, 20_, ...).
+for _f in sorted(glob.glob(f"{workflow.basedir}/rules/{MODE}/*.smk")):
+    include: _f
+
+# Shared report (MultiQC) — included last so it sees every upstream rule's outputs.
+include: "rules/shared/90_report.smk"
+
+
+rule all:
+    input: all_targets()

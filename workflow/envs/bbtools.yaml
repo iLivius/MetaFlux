@@ -1,0 +1,7 @@
+name: bbtools
+channels: [conda-forge, bioconda]
+dependencies:
+  - bbmap>=39.10
+  # pigz on PATH triggers BBDuk's parallel gzip read/write - big speedup on
+  # I/O-bound steps like PhiX decontamination
+  - pigz>=2.8

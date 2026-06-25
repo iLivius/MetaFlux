@@ -1,0 +1,8 @@
+name: dadaism3-metaxa2
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - metaxa>=2.2
+  - blast>=2.12     # metaxa bioconda recipe depends on blast-legacy but calls blastn (BLAST+)

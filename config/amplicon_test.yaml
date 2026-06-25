@@ -1,0 +1,13 @@
+# Amplicon test-run override — applied on top of config.yaml.
+# Usage:
+#   snakemake --sdm conda --cores 16 \
+#             --configfile config/config.yaml --configfile config/amplicon_test.yaml
+
+mode: amplicon
+
+input:
+  fastq_dir: /media/antoniellil/work/BioRecruiter_2026/MetaFlux_run/amplicon_test_input
+  bioproject: null
+
+output:
+  out_dir: /media/antoniellil/work/BioRecruiter_2026/MetaFlux_run/amplicon_test_output

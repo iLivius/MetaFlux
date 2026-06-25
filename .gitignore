@@ -1,0 +1,21 @@
+# Snakemake internals — conda envs, metadata, locks, incomplete markers
+.snakemake/
+
+# Reference databases — downloaded/symlinked at run time, not part of the code
+refdb/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# R
+.Rhistory
+.RData
+
+# OS / editor cruft
+.DS_Store
+*~
+*.swp
+
+# Internal staging notes (content folded into README.md)
+README_notes.md

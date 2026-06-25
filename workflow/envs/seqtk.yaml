@@ -1,0 +1,6 @@
+name: dadaism3-seqtk
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - seqtk=1.4

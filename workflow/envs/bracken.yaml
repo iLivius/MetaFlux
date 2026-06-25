@@ -1,0 +1,5 @@
+name: bracken
+channels: [conda-forge, bioconda]
+dependencies:
+  - bracken>=3.0
+  - jq

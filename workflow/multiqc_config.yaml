@@ -1,0 +1,63 @@
+# MultiQC config — shared by both modes.
+# Both amplicon and shotgun sides define sample_names_replace regexes that map
+# internal stage-tagged names to 'Stage label | sample_name' labels. The two
+# regex sets never collide because each mode produces distinct name patterns.
+
+show_analysis_paths: False
+show_analysis_time: False
+
+# fastp v1.35 derives sample names from the -i path in the JSON command field.
+# That path carries upstream decontamination suffixes (_dephix, _dehost) into
+# the sample name. use_filename_as_sample_name tells fastp to use the JSON
+# filename instead. extra_fn_clean_exts ensures '_fastp' is stripped during
+# file discovery (it is not in MultiQC's default fn_clean_exts), leaving the
+# bare {sample} name. The list form of use_filename_as_sample_name scopes it
+# to fastp only; extra_fn_clean_exts applies globally but only fastp names
+# carry this suffix.
+use_filename_as_sample_name:
+  - fastp
+extra_fn_clean_exts:
+  - "_fastp"
+
+report_header_info:
+  - Pipeline: "MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow"
+
+# ── Shotgun-side tuning ─────────────────────────────────────────
+kraken:
+  top_n: 10
+bracken:
+  top_n: 10
+
+# ── Sample-name renames (amplicon + shotgun) ────────────────────
+sample_names_replace_regex: true
+sample_names_replace:
+  # Falco / FastQC-format reports (read QC at each pipeline stage)
+  '^(.+)_R(\d+)_raw$':       'QC | raw reads | \1_R\2'
+  '^(.+)_R(\d+)_nophix$':    'QC | PhiX-filtered reads | \1_R\2'
+  '^(.+)_R(\d+)_stripped$':  'QC | primer-trimmed reads | \1_R\2'
+
+  # bowtie2 (PhiX filtering, amplicon)
+  '^(.+)_phixFilter$':       'PhiX removal | \1'
+
+  # cutadapt (primer trimming, two passes per sample).
+  # Sample-name extraction depends on MultiQC version:
+  #   v1.25.x → reads input.path1  → '<sample>_5prime_R\d+'  / '<sample>_3prime_R\d+'
+  #   v1.35+  → reads output basename (from command_line_arguments)
+  #             → '<sample>_after5p_R\d+' / '<sample>_after3p_R\d+'
+  # Both pattern sets are listed so the rename works across MultiQC versions.
+  # The cutadapt module passes both [path1, path2] to clean_s_name; the FASTQ-pair
+  # branch short-circuits before the regex pass. We anchor the rule on _R\d+$ so
+  # the regex runs inside the per-element recursion (before _R\d+ is stripped).
+  '^(.+)_5prime_R\d+$':      'Primer trim 5'' | \1'
+  '^(.+)_after5p_R\d+$':     'Primer trim 5'' | \1'
+  '^(.+)_3prime_R\d+$':      'Primer trim 3'' | \1'
+  '^(.+)_after3p_R\d+$':     'Primer trim 3'' | \1'
+
+  # Shotgun — directory-prefixed patterns (require -d --dirs-depth 1 in multiqc call).
+  # With -d, MultiQC prepends the immediate parent directory to every sample name.
+  # fastp uses the JSON filename (enforced by use_filename_as_sample_name above),
+  # so clean_s_name strips '_fastp' → bare {sample}. Kraken2/Bracken report files
+  # keep '_report' in their names, stripped here by the regex.
+  '^01\.preprocessing \| (.+)$':                'Adapter trim | \1'
+  '^02\.classification \| (.+)_report$': 'Kraken2 | \1'
+  '^03\.abundance \| (.+)_report$':      'Bracken | \1'

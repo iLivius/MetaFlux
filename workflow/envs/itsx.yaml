@@ -1,0 +1,7 @@
+name: dadaism3-itsx
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - itsx
+  - hmmer

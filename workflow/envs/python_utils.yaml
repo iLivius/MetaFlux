@@ -1,0 +1,7 @@
+name: dadaism3-python-utils
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.10
+  - matplotlib
+  - numpy

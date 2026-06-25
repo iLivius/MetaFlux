@@ -1,0 +1,8 @@
+name: dadaism3-cutadapt
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - cutadapt=4.9
+  - seqtk=1.4
+  - pigz
