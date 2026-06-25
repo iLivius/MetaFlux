@@ -1,6 +1,11 @@
 # ═══════════════════════════════════════════════════════════════════════
 # MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
+# TEMPLATE configuration. Replace every `/path/to/...` placeholder with your own
+# path, choose a `mode`, and set the references that mode needs. A convenient
+# pattern is to copy this file to `config/config.local.yaml` (git-ignored) and run
+# with `--configfile config/config.local.yaml`.
+#
 # All paths can be absolute or relative to the directory you invoke snakemake from.
 # Each section is annotated with the mode that consumes it:
 #   [shared]   — used by both modes
@@ -11,30 +16,31 @@
 # Explicit dispatch — selects which rule modules are included at parse time.
 # Amplicon path requires primer FASTAs (see amplicon.primers); shotgun path
 # supports BioProject SRA fetch + arbitrary host genome decontamination.
-mode: shotgun # amplicon | shotgun
+mode: amplicon # amplicon | shotgun
 
 # ─────────────────────── Input [shared] ─────────────────────────
 input:
   # Local FASTQ dir.
   # Amplicon: filenames must match {sample}_R1.fastq.gz / {sample}_R2.fastq.gz.
   # Shotgun:  {sample}_R1/_R2 OR {sample}_1/_2 (SRA-style) — auto-detected.
-  fastq_dir: /media/antoniellil/work/BioRecruiter_2026/MetaFlux_run/_PRJNA1477390_fastq_dir
+  fastq_dir: /path/to/fastq_dir
   # BioProject SRA fetch [shotgun-only].
   # Set bioproject to an NCBI BioProject accession (e.g. PRJNA603575) and
   # MetaFlux will resolve PAIRED runs via NCBI e-utils and pull them into
   # fastq_dir via prefetch + fasterq-dump. Leave null to use local FASTQs.
-  bioproject: PRJNA1477390  # e.g. PRJNA603575
-  accession_list: [SRR39106521, SRR39106522, SRR39106523, SRR39106524] # 4 WGS runs (excludes the 6 RNA-Seq runs)
+  bioproject: null  # e.g. PRJNA603575
+  accession_list: null # optional subset, e.g. [SRR11605259, SRR11605260]
 
 # ─────────────────────── Output [shared] ────────────────────────
 output:
-  out_dir: /media/antoniellil/work/BioRecruiter_2026/MetaFlux_run/PRJNA1477390_shotgun_output
+  out_dir: /path/to/output_dir
 
 # ─────────────────────── References ─────────────────────────────
 # PhiX is used in both modes but consumed differently:
 #   amplicon → bowtie2 index built from the fetched FASTA
 #   shotgun  → BBDuk's bundled phix174_ill.ref.fa.gz (no download/index needed)
-# SILVA / UNITE are amplicon-only. kraken_db is shotgun-only (user-supplied).
+# SILVA / UNITE are amplicon-only and auto-fetched on first run. kraken_db is
+# shotgun-only and must be supplied by you.
 references:
   phix: # [shared] — only the amplicon path fetches+indexes it
     fasta: refdb/phix/phix.fna
@@ -53,7 +59,7 @@ references:
     fetch_url:        https://s3.hpc.ut.ee/plutof-public/original/b02db549-5f04-43fc-afb6-02888b594d10.tgz
     fetch_url_uchime: https://s3.hpc.ut.ee/plutof-public/original/25ff4a97-e637-4d27-a442-9451afb5cbc6.zip
     fetch_url_sintax: https://s3.hpc.ut.ee/plutof-public/original/338a1413-6039-4e00-b5cf-410346a1e366.gz
-  kraken_db: /media/antoniellil/data/db/k2_pluspf_20251015 # [shotgun] — user-supplied
+  kraken_db: /path/to/kraken2_db # [shotgun] — user-supplied (e.g. a PlusPF index)
 
 # ═══════════════════════════════════════════════════════════════
 # Amplicon-only configuration — ignored when mode: shotgun
@@ -67,8 +73,8 @@ amplicon:
                                               # (symmetric with shotgun.decontamination.remove_phix)
 
   primers:
-    fwd: /media/antoniellil/work/BioRecruiter_2026/code/DADAism_1.1.0/fwd_primer.fasta
-    rev: /media/antoniellil/work/BioRecruiter_2026/code/DADAism_1.1.0/rev_primer.fasta
+    fwd: /path/to/fwd_primer.fasta
+    rev: /path/to/rev_primer.fasta
     orientation: fixed                        # fixed | mixed (mixed enables swap pass in cutadapt)
 
   expected_length: auto                       # int | [min,max] | "auto"
@@ -96,6 +102,8 @@ amplicon:
     # Both 16S and ITS use the same Q-based picker + overlap constraint.
     # For ITS, truncLen is overridden to (0, 0) in filterAndTrim — no hard cut
     # is applied; quality is controlled by maxEE and min_len only.
+    # NOTE: on very clean runs, `auto` can place truncLen above the (trimmed)
+    # read-length bulk and drop all reads — see README Troubleshooting.
 
   # ASV length filter applied AFTER target extraction (Metaxa2/ITSx) so the
   # filtered distribution is directly comparable to the probe distribution.
@@ -161,10 +169,10 @@ shotgun:
   decontamination:
     # PhiX is still routinely spiked into Illumina runs — keep this on unless
     # you know for certain the lab skipped the spike-in.
-    # NOTE: disabled for PRJNA1477390 — its reads are pre-trimmed (variable length)
-    # and crash BBDuk's two-file reader (see README troubleshooting). Re-enable on
-    # raw/uniform-length inputs.
-    remove_phix: false                        # BBDuk vs bundled phix174_ill.ref.fa.gz; false = skip
+    # NOTE: BBDuk (and the BBMap host step) require uniform-length reads. If your
+    # input was adapter/quality-trimmed before deposition (variable lengths), set
+    # this false and skip host removal — see README Troubleshooting.
+    remove_phix: true                         # BBDuk vs bundled phix174_ill.ref.fa.gz; false = skip
 
     # Host / contaminant removal with BBMap (alignment-based — more sensitive than
     # k-mer matching for host reads that diverge from the reference assembly; this
@@ -179,9 +187,9 @@ shotgun:
     #   https://zenodo.org/records/4116107   →   human_virus_masked.fasta.gz
     # Because it is ~900 MB, download it once to a local path rather than
     # re-fetching the URL on every fresh run.
-    host_genomes: []                          # host removal SKIPPED for this run
+    host_genomes: []                          # e.g. [/path/to/human_virus_masked.fasta.gz]; [] = skip
     #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz?download=1     # masked human (889 MB) — see README
-    #   - /media/antoniellil/data/db/human_virus_masked.fasta.gz                              # local alternative (recommended for repeat runs)
+    #   - /path/to/human_virus_masked.fasta.gz                                                # local alternative (recommended for repeat runs)
     host_min_id: 0.95                         # BBMap minid — min alignment identity to call a read host-derived
 
   fastp:
@@ -210,10 +218,8 @@ shotgun:
     threshold: 10                             # min read count per taxon
 
   # NCBI scientific names of taxa whose reads should be extracted via krakentools.
-  # Empty list = skip extraction entirely.
-  extract_taxa:
-    - Bacteria
-    - Archaea
+  # Empty list = skip extraction entirely. Example: [Bacteria, Archaea]
+  extract_taxa: []
 
   # SRA fetch (fasterq-dump + pigz) parallelism.
   # 6 is usually enough; past ~8 you hit I/O ceilings rather than CPU.
