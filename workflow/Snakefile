@@ -1,6 +1,6 @@
 # MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow.
 #
-# Invocation (from repo root, code/MetaFlux_1.0.0/):
+# Invocation (from the repository root):
 #   snakemake --sdm conda --cores N --configfile config/config.yaml
 # (--sdm is the short alias for --software-deployment-method, which replaced
 #  the deprecated --use-conda flag in modern Snakemake.)
