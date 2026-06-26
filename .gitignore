@@ -20,5 +20,7 @@ __pycache__/
 # Internal staging notes (content folded into README.md)
 README_notes.md
 
-# Personal / customized run configs (the committed config.yaml is the template)
-config/*.local.yaml
+# Personal / customized run configs — only config.yaml (the template) is tracked
+config/*.yaml
+config/*.yml
+!config/config.yaml
