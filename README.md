@@ -157,7 +157,8 @@ DADA2-based 16S/ITS metabarcoding. Steps (each maps to a numbered output directo
    or [ITSx](https://microbiology.se/software/itsx/) (ITS) isolates the target region. Toggle
    with `amplicon.extraction.enabled`.
 8. **ASV length filter** — keeps ASVs within a window derived from the probe
-   distribution (`auto`) or a manual range.
+   distribution (`auto`) or a manual range; the before/after length distributions
+   are logged to `stats/dada2/`.
 9. **Taxonomy** — DADA2 RDP naive Bayesian classifier *or*
    [VSEARCH](https://github.com/torognes/vsearch) SINTAX (selectable), against SILVA
    (16S) or UNITE (ITS), followed by a configurable include/exclude contaminant filter.
@@ -455,7 +456,7 @@ out_dir/
 ├── 4.filtered/           # DADA2 filterAndTrim output
 ├── 5.dada2/              # ASV sequences + tables, extraction, length-filtered seqtab
 ├── 6.taxonomy/           # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
-├── stats/                # read_tracking.txt, falco/, cutadapt/, trunclen.json, dada2/ plots
+├── stats/                # read_tracking.txt, falco/, cutadapt/, trunclen.json, dada2/ (error/quality plots + ASV length stats)
 ├── multiqc/              # multiqc_report.html
 ├── logs/                 # per-rule logs
 └── benchmarks/           # per-rule runtime/memory benchmarks
@@ -482,6 +483,11 @@ relabeled).
 The last populated column is the final result: `seqtab_lenfilt_head_seqs.txt`
 (length-filtered, sequence-keyed) is what the taxonomy step reads. With extraction
 disabled, the middle column is absent and the length filter runs on the DADA2 output.
+
+The length filter also writes `stats/dada2/asv_length_stats.json` +
+`asv_length_hist.png`: ASV lengths at three stages — pre-extraction, post-extraction,
+kept — showing how much Metaxa2/ITSx trimmed. Most useful for ITS; for 16S the first
+two stages usually match.
 
 ### Shotgun mode
 
