@@ -48,13 +48,19 @@ if (amp_type == "ITS" && length(probe_json_path) > 0L && file.exists(probe_json_
   message("[dada_filter] min_len from config: ", min_len, " bp")
 }
 
-# ITS reads are not hard-truncated: variable amplicon length means a fixed cut
-# would discard genuinely short sequences. Quality is controlled by maxEE and
-# minLen only. For 16S, truncLen stays as picked by pick_trunclen.
+# ITS: disable the fixed-length truncation. In DADA2, truncLen does two things —
+# it cuts every read to a set length AND discards any read shorter than that.
+# ITS amplicons vary in length, so a fixed cut would throw away genuinely short
+# sequences. The 3' low-quality tail is NOT left untrimmed, though: truncQ in the
+# filterAndTrim call below still trims each read adaptively at its first low-quality
+# base, and maxEE drops reads with too many expected errors.
+# This override is unconditional, so it also wins over manual mode: manual_r1 /
+# manual_r2 have no effect for ITS. (16S keeps truncLen as picked by
+# pick_trunclen, auto or manual.)
 if (amp_type == "ITS") {
   trunc_r1 <- 0L
   trunc_r2 <- 0L
-  message("[dada_filter] ITS mode: truncLen overridden to c(0, 0)")
+  message("[dada_filter] ITS mode: truncLen overridden to c(0, 0); 3' quality handled by truncQ/maxEE")
 }
 
 # max_len is optional; if not set in config it arrives as NULL or NA → use Inf (no upper limit)

@@ -1,31 +1,56 @@
 #!/usr/bin/env python3
-"""Auto-pick truncLen by parsing falco's per-base sequence quality table.
+"""Auto-pick truncLen from falco's per-base sequence quality table.
 
-Falco emits a FastQC-compatible ``fastqc_data.txt``; we read the
-``>>Per base sequence quality`` section, take the "Lower Quartile" (Q1, 25th
-percentile) per position bin, aggregate across samples (median per bin) for
-each direction, and find the first bin where the aggregated Q1 drops below
-``q_threshold``.
+What truncLen does, and the trade-off
+-------------------------------------
+``truncLen`` is one length per read direction; any bases past it are discarded.
+That single number is pulled two opposite ways:
+
+    - Trim shorter -> cuts off the low-quality 3' tail of the read, which is
+      what DADA2's error model wants (cleaner bases).
+    - Trim too short -> R1 and R2 stop overlapping in the middle, so DADA2 can
+      no longer merge them into one amplicon, and a pair that won't merge is
+      dropped entirely.
+
+So the cut should remove the bad tail but stop while the forward and reverse
+reads still reach each other.
+
+How the cut is chosen
+---------------------
+Falco generates a FastQC-compatible ``fastqc_data.txt``. For each direction we
+read the ``>>Per base sequence quality`` section, take the "Lower Quartile"
+(Q1, 25th percentile) at each position, aggregate across samples (median per
+bin), and cut at the first position where the aggregated Q1 drops below
+``q_threshold`` — i.e. where quality falls off.
 
 Bin notation: positions 1..9 are reported as single integers, then ``10-14``,
 ``15-19``, ... in fixed-width bins. ``truncLen`` is set to ``(bin_start - 1)``
 so we keep cycles up to (but not including) the first sub-threshold bin.
 
-Overlap constraint:
+Keeping the pair mergeable
+--------------------------
+The two cuts must still leave enough overlap to merge:
+
     truncR1 + truncR2 >= amplicon_length + min_overlap
 
-On violation, applies ``resolve_policy``:
-    - raise_trunc: push higher-headroom direction past its primary cut
-    - relax_q    : drop Q threshold by 1 (floor q_floor) until constraint holds
-    - error      : abort
+If the quality-based cuts break this, ``resolve_policy`` decides what to do:
+    - raise_trunc: extend the cuts past the quality drop to recover the missing
+      bases, splitting the deficit between R1/R2 by how much room each still has
+      (its headroom); error if even the combined headroom is not enough.
+    - relax_q    : lower the Q threshold by 1 (down to ``q_floor``) and re-cut,
+      until the overlap holds.
+    - error      : abort and report the deficit.
 
-ITS amplicons run the same algorithm as 16S — Callahan's DADA2 SOP recommends
-skipping truncation for ITS, but in practice MiSeq R2 quality often collapses
-badly enough that DADA2's error model and mergePairs degrade without trunc.
-The cost is dropping the low-frequency long tail of ITS reads (which DADA2
-would also lose to quality issues without truncation). User should set
-``expected_length`` to the *modal* fungal amplicon length (~100-200 bp for most
-ITS1/ITS2 primer pairs), not the maximum.
+ITS amplicons
+-------------
+The picker still runs on ITS — it computes the Q-based cuts and writes them to
+``trunclen.json`` — but ``dada_filter`` overrides ``truncLen`` to ``c(0, 0)`` for
+ITS: a fixed-length cut would discard genuinely short fungal amplicons, since ITS
+length varies. The 3' low-quality tail is instead trimmed adaptively there by
+``truncQ``, with ``maxEE``/``minLen`` as the quality gate — so if ITS R2 quality
+is poor, the lever is a stricter ``truncQ``/``maxEE``, not a fixed ``truncLen``.
+The cuts written here are kept for reference/QC only and do not affect ITS
+filtering (this also means ``manual_r1``/``manual_r2`` have no effect for ITS).
 
 Manual mode bypasses Q analysis and uses ``manual_r1``/``manual_r2`` from config.
 """
