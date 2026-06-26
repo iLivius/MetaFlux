@@ -1,5 +1,5 @@
 # Shotgun preprocessing: optional SRA fetch (BioProject mode), samples manifest,
-# PhiX removal (BBDuk), host removal (BBDuk against concatenated host reference),
+# PhiX removal (BBDuk), host removal (BBMap against a concatenated host reference),
 # and adapter/quality trimming (fastp).
 #
 # Stage chain (each step optional): raw → (phix) → (host) → fastp. The

@@ -31,11 +31,10 @@ runs in one of two modes, selected by a single config key:
   metagenomic taxonomic profiling: decontamination, quality trimming, read
   classification, abundance re-estimation, and OTU-table construction.
 
-Both modes share one entry point, one configuration file, one resource model, and
-one [MultiQC](https://multiqc.info/) report, so colleagues only learn the workflow
-once. MetaFlux belongs to the "Flux" family of pipelines
-([BacFlux](https://github.com/iLivius/BacFlux),
-[BacFluxL](https://github.com/iLivius/BacFluxL)).
+Both modes run from the same command and the same config file, and produce a single
+[MultiQC](https://multiqc.info/) report.
+
+`MetaFlux` belongs to the [BioFlux](https://github.com/stars/iLivius/lists/bioflux) family of pipelines.
 
 ## Table of Contents
 
@@ -52,6 +51,7 @@ once. MetaFlux belongs to the "Flux" family of pipelines
 - [Acknowledgements](#acknowledgements)
 - [Citation](#citation)
 - [References](#references)
+- [License](#license)
 
 ## Quick Start
 
@@ -72,28 +72,25 @@ snakemake --sdm conda --cores 16 --configfile config/config.yaml --dry-run
 snakemake --sdm conda --cores 16 --configfile config/config.yaml
 ```
 
-`--sdm conda` (software-deployment-method) tells Snakemake to provision each rule's
-own pinned conda environment automatically on first run. Pick the mode and point
-the config at your data before launching — see [Configuration](#configuration).
+`--sdm conda` (software-deployment-method) tells Snakemake to create each rule's
+own pinned conda environment automatically on first run. The mode and input paths
+are set in the config before launching — see [Configuration](#configuration).
 
 [↑ Back to top](#table-of-contents)
 
 ## Rationale
 
 Over many years of amplicon-sequencing and metagenomics work, a set of methods and
-parameter choices accumulates into a personal "house" pipeline. For a long time
-ours lived as a collection of R and Python scripts stitched together by a shell
-script — scientifically sound, but hard to reproduce exactly on another machine,
-awkward to scale, and not resumable after a failure.
+parameter choices accumulates into an in-house pipeline.
 
-MetaFlux re-implements that methodology as a modern, modular Snakemake workflow,
-and in doing so adds several capabilities the legacy scripts never had:
+MetaFlux re-implements that methodology as a more modern, modular Snakemake workflow,
+adding several capabilities the previous implementation never had:
 
 1. **Data-driven read truncation.** The DADA2 `truncLen` can be chosen
    automatically from the per-base quality profile, with an overlap-aware safeguard
    so forward and reverse reads still merge — instead of being picked by eye.
 2. **Agnostic amplicon-length inference.** The expected amplicon length is derived
-   from the reference database using *your* primers (in-silico PCR against SILVA, or
+   from the reference database using the supplied primers (in-silico PCR against SILVA, or
    the UNITE pre-extracted subregions for ITS), and that distribution then drives an
    automatic ASV length filter — no hard-coded numbers.
 3. **Orientation-aware primer trimming.** Cutadapt strips primers and, when reads
@@ -103,35 +100,37 @@ and in doing so adds several capabilities the legacy scripts never had:
 5. **One pipeline, two modes.** Amplicon and shotgun processing share a single
    reproducible entry point and infrastructure.
 
-Reproducibility is built in: every step runs in a pinned conda environment, the
-dependency graph is declarative and resumable, and all parameters live in one
-versionable config file.
+Each step runs in its own pinned conda environment, the workflow is resumable after
+an interruption, and every parameter lives in a single version-controlled config
+file — so a run can be reproduced exactly.
 
 [↑ Back to top](#table-of-contents)
 
 ## Description
 
-MetaFlux dispatches at parse time on the `mode` key. Shared modules (QC aggregation,
-read tracking, reference handling, the resource model) are always included; the rest
-of the rules come from the selected mode.
+The `mode` key in the config decides which pipeline runs. A few steps are shared by
+both modes — read QC and its MultiQC report, read tracking, reference handling, and
+the per-rule resource settings — while everything else is specific to the selected
+mode.
 
 ```
-                 ┌─────────────────────────────┐
-   config: mode  │   amplicon   │   shotgun     │
+                 ┌──────────────┬───────────────┐
+   config: mode  │   amplicon   │    shotgun    │
                  └──────┬───────┴───────┬───────┘
         raw paired-end Illumina reads (R1/R2)
                         │               │
         bowtie2 PhiX*   │               │  BBDuk PhiX*  +  BBMap host*
         Cutadapt primer │               │  fastp trim
         DADA2 ASVs      │               │  Kraken2 classify
-        Metaxa2 / ITSx  │               │  Bracken abundance
+        Metaxa2 / ITSx* │               │  Bracken abundance
         length filter   │               │  kraken-biom OTU table
-        SILVA / UNITE   │               │  KrakenTools per-taxon reads
+        SILVA / UNITE   │               │  KrakenTools per-taxon reads*
         taxonomy        │               │
                         ▼               ▼
               ASV table + taxonomy   OTU table + reports
-                        └──────┬────────┘
+                        └───────┬───────┘
                      read tracking + MultiQC
+
    * optional steps, toggled in config
 ```
 
@@ -147,15 +146,16 @@ DADA2-based 16S/ITS metabarcoding. Steps (each maps to a numbered output directo
    recovers reads sequenced in the opposite orientation and re-orients them.
 3. **Per-stage QC** — [Falco](https://github.com/smithlabcode/falco) profiles reads
    at the raw, PhiX-filtered, and primer-trimmed stages.
-4. **Amplicon-length probe** — in-silico PCR of *your* primers against SILVA (16S)
+4. **Amplicon-length probe** — in-silico PCR of the supplied primers against SILVA (16S)
    or direct measurement of the UNITE ITS1/ITS2 subregions (ITS), yielding a length
    distribution used downstream.
 5. **Truncation-length selection** — `auto` picks `truncLen` from the per-base Q1
    profile under a merge-overlap constraint; `manual` uses fixed values.
 6. **ASV inference** — DADA2 `filterAndTrim` → error learning → denoising →
    `mergePairs` → chimera removal.
-7. **Marker extraction** — [Metaxa2](https://microbiology.se/software/metaxa2/) (16S)
-   or [ITSx](https://microbiology.se/software/itsx/) (ITS) isolates the target region.
+7. **Marker extraction** *(optional)* — [Metaxa2](https://microbiology.se/software/metaxa2/) (16S)
+   or [ITSx](https://microbiology.se/software/itsx/) (ITS) isolates the target region. Toggle
+   with `amplicon.extraction.enabled`.
 8. **ASV length filter** — keeps ASVs within a window derived from the probe
    distribution (`auto`) or a manual range.
 9. **Taxonomy** — DADA2 RDP naive Bayesian classifier *or*
@@ -198,8 +198,8 @@ cd MetaFlux
 
 ### 2. Install Snakemake
 
-Only Snakemake (≥ 9) needs to be installed by hand; every other tool is provisioned
-per-rule via conda when you run with `--sdm conda`.
+Only Snakemake (≥ 9) needs to be installed by hand; conda installs every other tool,
+one environment per rule, when the workflow runs with `--sdm conda`.
 
 ```bash
 conda create -n snakemake -c conda-forge -c bioconda snakemake
@@ -208,25 +208,37 @@ conda activate snakemake
 
 ### 3. Reference databases
 
-| Database | Mode | Provisioning |
-|----------|------|--------------|
-| PhiX | both | **Auto-fetched** (NCBI) and indexed on first run |
-| SILVA (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched** from Zenodo on first run |
-| UNITE (general + UCHIME + SINTAX) | amplicon (ITS) | **Auto-fetched** from PlutoF on first run |
-| Kraken2 database | shotgun | **User-supplied** (see below) |
-| Host genome(s) | shotgun (optional) | **User-supplied** (path or URL) |
+| Database                           | Mode               | Provisioning                                     |
+|------------------------------------|--------------------|--------------------------------------------------|
+| PhiX                               | both               | **Auto-fetched** (NCBI) and indexed on first run |
+| SILVA (toGenus + species + SINTAX) | amplicon (16S)     | **Auto-fetched** from Zenodo on first run        |
+| UNITE (general + UCHIME + SINTAX)  | amplicon (ITS)     | **Auto-fetched** from PlutoF on first run        |
+| Kraken2 database                   | shotgun            | **User-supplied** (see below)                    |
+| Host genome(s)                     | shotgun (optional) | **User-supplied** (path or URL)                  |
 
 The amplicon reference databases download automatically the first time they are
-needed and are cached under `refdb/`. For **shotgun mode you must supply a Kraken2
-database yourself** — it is large and version-sensitive. A standard choice is the
-pre-built **PlusPF** index:
+needed and are cached under `refdb/`. **Shotgun mode requires a user-supplied Kraken2
+database** — it is large and version-sensitive. Pre-built indexes, with sizes, build
+dates, and md5 checksums, are listed in Ben Langmead's [catalog](https://benlangmead.github.io/aws-indexes/k2).
+A standard choice is the **PlusPF** index. A single `wget` stream works but is slow on
+a ~100 GB file; a multi-connection downloader is faster and resumable.
+
+Pick the current build from the catalog:
 
 ```bash
-# Example: download a pre-built Kraken2/Bracken index (sizes vary by release)
 mkdir -p /path/to/db && cd /path/to/db
-wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_YYYYMMDD.tar.gz
-tar -xzf k2_pluspf_YYYYMMDD.tar.gz       # contains hash.k2d, opts.k2d, taxo.k2d, *.kmer_distrib
+
+# substitute the latest dated build from the catalog
+aria2c -x16 -s16 https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260226.tar.gz
+
+# verify integrity against the md5 listed in the catalog
+md5sum k2_pluspf_20260226.tar.gz
+
+# contains hash.k2d, opts.k2d, taxo.k2d, *.kmer_distrib
+tar -xzf k2_pluspf_20260226.tar.gz
 ```
+
+> If the AWS CLI is installed, `aws s3 cp --no-sign-request <url>` is the fastest option (parallel multipart). Plain `wget -c <url>` also works and resumes a partial download.
 
 > **NOTE:** the full PlusPF index is ~100 GB. With memory-mapping enabled (default),
 > Kraken2 needs only a modest private workspace and lets the OS cache the database;
@@ -241,7 +253,7 @@ avoids removing real microbial reads:
 ```bash
 # hg19 + viral masking, ~889 MB
 wget -O /path/to/db/human_virus_masked.fasta.gz \
-  "https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz?download=1"
+  "https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz"
 ```
 
 [↑ Back to top](#table-of-contents)
@@ -249,8 +261,8 @@ wget -O /path/to/db/human_virus_masked.fasta.gz \
 ## Configuration
 
 All behaviour is controlled by `config/config.yaml`. Paths may be absolute or
-relative; **relative paths resolve against the directory you invoke `snakemake`
-from**, not the config file's location — use absolute paths when in doubt.
+relative; **relative paths resolve against the directory snakemake is invoked from**,
+not the config file's location — absolute paths are safest.
 
 Each section is tagged `[shared]`, `[amplicon]`, or `[shotgun]` so it is clear which
 mode consumes it.
@@ -261,10 +273,10 @@ mode consumes it.
 mode: amplicon          # amplicon | shotgun
 ```
 
-> **NOTE:** `mode` must match your data. If it is set to one mode while the
-> input/output paths point at the other mode's data, MetaFlux will run the wrong
+> **NOTE:** `mode` must match the data. If it is set to one mode while the
+> input/output paths point at the other mode's data, MetaFlux runs the wrong
 > analysis — it does not always error, because both modes accept `{sample}_R1/_R2`
-> filenames. You can also override the mode without editing the file:
+> filenames. The mode can also be overridden without editing the file:
 > `--config mode=shotgun`.
 
 ### Input and output `[shared]`
@@ -282,8 +294,8 @@ output:
 
 - **Amplicon** filenames must be `{sample}_R1.fastq.gz` / `{sample}_R2.fastq.gz`.
 - **Shotgun** accepts `{sample}_R1/_R2` or SRA-style `{sample}_1/_2` (auto-detected).
-- When `bioproject` is set, MetaFlux resolves all PAIRED runs for that accession; use
-  `accession_list` to restrict to specific runs (e.g. to keep only WGS runs from a
+- When `bioproject` is set, MetaFlux resolves all PAIRED runs for that accession;
+  `accession_list` restricts this to specific runs (e.g. to keep only WGS runs from a
   BioProject that also contains amplicon or RNA-Seq runs).
 
 ### References `[shared / amplicon / shotgun]`
@@ -323,7 +335,7 @@ amplicon:
 
   expected_length: auto                   # int | [min, max] | "auto"
   probe_length_stat: { 16S: p95 }         # statistic used from the probe distribution
-  min_overlap: 12                         # required forward/reverse overlap
+  min_overlap: 12                         # required forward/reverse overlap, in bp
 
   trunc_len:
     mode: manual                          # auto | manual
@@ -374,8 +386,9 @@ indexed once.
 
 ### Resources `[shared]`
 
-Per-rule CPU and RAM live in one block, with global fallbacks. Tune these to your
-machine or cluster; values feed straight into Snakemake's cluster executor.
+Per-rule CPU and RAM live in one block, with global fallbacks. These can be tuned to
+the target machine or cluster; the values feed straight into Snakemake's cluster
+executor.
 
 ```yaml
 resources:
@@ -418,7 +431,7 @@ snakemake --sdm conda --jobs 4 --cores 16
 snakemake --sdm conda --cores 16 --rerun-incomplete
 
 # Cluster execution: supply a profile (e.g. SLURM) — per-rule threads/mem_mb are honoured
-snakemake --sdm conda --profile <your-slurm-profile>
+snakemake --sdm conda --profile <slurm-profile>
 ```
 
 > **NOTE (shotgun, BioProject mode):** set `input.bioproject` to an NCBI accession
@@ -444,12 +457,31 @@ out_dir/
 ├── 6.taxonomy/           # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
 ├── stats/                # read_tracking.txt, falco/, cutadapt/, trunclen.json, dada2/ plots
 ├── multiqc/              # multiqc_report.html
-├── logs/  └ benchmarks/
+├── logs/                 # per-rule logs
+└── benchmarks/           # per-rule runtime/memory benchmarks
 ```
 
-Key files: `6.taxonomy/asv_table.txt` (ASV × sample counts + taxonomy),
-`5.dada2/seqs.fasta` (ASV sequences), `stats/read_tracking.txt`
+Key files: `6.taxonomy/asv_table.txt` (ASV × sample counts + taxonomy, keyed by
+`ASV_#` ID) and `6.taxonomy/asv_table_seqs.txt` (the same table keyed by the ASV
+sequence), `5.dada2/seqs.fasta` (ASV sequences), `stats/read_tracking.txt`
 (reads surviving each stage, per sample).
+
+**Inside `5.dada2/`.** It looks busy, but most of it is just two artifacts — the **ASV
+sequences** and the **ASV count table** — saved at each processing stage. The table
+below reads left-to-right in pipeline order; within the count table, `head_names`
+columns are `ASV_#` IDs and `head_seqs` columns are the full ASV sequence (same counts,
+relabeled).
+
+| Artifact                    | DADA2                   | + Extraction *(optional)*         | + Length filter                 |
+|-----------------------------|-------------------------|-----------------------------------|---------------------------------|
+| **ASV sequences** (FASTA)   | `seqs.fasta`            | `seqs_extracted.fasta`            | `seqs_lenfilt.fasta`            |
+| **Counts** — `ASV_#` keyed  | `seqtab_head_names.txt` | `seqtab_extracted_head_names.txt` | `seqtab_lenfilt_head_names.txt` |
+| **Counts** — sequence keyed | `seqtab_head_seqs.txt`  | —                                 | `seqtab_lenfilt_head_seqs.txt`  |
+| **Extras**                  | `read.counts`           | Metaxa2 / ITSx results + dir      | —                               |
+
+The last populated column is the final result: `seqtab_lenfilt_head_seqs.txt`
+(length-filtered, sequence-keyed) is what the taxonomy step reads. With extraction
+disabled, the middle column is absent and the length filter runs on the DADA2 output.
 
 ### Shotgun mode
 
@@ -462,12 +494,24 @@ out_dir/
 ├── stats/                # read_tracking.txt
 ├── multiqc/              # multiqc_report.html
 ├── samples.tsv           # sample → source → FASTQ manifest
-├── logs/
+└── logs/                 # per-rule logs
 ```
 
 Key files: `03.abundance/otu_table.tsv` (taxon × sample abundances),
 `03.abundance/{sample}_report.txt` (Bracken), `stats/read_tracking.txt`
 (raw → trimmed → classified/unclassified, per sample).
+
+**Inside `01.preprocessing/`.** The cleaned reads themselves are temporary — Snakemake
+deletes the `_dephix` / `_dehost` / `_trim` FASTQs once Kraken2 has read them — so what
+persists here is per-sample QC and stats, not bulky sequence files:
+
+- `{sample}_fastp.html` / `_fastp.json` — fastp trimming report (the JSON also feeds MultiQC).
+- `{sample}_dephix_stats.txt` — BBDuk PhiX-removal counts *(only if `remove_phix: true`)*.
+- `{sample}_dehost_stats.txt` — BBMap host-removal counts *(only if `host_genomes` is set)*.
+- `refs/` — the concatenated host reference and its BBMap index, built once and reused *(host removal only)*.
+
+The suffix marks the stage the reads came off: `_dephix` (BBDuk PhiX) → `_dehost`
+(BBMap host) → `_trim` (fastp). With decontamination off, only the fastp report remains.
 
 [↑ Back to top](#table-of-contents)
 
@@ -486,37 +530,47 @@ everything. The symptom is a failure at the DADA2 step:
 Error: No reads passed the filter ...
 ```
 
-**Fix:** inspect the *primer-trimmed* read-length distribution (the
-`*_R{1,2}_stripped` "Sequence Length Distribution" in MultiQC/Falco), then set
-`mode: manual` with `manual_r1`/`manual_r2` below the bulk of that distribution while
-keeping `truncLen_R1 + truncLen_R2 ≥ amplicon_length + min_overlap`.
+**Fix:** set the truncation length by hand. Look at the read lengths after primer
+trimming — the `*_R{1,2}_stripped` "Sequence Length Distribution" in MultiQC/Falco —
+then switch to `mode: manual` and set `manual_r1`/`manual_r2` a little below the length
+most reads still reach, so `filterAndTrim` stops discarding them. Keep
+`truncLen_R1 + truncLen_R2 ≥ amplicon_length + min_overlap` so the pairs still overlap.
+Re-running picks up from there: the trimming and QC are already done, so only DADA2 and
+the steps after it run again, and trying a different value is fast.
 
-### Shotgun: BBDuk fails on variable-length (pre-trimmed) reads
+### Shotgun: BBDuk PhiX removal fails on variable-length (pre-trimmed) reads
 
-The BBDuk PhiX step (`decontam_phix`) and the BBMap host step (`decontam_host`) read
-R1 and R2 as two separate files in lockstep and expect **uniform-length** reads (as
-they come off the sequencer). If the input was adapter/quality-trimmed *before*
-deposition so read lengths vary — especially when R1 and R2 of a pair differ — the
-two streams desync and BBDuk aborts:
+The BBDuk PhiX step (`decontam_phix`) reads the R1 and R2 files in parallel — one read
+from each at a time, assuming they stay paired — and expects **uniform-length** reads
+(as they come off the sequencer). If the input was adapter/quality-trimmed *before*
+deposition so read lengths vary — common for SRA/BioProject data, especially when R1
+and R2 of a pair differ — the reads from the two files stop matching up and BBDuk
+aborts. This is not corrupt data (the FASTQs are intact and correctly paired) — it is a
+BBDuk limitation with non-uniform lengths.
 
-```
-java.lang.AssertionError: List size mismatch: 666 vs 669
-... Input: 0 reads ...
-bbduk.BBDukS terminated in an error state
-```
+The BBMap host step (`decontam_host`) is **not** affected: it aligns reads, so ragged
+lengths are no problem. To work around the PhiX step:
 
-This is not corrupt data (the FASTQs are intact and correctly paired) — it is a
-BBDuk limitation with non-uniform lengths. **Options:** (a) use raw, untrimmed reads
-(MetaFlux does its own trimming with fastp); (b) disable the BBTools steps
-(`remove_phix: false`, `host_genomes: []`) — fastp/Kraken2/Bracken handle ragged
-reads fine; or (c) interleave the pair into one stream first
-(`reformat.sh in1=… in2=… out=stdout.fq int=t | bbduk.sh in=stdin.fq int=t …`).
+- **Skip it** — `remove_phix: false`. In shotgun data PhiX is a negligible spike-in
+  fraction, and Kraken2 will not classify it as anything real.
+- **Remove PhiX with BBMap instead** — keep `remove_phix: false` and list a phiX174
+  FASTA under `host_genomes`; BBMap drops it at the host step, ragged lengths and all.
+  The NCBI URL (the same phiX174 the amplicon path fetches) can go in directly:
+
+  ```yaml
+  decontamination:
+    remove_phix: false
+    host_genomes:
+      - ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz
+  ```
+
+- **Use raw, untrimmed reads** if available — MetaFlux trims with fastp anyway.
 
 ### Config (YAML) errors
 
 Snakemake reports any config problem with one generic message
 (*"Config file is not valid JSON or YAML…"*). This almost always means a YAML
-indentation/list-syntax issue or a stray tab — not a problem with your parameter
+indentation/list-syntax issue or a stray tab — not a problem with the parameter
 values. Validate directly to get the exact line:
 
 ```bash
@@ -530,19 +584,19 @@ misplaced/over-indented `- ` list item (commonly in `host_genomes`).
 
 ## Acknowledgements
 
-Developed at the [Austrian Institute of Technology (AIT)](https://www.ait.ac.at/).
+Developed at the [AIT Austrian Institute of Technology](https://www.ait.ac.at/).
 MetaFlux consolidates and modernises methods refined across many amplicon and
-metagenomics collaborations, and is part of the "Flux" family of workflows.
+metagenomics collaborations, and is part of the **BioFlux** family of workflows.
 
 ## Citation
 
-If you use MetaFlux, please cite this repository. A formal release with a Zenodo DOI
-is forthcoming:
+Publications that use MetaFlux should cite this repository. A formal release with a
+Zenodo DOI is forthcoming:
 
 > Antonielli, L. (2026). *MetaFlux: a unified Illumina 16S/ITS amplicon and shotgun
 > taxonomic profiling workflow.* Zenodo. DOI: pending release.
 
-Please also cite the underlying tools (see [References](#references)).
+The underlying tools should also be cited (see [References](#references)).
 
 ## References
 

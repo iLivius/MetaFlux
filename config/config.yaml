@@ -1,19 +1,19 @@
 # ═══════════════════════════════════════════════════════════════════════
 # MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
-# TEMPLATE configuration. Replace every `/path/to/...` placeholder with your own
-# path, choose a `mode`, and set the references that mode needs. A convenient
-# pattern is to copy this file to `config/config.local.yaml` (git-ignored) and run
-# with `--configfile config/config.local.yaml`.
+# TEMPLATE configuration. Replace every `/path/to/...` placeholder with a real path,
+# choose a `mode`, and set the references that mode needs. A convenient pattern is to
+# copy this file to `config/config.local.yaml` (git-ignored) and run with
+# `--configfile config/config.local.yaml`.
 #
-# All paths can be absolute or relative to the directory you invoke snakemake from.
+# All paths can be absolute or relative to the directory snakemake is invoked from.
 # Each section is annotated with the mode that consumes it:
 #   [shared]   — used by both modes
 #   [amplicon] — only used when mode: amplicon
 #   [shotgun]  — only used when mode: shotgun
 
 # ─────────────────────── Mode selection ─────────────────────────
-# Explicit dispatch — selects which rule modules are included at parse time.
+# Selects which set of rules runs — amplicon or shotgun (chosen here, not auto-detected).
 # Amplicon path requires primer FASTAs (see amplicon.primers); shotgun path
 # supports BioProject SRA fetch + arbitrary host genome decontamination.
 mode: amplicon # amplicon | shotgun
@@ -40,7 +40,7 @@ output:
 #   amplicon → bowtie2 index built from the fetched FASTA
 #   shotgun  → BBDuk's bundled phix174_ill.ref.fa.gz (no download/index needed)
 # SILVA / UNITE are amplicon-only and auto-fetched on first run. kraken_db is
-# shotgun-only and must be supplied by you.
+# shotgun-only and must be supplied separately.
 references:
   phix: # [shared] — only the amplicon path fetches+indexes it
     fasta: refdb/phix/phix.fna
@@ -84,7 +84,7 @@ amplicon:
   probe_length_stat:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max
                                               # ITS: overlap constraint not checked (truncLen overridden to c(0,0))
-  min_overlap: 12                             # design overlap (truncLen constraint AND mergePairs)
+  min_overlap: 12                             # design overlap in bp (truncLen constraint AND mergePairs)
 
   cutadapt:
     max_error_rate: 0.2
@@ -152,7 +152,7 @@ amplicon:
       omega_a: 1e-40                          # ASV inference sensitivity (DADA2 default); lower = more ASVs
 
     merge:
-      min_overlap: 10                         # runtime mergePairs threshold (design constraint in amplicon.min_overlap)
+      min_overlap: 10                         # runtime mergePairs threshold in bp (design constraint in amplicon.min_overlap)
       max_mismatch: 2
       just_concatenate: false                 # ITS safety valve: skip overlap merging (NNNNN join)
       trim_overhang: true                     # trim bases overhanging amplicon ends; safe for 16S, necessary for short ITS
@@ -167,9 +167,9 @@ amplicon:
 # ═══════════════════════════════════════════════════════════════
 shotgun:
   decontamination:
-    # PhiX is still routinely spiked into Illumina runs — keep this on unless
-    # you know for certain the lab skipped the spike-in.
-    # NOTE: BBDuk (and the BBMap host step) require uniform-length reads. If your
+    # PhiX is still routinely spiked into Illumina runs — keep this on unless the
+    # lab is known to have skipped the spike-in.
+    # NOTE: BBDuk (and the BBMap host step) require uniform-length reads. If the
     # input was adapter/quality-trimmed before deposition (variable lengths), set
     # this false and skip host removal — see README Troubleshooting.
     remove_phix: true                         # BBDuk vs bundled phix174_ill.ref.fa.gz; false = skip
@@ -188,7 +188,7 @@ shotgun:
     # Because it is ~900 MB, download it once to a local path rather than
     # re-fetching the URL on every fresh run.
     host_genomes: []                          # e.g. [/path/to/human_virus_masked.fasta.gz]; [] = skip
-    #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz?download=1     # masked human (889 MB) — see README
+    #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz     # masked human (889 MB) — see README
     #   - /path/to/human_virus_masked.fasta.gz                                                # local alternative (recommended for repeat runs)
     host_min_id: 0.95                         # BBMap minid — min alignment identity to call a read host-derived
 
@@ -212,7 +212,7 @@ shotgun:
     threads: null                             # null = use resources.threads.kraken2; or pin (e.g. 12)
 
   # Bracken redistributes abundance from Kraken2 reports.
-  # Target rank: D | P | C | O | F | G | S. Drop to G if your DB is shallow.
+  # Target rank: D | P | C | O | F | G | S. Drop to G for a shallow DB.
   bracken:
     tax_lev: S
     threshold: 10                             # min read count per taxon
@@ -222,7 +222,7 @@ shotgun:
   extract_taxa: []
 
   # SRA fetch (fasterq-dump + pigz) parallelism.
-  # 6 is usually enough; past ~8 you hit I/O ceilings rather than CPU.
+  # 6 is usually enough; past ~8 the bottleneck is I/O rather than CPU.
   download_threads: 6
 
 # ─────────────────────── Resources [shared] ─────────────────────
