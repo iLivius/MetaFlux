@@ -1,7 +1,11 @@
 # Target extraction rules: Metaxa2 (16S) or ITSx (ITS).
 # Activated only when amplicon.extraction.enabled is true.
-# Both rules are named target_extract; only one is defined depending on
-# AMPLICON_TYPE (resolved at parse time), so the DAG always sees a single rule.
+# Both rules are named target_extract; only one is defined depending on the
+# marker profile's extractor (resolved at parse time), so the DAG always sees a
+# single rule. A marker whose extractor is "none" defines no rule here and must
+# run with extraction disabled; the guard that ties EXTRACTION_ENABLED to a
+# "none" extractor lands with the first no-extractor marker (gyrB). No current
+# marker uses "none", so the two branches below are exhaustive today.
 #
 # Metaxa2 : -t all (all domains). All extracted sequences pass through; domain-
 #           level filtering happens post-taxonomy via the contaminant filter
@@ -9,7 +13,7 @@
 # ITSx    : -t all, --only_full F (mandatory for single-region ITS1/ITS2 amplicons).
 #           The region file matching amplicon.its_region is kept.
 
-if AMPLICON_TYPE == "16S":
+if MARKER_EXTRACTOR == "metaxa2":
     rule target_extract:
         input:
             seqs         = OUT / "5.dada2" / "seqs.fasta",
@@ -32,7 +36,7 @@ if AMPLICON_TYPE == "16S":
         script:
             "../../scripts/amplicon/70a_metaxa2_extract.py"
 
-else:  # ITS
+elif MARKER_EXTRACTOR == "itsx":
     rule target_extract:
         input:
             seqs         = OUT / "5.dada2" / "seqs.fasta",

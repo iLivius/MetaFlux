@@ -55,16 +55,76 @@ def mem_mb_for(rule_name: str) -> int:
     return int(cfg.get("mem_mb", {}).get(rule_name, cfg.get("mem_mb_default", 1000)))
 
 
+# ────────────────────── Marker registry ────────────────────────
+# One profile per amplicon marker. Adding a marker means adding an entry here
+# (plus its reference-fetch rule in amplicon/10_refdb.smk) — every choice that
+# used to be a scattered `if AMPLICON_TYPE == "16S" else ...` now lives in one
+# place, so a new marker can no longer silently inherit the ITS branch.
+#
+#   probe_mode          "pcr"    — in-silico PCR of the primers against a
+#                                  full-length reference (16S/SILVA).
+#                       "direct" — the reference is already the trimmed
+#                                  subregion; measure its lengths (ITS/UNITE).
+#   probe_ref           reference symbol to probe (resolved via REF_PATHS below);
+#                       "{region}" is filled from amplicon.its_region.
+#   probe_ref_tag       label embedded in the probe-cache filename.
+#   probe_stat_key      which amplicon.probe_length_stat.<key> to read (only the
+#                       pcr path uses it; the direct path ignores the value).
+#   taxonomy_refdb      reference symbol for the DADA2/RDP training set.
+#   taxonomy_species_db reference symbol for DADA2 addSpecies, or None.
+#   taxonomy_sintax_db  reference symbol for the VSEARCH SINTAX database.
+#   extractor           "metaxa2" | "itsx" | "none" — target-region extractor.
+#
+# NOTE: the taxonomy rank model and the contaminant-filter defaults are still
+# derived per-type inside 80a/80c for now; those move into the profile in the
+# taxonomy-parameterization step (see NEW_MARKERS_NOTES.md §8, step 3).
+MARKERS = {
+    "16S": {
+        "probe_mode":          "pcr",
+        "probe_ref":           "silva_train",
+        "probe_ref_tag":       "silva_v138.2_toGenus",
+        "probe_stat_key":      "16S",
+        "taxonomy_refdb":      "silva_train",
+        "taxonomy_species_db": "silva_species",
+        "taxonomy_sintax_db":  "silva_sintax",
+        "extractor":           "metaxa2",
+    },
+    "ITS": {
+        "probe_mode":          "direct",
+        "probe_ref":           "unite_uchime_{region}",
+        "probe_ref_tag":       "unite_uchime_{region}",
+        "probe_stat_key":      "16S",   # unused by the direct path; kept for byte-parity
+        "taxonomy_refdb":      "unite_fasta",
+        "taxonomy_species_db": None,
+        "taxonomy_sintax_db":  "unite_sintax",
+        "extractor":           "itsx",
+    },
+}
+
+
 # ────────────────────── Amplicon-only globals ──────────────────
 if MODE == "amplicon":
     amp_cfg = config["amplicon"]
 
-    # ── References ──
+    # ── References (resolved paths + symbol table) ──
     SILVA_TRAIN          = Path(config["references"]["silva"]["train"]).resolve()
     SILVA_SPECIES        = Path(config["references"]["silva"]["species"]).resolve()
+    SILVA_SINTAX         = Path(config["references"]["silva"]["sintax"]).resolve()
     UNITE_FASTA          = Path(config["references"]["unite"]["fasta"]).resolve()
+    UNITE_SINTAX         = Path(config["references"]["unite"]["sintax"]).resolve()
     UNITE_UCHIME_ITS1_FA = Path(config["references"]["unite"]["uchime_its1"]).resolve()
     UNITE_UCHIME_ITS2_FA = Path(config["references"]["unite"]["uchime_its2"]).resolve()
+
+    # Marker profiles reference DBs by symbol; resolve symbol → Path here.
+    REF_PATHS = {
+        "silva_train":       SILVA_TRAIN,
+        "silva_species":     SILVA_SPECIES,
+        "silva_sintax":      SILVA_SINTAX,
+        "unite_fasta":       UNITE_FASTA,
+        "unite_sintax":      UNITE_SINTAX,
+        "unite_uchime_ITS1": UNITE_UCHIME_ITS1_FA,
+        "unite_uchime_ITS2": UNITE_UCHIME_ITS2_FA,
+    }
 
     # ── Primers (hard error if missing — mode=amplicon requires them) ──
     PRIMER_FWD = Path(amp_cfg["primers"]["fwd"]).resolve()
@@ -74,12 +134,15 @@ if MODE == "amplicon":
             sys.exit(f"[MetaFlux] mode=amplicon requires primer FASTA but not found: {_p}")
 
     AMPLICON_TYPE = amp_cfg["type"].upper()
-    if AMPLICON_TYPE not in ("16S", "ITS"):
-        sys.exit(f"amplicon.type must be '16S' or 'ITS' (got: {amp_cfg['type']!r})")
+    if AMPLICON_TYPE not in MARKERS:
+        sys.exit(f"amplicon.type must be one of {sorted(MARKERS)} (got: {amp_cfg['type']!r})")
 
     ITS_REGION = amp_cfg.get("its_region", "ITS2").upper()
     if AMPLICON_TYPE == "ITS" and ITS_REGION not in ("ITS1", "ITS2"):
         sys.exit(f"amplicon.its_region must be 'ITS1' or 'ITS2' (got: {ITS_REGION!r})")
+
+    # The active marker's profile — the single source for every dispatch below.
+    PROFILE = MARKERS[AMPLICON_TYPE]
 
     ORIENTATION = amp_cfg["primers"].get("orientation", "fixed").lower()
     if ORIENTATION not in ("fixed", "mixed"):
@@ -104,17 +167,13 @@ if MODE == "amplicon":
 
     PRIMER_HASH = _primer_pair_hash(PRIMER_FWD, PRIMER_REV)
 
-    if AMPLICON_TYPE == "16S":
-        # 16S: in-silico PCR against SILVA using two-pass cutadapt
-        PROBE_REF_FASTA = SILVA_TRAIN
-        PROBE_REF_TAG   = "silva_v138.2_toGenus"
-        PROBE_MODE      = "pcr"
-    else:
-        # ITS: direct length measurement from UNITE UCHIME pre-extracted subregion
-        # sequences; no primer binding sites needed, no cutadapt involved.
-        PROBE_REF_FASTA = UNITE_UCHIME_ITS1_FA if ITS_REGION == "ITS1" else UNITE_UCHIME_ITS2_FA
-        PROBE_REF_TAG   = f"unite_uchime_{ITS_REGION}"
-        PROBE_MODE      = "direct"
+    # ── Amplicon-probe wiring (from the marker profile) ──
+    #   16S → pcr mode, in-silico PCR of the primers against SILVA.
+    #   ITS → direct mode, lengths read from the UNITE UCHIME ITS1/ITS2 subregion.
+    PROBE_MODE        = PROFILE["probe_mode"]
+    PROBE_REF_FASTA   = REF_PATHS[PROFILE["probe_ref"].format(region=ITS_REGION)]
+    PROBE_REF_TAG     = PROFILE["probe_ref_tag"].format(region=ITS_REGION)
+    PROBE_LENGTH_STAT = config["amplicon"]["probe_length_stat"][PROFILE["probe_stat_key"]]
 
     PROBE_JSON         = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.json"
     PROBE_AMPLICONS_FA = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.amplicons.fa.gz"
@@ -125,17 +184,19 @@ if MODE == "amplicon":
 
     WANTS_PROBE = _wants_probe(amp_cfg)
 
-    # ── Extraction / taxonomy globals ──
+    # ── Extraction / taxonomy globals (from the marker profile) ──
     EXTRACTION_ENABLED  = amp_cfg["extraction"].get("enabled", True)
+    MARKER_EXTRACTOR    = PROFILE["extractor"]           # metaxa2 | itsx | none
 
     # RDP path (method: rdp)
-    TAXONOMY_REFDB      = SILVA_TRAIN if AMPLICON_TYPE == "16S" else UNITE_FASTA
-    TAXONOMY_SPECIES_DB = [str(SILVA_SPECIES)] if AMPLICON_TYPE == "16S" else []
+    TAXONOMY_REFDB      = REF_PATHS[PROFILE["taxonomy_refdb"]]
+    TAXONOMY_SPECIES_DB = (
+        [str(REF_PATHS[PROFILE["taxonomy_species_db"]])]
+        if PROFILE["taxonomy_species_db"] else []
+    )
 
     # SINTAX path (method: sintax)
-    SILVA_SINTAX        = Path(config["references"]["silva"]["sintax"]).resolve()
-    UNITE_SINTAX        = Path(config["references"]["unite"]["sintax"]).resolve()
-    TAXONOMY_SINTAX_DB  = SILVA_SINTAX if AMPLICON_TYPE == "16S" else UNITE_SINTAX
+    TAXONOMY_SINTAX_DB  = REF_PATHS[PROFILE["taxonomy_sintax_db"]]
 
     # Taxonomy method — validated at parse time
     TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
