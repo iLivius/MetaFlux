@@ -17,6 +17,13 @@ outputs never disagree:
 Taxonomy in the BIOM is stored as a list of rank strings
 (['k__Bacteria', ..., 'g__Achromobacter', 's__sp. MFA1 R4']), so filtering and
 normalization operate on structured segments — no fragile string parsing.
+
+FUTURE (known limitation): the species binomial is rebuilt from kraken-biom's
+already-genus-stripped field, which is lossy — so viral strain codes (e.g.
+'s__TP778L' under g__Brussowvirus) are left genus-less rather than risk
+mis-attaching a genus. Bacterial/archaeal binomials are recovered correctly.
+For a truly complete binomial on every taxon (viruses included), source the full
+NCBI names from the per-sample Bracken reports instead of kraken-biom's lineage.
 """
 import biom
 from biom.util import biom_open
