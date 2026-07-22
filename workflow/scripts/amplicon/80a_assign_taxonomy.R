@@ -16,9 +16,12 @@ sink(log_con, type = "message")
 amp_type        <- snakemake@params[["amp_type"]]
 min_boot        <- as.integer(snakemake@params[["min_boot"]])
 try_rc          <- as.logical(snakemake@params[["try_rc"]])
+tax_levels      <- unlist(snakemake@params[["tax_levels"]])       # ordered rank columns
+rank_prefixes   <- unlist(snakemake@params[["rank_prefixes"]])    # k__/p__/… per level
+prefix_style    <- snakemake@params[["prefix_style"]]             # "bare" | "embedded"
 filter_enabled  <- as.logical(snakemake@params[["filter_enabled"]])
-include_pattern <- snakemake@params[["include_pattern"]]
-exclude_pattern <- snakemake@params[["exclude_pattern"]]
+filter_keep     <- unlist(snakemake@params[["filter_keep"]])      # rank-token keep list
+filter_discard  <- unlist(snakemake@params[["filter_discard"]])   # rank-token discard list
 threads         <- as.integer(snakemake@threads)
 seed            <- as.integer(snakemake@params[["seed"]])
 
@@ -26,15 +29,7 @@ seed            <- as.integer(snakemake@params[["seed"]])
 # compute minBoot confidence; fix it so calls near the threshold don't flip.
 set.seed(seed)
 
-# Default contaminant filter patterns when config leaves them null
-if (is.null(include_pattern) || include_pattern == "") {
-  include_pattern <- if (amp_type == "16S") "k__Archaea|k__Bacteria" else "k__Fungi"
-}
-if (is.null(exclude_pattern) || exclude_pattern == "") {
-  exclude_pattern <- if (amp_type == "16S") "chloroplast|mitochondria" else NULL
-}
-
-message("[assign_taxonomy] amp_type=", amp_type)
+message("[assign_taxonomy] amp_type=", amp_type, " (", prefix_style, " ranks)")
 
 # ── Read FASTA (simple parser — no seqinr dependency) ─────────────────────────
 read_fasta_simple <- function(path) {
@@ -95,59 +90,76 @@ taxa_df <- as.data.frame(taxa, stringsAsFactors = FALSE)
 rownames(taxa_df) <- names(seqs_sub)
 message("[assign_taxonomy] Taxa assigned for ", nrow(taxa_df), " ASVs")
 
-# ── Build taxonomy string ─────────────────────────────────────────────────────
-make_tax_string_16S <- function(row) {
+# ── Build taxonomy string (registry-driven; see 00_common.smk MARKERS) ────────
+# prefix_style == "bare"     → values carry no rank prefix: prepend rank_prefixes,
+#                              and render the last (species) slot as a
+#                              Genus+species binomial, emitted only when the
+#                              genus slot is present too (SILVA/16S behaviour).
+# prefix_style == "embedded" → values already carry k__/p__… prefixes; emit
+#                              them verbatim (UNITE/ITS behaviour).
+make_tax_string <- function(row) {
   parts <- character(0)
-  if (!is.na(row["Kingdom"])) parts <- c(parts, paste0("k__", row["Kingdom"]))
-  if (!is.na(row["Phylum"]))  parts <- c(parts, paste0("p__", row["Phylum"]))
-  if (!is.na(row["Class"]))   parts <- c(parts, paste0("c__", row["Class"]))
-  if (!is.na(row["Order"]))   parts <- c(parts, paste0("o__", row["Order"]))
-  if (!is.na(row["Family"]))  parts <- c(parts, paste0("f__", row["Family"]))
-  if (!is.na(row["Genus"]))   parts <- c(parts, paste0("g__", row["Genus"]))
-  if (!is.na(row["Genus"]) && !is.na(row["Species"]))
-    parts <- c(parts, paste0("s__", row["Genus"], " ", row["Species"]))
+  n <- length(tax_levels)
+  for (i in seq_len(n)) {
+    val <- row[[tax_levels[i]]]
+    if (is.na(val) || val == "") next
+    if (identical(prefix_style, "embedded")) {
+      parts <- c(parts, val)
+    } else if (i == n && n >= 2L) {
+      # species slot → binomial; requires the genus (level n-1) to be present
+      gval <- row[[tax_levels[n - 1L]]]
+      if (is.na(gval) || gval == "") next
+      parts <- c(parts, paste0(rank_prefixes[i], gval, " ", val))
+    } else {
+      parts <- c(parts, paste0(rank_prefixes[i], val))
+    }
+  }
   paste(parts, collapse = ";")
 }
-
-make_tax_string_ITS <- function(row) {
-  # UNITE columns already carry k__/p__/... prefixes; NAs are plain R NA
-  lvls <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
-  parts <- row[lvls]
-  parts <- parts[!is.na(parts) & parts != ""]
-  s <- paste(parts, collapse = ";")
-  # Strip any residual ";NA" or "; NA" artifacts
-  s <- gsub(";NA|; NA", "", s)
-  s
-}
-
-if (amp_type == "16S") {
-  tax_strings <- apply(taxa_df, 1L, make_tax_string_16S)
-} else {
-  tax_strings <- apply(taxa_df, 1L, make_tax_string_ITS)
-}
+tax_strings <- apply(taxa_df, 1L, make_tax_string)
 
 # ── ASV table: rows=ASV_IDs, cols=[samples..., taxonomy] ─────────────────────
 # seqtab_sub has rows=samples, cols=ASV_IDs → transpose for ASV table orientation
 count_t <- as.data.frame(t(seqtab_sub[, rownames(taxa_df), drop = FALSE]))
 asv_table <- cbind(count_t, taxonomy = tax_strings)
 
-# ── Contaminant filter ────────────────────────────────────────────────────────
+# ── Contaminant filter (rank-aware keep/discard lists; config-only) ──────────
+# Each token (e.g. k__Bacteria, o__Chloroplast) is matched against whole
+# ';'-delimited segments of the taxonomy string, so g__Bacillus hits only a
+# genus named exactly that — never a substring elsewhere. keep runs first
+# (defines the universe), then discard prunes. An empty list = that direction
+# is a no-op. There is NO per-marker code default: the lists come from config.
+seg_match <- function(tax_string, tokens) {
+  segs <- trimws(strsplit(tax_string, ";", fixed = TRUE)[[1]])
+  any(tokens %in% segs)
+}
 n_before_filter <- nrow(asv_table)
 if (isTRUE(filter_enabled)) {
-  if (!is.null(include_pattern) && nchar(include_pattern) > 0L) {
-    keep <- grepl(include_pattern, asv_table$taxonomy, ignore.case = TRUE)
+  if (length(filter_keep) > 0L) {
+    keep <- vapply(asv_table$taxonomy, seg_match, logical(1L),
+                   tokens = filter_keep, USE.NAMES = FALSE)
     asv_table <- asv_table[keep, , drop = FALSE]
-    message("[assign_taxonomy] Include filter (", include_pattern, "): ",
+    message("[assign_taxonomy] Keep filter (", paste(filter_keep, collapse = ","), "): ",
             sum(keep), " / ", n_before_filter, " ASVs retained")
   }
-  if (!is.null(exclude_pattern) && nchar(exclude_pattern) > 0L) {
-    drop <- grepl(exclude_pattern, asv_table$taxonomy, ignore.case = TRUE)
+  if (length(filter_discard) > 0L) {
+    drop <- vapply(asv_table$taxonomy, seg_match, logical(1L),
+                   tokens = filter_discard, USE.NAMES = FALSE)
     asv_table <- asv_table[!drop, , drop = FALSE]
-    message("[assign_taxonomy] Exclude filter (", exclude_pattern, "): ",
+    message("[assign_taxonomy] Discard filter (", paste(filter_discard, collapse = ","), "): ",
             sum(drop), " ASV(s) removed")
   }
 }
 message("[assign_taxonomy] Final ASV count: ", nrow(asv_table))
+
+# Fail loud rather than write a header-only table: a filter that removes 100% of
+# ASVs is almost always a marker/config mismatch (e.g. 16S keep tokens on an ITS run).
+if (isTRUE(filter_enabled) && n_before_filter > 0L && nrow(asv_table) == 0L) {
+  stop("[assign_taxonomy] the keep/discard filter removed ALL ", n_before_filter,
+       " ASVs (amp_type=", amp_type, "). The keep/discard lists likely do not match this ",
+       "marker: for ITS use keep: [k__Fungi]; for 16S use keep: [k__Bacteria, k__Archaea]. ",
+       "Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.")
+}
 
 # ── Output (a): asv_table.txt — rows=ASV_IDs ─────────────────────────────────
 dir.create(dirname(snakemake@output[["asv_table"]]), recursive = TRUE, showWarnings = FALSE)

@@ -18,7 +18,6 @@ All outputs use R write.table quoting conventions (character values double-quote
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
 """
 import gzip
-import re
 import subprocess
 import sys
 import tempfile
@@ -39,17 +38,16 @@ filter_enabled  = bool(sm.params.filter_enabled)
 threads         = int(sm.threads)
 seed            = int(sm.params.seed)
 
-# YAML null arrives as Python None or the string "null" depending on Snakemake version.
-def _none_or_str(v) -> str | None:
-    return None if (v is None or str(v).strip().lower() in ("null", "none", "")) else str(v)
+# Rank model from the marker profile (see 00_common.smk MARKERS), replacing the
+# previously hardcoded 7-rank tuples. The SINTAX path always normalises values
+# to bare letters then re-adds the prefixes, so it needs no prefix_style.
+RANK_LETTERS = tuple(sm.params.rank_letters)
+RANK_NAMES   = tuple(sm.params.tax_levels)
+RANK_PREFIX  = tuple(sm.params.rank_prefixes)
 
-include_pattern = _none_or_str(sm.params.include_pattern)
-exclude_pattern = _none_or_str(sm.params.exclude_pattern)
-
-if include_pattern is None:
-    include_pattern = "k__Archaea|k__Bacteria" if amp_type == "16S" else "k__Fungi"
-if exclude_pattern is None:
-    exclude_pattern = "chloroplast|mitochondria" if amp_type == "16S" else None
+# Contaminant keep/discard: rank-token lists from config, no per-marker default.
+filter_keep    = list(sm.params.filter_keep) or []
+filter_discard = list(sm.params.filter_discard) or []
 
 log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -59,12 +57,6 @@ log = log_path.open("w")
 def logmsg(msg: str) -> None:
     log.write(f"[assign_taxonomy/sintax] {msg}\n")
     log.flush()
-
-
-# ── Rank tables ────────────────────────────────────────────────────────────
-RANK_LETTERS = ("d", "p", "c", "o", "f", "g", "s")
-RANK_NAMES   = ("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
-RANK_PREFIX  = ("k__", "p__", "c__", "o__", "f__", "g__", "s__")
 
 
 def _strip_existing_prefix(val: str) -> str:
@@ -124,6 +116,7 @@ def read_fasta(path: Path) -> dict[str, str]:
     return seqs
 
 
+logmsg(f"amp_type={amp_type}")
 fasta = read_fasta(seqs_path)
 asv_ids = list(fasta.keys())
 logmsg(f"FASTA: {len(fasta)} ASVs loaded from {seqs_path}")
@@ -199,22 +192,42 @@ for asv_id in shared_ids:
         for letter, col in zip(RANK_LETTERS, RANK_NAMES)
     }
 
-# ── Contaminant filter ─────────────────────────────────────────────────────
+# ── Contaminant filter (rank-aware keep/discard lists; config-only) ─────────
+# Each token (e.g. k__Bacteria, o__Chloroplast) matches whole ';'-delimited
+# segments of the taxonomy string — so g__Bacillus hits only a genus named
+# exactly that, never a substring elsewhere. keep runs first (defines the
+# universe), then discard prunes. Empty list = that direction is a no-op.
+def _seg_match(tax_string: str, tokens: list[str]) -> bool:
+    segs = {s.strip() for s in tax_string.split(";")}
+    return any(tok in segs for tok in tokens)
+
+
 filtered_ids = list(shared_ids)
 n_before = len(filtered_ids)
 
 if filter_enabled:
-    if include_pattern:
+    if filter_keep:
         filtered_ids = [aid for aid in filtered_ids
-                        if re.search(include_pattern, tax_strings[aid], re.IGNORECASE)]
-        logmsg(f"Include filter ({include_pattern}): {len(filtered_ids)} / {n_before} ASVs retained")
-    if exclude_pattern:
+                        if _seg_match(tax_strings[aid], filter_keep)]
+        logmsg(f"Keep filter ({','.join(filter_keep)}): {len(filtered_ids)} / {n_before} ASVs retained")
+    if filter_discard:
         n_pre_excl   = len(filtered_ids)
         filtered_ids = [aid for aid in filtered_ids
-                        if not re.search(exclude_pattern, tax_strings[aid], re.IGNORECASE)]
-        logmsg(f"Exclude filter ({exclude_pattern}): {n_pre_excl - len(filtered_ids)} ASV(s) removed")
+                        if not _seg_match(tax_strings[aid], filter_discard)]
+        logmsg(f"Discard filter ({','.join(filter_discard)}): {n_pre_excl - len(filtered_ids)} ASV(s) removed")
 
 logmsg(f"Final ASV count: {len(filtered_ids)}")
+
+# Fail loud rather than write a header-only table: a filter that removes 100% of
+# ASVs is almost always a marker/config mismatch (e.g. 16S keep tokens on an ITS run).
+if filter_enabled and n_before > 0 and len(filtered_ids) == 0:
+    msg = (f"the keep/discard filter removed ALL {n_before} ASVs (amp_type={amp_type}). "
+           "The keep/discard lists likely do not match this marker: for ITS use keep: [k__Fungi]; "
+           "for 16S use keep: [k__Bacteria, k__Archaea]. Fix amplicon.taxonomy.filter, "
+           "or set amplicon.taxonomy.filter.enabled: false.")
+    logmsg("ERROR: " + msg)
+    log.close()
+    sys.exit(f"[assign_taxonomy/sintax] {msg}")
 
 
 # ── Write helpers — R write.table quoting conventions ─────────────────────

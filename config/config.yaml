@@ -136,13 +136,20 @@ amplicon:
     sintax_cutoff: 0.8                        # sintax only — confidence threshold (0–1); 0.8 ≈ min_boot=80
     try_rc: true                              # rdp only  — try reverse complement during assignTaxonomy
     filter:
-      enabled: true
-      include_pattern: null                   # null → defaults per amplicon type:
-                                              #   16S: "k__Archaea|k__Bacteria"
-                                              #   ITS: "k__Fungi"
-      exclude_pattern: null                   # null → defaults per amplicon type:
-                                              #   16S: "chloroplast|mitochondria"
-                                              #   ITS: none
+      enabled: true                           # master switch; false = keep every ASV
+      # Contaminant filter as rank-aware TOKEN LISTS. Each token is matched against
+      # a whole segment of the taxonomy string (k__Bacteria, o__Chloroplast,
+      # g__Ralstonia, …), so it targets exactly one rank — never a loose substring.
+      # `keep` runs first (defines what survives); then `discard` prunes what's left.
+      # An empty list [] means that direction does nothing. There is NO built-in
+      # default — whatever you list here is exactly what is applied, so set these to
+      # match your marker. Recommended starting points:
+      #   16S : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
+      #   ITS : keep [k__Fungi]                   discard []
+      # To drop lab/kit contaminants a blank control revealed, add them to discard,
+      # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
+      keep:    [k__Bacteria, k__Archaea]        # 16S template default (see above)
+      discard: [o__Chloroplast, f__Mitochondria]
 
   dada2:
     pool: false                               # false | "pseudo" | true
@@ -228,6 +235,20 @@ shotgun:
   bracken:
     tax_lev: S
     threshold: 10                             # min read count per taxon
+
+  # OTU-table taxon filter — the shotgun counterpart of amplicon.taxonomy.filter.
+  # Uses the SAME rank-aware token machinery: each token (k__Bacteria, g__Homo,
+  # …) matches a whole segment of the OTU's taxonomy lineage; `keep` runs first,
+  # then `discard`. Empty list = that direction does nothing. Applied to the
+  # final otu_table after Bracken, so it never changes read classification, only
+  # which OTUs appear in the table. Default OFF (metagenomic sample types vary
+  # too much for a universal default). Common uses:
+  #   keep:    [k__Bacteria, k__Archaea]   # prokaryotes only (drop Eukaryota/Viruses)
+  #   discard: [g__Homo]                    # explicit host safety net
+  taxonomy_filter:
+    enabled: false
+    keep:    []
+    discard: []
 
   # NCBI scientific names of taxa whose reads should be extracted via krakentools.
   # Empty list = skip extraction entirely. Example: [Bacteria, Archaea]

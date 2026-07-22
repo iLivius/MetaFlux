@@ -74,10 +74,22 @@ def mem_mb_for(rule_name: str) -> int:
 #   taxonomy_species_db reference symbol for DADA2 addSpecies, or None.
 #   taxonomy_sintax_db  reference symbol for the VSEARCH SINTAX database.
 #   extractor           "metaxa2" | "itsx" | "none" — target-region extractor.
+#   tax_levels          ordered rank column names emitted by the classifier
+#                       (assignTaxonomy columns / SINTAX ranks).
+#   rank_letters        the SINTAX one-letter rank codes paired to tax_levels.
+#   rank_prefixes       the output prefixes (k__/p__/…) paired to tax_levels.
+#   prefix_style        "bare"     — classifier values carry no rank prefix, so
+#                                    the builder adds rank_prefixes (SILVA/16S).
+#                                    The species slot becomes a Genus+species
+#                                    binomial.
+#                       "embedded" — values already carry k__/p__ prefixes, so
+#                                    the builder emits them verbatim (UNITE/ITS).
+#                       (rdp path only; the SINTAX path always normalises to
+#                       bare letters then re-adds rank_prefixes.)
 #
-# NOTE: the taxonomy rank model and the contaminant-filter defaults are still
-# derived per-type inside 80a/80c for now; those move into the profile in the
-# taxonomy-parameterization step (see NEW_MARKERS_NOTES.md §8, step 3).
+# The contaminant keep/discard lists are NOT a profile field: they live only in
+# config (amplicon.taxonomy.filter.keep / .discard), documented per marker in
+# the config template + README — there is no hidden code default to reconcile.
 MARKERS = {
     "16S": {
         "probe_mode":          "pcr",
@@ -88,6 +100,10 @@ MARKERS = {
         "taxonomy_species_db": "silva_species",
         "taxonomy_sintax_db":  "silva_sintax",
         "extractor":           "metaxa2",
+        "tax_levels":    ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"],
+        "rank_letters":  ["d", "p", "c", "o", "f", "g", "s"],
+        "rank_prefixes": ["k__", "p__", "c__", "o__", "f__", "g__", "s__"],
+        "prefix_style":  "bare",
     },
     "ITS": {
         "probe_mode":          "direct",
@@ -98,8 +114,24 @@ MARKERS = {
         "taxonomy_species_db": None,
         "taxonomy_sintax_db":  "unite_sintax",
         "extractor":           "itsx",
+        "tax_levels":    ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"],
+        "rank_letters":  ["d", "p", "c", "o", "f", "g", "s"],
+        "rank_prefixes": ["k__", "p__", "c__", "o__", "f__", "g__", "s__"],
+        "prefix_style":  "embedded",
     },
 }
+
+
+def _as_taxon_list(v):
+    """Normalize a keep/discard config value to a list of tokens.
+    YAML lets `keep: [k__Fungi]` and `keep: k__Fungi` both parse; the bare scalar
+    arrives as a str and MUST NOT reach the scripts unwrapped (Python's list("k__Fungi")
+    would char-split it, silently emptying the table). null/empty → []."""
+    if v is None:
+        return []
+    if isinstance(v, str):
+        return [v]
+    return list(v)
 
 
 # ────────────────────── Amplicon-only globals ──────────────────
@@ -198,6 +230,36 @@ if MODE == "amplicon":
     # SINTAX path (method: sintax)
     TAXONOMY_SINTAX_DB  = REF_PATHS[PROFILE["taxonomy_sintax_db"]]
 
+    # ── Taxonomy rank model (from the marker profile) ──
+    # Drives the taxonomy-string builder in both 80a (rdp) and 80c (sintax),
+    # replacing the previously hardcoded 7-rank tuples. 16S/ITS share the
+    # Linnaean 7 today; a future 9-rank marker (PR2) supplies its own here.
+    TAX_LEVELS    = PROFILE["tax_levels"]
+    RANK_LETTERS  = PROFILE["rank_letters"]
+    RANK_PREFIXES = PROFILE["rank_prefixes"]
+    PREFIX_STYLE  = PROFILE["prefix_style"]
+
+    # ── Contaminant keep/discard (config-only; no per-marker code default) ──
+    # Lists of rank-prefixed tokens (e.g. k__Bacteria, o__Chloroplast) matched
+    # against whole taxonomy-string segments. Empty/null list → that direction
+    # is a no-op. The recommended per-marker values ship in the config template.
+    _filter_cfg      = amp_cfg["taxonomy"]["filter"]
+    # Fail loud on the pre-step-3 schema instead of silently ignoring it: the old
+    # include_pattern/exclude_pattern regex keys used to carry per-type defaults;
+    # a reused config that still has them (and no keep/discard) would otherwise run
+    # with the filter silently disabled.
+    if "include_pattern" in _filter_cfg or "exclude_pattern" in _filter_cfg:
+        sys.exit(
+            "[MetaFlux] amplicon.taxonomy.filter uses the retired include_pattern/"
+            "exclude_pattern regex schema. Replace them with keep/discard token lists, e.g.\n"
+            "    keep:    [k__Bacteria, k__Archaea]\n"
+            "    discard: [o__Chloroplast, f__Mitochondria]   # 16S\n"
+            "  or keep: [k__Fungi]   discard: []              # ITS"
+        )
+    FILTER_ENABLED   = bool(_filter_cfg.get("enabled", True))
+    FILTER_KEEP      = _as_taxon_list(_filter_cfg.get("keep"))
+    FILTER_DISCARD   = _as_taxon_list(_filter_cfg.get("discard"))
+
     # Taxonomy method — validated at parse time
     TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
     if TAXONOMY_METHOD not in ("rdp", "sintax"):
@@ -250,6 +312,14 @@ else:  # MODE == "shotgun"
     BRACKEN_THRESH   = int(sht_cfg["bracken"]["threshold"])
     EXTRACT_TAXA     = list(sht_cfg.get("extract_taxa", []) or [])
     DL_THREADS       = int(sht_cfg.get("download_threads", 4))
+
+    # ── OTU-table taxon filter (shotgun counterpart of amplicon keep/discard) ──
+    # Same rank-aware token matching; applied to the final otu_table. Config-only,
+    # no code default — default OFF (see config comment).
+    _sht_filter        = sht_cfg.get("taxonomy_filter", {}) or {}
+    OTU_FILTER_ENABLED = bool(_sht_filter.get("enabled", False))
+    OTU_FILTER_KEEP    = _as_taxon_list(_sht_filter.get("keep"))
+    OTU_FILTER_DISCARD = _as_taxon_list(_sht_filter.get("discard"))
 
     # Kraken2 mem_mb is derived from the mmap mode + actual DB size at parse time:
     #   mmap on   → ~20 GB private workspace per process (DB is shared via the OS

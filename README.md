@@ -357,10 +357,43 @@ amplicon:
     method: sintax                        # rdp | sintax
     min_boot: 80                          # rdp bootstrap minimum
     sintax_cutoff: 0.8                    # sintax confidence (≈ min_boot 80)
-    filter: { enabled: true }             # contaminant include/exclude filter
+    filter:
+      enabled: true                       # master switch for the taxon filter
+      keep:    [k__Bacteria, k__Archaea]  # 16S; use [k__Fungi] for ITS
+      discard: [o__Chloroplast, f__Mitochondria]
 ```
 
-See [Troubleshooting](#troubleshooting) for the `auto` truncation caveat.
+See [Troubleshooting](#troubleshooting) for the `auto` truncation caveat, and
+[Keeping and discarding taxa](#keeping-and-discarding-taxa) for the filter.
+
+#### Keeping and discarding taxa
+
+The taxonomy filter decides which ASVs reach the final table by matching **whole
+rank segments** of each ASV's taxonomy string. A token like `g__Bacillus` matches
+only a genus named exactly that — never a loose substring elsewhere in the lineage.
+
+- `keep` runs first and defines what survives: an ASV is kept only if one of its
+  ranks matches a `keep` token. `[k__Bacteria, k__Archaea]` keeps prokaryotes and
+  drops anything unclassified at kingdom or assigned elsewhere.
+- `discard` then prunes what remains: an ASV is removed if any of its ranks matches
+  a `discard` token. `[o__Chloroplast, f__Mitochondria]` removes the usual 16S
+  plastid/host carry-over.
+- An empty list means that direction does nothing; `enabled: false` turns the whole
+  filter off and keeps every ASV.
+
+There is **no hidden default** — whatever you list is exactly what is applied, so set
+these to suit your marker:
+
+| Marker | keep | discard |
+|--------|------|---------|
+| 16S    | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
+| ITS    | `[k__Fungi]` | `[]` |
+
+To drop lab/kit contaminants a negative control revealed, add them to `discard` —
+e.g. `discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]`.
+Use the exact rank-prefixed name as it appears in the `taxonomy` column of
+`asv_table.txt` (kingdom `k__`, phylum `p__`, class `c__`, order `o__`, family
+`f__`, genus `g__`, species `s__`).
 
 ### Shotgun parameters `[shotgun]`
 
@@ -379,12 +412,23 @@ shotgun:
   bracken:
     tax_lev: S                            # taxonomic level for re-estimation
     threshold: 10
+  taxonomy_filter:                        # optional OTU-table taxon filter
+    enabled: false
+    keep:    []                           # e.g. [k__Bacteria, k__Archaea]
+    discard: []                           # e.g. [g__Homo]
   extract_taxa: []                        # optional taxa to pull reads for
 ```
 
 `host_genomes` is a YAML **list** — each reference is its own `- ` item (a local
 path *or* a URL); `[]` means skip host removal. Multiple entries are concatenated and
 indexed once.
+
+`taxonomy_filter` applies the same rank-aware keep/discard machinery as the amplicon
+side (see [Keeping and discarding taxa](#keeping-and-discarding-taxa)) to the final
+`otu_table`, after Bracken — so it changes which OTUs appear in the table, never the
+read classification itself. It is **off by default** (metagenomic sample types vary
+too much for a universal default). Common uses: keep prokaryotes only
+(`keep: [k__Bacteria, k__Archaea]`) or drop residual host (`discard: [g__Homo]`).
 
 ### Resources `[shared]`
 
@@ -504,9 +548,18 @@ out_dir/
 └── logs/                 # per-rule logs
 ```
 
-Key files: `03.abundance/otu_table.tsv` (taxon × sample abundances),
-`03.abundance/{sample}_report.txt` (Bracken), `stats/read_tracking.txt`
-(raw → trimmed → classified/unclassified, per sample).
+Key files: `03.abundance/otu_table.tsv` (taxon × sample abundances) plus the
+matching `otu_table.biom`, `03.abundance/{sample}_report.txt` (Bracken),
+`stats/read_tracking.txt` (raw → trimmed → classified/unclassified, per sample).
+
+All tables write the taxonomy lineage the same way structurally: ranks joined by
+`;` (no space), each prefixed `k__/p__/c__/o__/f__/g__/s__`. The exact species-slot
+form follows the reference, not the pipeline: SILVA/16S via `rdp` gives a
+`s__Genus species` binomial (e.g. `s__Bacillus subtilis`), and the shotgun table
+reconstructs the same binomial where the epithet is a bare specific name;
+UNITE/ITS keeps its native `s__Genus_species` (underscore); the `sintax` path emits
+whatever label its database carries. On the shotgun side the `otu_table.biom` and
+`otu_table.tsv` are rendered from the same filtered table, so they always agree.
 
 **Inside `01.preprocessing/`.** The cleaned reads themselves are temporary — Snakemake
 deletes the `_dephix` / `_dehost` / `_trim` FASTQs once Kraken2 has read them — so what
