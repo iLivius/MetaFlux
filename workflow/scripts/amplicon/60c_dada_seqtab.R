@@ -36,6 +36,11 @@ chim_method   <- snakemake@params[["chimera_method"]]
 min_fold      <- as.numeric(snakemake@params[["chimera_min_fold_parent"]])
 allow_one_off <- as.logical(snakemake@params[["chimera_allow_one_off"]])
 threads       <- as.integer(snakemake@threads)
+seed          <- as.integer(snakemake@params[["seed"]])
+
+# learnErrors(randomize=TRUE) draws its nbases sample of reads via R's RNG;
+# fix it so the error model (and everything downstream) is reproducible.
+set.seed(seed)
 
 # YAML false/true → Python False/True → R FALSE/TRUE (logical); "pseudo" → character.
 # The is.character guard converts string "false"/"true" if YAML used quotes.

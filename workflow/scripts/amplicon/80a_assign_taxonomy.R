@@ -20,6 +20,11 @@ filter_enabled  <- as.logical(snakemake@params[["filter_enabled"]])
 include_pattern <- snakemake@params[["include_pattern"]]
 exclude_pattern <- snakemake@params[["exclude_pattern"]]
 threads         <- as.integer(snakemake@threads)
+seed            <- as.integer(snakemake@params[["seed"]])
+
+# assignTaxonomy's RDP classifier draws bootstrap resamples via R's RNG to
+# compute minBoot confidence; fix it so calls near the threshold don't flip.
+set.seed(seed)
 
 # Default contaminant filter patterns when config leaves them null
 if (is.null(include_pattern) || include_pattern == "") {

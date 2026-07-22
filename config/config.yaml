@@ -68,6 +68,18 @@ amplicon:
   type: 16S                                   # 16S | ITS
   its_region: ITS2                            # ITS1 | ITS2 (ignored if type == 16S)
 
+  # Fixes the RNG for every stochastic step in the amplicon path: DADA2
+  # learnErrors(randomize=TRUE) and DADA2 assignTaxonomy's bootstrap
+  # confidence (rdp) are FULLY reproducible with this seed, at any thread
+  # count — verified empirically (identical output at 8 threads, two runs).
+  # VSEARCH --sintax's bootstrap confidence (sintax) is NOT: vsearch races
+  # multiple threads on one RNG stream during sintax, so a handful of
+  # per-rank confidence values can still drift between runs even with this
+  # seed fixed — verified empirically (8 threads: differs; 1 thread:
+  # identical). For byte-reproducible sintax output, set
+  # resources.threads.assign_taxonomy: 1 (slower). See README Troubleshooting.
+  seed: 100
+
   decontamination:
     remove_phix: true                         # bowtie2 vs the fetched PhiX reference; false = skip PhiX removal
                                               # (symmetric with shotgun.decontamination.remove_phix)

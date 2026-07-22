@@ -37,6 +37,7 @@ amp_type        = sm.params.amp_type
 sintax_cutoff   = float(sm.params.sintax_cutoff)
 filter_enabled  = bool(sm.params.filter_enabled)
 threads         = int(sm.threads)
+seed            = int(sm.params.seed)
 
 # YAML null arrives as Python None or the string "null" depending on Snakemake version.
 def _none_or_str(v) -> str | None:
@@ -151,6 +152,12 @@ out_asv.parent.mkdir(parents=True, exist_ok=True)
 tabbedout = out_asv.parent / "_sintax_raw.tsv"
 
 # The UNITE SINTAX DB is .gz; VSEARCH reads gzipped FASTA natively.
+# --randseed: vsearch's sintax bootstrap confidence defaults to seed 0, i.e.
+# "use a random data source". Pinning it removes that as a source of drift,
+# but does NOT make multithreaded --sintax fully reproducible: vsearch races
+# threads on one RNG stream, so per-rank confidence near sintax_cutoff can
+# still shift a little between runs at threads > 1 (verified empirically).
+# Full byte-reproducibility requires threads == 1 — see README Troubleshooting.
 cmd = [
     "vsearch", "--sintax", str(seqs_path),
     "--db",            str(refdb_path),
@@ -158,6 +165,7 @@ cmd = [
     "--tabbedout",     str(tabbedout),
     "--strand",        "both",
     "--threads",       str(threads),
+    "--randseed",      str(seed),
 ]
 logmsg(f"Running: {' '.join(cmd)}")
 res = subprocess.run(cmd, stdout=log, stderr=log)

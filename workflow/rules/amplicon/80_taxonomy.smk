@@ -29,6 +29,7 @@ if TAXONOMY_METHOD == "rdp":
             filter_enabled  = _tax_cfg["filter"]["enabled"],
             include_pattern = _tax_cfg["filter"]["include_pattern"],
             exclude_pattern = _tax_cfg["filter"]["exclude_pattern"],
+            seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",
         conda:
@@ -55,6 +56,7 @@ else:  # sintax
             filter_enabled  = _tax_cfg["filter"]["enabled"],
             include_pattern = _tax_cfg["filter"]["include_pattern"],
             exclude_pattern = _tax_cfg["filter"]["exclude_pattern"],
+            seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",
         conda:

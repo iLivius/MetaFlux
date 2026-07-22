@@ -325,6 +325,7 @@ references:
 amplicon:
   type: 16S                               # 16S | ITS
   its_region: ITS2                        # ITS1 | ITS2 (ignored for 16S)
+  seed: 100                               # fixes learnErrors/assignTaxonomy RNG fully; sintax needs threads:1 too — see Troubleshooting
 
   decontamination:
     remove_phix: true                     # bowtie2 PhiX removal; false = skip
@@ -571,6 +572,33 @@ lengths are no problem. To work around the PhiX step:
   ```
 
 - **Use raw, untrimmed reads** if available — MetaFlux trims with fastp anyway.
+
+### Amplicon: ASV counts or taxonomy calls differ between identical re-runs
+
+Three steps in the amplicon path draw on a random-number generator: DADA2's
+`learnErrors(randomize=TRUE)` (which subsamples reads to build the error model),
+DADA2's `assignTaxonomy` (rdp method — bootstrap confidence), and VSEARCH's
+`--sintax` (sintax method — bootstrap confidence, seeded from a random source by
+default). Without a fixed seed, each of these draws a different sample every run,
+so a handful of ASVs or taxonomy calls near a decision threshold can flip between
+two runs on the exact same input — this is expected DADA2/VSEARCH behaviour, not
+a bug or corrupted data.
+
+`amplicon.seed` fixes the RNG for all three, but **only `learnErrors` and
+`assignTaxonomy` (rdp) become fully reproducible at any thread count** — verified
+by running the amplicon test set twice at 8 threads with the same seed:
+`seqs.fasta`, ASV counts, and rdp-path taxonomy came back byte-identical.
+
+**`--sintax` (the sintax method) does not**: VSEARCH runs its bootstrap
+confidence step across threads that share one RNG stream, so which thread
+consumes which random draw still depends on scheduling, seed or no seed. Verified
+the same way — with `amplicon.seed` fixed, 8-threaded `assign_taxonomy` reruns
+still shifted a handful of per-rank confidence values (e.g. a genus call at 0.99
+in one run, 1.00 in the next), while single-threaded reruns came back identical.
+If byte-reproducible sintax output matters more than speed, set
+`resources.threads.assign_taxonomy: 1`; otherwise treat sub-percent confidence
+drift near `sintax_cutoff` as expected run-to-run noise, same as before the seed
+was added.
 
 ### Config (YAML) errors
 

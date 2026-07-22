@@ -119,6 +119,7 @@ rule dada_seqtab:
         chimera_method           = config["amplicon"]["dada2"]["chimera"]["method"],
         chimera_min_fold_parent  = config["amplicon"]["dada2"]["chimera"]["min_fold_parent"],
         chimera_allow_one_off    = config["amplicon"]["dada2"]["chimera"]["allow_one_off"],
+        seed                     = config["amplicon"]["seed"],
     log:
         LOGS / "dada_seqtab.log",
     conda:
