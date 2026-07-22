@@ -622,6 +622,8 @@ Developed at the [AIT Austrian Institute of Technology](https://www.ait.ac.at/).
 MetaFlux consolidates and modernises methods refined across many amplicon and
 metagenomics collaborations, and is part of the **BioFlux** family of workflows.
 
+Portions of this codebase were developed with the assistance of Claude Code.
+
 ## Citation
 
 Publications that use MetaFlux should cite this repository. A formal release with a
