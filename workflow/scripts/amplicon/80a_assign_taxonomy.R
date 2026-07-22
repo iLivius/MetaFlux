@@ -71,10 +71,15 @@ message("[assign_taxonomy] assignTaxonomy against ", refdb_path)
 unique_seqs <- unique(unname(seqs_sub))
 message("[assign_taxonomy] Classifying ", length(unique_seqs),
         " unique sequence(s) from ", length(seqs_sub), " input ASVs")
+# taxLevels comes from the marker profile so the classifier matches the reference's
+# actual depth. For 16S/ITS these are the Linnaean 7, identical to DADA2's own
+# default (so passing them explicitly changes nothing); a 9-rank reference such as
+# PR2 (domain..species) needs them declared or assignTaxonomy would truncate to 7.
 taxa_unique <- assignTaxonomy(unique_seqs, refdb_path,
                               minBoot = min_boot,
                               multithread = threads,
                               tryRC = try_rc,
+                              taxLevels = tax_levels,
                               verbose = TRUE)
 
 # addSpecies for 16S only; species_db is empty list for ITS

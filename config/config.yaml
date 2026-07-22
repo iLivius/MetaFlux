@@ -59,14 +59,28 @@ references:
     fetch_url:        https://s3.hpc.ut.ee/plutof-public/original/b02db549-5f04-43fc-afb6-02888b594d10.tgz
     fetch_url_uchime: https://s3.hpc.ut.ee/plutof-public/original/25ff4a97-e637-4d27-a442-9451afb5cbc6.zip
     fetch_url_sintax: https://s3.hpc.ut.ee/plutof-public/original/338a1413-6039-4e00-b5cf-410346a1e366.gz
+  silva_euk: # [amplicon, 18S] — probe substrate only (best in-silico primer recovery)
+    fasta:     refdb/silva_euk/silva_132.18s.dada2.fa.gz
+    fetch_url: https://zenodo.org/records/1447330/files/silva_132.18s.99_rep_set.dada2.fa.gz?download=1
+  pr2: # [amplicon, 18S] — taxonomy reference. NOTE the two files differ in rank
+       # depth: dada2 = 9 ranks (Domain..Species), UTAX = 8 (Division+Subdivision
+       # merged). MetaFlux handles both; do not swap one for the other.
+    dada2:           refdb/pr2/pr2_SSU_dada2.fasta.gz   # rdp path
+    utax:            refdb/pr2/pr2_SSU_UTAX.fasta.gz    # sintax path
+    fetch_url_dada2: https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz
+    fetch_url_utax:  https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_UTAX.fasta.gz
   kraken_db: /path/to/kraken2_db # [shotgun] — user-supplied (e.g. a PlusPF index)
 
 # ═══════════════════════════════════════════════════════════════
 # Amplicon-only configuration — ignored when mode: shotgun
 # ═══════════════════════════════════════════════════════════════
 amplicon:
-  type: 16S                                   # 16S | ITS
-  its_region: ITS2                            # ITS1 | ITS2 (ignored if type == 16S)
+  type: 16S                                   # 16S | ITS | 18S
+                                              # 18S: probed on SILVA-Euk, classified on PR2;
+                                              # no region extractor (extraction is forced off).
+                                              # Remember to set taxonomy.filter for the marker
+                                              # (18S: keep [d__Eukaryota]).
+  its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
 
   # Fixes the RNG for every stochastic step in the amplicon path: DADA2
   # learnErrors(randomize=TRUE) and DADA2 assignTaxonomy's bootstrap
@@ -92,9 +106,17 @@ amplicon:
   expected_length: auto                       # int | [min,max] | "auto"
                                               # 16S auto: in-silico PCR against SILVA; uses probe_length_stat.16S.
                                               # ITS auto: length distribution of UNITE UCHIME ITS1/ITS2 sequences.
+                                              # 18S auto: in-silico PCR against SILVA-Euk; uses probe_length_stat.18S.
+                                              #   V4 primers (TAReuk/Bass/Parfrey/Hadziavdic, 515Y-926R) work with
+                                              #   auto — the window is wide (measured 380-595 bp core, primer-dependent).
+                                              #   V9 (1391F/EukBr) must be MANUAL, e.g. [115, 150]: only 24-41% of
+                                              #   references are recovered in silico (EukBr sits at the 3' terminus and
+                                              #   most references are truncated before it), so auto would size the
+                                              #   window from a biased minority.
                                               # Manual: provide a single integer (bp) or [min, max] range.
   probe_length_stat:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max
+    18S: p95                                  # 18S V4 has a ragged upper tail — p95 keeps the window permissive
                                               # ITS: overlap constraint not checked (truncLen overridden to c(0,0))
   min_overlap: 12                             # design overlap in bp (truncLen constraint AND mergePairs)
 

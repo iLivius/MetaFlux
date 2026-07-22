@@ -169,3 +169,66 @@ rule fetch_uchime:
         mv "$src1" {output.its1}
         mv "$src2" {output.its2}
         """
+
+
+# ── 18S references ────────────────────────────────────────────────────────
+# SILVA-Euk is the probe substrate (in-silico primer recovery 96-97% vs 66-75%
+# on PR2); PR2 is the taxonomy reference. PR2 ships two files with DIFFERENT
+# rank depths — the DADA2 one (9 ranks) feeds the rdp path, the UTAX one
+# (8 ranks) feeds sintax — so both are fetched independently.
+
+rule fetch_silva_euk:
+    output:
+        fasta = SILVA_EUK,
+    params:
+        url = config["references"].get("silva_euk", {}).get(
+            "fetch_url",
+            "https://zenodo.org/records/1447330/files/silva_132.18s.99_rep_set.dada2.fa.gz?download=1",
+        ),
+    log:
+        LOGS / "refdb" / "fetch_silva_euk.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        """
+        mkdir -p $(dirname {output.fasta})
+        wget -O {output.fasta} "{params.url}" > {log} 2>&1
+        """
+
+
+rule fetch_pr2_dada2:
+    output:
+        fasta = PR2_DADA2,
+    params:
+        url = config["references"].get("pr2", {}).get(
+            "fetch_url_dada2",
+            "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz",
+        ),
+    log:
+        LOGS / "refdb" / "fetch_pr2_dada2.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        """
+        mkdir -p $(dirname {output.fasta})
+        wget -O {output.fasta} "{params.url}" > {log} 2>&1
+        """
+
+
+rule fetch_pr2_utax:
+    output:
+        fasta = PR2_UTAX,
+    params:
+        url = config["references"].get("pr2", {}).get(
+            "fetch_url_utax",
+            "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_UTAX.fasta.gz",
+        ),
+    log:
+        LOGS / "refdb" / "fetch_pr2_utax.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        """
+        mkdir -p $(dirname {output.fasta})
+        wget -O {output.fasta} "{params.url}" > {log} 2>&1
+        """

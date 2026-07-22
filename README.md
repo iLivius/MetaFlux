@@ -323,8 +323,8 @@ references:
 
 ```yaml
 amplicon:
-  type: 16S                               # 16S | ITS
-  its_region: ITS2                        # ITS1 | ITS2 (ignored for 16S)
+  type: 16S                               # 16S | ITS | 18S
+  its_region: ITS2                        # ITS1 | ITS2 (ignored unless type == ITS)
   seed: 100                               # fixes learnErrors/assignTaxonomy RNG fully; sintax needs threads:1 too — see Troubleshooting
 
   decontamination:
@@ -336,7 +336,7 @@ amplicon:
     orientation: fixed                    # fixed | mixed (mixed enables the swap pass)
 
   expected_length: auto                   # int | [min, max] | "auto"
-  probe_length_stat: { 16S: p95 }         # statistic used from the probe distribution
+  probe_length_stat: { 16S: p95, 18S: p95 }  # statistic used from the probe distribution
   min_overlap: 12                         # required forward/reverse overlap, in bp
 
   trunc_len:
@@ -394,6 +394,50 @@ e.g. `discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium
 Use the exact rank-prefixed name as it appears in the `taxonomy` column of
 `asv_table.txt` (kingdom `k__`, phylum `p__`, class `c__`, order `o__`, family
 `f__`, genus `g__`, species `s__`).
+
+#### Running 18S (eukaryotes)
+
+Set `type: 18S` and supply your 18S primers. The two reference databases are fetched
+automatically on first run and cached under `refdb/`:
+
+- **SILVA-Eukaryotic 18S v132** is used *only* as the in-silico PCR probe substrate —
+  it recovers 96–97% of references for every V4 primer pair tested, against 66–75% for
+  PR2, so it sizes the length window far more reliably.
+- **PR2 (v5.1.1)** is the taxonomy reference, being the better-curated protist database.
+
+Two things differ from 16S/ITS and are handled for you:
+
+- **No region extractor.** There is no 18S equivalent of Metaxa2/ITSx in MetaFlux, so
+  `extraction.enabled` is forced off (with a warning) — the ASV length filter still runs.
+- **PR2 ships two files with different rank depths.** The DADA2 file has 9 ranks
+  (`Domain;Supergroup;Division;Subdivision;Class;Order;Family;Genus;Species`), while the
+  UTAX file used by `sintax` has 8, merging Division+Subdivision into one field. MetaFlux
+  declares both rank models, so either `method` classifies at the correct depth. Output
+  prefixes are keyed to rank *meaning*, so a filter token means the same thing under
+  either method:
+
+  ```
+  rdp    : d__Eukaryota;sg__TSAR;dv__Alveolata;sbd__Dinoflagellata;c__Dinophyceae;…
+  sintax : d__Eukaryota;sg__TSAR;dv__Alveolata-Dinoflagellata;c__Dinophyceae;…
+  ```
+
+Set the taxon filter for the marker — `keep: [d__Eukaryota]` (a 16S `keep` list would
+drop every eukaryotic ASV; MetaFlux errors out rather than write an empty table).
+
+**Amplicon length by primer pair.** The expected length is a property of the primers, not
+of the marker — measured in silico across the common pairs:
+
+| Region | Primer pair | Core length | `expected_length` |
+|---|---|--:|---|
+| V4 | TAReuk454FWD1 / TAReukREV3 | ~380 bp | `auto` |
+| V4 | Parfrey 515F / 1119r | ~565 bp | `auto` |
+| V4 | Hadziavdic 566F / 1200R | ~595 bp | `auto` |
+| V4–V5 | 515Y / 926R | ~551 bp | `auto` |
+| V9 | Euk1391F / EukBr | ~130 bp | **manual**, e.g. `[115, 150]` |
+
+V9 must be set manually: only 24–41% of references are recovered in silico, because EukBr
+sits at the 3′ terminus and most references are truncated before it — so `auto` would size
+the window from a biased minority rather than from the real amplicon distribution.
 
 ### Shotgun parameters `[shotgun]`
 

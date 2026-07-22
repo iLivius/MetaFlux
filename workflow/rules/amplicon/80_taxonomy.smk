@@ -56,9 +56,11 @@ else:  # sintax
         params:
             amp_type        = AMPLICON_TYPE,
             sintax_cutoff   = _tax_cfg["sintax_cutoff"],
-            tax_levels      = TAX_LEVELS,
-            rank_letters    = RANK_LETTERS,
-            rank_prefixes   = RANK_PREFIXES,
+            # sintax rank model — differs from the rdp one for markers whose two
+            # reference files disagree on depth (see MARKERS in 00_common.smk).
+            tax_levels      = SINTAX_TAX_LEVELS,
+            rank_letters    = SINTAX_RANK_LETTERS,
+            rank_prefixes   = SINTAX_RANK_PREFIXES,
             filter_enabled  = FILTER_ENABLED,
             filter_keep     = FILTER_KEEP,
             filter_discard  = FILTER_DISCARD,

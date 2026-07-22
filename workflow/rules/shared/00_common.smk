@@ -78,6 +78,14 @@ def mem_mb_for(rule_name: str) -> int:
 #                       (assignTaxonomy columns / SINTAX ranks).
 #   rank_letters        the SINTAX one-letter rank codes paired to tax_levels.
 #   rank_prefixes       the output prefixes (k__/p__/…) paired to tax_levels.
+#   sintax_tax_levels / sintax_rank_letters / sintax_rank_prefixes
+#                       OPTIONAL per-method overrides. The rdp and sintax
+#                       references usually share a rank model (16S, ITS), but not
+#                       always: PR2 ships 9 ranks in its DADA2 file and only 8 in
+#                       its UTAX file, where Division+Subdivision are merged into
+#                       one 'p:' field. When absent these fall back to the fields
+#                       above. Prefixes are keyed to rank MEANING, so the same
+#                       keep/discard token works under either method.
 #   prefix_style        "bare"     — classifier values carry no rank prefix, so
 #                                    the builder adds rank_prefixes (SILVA/16S).
 #                                    The species slot becomes a Genus+species
@@ -119,6 +127,40 @@ MARKERS = {
         "rank_prefixes": ["k__", "p__", "c__", "o__", "f__", "g__", "s__"],
         "prefix_style":  "embedded",
     },
+    # 18S — eukaryotes. Probed against SILVA-Euk (96-97% in-silico primer recovery
+    # vs 66-75% on PR2) but classified against PR2, which is the better-curated
+    # protist reference. No target-region extractor: Metaxa2 could do SSU, but it
+    # is deliberately not used for this marker, so extraction is forced off.
+    # NOTE the two PR2 files disagree on rank depth (verified against v5.1.1):
+    #   DADA2 file : 9 ranks  Domain;Supergroup;Division;Subdivision;Class;…;Species
+    #   UTAX  file : 8 ranks  k:Domain,d:Supergroup,p:Division-Subdivision,c:Class,…
+    # hence the sintax_* overrides below.
+    "18S": {
+        "probe_mode":          "pcr",
+        "probe_ref":           "silva_euk",
+        "probe_ref_tag":       "silva_euk_18s_v132",
+        "probe_stat_key":      "18S",
+        "taxonomy_refdb":      "pr2_dada2",
+        "taxonomy_species_db": None,          # PR2 carries species in-line; no addSpecies step
+        "taxonomy_sintax_db":  "pr2_utax",
+        "extractor":           "none",
+        # rdp path — PR2 DADA2 file (9 ranks); taxLevels must be declared or
+        # assignTaxonomy silently truncates to its default 7.
+        "tax_levels":    ["Domain", "Supergroup", "Division", "Subdivision",
+                          "Class", "Order", "Family", "Genus", "Species"],
+        "rank_letters":  ["d", "sg", "dv", "sbd", "c", "o", "f", "g", "s"],  # rdp path: unused
+        "rank_prefixes": ["d__", "sg__", "dv__", "sbd__",
+                          "c__", "o__", "f__", "g__", "s__"],
+        "prefix_style":  "bare",
+        # sintax path — PR2 UTAX file (8 ranks, Division+Subdivision merged).
+        # Prefixes stay keyed to meaning, so d__Eukaryota means the same under
+        # both methods even though the underlying letters differ.
+        "sintax_tax_levels":    ["Domain", "Supergroup", "Division_Subdivision",
+                                 "Class", "Order", "Family", "Genus", "Species"],
+        "sintax_rank_letters":  ["k", "d", "p", "c", "o", "f", "g", "s"],
+        "sintax_rank_prefixes": ["d__", "sg__", "dv__",
+                                 "c__", "o__", "f__", "g__", "s__"],
+    },
 }
 
 
@@ -147,6 +189,15 @@ if MODE == "amplicon":
     UNITE_UCHIME_ITS1_FA = Path(config["references"]["unite"]["uchime_its1"]).resolve()
     UNITE_UCHIME_ITS2_FA = Path(config["references"]["unite"]["uchime_its2"]).resolve()
 
+    # 18S references. Defaulted so configs written before 18S support still parse
+    # (they simply never resolve these paths); override under references.pr2 /
+    # references.silva_euk to relocate them.
+    _pr2_cfg  = config["references"].get("pr2", {}) or {}
+    _seuk_cfg = config["references"].get("silva_euk", {}) or {}
+    PR2_DADA2 = Path(_pr2_cfg.get("dada2", "refdb/pr2/pr2_SSU_dada2.fasta.gz")).resolve()
+    PR2_UTAX  = Path(_pr2_cfg.get("utax",  "refdb/pr2/pr2_SSU_UTAX.fasta.gz")).resolve()
+    SILVA_EUK = Path(_seuk_cfg.get("fasta", "refdb/silva_euk/silva_132.18s.dada2.fa.gz")).resolve()
+
     # Marker profiles reference DBs by symbol; resolve symbol → Path here.
     REF_PATHS = {
         "silva_train":       SILVA_TRAIN,
@@ -156,6 +207,9 @@ if MODE == "amplicon":
         "unite_sintax":      UNITE_SINTAX,
         "unite_uchime_ITS1": UNITE_UCHIME_ITS1_FA,
         "unite_uchime_ITS2": UNITE_UCHIME_ITS2_FA,
+        "pr2_dada2":         PR2_DADA2,
+        "pr2_utax":          PR2_UTAX,
+        "silva_euk":         SILVA_EUK,
     }
 
     # ── Primers (hard error if missing — mode=amplicon requires them) ──
@@ -205,7 +259,18 @@ if MODE == "amplicon":
     PROBE_MODE        = PROFILE["probe_mode"]
     PROBE_REF_FASTA   = REF_PATHS[PROFILE["probe_ref"].format(region=ITS_REGION)]
     PROBE_REF_TAG     = PROFILE["probe_ref_tag"].format(region=ITS_REGION)
-    PROBE_LENGTH_STAT = config["amplicon"]["probe_length_stat"][PROFILE["probe_stat_key"]]
+    # Only the pcr probe path consumes this statistic; fail with a usable message
+    # rather than a bare KeyError when a marker's key is absent from the config.
+    _stat_key = PROFILE["probe_stat_key"]
+    _stat_cfg = config["amplicon"].get("probe_length_stat", {}) or {}
+    if PROBE_MODE == "pcr" and _stat_key not in _stat_cfg:
+        sys.exit(
+            f"[MetaFlux] amplicon.probe_length_stat is missing the '{_stat_key}' key that "
+            f"marker {AMPLICON_TYPE} needs. Add it, e.g.\n"
+            f"    probe_length_stat:\n"
+            f"      {_stat_key}: p95"
+        )
+    PROBE_LENGTH_STAT = _stat_cfg.get(_stat_key)
 
     PROBE_JSON         = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.json"
     PROBE_AMPLICONS_FA = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.amplicons.fa.gz"
@@ -219,6 +284,17 @@ if MODE == "amplicon":
     # ── Extraction / taxonomy globals (from the marker profile) ──
     EXTRACTION_ENABLED  = amp_cfg["extraction"].get("enabled", True)
     MARKER_EXTRACTOR    = PROFILE["extractor"]           # metaxa2 | itsx | none
+
+    # A marker whose profile has no region extractor (18S, gyrB) defines no
+    # target_extract rule in 70_extract.smk. Leaving extraction.enabled true would
+    # make the DAG ask for seqs_extracted.fasta, which nothing produces — a
+    # confusing missing-input error. Force it off and say so instead.
+    if MARKER_EXTRACTOR == "none" and EXTRACTION_ENABLED:
+        sys.stderr.write(
+            f"[MetaFlux] warning: marker {AMPLICON_TYPE} has no target-region extractor; "
+            "ignoring amplicon.extraction.enabled: true (no extraction step will run)\n"
+        )
+        EXTRACTION_ENABLED = False
 
     # RDP path (method: rdp)
     TAXONOMY_REFDB      = REF_PATHS[PROFILE["taxonomy_refdb"]]
@@ -234,10 +310,17 @@ if MODE == "amplicon":
     # Drives the taxonomy-string builder in both 80a (rdp) and 80c (sintax),
     # replacing the previously hardcoded 7-rank tuples. 16S/ITS share the
     # Linnaean 7 today; a future 9-rank marker (PR2) supplies its own here.
+    # rdp path rank model
     TAX_LEVELS    = PROFILE["tax_levels"]
     RANK_LETTERS  = PROFILE["rank_letters"]
     RANK_PREFIXES = PROFILE["rank_prefixes"]
     PREFIX_STYLE  = PROFILE["prefix_style"]
+
+    # sintax path rank model — identical to the rdp one unless the marker declares
+    # otherwise (18S does: PR2's UTAX file has 8 ranks to the DADA2 file's 9).
+    SINTAX_TAX_LEVELS    = PROFILE.get("sintax_tax_levels",    TAX_LEVELS)
+    SINTAX_RANK_LETTERS  = PROFILE.get("sintax_rank_letters",  RANK_LETTERS)
+    SINTAX_RANK_PREFIXES = PROFILE.get("sintax_rank_prefixes", RANK_PREFIXES)
 
     # ── Contaminant keep/discard (config-only; no per-marker code default) ──
     # Lists of rank-prefixed tokens (e.g. k__Bacteria, o__Chloroplast) matched
