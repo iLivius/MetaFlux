@@ -200,6 +200,8 @@ if MODE == "amplicon":
     PR2_DADA2            = _ref_path("pr2_dada2",         "pr2",   "dada2")
     PR2_UTAX             = _ref_path("pr2_utax",          "pr2",   "utax")
     SILVA_EUK            = _ref_path("silva_euk",         "silva_euk", "fasta")
+    GYRB_DADA2           = _ref_path("gyrb_dada2",        "gyrb",  "dada2")
+    RPOB_FROGS           = _ref_path("rpob_frogs",        "rpob",  "frogs")
 
     # Marker profiles reference DBs by symbol; resolve symbol → Path here.
     REF_PATHS = {
@@ -213,6 +215,8 @@ if MODE == "amplicon":
         "pr2_dada2":         PR2_DADA2,
         "pr2_utax":          PR2_UTAX,
         "silva_euk":         SILVA_EUK,
+        "gyrb_dada2":        GYRB_DADA2,
+        "rpob_frogs":        RPOB_FROGS,
     }
 
     # ── Primers (hard error if missing — mode=amplicon requires them) ──
@@ -222,9 +226,16 @@ if MODE == "amplicon":
         if not _p.exists():
             sys.exit(f"[MetaFlux] mode=amplicon requires primer FASTA but not found: {_p}")
 
-    AMPLICON_TYPE = amp_cfg["type"].upper()
-    if AMPLICON_TYPE not in MARKERS:
-        sys.exit(f"amplicon.type must be one of {sorted(MARKERS)} (got: {amp_cfg['type']!r})")
+    # Match amplicon.type to a marker pack case-INSENSITIVELY, then adopt the pack's
+    # own name as canonical. 16S/ITS/18S are uppercase so this is a no-op for them;
+    # mixed-case gene markers (gyrB, rpoB) keep their conventional casing rather than
+    # being flattened to GYRB/RPOB in logs and cache filenames. A user may write
+    # gyrb / GYRB / gyrB and all resolve to the shipped pack 'gyrB'.
+    _marker_by_ci = {name.upper(): name for name in MARKERS}
+    _req_type = amp_cfg["type"]
+    if _req_type.upper() not in _marker_by_ci:
+        sys.exit(f"amplicon.type must be one of {sorted(MARKERS)} (got: {_req_type!r})")
+    AMPLICON_TYPE = _marker_by_ci[_req_type.upper()]
 
     ITS_REGION = amp_cfg.get("its_region", "ITS2").upper()
     if AMPLICON_TYPE == "ITS" and ITS_REGION not in ("ITS1", "ITS2"):
@@ -319,8 +330,12 @@ if MODE == "amplicon":
         if PROFILE["taxonomy_species_db"] else []
     )
 
-    # SINTAX path (method: sintax)
-    TAXONOMY_SINTAX_DB  = REF_PATHS[PROFILE["taxonomy_sintax_db"]]
+    # SINTAX path (method: sintax). Some markers have no SINTAX build at all
+    # (gyrB's DD7RZ8, rpoB's FROGS release ship a DADA2/rdp trainset only), so the
+    # pack leaves taxonomy_sintax_db null and this stays None; the method guard
+    # below refuses method: sintax for such a marker rather than failing obscurely.
+    _sintax_sym         = PROFILE["taxonomy_sintax_db"]
+    TAXONOMY_SINTAX_DB  = REF_PATHS[_sintax_sym] if _sintax_sym else None
 
     # ── Taxonomy rank model (from the marker profile) ──
     # Drives the taxonomy-string builder in both 80a (rdp) and 80c (sintax),
@@ -365,6 +380,14 @@ if MODE == "amplicon":
         sys.exit(
             f"amplicon.taxonomy.method must be 'rdp' or 'sintax' "
             f"(got: {amp_cfg['taxonomy']['method']!r})"
+        )
+    # A marker with no SINTAX reference (gyrB, rpoB) can only be classified by rdp.
+    # Catch method: sintax here with a clear message instead of a None-path crash
+    # deeper in the sintax rule.
+    if TAXONOMY_METHOD == "sintax" and TAXONOMY_SINTAX_DB is None:
+        sys.exit(
+            f"[MetaFlux] marker {AMPLICON_TYPE} has no SINTAX reference database, so "
+            f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
         )
 
     # Taxonomy always reads the length-filtered outputs (dada_length_filter

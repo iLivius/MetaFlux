@@ -1,8 +1,10 @@
 # Snakemake internals — conda envs, metadata, locks, incomplete markers
 .snakemake/
 
-# Reference databases — downloaded/symlinked at run time, not part of the code
-refdb/
+# Reference databases — downloaded/symlinked at run time, not part of the code.
+# Anchored to the repo root so it does NOT also ignore workflow/scripts/refdb/
+# (the reference-preparation scripts, which ARE code).
+/refdb/
 
 # Python
 __pycache__/

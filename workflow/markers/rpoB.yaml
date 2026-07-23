@@ -1,0 +1,44 @@
+# MetaFlux marker pack: rpoB (bacterial RNA polymerase subunit B).
+# See 16S.yaml for what belongs in a pack and what does not.
+#
+# Protein-coding single-copy marker (Ogier et al. 2019); resolves species/strains
+# that 16S V3-V4 cannot. Reference is the FROGS RefSeq build (complete + chromosome
+# genomes, FetchMGS-extracted, 47k sequences). Unlike gyrB's DD7RZ8, these are
+# FULL-LENGTH rpoB genes (~4 kb), so:
+#   - probe_mode: pcr  — in-silico PCR of the primers recovers the ~435 bp amplicon
+#     window from the full gene (a direct read would return the whole gene, wrong).
+#   - no region extractor — there is no rpoB equivalent of Metaxa2/ITSx.
+probe_mode:          pcr
+probe_ref:           rpob_frogs
+probe_ref_tag:       rpob_refseq_cc_20240707
+probe_stat_key:      rpoB             # amplicon.probe_length_stat.rpoB feeds auto mode
+
+# rdp path only. The FROGS package is for its own classifier; MetaFlux uses the
+# converted FASTA with DADA2 assignTaxonomy. There is no SINTAX build, so
+# taxonomy.method must be rdp for rpoB.
+taxonomy_refdb:      rpob_frogs
+taxonomy_species_db: null             # no separate species step; the trainset goes to species
+taxonomy_sintax_db:  null             # no SINTAX build for this reference
+
+extractor:           none
+
+# Rank model. After conversion (10_refdb.smk convert_rpob_to_dada2) the header is
+#   >k__Bacteria;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Genus_species
+# a GTDB lineage with ranks already prefixed and a GTDB-style binomial species —
+# the same shape as 16S but with GTDB names. "embedded" = emit values verbatim.
+tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
+rank_letters:  [d, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
+rank_prefixes: [k__, p__, c__, o__, f__, g__, s__] # not applied under embedded style
+prefix_style:  embedded
+
+# The FROGS download is a .tar.gz bundling a FASTA, a BLAST index and an RDP tree,
+# with FROGS-specific headers (>ACC Root;k__X [id: N];...). It needs extraction AND a
+# header transform to become a DADA2 trainset, so — like UNITE and silva_sintax — it
+# keeps bespoke rules in 10_refdb.smk (fetch_rpob_archive + convert_rpob_to_dada2)
+# rather than a generated fetch. `archive: tgz` marks it so, and `file` is the
+# CONVERTED output path.
+references:
+  rpob_frogs:
+    archive: tgz
+    file: rpob/rpob_refseq_cc_20240707_dada2.fa.gz
+    url:  https://web-genobioinfo.toulouse.inrae.fr/frogs_databanks/assignation/rpoB/rpoB_bacteria_NCBI_refseq_genome_complete_and_chromosome_20240707.tar.gz

@@ -1,6 +1,26 @@
-# Reference DB management (amplicon-only): PhiX fetch + bowtie2 index;
-# SILVA training-set + species (16S); UNITE general release + UCHIME (ITS).
-# Each rule only runs when its output is missing — DBs are cached under refdb/.
+# Reference DB management (amplicon-only). Each rule runs only when its output is
+# missing — DBs are cached under refdb/.
+#
+# REFERENCE PREPARATION MAP — every reference falls into one of three prep tiers:
+#
+#   TIER 0  plain download, ready for its tool (NO code)
+#           silva_train, silva_species, unite_sintax, pr2_dada2, pr2_utax,
+#           silva_euk, gyrb_dada2  → handled by the GENERATED fetch loop at the
+#           bottom of this file, straight from the marker pack's url.
+#
+#   TIER 1  download + unpack an archive (bespoke rule, extraction only)
+#           unite_fasta (.tgz)         → fetch_unite
+#           unite_uchime_ITS1/2 (.zip) → fetch_uchime
+#           rpob_frogs (.tar.gz)       → fetch_rpob_archive  (raw FASTA, still FROGS-shaped)
+#
+#   TIER 2  reshape the FASTA into the format a classifier wants (bespoke rule +
+#           a named script in workflow/scripts/refdb/ — that folder is the ONE place
+#           the database-specific transform logic lives)
+#           silva_sintax  ← convert_silva_sintax   (refdb/silva_to_sintax.py)
+#           rpob_frogs    ← convert_rpob_to_dada2   (refdb/frogs_rpob_to_dada2.py)
+#
+# PhiX is separate: it is a decontamination reference, not taxonomy — fetched and
+# bowtie2-indexed below.
 
 rule fetch_phix:
     output:
@@ -84,7 +104,7 @@ rule convert_silva_sintax:
     conda:
         "../../envs/python_utils.yaml"
     script:
-        "../../scripts/amplicon/10a_silva_to_sintax.py"
+        "../../scripts/refdb/silva_to_sintax.py"
 
 
 # ───────────────────── UNITE SINTAX download (ITS) ─────────────────────────
@@ -116,6 +136,58 @@ rule fetch_uchime:
         mv "$src1" {output.its1}
         mv "$src2" {output.its2}
         """
+
+
+# ───────────────────── rpoB FROGS → DADA2 (fetch + convert) ────────────────
+# The FROGS RefSeq rpoB release is a .tar.gz bundling the FASTA, a BLAST index and
+# an RDP-classifier tree, with FROGS-shaped headers:
+#   >WP_095092576.1 Root;k__Bacteria [id: 1];p__Bacillota [id: 2];...;s__X [id: 7]
+# Prepared in two steps that mirror the SILVA fetch+convert pattern above:
+#   fetch_rpob_archive   — download + unpack, keep only the raw FASTA (Tier 1)
+#   convert_rpob_to_dada2 — rewrite headers to a DADA2 trainset (Tier 2), the
+#                           reshape logic living in refdb/frogs_rpob_to_dada2.py
+
+# Raw FROGS FASTA (still FROGS-shaped); consumed by the converter, then deleted.
+RPOB_FROGS_RAW = RPOB_FROGS.parent / "rpob_frogs_raw.fasta.gz"
+
+rule fetch_rpob_archive:
+    output:
+        fasta = temp(RPOB_FROGS_RAW),
+    params:
+        url = PACK_REF_URLS["rpob_frogs"],
+    log:
+        LOGS / "refdb" / "fetch_rpob_archive.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        r"""
+        mkdir -p $(dirname {output.fasta})
+        tmp=$(mktemp -d)
+        trap 'rm -rf "$tmp"' EXIT
+        wget -O $tmp/rpob.tar.gz "{params.url}" > {log} 2>&1
+        tar -xzf $tmp/rpob.tar.gz -C $tmp >> {log} 2>&1
+        # The single true FASTA in the archive (the BLAST index files end in
+        # .fasta.n**, and there is a .fasta.properties — exclude both).
+        src=$(find $tmp -type f -name '*.fasta' ! -name '*.properties' | head -1)
+        if [ -z "$src" ]; then
+            echo "Could not find the rpoB FASTA in the FROGS archive" >> {log}
+            exit 1
+        fi
+        gzip -c "$src" > {output.fasta}
+        """
+
+
+rule convert_rpob_to_dada2:
+    input:
+        fasta = RPOB_FROGS_RAW,
+    output:
+        fasta = RPOB_FROGS,
+    log:
+        LOGS / "refdb" / "convert_rpob_to_dada2.log",
+    conda:
+        "../../envs/python_utils.yaml"
+    script:
+        "../../scripts/refdb/frogs_rpob_to_dada2.py"
 
 
 # ── 18S references ────────────────────────────────────────────────────────

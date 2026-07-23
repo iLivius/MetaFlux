@@ -1,0 +1,45 @@
+# MetaFlux marker pack: gyrB (bacterial DNA gyrase subunit B).
+# See 16S.yaml for what belongs in a pack and what does not.
+#
+# Protein-coding single-copy marker; higher intra-genus resolution than 16S.
+# Reference is the INRAE DD7RZ8 v6 trainset (GTDB r226): in-silico amplicons cut
+# with the Barret 2015 primers, so the sequences are ALREADY the trimmed amplicon
+# (~247 bp). That has two consequences handled below:
+#   - probe_mode: direct  — amplicon lengths are read straight off the DB, never by
+#     in-silico PCR (which aborts on pre-trimmed references).
+#   - no region extractor — there is no gyrB equivalent of Metaxa2/ITSx.
+probe_mode:          direct
+probe_ref:           gyrb_dada2
+probe_ref_tag:       gyrb_dd7rz8_v6
+probe_stat_key:      16S              # unused by the direct path; kept for parity
+
+# rdp path only. The DD7RZ8 release ships a DADA2 trainset and NO SINTAX build, so
+# there is no sintax reference to name — taxonomy.method must be rdp for gyrB.
+taxonomy_refdb:      gyrb_dada2
+taxonomy_species_db: null             # no separate species step; the trainset goes to species
+taxonomy_sintax_db:  null             # no SINTAX build exists for DD7RZ8
+
+extractor:           none
+
+# Rank model. The DD7RZ8 header is
+#   >{gene};p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Genus_species
+# i.e. a GTDB lineage with the ranks ALREADY prefixed (p__/c__/…/s__), preceded by
+# a bare gene tag in slot 1. The tag is "gyrB" (true gyrB) or "other" (a co-amplified
+# paralog such as parE) — a built-in paralog flag. We keep it as the first rank so a
+# run can drop paralogs with the ordinary keep/discard filter (discard: [other]).
+#
+# "embedded" = values already carry their prefix, so the builder emits them verbatim
+# (the gene tag, being unprefixed, is emitted as-is; species stays a GTDB binomial).
+tax_levels:    [Gene, Phylum, Class, Order, Family, Genus, Species]
+rank_letters:  [g, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
+rank_prefixes: ["", p__, c__, o__, f__, g__, s__] # not applied under embedded style
+prefix_style:  embedded
+
+# The DD7RZ8 v6 trainset is a single plain .fa.gz download (Recherche Data Gouv /
+# Dataverse), so a fetch rule is GENERATED from the url below — no code to write.
+# The url is the Dataverse file-access API endpoint for train_set_gyrB_v6.fa.gz; it
+# 303-redirects to the object store, which wget follows.
+references:
+  gyrb_dada2:
+    file: gyrb/train_set_gyrB_v6.fa.gz
+    url:  https://entrepot.recherche.data.gouv.fr/api/access/datafile/760120

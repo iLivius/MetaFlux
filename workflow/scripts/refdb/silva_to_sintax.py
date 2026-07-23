@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Convert the SILVA DADA2 RDP trainset to VSEARCH SINTAX format.
+"""Reference-DB prep (workflow/scripts/refdb/): SILVA DADA2 trainset -> VSEARCH SINTAX.
+
+One of the reference-preparation scripts. Each script here turns one upstream
+database into the exact format a classifier wants; the rules in 10_refdb.smk just
+fetch and call these. See workflow/scripts/refdb/README.md for the full list.
+
+SCOPE: this converter is SILVA/16S-specific — it assumes a BARE 6-rank lineage
+(kingdom..genus, no species) with no rank prefixes and no accession field. It is
+NOT a general DADA2->SINTAX tool: a marker with embedded prefixes (k__/p__),
+a species rank, or a gene tag (gyrB) would need a rank-model-aware converter. When
+a second marker needs SINTAX, generalise this using the pack's rank metadata
+(tax_levels / rank_letters / rank_prefixes / prefix_style) rather than copying it.
 
 The SILVA DADA2 trainset (toGenus) uses the full lineage as the FASTA header
 with no separate accession field:
