@@ -1,0 +1,24 @@
+# MetaFlux marker pack: 16S rRNA (bacteria/archaea).
+#
+# FACTS ABOUT THE MARKER ONLY. This file is loaded into its own namespace and is
+# never merged into `config`, so nothing here can shadow a run-config setting and
+# nothing here is a tuning knob. If you would change a value for one run and not
+# the next (primers, expected_length, truncLen, filter lists), it belongs in the
+# run config instead.
+probe_mode:          pcr              # pcr | direct | none
+probe_ref:           silva_train
+probe_ref_tag:       silva_v138.2_toGenus
+probe_stat_key:      16S              # which amplicon.probe_length_stat.<key> the pcr path reads
+
+taxonomy_refdb:      silva_train      # rdp path
+taxonomy_species_db: silva_species    # addSpecies (16S only)
+taxonomy_sintax_db:  silva_sintax     # sintax path
+
+extractor:           metaxa2          # metaxa2 | itsx | none
+
+# Rank model. "bare" = reference values carry no rank prefix, so the builder adds
+# rank_prefixes and renders the species slot as a Genus+species binomial.
+tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
+rank_letters:  [d, p, c, o, f, g, s]
+rank_prefixes: [k__, p__, c__, o__, f__, g__, s__]
+prefix_style:  bare

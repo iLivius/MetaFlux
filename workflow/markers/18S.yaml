@@ -1,0 +1,32 @@
+# MetaFlux marker pack: 18S rRNA (eukaryotes).
+# See 16S.yaml for what belongs in a pack and what does not.
+#
+# Probed against SILVA-Euk (96-97% in-silico primer recovery vs 66-75% on PR2) but
+# classified against PR2, the better-curated eukaryote/protist reference. No target
+# region extractor: Metaxa2 could handle SSU but is deliberately not used here, so
+# extraction is forced off with a warning.
+probe_mode:          pcr
+probe_ref:           silva_euk
+probe_ref_tag:       silva_euk_18s_v132
+probe_stat_key:      18S
+
+taxonomy_refdb:      pr2_dada2        # rdp path
+taxonomy_species_db: null             # PR2 carries species in-line; no addSpecies step
+taxonomy_sintax_db:  pr2_utax         # sintax path
+
+extractor:           none
+
+# PR2's two release files DISAGREE on rank depth (verified against v5.1.1):
+#   dada2 file : 9 ranks  Domain;Supergroup;Division;Subdivision;Class;...;Species
+#   UTAX  file : 8 ranks  k:Domain,d:Supergroup,p:Division-Subdivision,c:Class,...
+# so the sintax path declares its own model below. Prefixes are keyed to rank
+# MEANING, not to the underlying letters, so one keep/discard token behaves the
+# same under either method (d__Eukaryota works for both).
+tax_levels:    [Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species]
+rank_letters:  [d, sg, dv, sbd, c, o, f, g, s]     # rdp path: unused
+rank_prefixes: [d__, sg__, dv__, sbd__, c__, o__, f__, g__, s__]
+prefix_style:  bare
+
+sintax_tax_levels:    [Domain, Supergroup, Division_Subdivision, Class, Order, Family, Genus, Species]
+sintax_rank_letters:  [k, d, p, c, o, f, g, s]
+sintax_rank_prefixes: [d__, sg__, dv__, c__, o__, f__, g__, s__]

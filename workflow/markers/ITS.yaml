@@ -1,0 +1,21 @@
+# MetaFlux marker pack: fungal ITS.
+# See 16S.yaml for what belongs in a pack and what does not.
+#
+# "{region}" is the ONLY reserved placeholder; it is filled from amplicon.its_region.
+probe_mode:          direct           # the UNITE UCHIME release is already the trimmed
+probe_ref:           "unite_uchime_{region}"   # subregion, so lengths are measured directly
+probe_ref_tag:       "unite_uchime_{region}"
+probe_stat_key:      16S              # unused by the direct path; kept for byte-parity
+
+taxonomy_refdb:      unite_fasta
+taxonomy_species_db: null             # no addSpecies for ITS
+taxonomy_sintax_db:  unite_sintax
+
+extractor:           itsx
+
+# "embedded" = UNITE values already carry k__/p__ prefixes, so the builder emits
+# them verbatim rather than adding its own.
+tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
+rank_letters:  [d, p, c, o, f, g, s]
+rank_prefixes: [k__, p__, c__, o__, f__, g__, s__]
+prefix_style:  embedded

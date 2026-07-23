@@ -11,6 +11,7 @@ import os
 import sys
 import urllib.parse
 import urllib.request
+import yaml
 from pathlib import Path
 
 from snakemake.io import glob_wildcards
@@ -95,74 +96,50 @@ def mem_mb_for(rule_name: str) -> int:
 #                       (rdp path only; the SINTAX path always normalises to
 #                       bare letters then re-adds rank_prefixes.)
 #
-# The contaminant keep/discard lists are NOT a profile field: they live only in
+# The contaminant keep/discard lists are NOT a pack field: they live only in
 # config (amplicon.taxonomy.filter.keep / .discard), documented per marker in
-# the config template + README — there is no hidden code default to reconcile.
-MARKERS = {
-    "16S": {
-        "probe_mode":          "pcr",
-        "probe_ref":           "silva_train",
-        "probe_ref_tag":       "silva_v138.2_toGenus",
-        "probe_stat_key":      "16S",
-        "taxonomy_refdb":      "silva_train",
-        "taxonomy_species_db": "silva_species",
-        "taxonomy_sintax_db":  "silva_sintax",
-        "extractor":           "metaxa2",
-        "tax_levels":    ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"],
-        "rank_letters":  ["d", "p", "c", "o", "f", "g", "s"],
-        "rank_prefixes": ["k__", "p__", "c__", "o__", "f__", "g__", "s__"],
-        "prefix_style":  "bare",
-    },
-    "ITS": {
-        "probe_mode":          "direct",
-        "probe_ref":           "unite_uchime_{region}",
-        "probe_ref_tag":       "unite_uchime_{region}",
-        "probe_stat_key":      "16S",   # unused by the direct path; kept for byte-parity
-        "taxonomy_refdb":      "unite_fasta",
-        "taxonomy_species_db": None,
-        "taxonomy_sintax_db":  "unite_sintax",
-        "extractor":           "itsx",
-        "tax_levels":    ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"],
-        "rank_letters":  ["d", "p", "c", "o", "f", "g", "s"],
-        "rank_prefixes": ["k__", "p__", "c__", "o__", "f__", "g__", "s__"],
-        "prefix_style":  "embedded",
-    },
-    # 18S — eukaryotes. Probed against SILVA-Euk (96-97% in-silico primer recovery
-    # vs 66-75% on PR2) but classified against PR2, which is the better-curated
-    # protist reference. No target-region extractor: Metaxa2 could do SSU, but it
-    # is deliberately not used for this marker, so extraction is forced off.
-    # NOTE the two PR2 files disagree on rank depth (verified against v5.1.1):
-    #   DADA2 file : 9 ranks  Domain;Supergroup;Division;Subdivision;Class;…;Species
-    #   UTAX  file : 8 ranks  k:Domain,d:Supergroup,p:Division-Subdivision,c:Class,…
-    # hence the sintax_* overrides below.
-    "18S": {
-        "probe_mode":          "pcr",
-        "probe_ref":           "silva_euk",
-        "probe_ref_tag":       "silva_euk_18s_v132",
-        "probe_stat_key":      "18S",
-        "taxonomy_refdb":      "pr2_dada2",
-        "taxonomy_species_db": None,          # PR2 carries species in-line; no addSpecies step
-        "taxonomy_sintax_db":  "pr2_utax",
-        "extractor":           "none",
-        # rdp path — PR2 DADA2 file (9 ranks); taxLevels must be declared or
-        # assignTaxonomy silently truncates to its default 7.
-        "tax_levels":    ["Domain", "Supergroup", "Division", "Subdivision",
-                          "Class", "Order", "Family", "Genus", "Species"],
-        "rank_letters":  ["d", "sg", "dv", "sbd", "c", "o", "f", "g", "s"],  # rdp path: unused
-        "rank_prefixes": ["d__", "sg__", "dv__", "sbd__",
-                          "c__", "o__", "f__", "g__", "s__"],
-        "prefix_style":  "bare",
-        # sintax path — PR2 UTAX file (8 ranks, Division+Subdivision merged).
-        # Prefixes stay keyed to meaning, so d__Eukaryota means the same under
-        # both methods even though the underlying letters differ.
-        "sintax_tax_levels":    ["Domain", "Supergroup", "Division_Subdivision",
-                                 "Class", "Order", "Family", "Genus", "Species"],
-        "sintax_rank_letters":  ["k", "d", "p", "c", "o", "f", "g", "s"],
-        "sintax_rank_prefixes": ["d__", "sg__", "dv__",
-                                 "c__", "o__", "f__", "g__", "s__"],
-    },
-}
+# the config template + README — there is no hidden default to reconcile.
+#
+# These fields are DATA, in workflow/markers/<type>.yaml (see _load_marker_packs).
+# Adding a marker means adding a pack file, not editing this module.
+MARKERS_SHIPPED_DIR = Path(workflow.basedir) / "markers"
+MARKERS_USER_DIR    = Path("config") / "markers"
 
+
+def _load_marker_packs():
+    """Load marker packs from YAML into their OWN namespace.
+
+    Packs are DATA, never merged into `config`: a pack is read as MARKERS[type][...]
+    and a run setting as config["amplicon"][...], so no key has two homes and there
+    is no precedence rule to remember. A pack therefore cannot silently supply a
+    user preference, and a run config cannot accidentally shadow a marker fact.
+
+    workflow/markers/*.yaml ships with the pipeline; config/markers/*.yaml is the
+    user's own, shadowing a shipped pack of the same name. Adding a marker is a
+    data-only change — no code edit.
+    """
+    packs = {}
+    for d in (MARKERS_SHIPPED_DIR, MARKERS_USER_DIR):
+        if not d.is_dir():
+            continue
+        for f in sorted(d.glob("*.yaml")):
+            try:
+                with open(f) as fh:
+                    pack = yaml.safe_load(fh) or {}
+            except Exception as e:
+                sys.exit(f"[MetaFlux] could not read marker pack {f}: {e}")
+            if not isinstance(pack, dict):
+                sys.exit(f"[MetaFlux] marker pack {f} must be a YAML mapping")
+            packs[f.stem] = pack
+    if not packs:
+        sys.exit(
+            f"[MetaFlux] no marker packs found in {MARKERS_SHIPPED_DIR} "
+            f"(or {MARKERS_USER_DIR}). The installation looks incomplete."
+        )
+    return packs
+
+
+MARKERS = _load_marker_packs()
 
 def _as_taxon_list(v):
     """Normalize a keep/discard config value to a list of tokens.
