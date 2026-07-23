@@ -29,7 +29,7 @@ rule pick_trunclen:
         resolve_policy  = config["amplicon"]["trunc_len"]["resolve_policy"],
         manual_r1       = config["amplicon"]["trunc_len"]["manual_r1"],
         manual_r2       = config["amplicon"]["trunc_len"]["manual_r2"],
-        probe_stat_16s  = PROBE_LENGTH_STAT,
+        probe_stat      = PROBE_LENGTH_STAT,
     log:
         LOGS / "pick_trunclen.log",
     threads: lambda wc: threads_for("pick_trunclen")

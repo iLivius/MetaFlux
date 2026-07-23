@@ -154,14 +154,14 @@ def first_drop_trunclen(bins: list[tuple[int, int, float]], threshold: float) ->
 
 # ── Convert the config amplicon length setting to a single number ─
 def resolve_expected_length(expected_length, amp_type, probe_json_path, log_fn,
-                            probe_stat_16s: str = "p95") -> tuple[int, str]:
+                            probe_stat: str = "p95") -> tuple[int, str]:
     """Validate and resolve amplicon.expected_length from config to a single int.
 
     Accepts:
       - int / float                       e.g. 338
       - [min, max] list                   e.g. [320, 360]  (uses max for overlap constraint)
       - "auto"                            reads the amplicon_probe JSON and picks
-                                          the stat from probe_stat_16s / probe_stat_its.
+                                          the stat resolved per-marker upstream (probe_stat).
     Returns (resolved_int, source_label) for inclusion in trunclen.json.
     """
     if expected_length is None:
@@ -182,11 +182,12 @@ def resolve_expected_length(expected_length, amp_type, probe_json_path, log_fn,
                     f"check the pipeline DAG and refdb/cache/."
                 )
             probe = json.loads(Path(probe_json_path).read_text())
-            # Statistic is configurable via config.amplicon.probe_length_stat (16S only)
-            if amp_type == "16S":
-                stat = probe_stat_16s
-            else:
-                raise ValueError(f"Unsupported amplicon_type for auto-probe expected_length: {amp_type}")
+            # Which statistic to read is already resolved per-marker upstream:
+            # 00_common.smk maps the marker pack's probe_stat_key onto
+            # amplicon.probe_length_stat.<key> and passes it in as probe_stat.
+            # Markers whose probe runs in "direct" mode (ITS) return before this
+            # point, so anything arriving here has a pcr probe and a valid stat.
+            stat = probe_stat
             if stat not in probe:
                 raise KeyError(
                     f"Probe JSON does not contain stat '{stat}'. "
@@ -273,7 +274,7 @@ def main() -> int:
     resolve_policy  = p.resolve_policy
     manual_r1       = p.manual_r1
     manual_r2       = p.manual_r2
-    probe_stat_16s  = str(p.probe_stat_16s)
+    probe_stat  = str(p.probe_stat)
 
     log(f"[pick_trunclen] amp_type={amp_type} mode={mode} q_threshold={q_threshold}")
     log(f"[pick_trunclen] R1 falco files: {len(falco_r1)}; R2 falco files: {len(falco_r2)}")
@@ -351,7 +352,7 @@ def main() -> int:
 
     exp_len, exp_len_source = resolve_expected_length(
         expected_length, amp_type, probe_json_path, log,
-        probe_stat_16s=probe_stat_16s,
+        probe_stat=probe_stat,
     )
     log(f"[pick_trunclen] expected_length (for overlap): {exp_len} (source: {exp_len_source}), min_overlap: {min_overlap}")
 
