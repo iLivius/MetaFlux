@@ -1,4 +1,4 @@
-# MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow.
+# MetaFlux v2.0.0 — Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow.
 #
 # Invocation (from the repository root):
 #   snakemake --sdm conda --cores N --configfile config/config.yaml
@@ -6,7 +6,7 @@
 #  the deprecated --use-conda flag in modern Snakemake.)
 #
 # Mode is selected via config["mode"]: 'amplicon' or 'shotgun'.
-#   amplicon → rules/amplicon/*.smk  (DADA2-based 16S/ITS workflow)
+#   amplicon → rules/amplicon/*.smk  (DADA2-based 16S/ITS/18S workflow)
 #   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken-based shotgun workflow)
 # Shared modules (rules/shared/*.smk) are always included.
 
@@ -19,8 +19,8 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-MetaFlux v1.0.0
-Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow
+MetaFlux v2.0.0
+Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow
 
 Livio Antonielli, May 2026
 """)

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow
+# MetaFlux v2.0.0 — Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
 # TEMPLATE configuration. Replace every `/path/to/...` placeholder with a real path,
 # choose a `mode`, and set the references that mode needs. A convenient pattern is to
@@ -83,7 +83,7 @@ amplicon:
   # seed fixed — verified empirically (8 threads: differs; 1 thread:
   # identical). For byte-reproducible sintax output, set
   # resources.threads.assign_taxonomy: 1 (slower). See README Troubleshooting.
-  seed: 100
+  seed: 42
 
   decontamination:
     remove_phix: true                         # bowtie2 vs the fetched PhiX reference; false = skip PhiX removal

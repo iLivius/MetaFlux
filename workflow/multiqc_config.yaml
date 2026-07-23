@@ -20,7 +20,7 @@ extra_fn_clean_exts:
   - "_fastp"
 
 report_header_info:
-  - Pipeline: "MetaFlux v1.0.0 — Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow"
+  - Pipeline: "MetaFlux v2.0.0 — Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow"
 
 # ── Shotgun-side tuning ─────────────────────────────────────────
 kraken:

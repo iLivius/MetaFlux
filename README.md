@@ -7,10 +7,10 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-v1.0.0
+v2.0.0
 ```
 
-**Unified Illumina 16S/ITS amplicon and shotgun taxonomic profiling workflow.**
+**Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow.**
 
 ![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A59.0-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -23,9 +23,9 @@ paired-end Illumina reads through to a taxonomically annotated abundance table. 
 runs in one of two modes, selected by a single config key:
 
 - **`amplicon`** — a [DADA2](https://benjjneb.github.io/dada2/)-based pipeline for
-  16S rRNA and ITS metabarcoding: PhiX removal, primer trimming, exact ASV
-  inference, marker-region extraction, length filtering, and taxonomic assignment
-  against SILVA (16S) or UNITE (ITS).
+  16S rRNA, ITS, and 18S rRNA metabarcoding: PhiX removal, primer trimming, exact
+  ASV inference, marker-region extraction, length filtering, and taxonomic
+  assignment against SILVA (16S), UNITE (ITS), or PR2 (18S).
 - **`shotgun`** — a [Kraken2](https://github.com/DerrickWood/kraken2) +
   [Bracken](https://github.com/jenniferlu717/Bracken) pipeline for shotgun
   metagenomic taxonomic profiling: decontamination, quality trimming, read
@@ -136,7 +136,7 @@ mode.
 
 ### Amplicon mode
 
-DADA2-based 16S/ITS metabarcoding. Steps (each maps to a numbered output directory):
+DADA2-based 16S/ITS/18S metabarcoding. Steps (each maps to a numbered output directory):
 
 1. **PhiX removal** *(optional)* — [bowtie2](https://github.com/BenLangmead/bowtie2)
    maps against the PhiX reference; unmapped reads are kept. Toggle with
@@ -726,8 +726,8 @@ Portions of this codebase were developed with the assistance of Claude Code.
 Publications that use MetaFlux should cite this repository. A formal release with a
 Zenodo DOI is forthcoming:
 
-> Antonielli, L. (2026). *MetaFlux: a unified Illumina 16S/ITS amplicon and shotgun
-> taxonomic profiling workflow.* Zenodo. DOI: pending release.
+> Antonielli, L. (2026). *MetaFlux: a unified Illumina 16S/ITS/18S amplicon and
+> shotgun taxonomic profiling workflow.* Zenodo. DOI: pending release.
 
 The underlying tools should also be cited (see [References](#references)).
 
