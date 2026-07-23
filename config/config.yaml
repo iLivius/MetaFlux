@@ -126,13 +126,13 @@ amplicon:
     # No quality trimming at this stage — DADA2 wants per-cycle Q profiles intact.
 
   trunc_len:
-    mode: manual                              # auto | manual
+    mode: auto                                # auto | manual
     q_threshold: 20                           # Q1 (25th-percentile) cutoff for auto
     q_floor: 15                               # floor used by relax_q resolve_policy
     resolve_policy: raise_trunc               # raise_trunc | relax_q | error
     subsample_files: 12                       # number of files sampled by dada2::qa() per direction
-    manual_r1: 260                            # used only when mode == manual
-    manual_r2: 240
+    manual_r1: #260                           # used only when mode == manual
+    manual_r2: #240
     # Both 16S and ITS use the same Q-based picker + overlap constraint.
     # For ITS, truncLen is overridden to (0, 0) in filterAndTrim — no hard cut
     # is applied; quality is controlled by maxEE and min_len only.
@@ -165,13 +165,24 @@ amplicon:
       # `keep` runs first (defines what survives); then `discard` prunes what's left.
       # An empty list [] means that direction does nothing. There is NO built-in
       # default — whatever you list here is exactly what is applied, so set these to
-      # match your marker. Recommended starting points:
+      # match your marker.
+      #
+      # The values below are COMMENTED OUT on purpose. This file is always loaded as a
+      # base layer beneath your --configfile, so a concrete value here would silently
+      # apply to any run that does not set its own (e.g. 16S taxon strings leaking into
+      # an 18S run, which would discard every eukaryotic ASV). Left unset they resolve
+      # to [] = no filtering, which fails safe. Copy the line for your marker into YOUR
+      # run config and uncomment it there.
+      #
+      # Recommended starting points:
       #   16S : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
-      #   ITS : keep [k__Fungi]                   discard []
+      #   ITS : keep [k__Fungi]                  discard []
+      #   18S : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
+      #                                                       # use k__Eukaryota with SILVA-Euk
       # To drop lab/kit contaminants a blank control revealed, add them to discard,
       # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
-      keep:    [k__Bacteria, k__Archaea]        # 16S template default (see above)
-      discard: [o__Chloroplast, f__Mitochondria]
+      keep:    #[k__Bacteria, k__Archaea]
+      discard: #[o__Chloroplast, f__Mitochondria]
 
   dada2:
     pool: false                               # false | "pseudo" | true
