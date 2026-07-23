@@ -158,22 +158,48 @@ if MODE == "amplicon":
     amp_cfg = config["amplicon"]
 
     # ── References (resolved paths + symbol table) ──
-    SILVA_TRAIN          = Path(config["references"]["silva"]["train"]).resolve()
-    SILVA_SPECIES        = Path(config["references"]["silva"]["species"]).resolve()
-    SILVA_SINTAX         = Path(config["references"]["silva"]["sintax"]).resolve()
-    UNITE_FASTA          = Path(config["references"]["unite"]["fasta"]).resolve()
-    UNITE_SINTAX         = Path(config["references"]["unite"]["sintax"]).resolve()
-    UNITE_UCHIME_ITS1_FA = Path(config["references"]["unite"]["uchime_its1"]).resolve()
-    UNITE_UCHIME_ITS2_FA = Path(config["references"]["unite"]["uchime_its2"]).resolve()
+    # A path comes from the run config when given (so existing configs are
+    # unchanged), otherwise from the owning marker pack's references.<symbol>.file
+    # relative to references.refdb_root. Packs therefore carry every marker's DB
+    # locations and URLs, and the config need only name a reference to RELOCATE it.
+    REFDB_ROOT = Path(config["references"].get("refdb_root", "refdb"))
 
-    # 18S references. Defaulted so configs written before 18S support still parse
-    # (they simply never resolve these paths); override under references.pr2 /
-    # references.silva_euk to relocate them.
-    _pr2_cfg  = config["references"].get("pr2", {}) or {}
-    _seuk_cfg = config["references"].get("silva_euk", {}) or {}
-    PR2_DADA2 = Path(_pr2_cfg.get("dada2", "refdb/pr2/pr2_SSU_dada2.fasta.gz")).resolve()
-    PR2_UTAX  = Path(_pr2_cfg.get("utax",  "refdb/pr2/pr2_SSU_UTAX.fasta.gz")).resolve()
-    SILVA_EUK = Path(_seuk_cfg.get("fasta", "refdb/silva_euk/silva_132.18s.dada2.fa.gz")).resolve()
+    _PACK_REF_FILES = {}
+    PACK_REF_URLS = {}
+    for _pack in MARKERS.values():
+        for _sym, _spec in (_pack.get("references") or {}).items():
+            if not isinstance(_spec, dict):
+                continue
+            if _spec.get("file"):
+                _PACK_REF_FILES.setdefault(_sym, _spec["file"])
+            if _spec.get("url"):
+                PACK_REF_URLS.setdefault(_sym, _spec["url"])
+
+    def _ref_path(symbol, *cfg_keys):
+        """Resolve a reference path: explicit config entry first, else pack default."""
+        node = config["references"]
+        for k in cfg_keys:
+            node = node.get(k) if isinstance(node, dict) else None
+        if node:
+            return Path(node).resolve()
+        if symbol in _PACK_REF_FILES:
+            return (REFDB_ROOT / _PACK_REF_FILES[symbol]).resolve()
+        sys.exit(
+            f"[MetaFlux] reference '{symbol}' has no path. Either set references."
+            f"{'.'.join(cfg_keys)} in the config, or give the marker pack a "
+            f"references.{symbol}.file entry."
+        )
+
+    SILVA_TRAIN          = _ref_path("silva_train",       "silva", "train")
+    SILVA_SPECIES        = _ref_path("silva_species",     "silva", "species")
+    SILVA_SINTAX         = _ref_path("silva_sintax",      "silva", "sintax")
+    UNITE_FASTA          = _ref_path("unite_fasta",       "unite", "fasta")
+    UNITE_SINTAX         = _ref_path("unite_sintax",      "unite", "sintax")
+    UNITE_UCHIME_ITS1_FA = _ref_path("unite_uchime_ITS1", "unite", "uchime_its1")
+    UNITE_UCHIME_ITS2_FA = _ref_path("unite_uchime_ITS2", "unite", "uchime_its2")
+    PR2_DADA2            = _ref_path("pr2_dada2",         "pr2",   "dada2")
+    PR2_UTAX             = _ref_path("pr2_utax",          "pr2",   "utax")
+    SILVA_EUK            = _ref_path("silva_euk",         "silva_euk", "fasta")
 
     # Marker profiles reference DBs by symbol; resolve symbol → Path here.
     REF_PATHS = {
@@ -207,22 +233,17 @@ if MODE == "amplicon":
     # The active marker's profile — the single source for every dispatch below.
     PROFILE = MARKERS[AMPLICON_TYPE]
 
-    # Pack-declared references fill in anything the config does not pin explicitly,
-    # so a NEW marker needs only its pack file — no config entry and no fetch rule.
-    # An explicit config path still wins, which keeps existing configs resolving
-    # byte-identically.
-    REFDB_ROOT = Path(config["references"].get("refdb_root", "refdb"))
-    for _sym, _spec in (PROFILE.get("references") or {}).items():
-        if _sym not in REF_PATHS and isinstance(_spec, dict) and _spec.get("file"):
-            REF_PATHS[_sym] = (REFDB_ROOT / _spec["file"]).resolve()
-
-    # Symbols the active pack can fetch with a plain download. 10_refdb.smk turns
-    # each into a generated fetch rule; anything needing archive extraction or a
-    # transform keeps a bespoke rule there instead.
+    # Symbols the ACTIVE pack can fetch with a plain download. 10_refdb.smk turns
+    # each into a generated fetch rule. Entries carrying an `archive` (UNITE .tgz /
+    # .zip) need extraction and keep their bespoke rule there instead, as does
+    # silva_sintax, which is derived from silva_train rather than downloaded.
     PACK_FETCHABLE = {
         _sym: {"path": REF_PATHS[_sym], "url": _spec["url"]}
         for _sym, _spec in (PROFILE.get("references") or {}).items()
-        if isinstance(_spec, dict) and _spec.get("url") and _sym in REF_PATHS
+        if isinstance(_spec, dict)
+        and _spec.get("url")
+        and not _spec.get("archive")
+        and _sym in REF_PATHS
     }
 
     ORIENTATION = amp_cfg["primers"].get("orientation", "fixed").lower()

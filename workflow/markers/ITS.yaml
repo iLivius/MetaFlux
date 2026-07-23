@@ -22,7 +22,20 @@ prefix_style:  embedded
 
 # See 16S.yaml. unite_fasta (.tgz) and unite_uchime_ITS1/ITS2 (.zip) need archive
 # extraction, so they keep bespoke rules in 10_refdb.smk rather than appearing here.
+
 references:
+  unite_fasta:
+    archive: tgz
+    file: unite/sh_general_release_dynamic_s_all_19.02.2025.fasta
+    url: https://s3.hpc.ut.ee/plutof-public/original/b02db549-5f04-43fc-afb6-02888b594d10.tgz
   unite_sintax:
     file: unite/utax_reference_dataset_all_19.02.2025.fasta.gz
-    url:  https://s3.hpc.ut.ee/plutof-public/original/338a1413-6039-4e00-b5cf-410346a1e366.gz
+    url: https://s3.hpc.ut.ee/plutof-public/original/338a1413-6039-4e00-b5cf-410346a1e366.gz
+  unite_uchime_ITS1:
+    archive: zip
+    file: unite/uchime_its1.fasta
+    url: https://s3.hpc.ut.ee/plutof-public/original/25ff4a97-e637-4d27-a442-9451afb5cbc6.zip
+  unite_uchime_ITS2:
+    archive: zip
+    file: unite/uchime_its2.fasta
+    url: https://s3.hpc.ut.ee/plutof-public/original/25ff4a97-e637-4d27-a442-9451afb5cbc6.zip

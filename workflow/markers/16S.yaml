@@ -29,10 +29,13 @@ prefix_style:  bare
 # References needing archive extraction or a transform keep a bespoke rule in
 # 10_refdb.smk and are deliberately absent here (silva_sintax is derived from
 # silva_train by convert_silva_sintax).
+
 references:
-  silva_train:
-    file: silva/silva_nr99_v138.2_toGenus_trainset.fa.gz
-    url:  https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainset.fa.gz
+  silva_sintax:
+    file: silva/silva_nr99_v138.2_sintax.fa.gz
   silva_species:
     file: silva/silva_v138.2_assignSpecies.fa.gz
-    url:  https://zenodo.org/records/14169026/files/silva_v138.2_assignSpecies.fa.gz
+    url: https://zenodo.org/records/14169026/files/silva_v138.2_assignSpecies.fa.gz
+  silva_train:
+    file: silva/silva_nr99_v138.2_toGenus_trainset.fa.gz
+    url: https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainset.fa.gz

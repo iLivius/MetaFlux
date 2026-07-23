@@ -48,7 +48,7 @@ rule fetch_unite:
     output:
         fasta = UNITE_FASTA,
     params:
-        url = config["references"]["unite"]["fetch_url"],
+        url = PACK_REF_URLS["unite_fasta"],
     log:
         LOGS / "refdb" / "fetch_unite.log",
     conda:
@@ -95,7 +95,7 @@ rule fetch_uchime:
         its1 = UNITE_UCHIME_ITS1_FA,
         its2 = UNITE_UCHIME_ITS2_FA,
     params:
-        url = config["references"]["unite"]["fetch_url_uchime"],
+        url = PACK_REF_URLS["unite_uchime_ITS1"],
     log:
         LOGS / "refdb" / "fetch_uchime.log",
     conda:
