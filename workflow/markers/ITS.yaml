@@ -19,3 +19,10 @@ tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
 rank_letters:  [d, p, c, o, f, g, s]
 rank_prefixes: [k__, p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
+
+# See 16S.yaml. unite_fasta (.tgz) and unite_uchime_ITS1/ITS2 (.zip) need archive
+# extraction, so they keep bespoke rules in 10_refdb.smk rather than appearing here.
+references:
+  unite_sintax:
+    file: unite/utax_reference_dataset_all_19.02.2025.fasta.gz
+    url:  https://s3.hpc.ut.ee/plutof-public/original/338a1413-6039-4e00-b5cf-410346a1e366.gz

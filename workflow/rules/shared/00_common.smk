@@ -207,6 +207,24 @@ if MODE == "amplicon":
     # The active marker's profile — the single source for every dispatch below.
     PROFILE = MARKERS[AMPLICON_TYPE]
 
+    # Pack-declared references fill in anything the config does not pin explicitly,
+    # so a NEW marker needs only its pack file — no config entry and no fetch rule.
+    # An explicit config path still wins, which keeps existing configs resolving
+    # byte-identically.
+    REFDB_ROOT = Path(config["references"].get("refdb_root", "refdb"))
+    for _sym, _spec in (PROFILE.get("references") or {}).items():
+        if _sym not in REF_PATHS and isinstance(_spec, dict) and _spec.get("file"):
+            REF_PATHS[_sym] = (REFDB_ROOT / _spec["file"]).resolve()
+
+    # Symbols the active pack can fetch with a plain download. 10_refdb.smk turns
+    # each into a generated fetch rule; anything needing archive extraction or a
+    # transform keeps a bespoke rule there instead.
+    PACK_FETCHABLE = {
+        _sym: {"path": REF_PATHS[_sym], "url": _spec["url"]}
+        for _sym, _spec in (PROFILE.get("references") or {}).items()
+        if isinstance(_spec, dict) and _spec.get("url") and _sym in REF_PATHS
+    }
+
     ORIENTATION = amp_cfg["primers"].get("orientation", "fixed").lower()
     if ORIENTATION not in ("fixed", "mixed"):
         sys.exit(f"amplicon.primers.orientation must be 'fixed' or 'mixed' (got: {ORIENTATION!r})")

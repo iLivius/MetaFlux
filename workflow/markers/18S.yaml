@@ -30,3 +30,16 @@ prefix_style:  bare
 sintax_tax_levels:    [Domain, Supergroup, Division_Subdivision, Class, Order, Family, Genus, Species]
 sintax_rank_letters:  [k, d, p, c, o, f, g, s]
 sintax_rank_prefixes: [d__, sg__, dv__, c__, o__, f__, g__, s__]
+
+# See 16S.yaml. All three 18S references are plain downloads, so this marker needs
+# no fetch code at all.
+references:
+  silva_euk:
+    file: silva_euk/silva_132.18s.dada2.fa.gz
+    url:  https://zenodo.org/records/1447330/files/silva_132.18s.99_rep_set.dada2.fa.gz?download=1
+  pr2_dada2:
+    file: pr2/pr2_SSU_dada2.fasta.gz
+    url:  https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz
+  pr2_utax:
+    file: pr2/pr2_SSU_UTAX.fasta.gz
+    url:  https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_UTAX.fasta.gz

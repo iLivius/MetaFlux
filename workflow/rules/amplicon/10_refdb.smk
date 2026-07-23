@@ -44,43 +44,6 @@ rule build_phix_index:
 # ───────────────────── SILVA training-set fetch (16S) ──────────────────
 # Triggered on demand: amplicon_probe (when expected_length=auto) and the
 # DADA2 taxonomy step. Cached at the path declared in config.
-rule fetch_silva_train:
-    output:
-        fasta = SILVA_TRAIN,
-    params:
-        url = config["references"]["silva"]["fetch_url_train"],
-    log:
-        LOGS / "refdb" / "fetch_silva_train.log",
-    conda:
-        "../../envs/bowtie2.yaml"                  # provides wget
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} {params.url} > {log} 2>&1
-        """
-
-
-rule fetch_silva_species:
-    output:
-        fasta = SILVA_SPECIES,
-    params:
-        url = config["references"]["silva"]["fetch_url_species"],
-    log:
-        LOGS / "refdb" / "fetch_silva_species.log",
-    conda:
-        "../../envs/bowtie2.yaml"
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} {params.url} > {log} 2>&1
-        """
-
-
-# ───────────────────── UNITE fetch (ITS) ───────────────────────────────
-# Two separate downloads:
-#   fetch_unite  : full UNITE general release (used by assignTaxonomy)
-#   fetch_uchime : UNITE UCHIME release with pre-extracted ITS1/ITS2 sequences
-#                  (used for the auto length-probe distribution)
 rule fetch_unite:
     output:
         fasta = UNITE_FASTA,
@@ -127,22 +90,6 @@ rule convert_silva_sintax:
 # ───────────────────── UNITE SINTAX download (ITS) ─────────────────────────
 # Official UNITE+INSD VSEARCH/SINTAX release (February 2025, UNITE v10).
 # Already in SINTAX header format — no conversion needed.
-rule fetch_unite_sintax:
-    output:
-        fasta = UNITE_SINTAX,
-    params:
-        url = config["references"]["unite"]["fetch_url_sintax"],
-    log:
-        LOGS / "refdb" / "fetch_unite_sintax.log",
-    conda:
-        "../../envs/bowtie2.yaml"                  # provides wget
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} {params.url} > {log} 2>&1
-        """
-
-
 rule fetch_uchime:
     output:
         its1 = UNITE_UCHIME_ITS1_FA,
@@ -177,58 +124,26 @@ rule fetch_uchime:
 # rank depths — the DADA2 one (9 ranks) feeds the rdp path, the UTAX one
 # (8 ranks) feeds sintax — so both are fetched independently.
 
-rule fetch_silva_euk:
-    output:
-        fasta = SILVA_EUK,
-    params:
-        url = config["references"].get("silva_euk", {}).get(
-            "fetch_url",
-            "https://zenodo.org/records/1447330/files/silva_132.18s.99_rep_set.dada2.fa.gz?download=1",
-        ),
-    log:
-        LOGS / "refdb" / "fetch_silva_euk.log",
-    conda:
-        "../../envs/bowtie2.yaml"
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} "{params.url}" > {log} 2>&1
-        """
 
+# ── Generated reference fetches ───────────────────────────────────────────
+# One rule per plain-download reference declared by the ACTIVE marker pack
+# (workflow/markers/<type>.yaml → references.<symbol>.url), so adding such a
+# reference — or a whole new marker — is a data change with no rule to write
+# here. References needing archive extraction (UNITE .tgz/.zip, PhiX .gz) or a
+# transform (silva_sintax, derived from silva_train) keep the bespoke rules above.
+for _sym, _spec in PACK_FETCHABLE.items():
 
-rule fetch_pr2_dada2:
-    output:
-        fasta = PR2_DADA2,
-    params:
-        url = config["references"].get("pr2", {}).get(
-            "fetch_url_dada2",
-            "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz",
-        ),
-    log:
-        LOGS / "refdb" / "fetch_pr2_dada2.log",
-    conda:
-        "../../envs/bowtie2.yaml"
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} "{params.url}" > {log} 2>&1
-        """
-
-
-rule fetch_pr2_utax:
-    output:
-        fasta = PR2_UTAX,
-    params:
-        url = config["references"].get("pr2", {}).get(
-            "fetch_url_utax",
-            "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_UTAX.fasta.gz",
-        ),
-    log:
-        LOGS / "refdb" / "fetch_pr2_utax.log",
-    conda:
-        "../../envs/bowtie2.yaml"
-    shell:
-        """
-        mkdir -p $(dirname {output.fasta})
-        wget -O {output.fasta} "{params.url}" > {log} 2>&1
-        """
+    rule:
+        name:   f"fetch_{_sym}"
+        output: _spec["path"]
+        params:
+            url = _spec["url"],
+        log:
+            LOGS / "refdb" / f"fetch_{_sym}.log",
+        conda:
+            "../../envs/bowtie2.yaml"
+        shell:
+            """
+            mkdir -p $(dirname {output})
+            wget -O {output} "{params.url}" > {log} 2>&1
+            """
