@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# MetaFlux v2.0.0 — Unified Illumina 16S/ITS/18S amplicon and shotgun taxonomic profiling workflow
+# MetaFlux v2.1.0 — Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
 # TEMPLATE configuration. Replace every `/path/to/...` placeholder with a real path,
 # choose a `mode`, and set the references that mode needs. A convenient pattern is to
