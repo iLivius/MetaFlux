@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Amplicon length probe — two modes depending on amplicon type.
+"""Amplicon length probe — two modes depending on the marker pack's probe_mode.
 
-PCR mode (16S): two-pass cutadapt against SILVA.
+PCR mode (16S, 18S, rpoB): two-pass cutadapt against a full-length reference
+  (SILVA / SILVA-Euk / FROGS).
   Pass 1: ``-g file:fwd`` with ``--discard-untrimmed``
           → keep reference sequences with the forward primer at 5', trim it off.
   Pass 2: ``-a file:rev_rc`` with ``--discard-untrimmed``
           → of those, keep sequences with revcomp(rev) at 3', trim it off.
           The survivors are the in-silico amplicon bodies.
 
-Direct mode (ITS): no primer trimming.
-  The reference FASTA is already the pre-extracted ITS1 or ITS2 subregion
-  from UNITE UCHIME; lengths are read directly without running cutadapt.
-  The reference FASTA is gzip-copied to the amplicons output for consistency.
+Direct mode (ITS, gyrB): no primer trimming. The reference is ALREADY an
+  amplicon-length sequence, whatever marker/DB it comes from — UNITE UCHIME's
+  pre-extracted ITS1/ITS2 subregion for ITS, or DD7RZ8's pre-trimmed in-silico
+  amplicons for gyrB. Lengths are read directly without running cutadapt, and
+  the reference FASTA is gzip-copied to the amplicons output for consistency.
 
 Both modes compute the same length distribution statistics and write a JSON:
   {n_amplicons, min, q1, median, q3, p95, p99, max, mean, stdev, probe_mode, ...}
@@ -138,7 +140,8 @@ if probe_mode == "pcr":
         log.close()
         sys.exit(2)
 
-# ── Direct length measurement from pre-extracted subregion (ITS) ─
+# ── Direct length measurement (ITS, gyrB): reference is already amplicon-length ─
+# (ITS: UNITE UCHIME pre-extracted subregion; gyrB: DD7RZ8 pre-trimmed amplicons)
 else:
     log.write(
         f"\n[amplicon_probe] direct mode: reading lengths from {ref_fasta} "

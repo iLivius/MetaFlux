@@ -1,6 +1,7 @@
 # Aggregate QC across upstream rule outputs via MultiQC.
 # Inputs and scan dirs are mode-dependent: amplicon path adds falco, cutadapt,
-# and bowtie2 (PhiX) logs; shotgun path adds fastp, kraken, bracken, BBDuk stats.
+# and bowtie2 (PhiX) logs; shotgun path adds fastp, kraken, bracken, BBDuk PhiX
+# stats, and (when host_genomes is set) BBMap host-removal stats.
 
 def _multiqc_inputs():
     """Resolve MultiQC inputs based on MODE — only the files actually produced

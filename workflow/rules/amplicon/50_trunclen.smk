@@ -1,6 +1,8 @@
 # Auto-pick truncLen by parsing falco's per-base quality table.
-# Both 16S and ITS: first bin where median-across-samples Q1 < q_threshold,
-# then enforce truncR1 + truncR2 >= amplicon_length + min_overlap via resolve_policy.
+# 16S/18S/gyrB/rpoB: first bin where median-across-samples Q1 < q_threshold, then
+# enforce the overlap constraint (truncR1 + truncR2 >= amplicon_length + min_overlap)
+# via resolve_policy. ITS: the same first-drop cut is computed and recorded, but the
+# overlap constraint is skipped — truncLen is overridden to c(0,0) in dada_filter.
 # Manual mode bypasses Q analysis, using config-provided truncLen values.
 
 rule pick_trunclen:
@@ -13,8 +15,9 @@ rule pick_trunclen:
             OUT / "stats" / "falco" / "{sample}_R2_stripped" / "fastqc_data.txt",
             sample=SAMPLES,
         ),
-        # probe_json is conditionally included: only when expected_length="auto"
-        # so pick_trunclen depends on amplicon_probe → fetch_silva (or fetch_unite).
+        # probe_json is conditionally included: only when expected_length="auto",
+        # so pick_trunclen depends on amplicon_probe, which in turn depends on that
+        # marker's probe reference — e.g. fetch_silva_train (16S) or fetch_uchime (ITS).
         # Otherwise [] = no dependency.
         probe_json = [PROBE_JSON] if WANTS_PROBE else [],
     output:

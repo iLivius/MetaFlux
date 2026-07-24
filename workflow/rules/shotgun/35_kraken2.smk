@@ -23,7 +23,7 @@ rule kraken2:
         db             = str(KRAKEN_DB),
         confidence     = KRAKEN_CONF,
         hit_groups     = KRAKEN_HIT,
-        # kraken2 v2.17 doesn't auto-gzip --classified-out even when the
+        # kraken2 v2.1.3 doesn't auto-gzip --classified-out even when the
         # filename ends in .gz — it just writes plain fastq with a misleading
         # name. So we ask for plain .fastq and pigz them ourselves into the
         # final _R1/_R2.fastq.gz outputs.

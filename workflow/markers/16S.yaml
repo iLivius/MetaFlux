@@ -5,7 +5,10 @@
 # nothing here is a tuning knob. If you would change a value for one run and not
 # the next (primers, expected_length, truncLen, filter lists), it belongs in the
 # run config instead.
-probe_mode:          pcr              # pcr | direct | none
+probe_mode:          pcr              # pcr | direct — see 40a_amplicon_probe.py:
+                                      # only "pcr" gets its own branch; any other
+                                      # value (including a typo) takes the direct
+                                      # path (raw lengths, no primer trimming).
 probe_ref:           silva_train
 probe_ref_tag:       silva_v138.2_toGenus
 probe_stat_key:      16S              # which amplicon.probe_length_stat.<key> the pcr path reads

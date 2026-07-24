@@ -61,9 +61,11 @@ rule build_phix_index:
         """
 
 
-# ───────────────────── SILVA training-set fetch (16S) ──────────────────
-# Triggered on demand: amplicon_probe (when expected_length=auto) and the
-# DADA2 taxonomy step. Cached at the path declared in config.
+# ───────────────────── UNITE general-release fetch (ITS) ───────────────
+# Taxonomy reference ONLY (taxonomy_refdb in ITS.yaml) — never the probe. The
+# probe uses the separate, pre-extracted UCHIME ITS1/ITS2 subregion instead
+# (fetch_uchime, below), since ITS's probe_mode is "direct": it needs sequences
+# already cut to amplicon length, not the full ITS region this file provides.
 rule fetch_unite:
     output:
         fasta = UNITE_FASTA,
@@ -107,9 +109,13 @@ rule convert_silva_sintax:
         "../../scripts/refdb/silva_to_sintax.py"
 
 
-# ───────────────────── UNITE SINTAX download (ITS) ─────────────────────────
-# Official UNITE+INSD VSEARCH/SINTAX release (February 2025, UNITE v10).
-# Already in SINTAX header format — no conversion needed.
+# ───────────────────── UNITE UCHIME ITS1/ITS2 subregions (ITS) ─────────────
+# The UNITE UCHIME reference dataset (.zip): ITS1 and ITS2 already cut to their
+# amplicon-length subregions. MetaFlux uses these as the ITS PROBE substrate
+# (ITS.yaml probe_ref: unite_uchime_{region}, direct mode) — lengths are read
+# straight off them, no in-silico PCR. This is NOT the SINTAX taxonomy DB: that
+# is unite_sintax, a plain .gz download handled by the generated fetch loop at
+# the bottom of this file.
 rule fetch_uchime:
     output:
         its1 = UNITE_UCHIME_ITS1_FA,

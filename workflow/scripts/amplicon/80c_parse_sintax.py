@@ -137,6 +137,7 @@ for line in data_lines:
     for i, asv in enumerate(seqtab_asv_ids, 1):
         counts[asv].append(cols[i] if i < len(cols) else "0")
 
+# Subset to ASVs present in the FASTA (length filter / extraction may have removed some)
 shared_ids = [aid for aid in asv_ids if aid in set(seqtab_asv_ids)]
 logmsg(f"Seqtab: {len(shared_ids)} ASVs shared with FASTA")
 
@@ -144,7 +145,8 @@ logmsg(f"Seqtab: {len(shared_ids)} ASVs shared with FASTA")
 out_asv.parent.mkdir(parents=True, exist_ok=True)
 tabbedout = out_asv.parent / "_sintax_raw.tsv"
 
-# The UNITE SINTAX DB is .gz; VSEARCH reads gzipped FASTA natively.
+# The SINTAX DB (SILVA for 16S, PR2/UTAX for 18S, UNITE for ITS) is .gz; VSEARCH
+# reads gzipped FASTA natively.
 # --randseed: vsearch's sintax bootstrap confidence defaults to seed 0, i.e.
 # "use a random data source". Pinning it removes that as a source of drift,
 # but does NOT make multithreaded --sintax fully reproducible: vsearch races

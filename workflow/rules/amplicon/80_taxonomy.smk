@@ -17,7 +17,7 @@ if TAXONOMY_METHOD == "rdp":
             seqs         = _seqs_for_taxonomy,
             seqtab_names = _seqtab_for_taxonomy,
             refdb        = TAXONOMY_REFDB,
-            species_db   = TAXONOMY_SPECIES_DB,    # addSpecies for 16S only; empty list for ITS
+            species_db   = TAXONOMY_SPECIES_DB,    # addSpecies for 16S only; empty list for all other markers (ITS, 18S, gyrB, rpoB)
         output:
             asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
             asv_table_seqs  = OUT / "6.taxonomy" / "asv_table_seqs.txt",

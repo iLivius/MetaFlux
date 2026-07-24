@@ -155,8 +155,8 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
         return min_len, max_len, "auto:fallback_expected_length±15pct"
 
     raise ValueError(
-        "length_filter.mode='manual' but length_filter.range is null in config. "
-        "Set a [min, max] range."
+        f"length_filter.mode={mode!r} is not 'auto', and no length_filter.range is set. "
+        "Set mode to 'auto' or 'manual', and if 'manual', a [min, max] range."
     )
 
 

@@ -1,6 +1,9 @@
 # Per-sample, per-direction, per-stage read QC via falco.
-# Output dirs encode the stage in the leaf name so MultiQC reports each stage
-# as a distinct sample (raw/nophix/stripped won't deduplicate).
+# What keeps MultiQC from deduplicating raw/nophix/stripped is NOT the output-dir
+# name — MultiQC names each amplicon sample from the "Filename" field inside
+# fastqc_data.txt (see the shell comment below), and falco is fed a stage-renamed
+# symlink so that field carries the stage. The output-dir leaf name only makes the
+# Snakemake outputs unique.
 
 def _falco_input(wildcards):
     """Resolve falco input based on the stage wildcard."""

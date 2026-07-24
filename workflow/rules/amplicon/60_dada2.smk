@@ -69,7 +69,8 @@ rule dada_filter:
         r1            = OUT / "3.stripped" / "{sample}_R1.fastq.gz",
         r2            = OUT / "3.stripped" / "{sample}_R2.fastq.gz",
         trunclen_json = OUT / "stats" / "trunclen.json",
-        # probe_json present only in auto mode; used to derive min_len from q1
+        # probe_json present only in auto mode; used by dada_filter to derive min_len
+        # from q1, but for ITS only — every other marker keeps the config min_len.
         probe_json    = [PROBE_JSON] if WANTS_PROBE else [],
     output:
         r1    = OUT / "4.filtered" / "{sample}_R1_filt.fastq.gz",

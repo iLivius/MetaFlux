@@ -1,13 +1,16 @@
 # Amplicon length probe — only when amplicon.expected_length == "auto".
 #
-# 16S (pcr mode):    two-pass cutadapt against SILVA — keep reference sequences
-#                    that carry both the fwd primer at 5' and revcomp(rev) at 3'.
+# pcr mode (16S, 18S, rpoB):    two-pass cutadapt against a full-length reference
+#                    (SILVA / SILVA-Euk / FROGS) — keep reference sequences that
+#                    carry both the fwd primer at 5' and revcomp(rev) at 3'.
 #                    Surviving trimmed sequences = the in-silico PCR products.
 #
-# ITS (direct mode): measure lengths directly from UNITE UCHIME pre-extracted
-#                    ITS1 or ITS2 sequences. No primer binding sites needed;
-#                    cutadapt is not used. This avoids the unreliable in-silico
-#                    PCR approach for ITS, where primers (ITS1F, ITS4) bind in
+# direct mode (ITS, gyrB): measure lengths directly from a reference that is
+#                    ALREADY amplicon-length — UNITE UCHIME's pre-extracted
+#                    ITS1/ITS2 subregions (ITS), or DD7RZ8's pre-trimmed
+#                    in-silico amplicons (gyrB). No primer binding sites needed;
+#                    cutadapt is not used. For ITS this also avoids the unreliable
+#                    in-silico PCR approach, where primers (ITS1F, ITS4) bind in
 #                    flanking rRNA regions absent from UNITE sequences.
 #
 # Both modes compute the same length distribution statistics and write a JSON;

@@ -11,7 +11,9 @@
 probe_mode:          direct
 probe_ref:           gyrb_dada2
 probe_ref_tag:       gyrb_dd7rz8_v6
-probe_stat_key:      16S              # unused by the direct path; kept for parity
+probe_stat_key:      16S              # amplicon.probe_length_stat.16S feeds auto mode
+                                      # (the "16S" key is a deliberate reuse, not a typo;
+                                      #  required for gyrB just like rpoB's own key)
 
 # rdp path only. The DD7RZ8 release ships a DADA2 trainset and NO SINTAX build, so
 # there is no sintax reference to name — taxonomy.method must be rdp for gyrB.

@@ -147,9 +147,10 @@ DADA2-based multi-marker metabarcoding (16S, ITS, 18S, gyrB, rpoB). Steps (each 
    recovers reads sequenced in the opposite orientation and re-orients them.
 3. **Per-stage QC** — [Falco](https://github.com/smithlabcode/falco) profiles reads
    at the raw, PhiX-filtered, and primer-trimmed stages.
-4. **Amplicon-length probe** — in-silico PCR of the supplied primers against SILVA (16S)
-   or direct measurement of the UNITE ITS1/ITS2 subregions (ITS), yielding a length
-   distribution used downstream.
+4. **Amplicon-length probe** — in-silico PCR of the supplied primers against a
+   full-length reference (16S/SILVA, 18S/SILVA-Euk, rpoB/FROGS), or direct measurement
+   of a reference that is already amplicon-length (ITS/UNITE UCHIME, gyrB/DD7RZ8),
+   yielding a length distribution used downstream.
 5. **Truncation-length selection** — `auto` picks `truncLen` from the per-base Q1
    profile under a merge-overlap constraint; `manual` uses fixed values.
 6. **ASV inference** — DADA2 `filterAndTrim` → error learning → denoising →
@@ -161,8 +162,10 @@ DADA2-based multi-marker metabarcoding (16S, ITS, 18S, gyrB, rpoB). Steps (each 
    distribution (`auto`) or a manual range; the before/after length distributions
    are logged to `stats/dada2/`.
 9. **Taxonomy** — DADA2 RDP naive Bayesian classifier *or*
-   [VSEARCH](https://github.com/torognes/vsearch) SINTAX (selectable), against SILVA
-   (16S) or UNITE (ITS), followed by a configurable include/exclude contaminant filter.
+   [VSEARCH](https://github.com/torognes/vsearch) SINTAX (selectable for 16S/ITS/18S),
+   against SILVA (16S), UNITE (ITS), PR2 (18S), DD7RZ8 (gyrB), or FROGS (rpoB) — gyrB
+   and rpoB ship no SINTAX build, so those two are RDP-only — followed by a
+   configurable include/exclude contaminant filter.
 
 ### Shotgun mode
 
@@ -211,10 +214,13 @@ conda activate snakemake
 ### 3. Reference databases
 
 | Database                           | Mode               | Provisioning                                     |
-|------------------------------------|--------------------|--------------------------------------------------|
+|------------------------------------|--------------------|---------------------------------------------------|
 | PhiX                               | both               | **Auto-fetched** (NCBI) and indexed on first run |
 | SILVA (toGenus + species + SINTAX) | amplicon (16S)     | **Auto-fetched** from Zenodo on first run        |
 | UNITE (general + UCHIME + SINTAX)  | amplicon (ITS)     | **Auto-fetched** from PlutoF on first run        |
+| PR2 (DADA2 + UTAX) + SILVA-Euk     | amplicon (18S)     | **Auto-fetched** from GitHub/Zenodo on first run |
+| DD7RZ8 (DADA2 trainset)            | amplicon (gyrB)    | **Auto-fetched** from Recherche Data Gouv        |
+| FROGS RefSeq (converted to DADA2)  | amplicon (rpoB)    | **Auto-fetched + converted** on first run        |
 | Kraken2 database                   | shotgun            | **User-supplied** (see below)                    |
 | Host genome(s)                     | shotgun (optional) | **User-supplied** (path or URL)                  |
 
@@ -304,19 +310,15 @@ output:
 
 ```yaml
 references:
+  # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS) are
+  # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
+  # DB filenames and download URLs, and MetaFlux fetches (and, for rpoB, converts)
+  # them on first use into refdb_root. You only need an entry here to RELOCATE one,
+  # e.g. `silva: {train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz}`.
+  refdb_root: refdb                       # where fetched databases are cached
   phix:                                   # [shared] — only amplicon fetches/indexes it
     fasta: refdb/phix/phix.fna
     fetch_url: ftp://ftp.ncbi.nlm.nih.gov/.../GCF_000819615.1_..._genomic.fna.gz
-  silva:                                  # [amplicon, 16S] — auto-fetched
-    train:   refdb/silva/silva_nr99_v138.2_toGenus_trainset.fa.gz
-    species: refdb/silva/silva_v138.2_assignSpecies.fa.gz
-    sintax:  refdb/silva/silva_nr99_v138.2_sintax.fa.gz
-    fetch_url_train:   https://zenodo.org/...
-    fetch_url_species: https://zenodo.org/...
-  unite:                                  # [amplicon, ITS] — auto-fetched
-    fasta:   refdb/unite/...fasta
-    sintax:  refdb/unite/...fasta.gz
-    fetch_url: https://...
   kraken_db: /path/to/db/k2_pluspf        # [shotgun] — user-supplied
 ```
 
@@ -324,9 +326,9 @@ references:
 
 ```yaml
 amplicon:
-  type: 16S                               # 16S | ITS | 18S
+  type: 16S                               # 16S | ITS | 18S | gyrB | rpoB
   its_region: ITS2                        # ITS1 | ITS2 (ignored unless type == ITS)
-  seed: 100                               # fixes learnErrors/assignTaxonomy RNG fully; sintax needs threads:1 too — see Troubleshooting
+  seed: 42                                # fixes learnErrors/assignTaxonomy RNG fully; sintax needs threads:1 too — see Troubleshooting
 
   decontamination:
     remove_phix: true                     # bowtie2 PhiX removal; false = skip
@@ -352,7 +354,8 @@ amplicon:
     window_margin: 50                     # bp added around the probe q1/p95
 
   extraction:
-    enabled: true                         # Metaxa2 (16S) / ITSx (ITS)
+    enabled: true                         # Metaxa2 (16S) / ITSx (ITS); no extractor for
+                                          # 18S/gyrB/rpoB — set false, or it is forced off
 
   taxonomy:
     method: sintax                        # rdp | sintax
@@ -389,6 +392,8 @@ these to suit your marker:
 |--------|------|---------|
 | 16S    | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS    | `[k__Fungi]` | `[]` |
+| gyrB   | *no recommended default* — see the paralog tag under [Running gyrB](#running-gyrb-bacterial-dna-gyrase-subunit-b) | |
+| rpoB   | *no recommended default* — FROGS RefSeq has nothing structurally equivalent to filter | |
 
 To drop lab/kit contaminants a negative control revealed, add them to `discard` —
 e.g. `discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]`.
@@ -439,6 +444,58 @@ of the marker — measured in silico across the common pairs:
 V9 must be set manually: only 24–41% of references are recovered in silico, because EukBr
 sits at the 3′ terminus and most references are truncated before it — so `auto` would size
 the window from a biased minority rather than from the real amplicon distribution.
+
+#### Running gyrB (bacterial DNA gyrase subunit B)
+
+Set `type: gyrB` and supply your gyrB primers (Barret 2015 F64/R353, or your own). The
+reference is fetched automatically on first run and cached under `refdb/`:
+
+- **DD7RZ8 v6** (GTDB r226, INRAE) is both the taxonomy reference and the amplicon-length
+  probe substrate — one trainset, no second database needed.
+
+Two things differ from 16S/ITS/18S and are handled for you:
+
+- **The reference is already amplicon-length.** DD7RZ8 ships primer-trimmed in-silico
+  amplicons (~247 bp, range 234–270), not full-length genes — so `probe_mode: direct`
+  reads lengths straight off the DB instead of running an in-silico PCR (which would find
+  no primer sites left to cut against a pre-trimmed reference).
+- **rdp only.** DD7RZ8 ships a DADA2 trainset with no SINTAX build, so
+  `taxonomy.method: sintax` is rejected for gyrB with a clear error at startup — use `rdp`.
+
+**Paralog tag.** DD7RZ8 tags every reference's first rank as `gyrB` (the true gene) or
+`other` (a co-amplified paralog such as *parE*). This rides along as an ordinary taxonomy
+rank, so the usual keep/discard filter can drop paralogs with no extra machinery:
+
+```
+discard: [other]     # or, equivalently: keep: [gyrB]
+```
+
+There's no universal right answer for how much `other` to expect from your own
+primers/samples — leave it empty on a first run so the paralog fraction is visible in
+the output, then decide.
+
+#### Running rpoB (bacterial RNA polymerase subunit B)
+
+Set `type: rpoB` and supply your rpoB primers (Ogier 2019 Univ_rpoB_deg F/R, or your
+own). The reference is fetched and converted automatically on first run and cached
+under `refdb/`:
+
+- **FROGS RefSeq rpoB** (complete + chromosome genomes, ~47k sequences) is both the
+  taxonomy reference and the probe substrate. It ships full-length rpoB genes (~4 kb)
+  in FROGS' own header format; a one-time conversion step
+  (`workflow/scripts/refdb/frogs_rpob_to_dada2.py`) rewrites headers into a plain DADA2
+  lineage before DADA2 ever sees the file.
+
+Two things differ from 16S/ITS/18S and are handled for you:
+
+- **`probe_mode: pcr`.** Unlike gyrB, the rpoB reference is full-length, so the amplicon
+  window is recovered the same way as for 16S/18S: in-silico PCR of the primers against
+  the full gene.
+- **rdp only.** The FROGS release ships a DADA2 trainset with no SINTAX build, so
+  `taxonomy.method: sintax` is rejected for rpoB with a clear error at startup — use `rdp`.
+
+No paralog tag for rpoB (unlike gyrB) — the FROGS rpoB reference set contains only
+rpoB, so there's nothing equivalent to filter out at the taxonomy-filter stage.
 
 ### Shotgun parameters `[shotgun]`
 
@@ -570,9 +627,12 @@ relabeled).
 | **Counts** — sequence keyed | `seqtab_head_seqs.txt`  | —                                 | `seqtab_lenfilt_head_seqs.txt`  |
 | **Extras**                  | `read.counts`           | Metaxa2 / ITSx results + dir      | —                               |
 
-The last populated column is the final result: `seqtab_lenfilt_head_seqs.txt`
-(length-filtered, sequence-keyed) is what the taxonomy step reads. With extraction
-disabled, the middle column is absent and the length filter runs on the DADA2 output.
+The last populated column is the final result. The taxonomy step reads the
+length-filtered `seqs_lenfilt.fasta` together with the `ASV_#`-keyed
+`seqtab_lenfilt_head_names.txt`; the sequence-keyed `seqtab_lenfilt_head_seqs.txt` is a
+terminal deliverable (same counts, relabeled) that no downstream rule consumes. With
+extraction disabled, the middle column is absent and the length filter runs on the
+DADA2 output.
 
 The length filter also writes `stats/dada2/asv_length_stats.json` +
 `asv_length_hist.png`: ASV lengths at three stages — pre-extraction, post-extraction,

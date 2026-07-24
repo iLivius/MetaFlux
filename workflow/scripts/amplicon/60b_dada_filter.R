@@ -35,9 +35,10 @@ min_len_stat <- snakemake@params[["min_len_stat"]]
 # min_len: filterAndTrim's min_len is a PER-READ length floor.
 #   ITS: the probe distribution (extracted ITS2 lengths, ~140-260 bp) is
 #        below per-read length, so auto-derive min_len from probe[min_len_stat].
-#   16S: the probe distribution is the full in-silico PCR amplicon length
-#        (~400 bp for V3-V4 or V5-V7), which exceeds per-read length and would
-#        drop every read. Fall back to the config's manual min_len.
+#   Non-ITS (16S, 18S, gyrB, rpoB): the probe distribution — where one exists —
+#        is the full amplicon length (~400 bp for 16S V3-V4/V5-V7), which exceeds
+#        per-read length and would drop every read; gyrB/rpoB don't run this probe
+#        for min_len purposes at all. Fall back to the config's manual min_len.
 probe_json_path <- snakemake@input[["probe_json"]]
 if (amp_type == "ITS" && length(probe_json_path) > 0L && file.exists(probe_json_path[[1]])) {
   probe   <- fromJSON(probe_json_path[[1]])

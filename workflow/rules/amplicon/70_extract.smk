@@ -2,10 +2,12 @@
 # Activated only when amplicon.extraction.enabled is true.
 # Both rules are named target_extract; only one is defined depending on the
 # marker profile's extractor (resolved at parse time), so the DAG always sees a
-# single rule. A marker whose extractor is "none" defines no rule here and must
-# run with extraction disabled; the guard that ties EXTRACTION_ENABLED to a
-# "none" extractor lands with the first no-extractor marker (gyrB). No current
-# marker uses "none", so the two branches below are exhaustive today.
+# single rule. A marker whose extractor is "none" (18S, gyrB, rpoB) defines no
+# rule here and must run with extraction disabled; 00_common.smk's guard forces
+# EXTRACTION_ENABLED off (with a warning) if such a marker's config still has
+# extraction.enabled: true, so a "none" marker never reaches this file expecting
+# a rule it doesn't get. The two branches below stay exhaustive for the same
+# reason: a "none" marker takes neither.
 #
 # Metaxa2 : -t all (all domains). All extracted sequences pass through; domain-
 #           level filtering happens post-taxonomy via the contaminant filter
@@ -48,6 +50,9 @@ elif MARKER_EXTRACTOR == "itsx":
             collapse_map = OUT / "5.dada2" / "itsx_collapse_map.tsv",
         params:
             its_region = ITS_REGION,
+            # Raw ITSx outputs (seqs.ITS1/ITS2.fasta, seqs.positions.txt, seqs.summary.txt,
+            # ...) are persisted under this dir for QC/inspection, same as Metaxa2's above —
+            # the leading underscore is only a naming convention, nothing deletes this dir.
             prefix     = lambda wc: str(OUT / "5.dada2" / "_itsx_tmp" / "seqs"),
         log:
             LOGS / "target_extract.log",
