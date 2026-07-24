@@ -1,4 +1,4 @@
-name: dadaism3-seqtk
+name: seqtk
 channels:
   - conda-forge
   - bioconda

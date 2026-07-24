@@ -1,4 +1,4 @@
-name: dadaism3-cutadapt
+name: cutadapt
 channels:
   - conda-forge
   - bioconda

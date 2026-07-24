@@ -1,6 +1,8 @@
+name: vsearch
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - vsearch >=2.28
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (80c_parse_sintax.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter

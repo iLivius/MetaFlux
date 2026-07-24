@@ -1,8 +1,9 @@
-name: dadaism3-metaxa2
+name: metaxa2
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - metaxa>=2.2
   - blast>=2.12     # metaxa bioconda recipe depends on blast-legacy but calls blastn (BLAST+)
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (70a_metaxa2_extract.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter

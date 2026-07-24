@@ -1,7 +1,9 @@
-name: dadaism3-itsx
+name: itsx
 channels:
   - conda-forge
   - bioconda
 dependencies:
   - itsx
   - hmmer
+  - python >=3.10  # this env backs a rule whose action is a Snakemake script: (70b_itsx_extract.py);
+                   # without python in-env, Snakemake silently falls back to the host interpreter

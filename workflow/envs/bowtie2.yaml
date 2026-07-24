@@ -1,9 +1,8 @@
-name: dadaism3-bowtie2
+name: bowtie2
 channels:
   - conda-forge
   - bioconda
 dependencies:
   - bowtie2=2.5
-  - samtools=1.21
   - pigz
   - wget

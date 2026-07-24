@@ -1,4 +1,4 @@
-name: dadaism3-falco
+name: falco
 channels:
   - conda-forge
   - bioconda

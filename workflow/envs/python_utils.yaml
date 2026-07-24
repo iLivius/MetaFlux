@@ -1,4 +1,4 @@
-name: dadaism3-python-utils
+name: python-utils
 channels:
   - conda-forge
 dependencies:

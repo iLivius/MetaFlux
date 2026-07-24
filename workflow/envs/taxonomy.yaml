@@ -1,4 +1,4 @@
-name: dadaism3-taxonomy
+name: taxonomy
 channels:
   - conda-forge
   - bioconda

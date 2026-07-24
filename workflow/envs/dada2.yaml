@@ -1,4 +1,4 @@
-name: dadaism3-dada2
+name: dada2
 channels:
   - conda-forge
   - bioconda
@@ -11,5 +11,4 @@ dependencies:
   - r-rcppparallel=5.1.9
   - r-jsonlite
   - r-pacman
-  - r-data.table
   - r-ggplot2

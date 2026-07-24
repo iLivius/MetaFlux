@@ -2,4 +2,5 @@ name: bracken
 channels: [conda-forge, bioconda]
 dependencies:
   - bracken>=3.0
-  - jq
+  - jq  # used by the bracken rule to read fastp's mean post-trim read length from its
+       # JSON report, to pick the closest Bracken k-mer read-length database
