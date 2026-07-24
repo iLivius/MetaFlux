@@ -126,8 +126,11 @@ def aggregate_q1_across_samples(per_sample_bins: list[list[tuple[int, int, float
         raise ValueError("No samples to aggregate.")
     per_sample_pos = [expand_bins_to_positions(b) for b in per_sample_bins]
     n_samples = len(per_sample_pos)
-    # 100% gate → need data from ALL samples; lower gates round up to nearest sample
-    min_n = max(1, int(min_coverage_pct * n_samples / 100))
+    # 100% gate → need data from ALL samples; lower gates round up to nearest sample.
+    # math.ceil, not int(): int() truncates DOWN (e.g. 95% of 21 samples = 19.95 →
+    # int() gives 19, but "at least 95%" needs ceil() = 20) — only matters once a
+    # caller passes a non-default min_coverage_pct, which none does today.
+    min_n = max(1, math.ceil(min_coverage_pct * n_samples / 100))
     if min_coverage_pct >= 100:
         min_n = n_samples
     all_positions = sorted({pos for s in per_sample_pos for pos in s})
@@ -185,8 +188,11 @@ def resolve_expected_length(expected_length, amp_type, probe_json_path, log_fn,
             # Which statistic to read is already resolved per-marker upstream:
             # 00_common.smk maps the marker pack's probe_stat_key onto
             # amplicon.probe_length_stat.<key> and passes it in as probe_stat.
-            # Markers whose probe runs in "direct" mode (ITS) return before this
-            # point, so anything arriving here has a pcr probe and a valid stat.
+            # ITS is the only marker that returns before this point (see the
+            # amp_type == "ITS" branch in main(), above) — every other marker
+            # reaches here, pcr-mode (16S/18S/rpoB) or direct-mode (gyrB) alike.
+            # 00_common.smk's AMPLICON_TYPE != "ITS" guard on probe_length_stat
+            # is what guarantees probe_stat is a valid key by the time we get here.
             stat = probe_stat
             if stat not in probe:
                 raise KeyError(
@@ -343,7 +349,7 @@ def main() -> int:
         log(f"[pick_trunclen] DONE. truncLen=(R1={primary_r1}, R2={primary_r2}) — will be overridden to c(0,0) for ITS")
         return 0
 
-    # ── 16S: resolve the expected amplicon length and check overlap ──
+    # ── Non-ITS (16S/18S/gyrB/rpoB): resolve the expected amplicon length and check overlap ──
     probe_json_path = None
     if hasattr(sm.input, "probe_json") and sm.input.probe_json:
         # Snakemake gives a list (or string) here depending on how it was declared.

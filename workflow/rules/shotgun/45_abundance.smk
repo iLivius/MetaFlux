@@ -38,9 +38,18 @@ rule bracken:
         r"""
         # mean read length (R1+R2)/2 after filtering, from fastp json
         mean=$(jq -r '(.summary.after_filtering.read1_mean_length + .summary.after_filtering.read2_mean_length) / 2 | floor' {input.json})
-        # closest available bracken k-mer length by squared distance
-        kmers=(50 75 100 150 200 250 300)
-        closest=$(for k in "${{kmers[@]}}"; do echo "$k $(echo "($mean - $k)^2" | bc)"; done | sort -k2n | head -n1 | cut -d' ' -f1)
+        # closest available bracken k-mer length by squared distance.
+        # Plain awk (not bc): bc is not declared in envs/bracken.yaml or anywhere in
+        # the repo, so it only ever worked by accident of the host system having it.
+        closest=$(awk -v mean="$mean" 'BEGIN {{
+            split("50 75 100 150 200 250 300", kmers, " ")
+            best_k = kmers[1]; best_d = (mean - kmers[1])^2
+            for (i = 2; i <= length(kmers); i++) {{
+                d = (mean - kmers[i])^2
+                if (d < best_d) {{ best_d = d; best_k = kmers[i] }}
+            }}
+            print best_k
+        }}')
         echo "{wildcards.sample}: mean=$mean kmer=$closest" > {log}
         bracken -d {params.db} -i {input.report} -r "$closest" \
             -l {params.tax_lev} -t {params.thresh} \

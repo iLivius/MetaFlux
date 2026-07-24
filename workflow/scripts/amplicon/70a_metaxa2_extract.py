@@ -90,14 +90,24 @@ with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
 
 log.write(f"[metaxa2_extract] {len(kept_ids)} ASV(s) extracted\n")
 
-# Copy results summary
+# Copy Metaxa2's results summary (a QC report, NOT consumed by any downstream
+# rule). The real extraction output — the FASTA above — is already validated, so a
+# missing summary must not fail an otherwise-complete run; but warn loudly and leave
+# a self-explaining placeholder rather than a silent empty file.
+# (Same missing-summary policy as 70b_itsx_extract.py — tolerant but loud.)
 results_src = Path(f"{prefix}.extraction.results")
+results_out.parent.mkdir(parents=True, exist_ok=True)
 if results_src.exists():
-    results_out.parent.mkdir(parents=True, exist_ok=True)
     results_out.write_text(results_src.read_text())
 else:
-    results_out.parent.mkdir(parents=True, exist_ok=True)
-    results_out.write_text("")
+    log.write(
+        f"[metaxa2_extract] WARNING: expected summary {results_src} not found; "
+        "the extraction FASTA was produced, so continuing. Writing a placeholder.\n"
+    )
+    results_out.write_text(
+        f"# Metaxa2 summary ({results_src.name}) was not produced by this run.\n"
+        "# Extraction itself succeeded (see the extracted FASTA); this QC report is absent.\n"
+    )
 
 # Subset seqtab
 subset_seqtab_by_ids(seqtab_names_in, kept_ids, seqtab_names_out, log)

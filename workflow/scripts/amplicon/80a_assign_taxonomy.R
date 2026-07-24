@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 # Taxonomy assignment for DADA2 ASVs via DADA2's RDP classifier.
 # assignTaxonomy (SILVA/UNITE DADA2 format) + addSpecies (16S only).
-# Reads the (possibly Metaxa2/ITSx-extracted) seqs FASTA and seqtab_head_names.txt.
+# Reads the length-filtered (and, if enabled, Metaxa2/ITSx-extracted) seqs FASTA
+# (seqs_lenfilt.fasta) and the ASV_#-keyed seqtab (seqtab_lenfilt_head_names.txt).
 # Writes three output tables + applies optional contaminant filter.
 
 if (!requireNamespace("pacman", quietly = TRUE))
@@ -98,8 +99,16 @@ message("[assign_taxonomy] Taxa assigned for ", nrow(taxa_df), " ASVs")
 # ── Build taxonomy string (registry-driven; see 00_common.smk MARKERS) ────────
 # prefix_style == "bare"     → values carry no rank prefix: prepend rank_prefixes,
 #                              and render the last (species) slot as a
-#                              Genus+species binomial, emitted only when the
-#                              genus slot is present too (SILVA/16S behaviour).
+#                              Genus+species binomial — but ONLY when the value
+#                              looks like a bare epithet (SILVA/16S addSpecies
+#                              output, e.g. "coli": lowercase, nomenclatural
+#                              convention for species epithets). A reference that
+#                              already hands back a complete Genus_species token
+#                              (PR2/18S: "Unruhdinium_kevei") starts uppercase, so
+#                              it is emitted as-is instead of gluing the genus on
+#                              a second time ("Unruhdinium Unruhdinium_kevei").
+#                              Same lowercase-epithet heuristic already used on
+#                              the shotgun side — see 45a_finalize_otu_table.py.
 # prefix_style == "embedded" → values already carry k__/p__… prefixes; emit
 #                              them verbatim (UNITE/ITS behaviour).
 make_tax_string <- function(row) {
@@ -114,7 +123,20 @@ make_tax_string <- function(row) {
       # species slot → binomial; requires the genus (level n-1) to be present
       gval <- row[[tax_levels[n - 1L]]]
       if (is.na(gval) || gval == "") next
-      parts <- c(parts, paste0(rank_prefixes[i], gval, " ", val))
+      # Glue the genus on only for a bare, lowercase epithet. A value that
+      # already starts uppercase, or already begins with the genus (PR2 uses
+      # both "Genus_species" binomials and, for ~18 unresolved environmental
+      # clades, lowercase placeholders already prefixed with their own clade
+      # name, e.g. genus "alphaI_cluster" / species "alphaI_cluster_sp." —
+      # confirmed against the full shipped pr2_SSU_dada2.fasta.gz: every
+      # lowercase-starting species value in it already starts with its own
+      # genus), is a complete name as-is — gluing again would double it.
+      needs_genus <- grepl("^[a-z]", val) && !startsWith(val, gval)
+      if (needs_genus) {
+        parts <- c(parts, paste0(rank_prefixes[i], gval, " ", val))
+      } else {
+        parts <- c(parts, paste0(rank_prefixes[i], val))
+      }
     } else {
       parts <- c(parts, paste0(rank_prefixes[i], val))
     }

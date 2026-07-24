@@ -26,11 +26,22 @@ binomial species — consumed by the rpoB marker pack as taxonomy_refdb (prefix_
 "embedded"). Input and output are both gzipped; sequence lines pass through verbatim
 so ASV-facing sequences are never altered.
 
+HEADER-SHAPE VALIDATION
+Both regexes are anchored to the exact shape of the 2024-07-07 FROGS release (see
+workflow/markers/rpoB.yaml's references.rpob_frogs.url, which pins that dated
+filename — not a "latest" pointer). If a future re-download ever points at a newer
+FROGS release with a different header shape, a silent no-op here would ship
+corrupted taxonomy strings (still-present accession/Root/id-tag text mistaken for
+a rank value) with no error at all. So each edit is checked: if a header doesn't
+start with ">ACCESSION Root;", or still contains "[id:" after both substitutions,
+the script stops and names the offending line rather than passing it through.
+
 INPUT  : the raw FROGS FASTA, extracted from the .tar.gz by rule fetch_rpob_archive.
 OUTPUT : the DADA2 trainset FASTA, used by rule assign_taxonomy for rpoB.
 """
 import gzip
 import re
+import sys
 from pathlib import Path
 
 sm = snakemake  # noqa: F821 (injected by Snakemake)
@@ -63,11 +74,36 @@ with (_open_maybe_gzip(in_path, "rt") as fi,
       gzip.open(out_path, "wt") as fo,
       log_path.open("w") as log):
 
-    for line in fi:
+    for line_no, line in enumerate(fi, 1):
         if line.startswith(">"):
-            # Apply both edits, in order, to the header (newline preserved).
-            line = DROP_ACCESSION_ROOT.sub(">", line)
-            line = DROP_ID_TAG.sub("", line)
+            # Apply both edits, in order, to the header (newline preserved), and
+            # confirm each one actually fired — a header that doesn't match means
+            # the upstream FROGS format has changed since this script was written.
+            new_line, n_root_sub = DROP_ACCESSION_ROOT.subn(">", line)
+            if n_root_sub == 0:
+                log.write(
+                    f"[frogs_rpob_to_dada2] ERROR: header on line {line_no} does not "
+                    f"match the expected '>ACCESSION Root;...' shape: {line.strip()!r}\n"
+                )
+                sys.exit(
+                    f"[frogs_rpob_to_dada2] {in_path}, line {line_no}: header does not "
+                    f"match the expected FROGS shape '>ACCESSION Root;...' ({line.strip()!r}). "
+                    "The upstream FROGS rpoB release may have changed its header format — "
+                    "compare a few headers from the new download against this script's "
+                    "docstring, then update DROP_ACCESSION_ROOT/DROP_ID_TAG to match."
+                )
+            new_line, _ = DROP_ID_TAG.subn("", new_line)
+            if "[id:" in new_line:
+                log.write(
+                    f"[frogs_rpob_to_dada2] ERROR: header on line {line_no} still has an "
+                    f"unremoved '[id: N]' tag after conversion: {new_line.strip()!r}\n"
+                )
+                sys.exit(
+                    f"[frogs_rpob_to_dada2] {in_path}, line {line_no}: an '[id: N]' tag "
+                    f"survived the conversion ({new_line.strip()!r}). The tag format may "
+                    "have changed — update DROP_ID_TAG to match the new shape."
+                )
+            line = new_line
             n_headers += 1
         else:
             n_seq_lines += 1

@@ -193,14 +193,24 @@ collapse_seqtab_by_groups(seqtab_names_in, collapse_map, reps_in_order,
                           seqtab_names_out, log)
 
 # ── Copy ITSx's native summary file to declared output ──────────
+# QC report, NOT consumed by any downstream rule. The real extraction output — the
+# region FASTA — is already validated above, so a missing summary must not fail an
+# otherwise-complete run; warn loudly and leave a self-explaining placeholder.
+# (Same missing-summary policy as 70a_metaxa2_extract.py — tolerant but loud.)
 summary_src = Path(f"{prefix}.summary.txt")
-if not summary_src.exists():
-    log.write(f"[itsx_extract] ERROR: expected summary file {summary_src} not found.\n")
-    log.close()
-    sys.exit(1)
 results_out.parent.mkdir(parents=True, exist_ok=True)
-shutil.copy2(summary_src, results_out)
-log.write(f"[itsx_extract] Copied {summary_src} → {results_out}\n")
+if summary_src.exists():
+    shutil.copy2(summary_src, results_out)
+    log.write(f"[itsx_extract] Copied {summary_src} → {results_out}\n")
+else:
+    log.write(
+        f"[itsx_extract] WARNING: expected summary {summary_src} not found; "
+        "the region FASTA was produced, so continuing. Writing a placeholder.\n"
+    )
+    results_out.write_text(
+        f"# ITSx summary ({summary_src.name}) was not produced by this run.\n"
+        "# Extraction itself succeeded (see the extracted FASTA); this QC report is absent.\n"
+    )
 
 log.write("[itsx_extract] DONE.\n")
 log.close()

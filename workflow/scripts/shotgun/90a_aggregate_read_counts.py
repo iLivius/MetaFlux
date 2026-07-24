@@ -64,12 +64,18 @@ def parse_fastp_counts(path: Path) -> tuple[int, int]:
 
 def parse_kraken2_report(path: Path) -> tuple[int, int]:
     """Return (classified_pairs, unclassified_pairs) from a Kraken2 report.
-    Rank U = unclassified; rank R = root of classified tree."""
+    Rank U = unclassified; rank R = root of classified tree.
+
+    Column indices assume the 8-column format produced by --report-minimizer-data
+    (35_kraken2.smk always passes this flag): it inserts two minimizer-count
+    columns before rank/taxid/name, shifting rank from the standard report's
+    index 3 to index 5 here. Without --report-minimizer-data, rank would be at
+    cols[3] instead — do not "fix" this back to 3 without checking that flag."""
     classified = unclassified = 0
     with path.open() as fh:
         for line in fh:
             cols = line.split("\t")
-            if len(cols) < 6:
+            if len(cols) < 8:
                 continue
             rank = cols[5].strip()
             reads = int(cols[1])

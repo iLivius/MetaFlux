@@ -12,13 +12,13 @@
 #   [amplicon] — only used when mode: amplicon
 #   [shotgun]  — only used when mode: shotgun
 
-# ┌───────────────────────────────────────────────────────────────┐
-# │ WHAT THIS RUN IS — the four lines that define the analysis.    │
-# │   mode          : amplicon | shotgun         (below)          │
-# │   amplicon.type : 16S | ITS | 18S            (amplicon block) │
-# │   input.fastq_dir / output.out_dir           (below)          │
-# │ Everything else in this file is tuning and can usually stay.   │
-# └───────────────────────────────────────────────────────────────┘
+# ┌────────────────────────────────────────────────────────────────────┐
+# │ WHAT THIS RUN IS — the four lines that define the analysis.        │
+# │   mode          : amplicon | shotgun              (below)          │
+# │   amplicon.type : 16S | ITS | 18S | gyrB | rpoB   (amplicon block) │
+# │   input.fastq_dir / output.out_dir                (below)          │
+# │ Everything else in this file is tuning and can usually stay.       │
+# └────────────────────────────────────────────────────────────────────┘
 
 # ─────────────────────── Mode selection ─────────────────────────
 # Selects which set of rules runs — amplicon or shotgun (chosen here, not auto-detected).
@@ -66,9 +66,13 @@ references:
 # Amplicon-only configuration — ignored when mode: shotgun
 # ═══════════════════════════════════════════════════════════════
 amplicon:
-  type: 16S                                   # 16S | ITS | 18S
+  type: 16S                                   # 16S | ITS | 18S | gyrB | rpoB
                                               # 18S: probed on SILVA-Euk, classified on PR2;
                                               # no region extractor (extraction is forced off).
+                                              # gyrB: probed direct (DD7RZ8 is pre-trimmed);
+                                              # rpoB: probed by in-silico PCR (FROGS is full-length).
+                                              # Both gyrB/rpoB are rdp-only (no SINTAX build) and
+                                              # have no region extractor (extraction is forced off).
                                               # Remember to set taxonomy.filter for the marker
                                               # (18S: keep [d__Eukaryota]).
   its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
@@ -104,12 +108,20 @@ amplicon:
                                               #   references are recovered in silico (EukBr sits at the 3' terminus and
                                               #   most references are truncated before it), so auto would size the
                                               #   window from a biased minority.
+                                              # gyrB auto: direct read of the pre-trimmed DD7RZ8 amplicons; uses
+                                              #   probe_length_stat.16S (gyrB reuses that key — its own is unused
+                                              #   since the direct path never runs an in-silico PCR).
+                                              # rpoB auto: in-silico PCR against the full-length FROGS genes; uses
+                                              #   probe_length_stat.rpoB — this key MUST be present in auto mode or
+                                              #   parsing hard-errors.
                                               # Manual: provide a single integer (bp) or [min, max] range.
   probe_length_stat:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max
     18S: p95                                  # 18S V4 has a ragged upper tail — p95 keeps the window permissive
+    rpoB: p95                                 # only required if rpoB runs with expected_length: auto
                                               # ITS: overlap constraint not checked (truncLen overridden to c(0,0))
-  min_overlap: 12                             # design overlap in bp (truncLen constraint AND mergePairs)
+  min_overlap: 12                             # design overlap in bp — truncLen constraint ONLY
+                                              # (runtime mergePairs uses dada2.merge.min_overlap)
 
   cutadapt:
     max_error_rate: 0.2
@@ -124,9 +136,9 @@ amplicon:
     subsample_files: 12                       # number of files sampled by dada2::qa() per direction
     manual_r1: #260                           # used only when mode == manual
     manual_r2: #240
-    # Both 16S and ITS use the same Q-based picker + overlap constraint.
-    # For ITS, truncLen is overridden to (0, 0) in filterAndTrim — no hard cut
-    # is applied; quality is controlled by maxEE and min_len only.
+    # 16S, 18S, gyrB and rpoB all use the same Q-based picker + overlap constraint.
+    # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
+    # no hard cut is applied; quality is controlled by maxEE and min_len only.
     # NOTE: on very clean runs, `auto` can place truncLen above the (trimmed)
     # read-length bulk and drop all reads — see README Troubleshooting.
 
@@ -142,6 +154,8 @@ amplicon:
 
   extraction:
     enabled: true                             # Metaxa2 (16S) or ITSx (ITS); set false to skip
+                                              # 18S/gyrB/rpoB have NO region extractor — set false
+                                              # for these (left true is auto-forced off with a warning)
 
   taxonomy:
     method: sintax                            # rdp | sintax
@@ -166,10 +180,14 @@ amplicon:
       # run config and uncomment it there.
       #
       # Recommended starting points:
-      #   16S : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
-      #   ITS : keep [k__Fungi]                  discard []
-      #   18S : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
+      #   16S  : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
+      #   ITS  : keep [k__Fungi]                  discard []
+      #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
       #                                                       # use k__Eukaryota with SILVA-Euk
+      #   gyrB : no recommended default — the DD7RZ8 paralog tag (discard: [other])
+      #          is a separate, structural filter; see README "Running gyrB"
+      #   rpoB : no recommended default — FROGS RefSeq has no non-rpoB contamination
+      #          equivalent to filter; leave empty unless your own run shows otherwise
       # To drop lab/kit contaminants a blank control revealed, add them to discard,
       # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
       keep:    #[k__Bacteria, k__Archaea]
@@ -239,8 +257,9 @@ shotgun:
     min_read_length: 100                      # --length_required after trimming
                                               # 100 is comfortable for 150 bp reads; ~70 for HiSeq 2x100.
 
-  # Kraken2 confidence threshold — 0.1 is moderate; higher = stricter.
-  # Hill et al. 2025 (CAMI3) suggests 0.05–0.15 is the sweet spot for PlusPF-like DBs.
+  # Kraken2 confidence threshold — higher = stricter.
+  # Hill et al. 2025 (CAMI3) suggests 0.05–0.15 is the sweet spot for PlusPF-like DBs;
+  # 0.15 (below) sits at the strict end of that range.
   kraken:
     confidence: 0.15
     hit_groups: 3                             # minimum distinct k-mer hits per read to keep a classification
@@ -278,10 +297,6 @@ shotgun:
   # Empty list = skip extraction entirely. Example: [Bacteria, Archaea]
   extract_taxa: []
 
-  # SRA fetch (fasterq-dump + pigz) parallelism.
-  # 6 is usually enough; past ~8 the bottleneck is I/O rather than CPU.
-  download_threads: 6
-
 # ─────────────────────── Resources [shared] ─────────────────────
 # Per-rule threads and mem_mb. Rules read these via threads_for() / mem_mb_for()
 # helpers defined in workflow/rules/shared/00_common.smk. Missing keys fall
@@ -313,7 +328,8 @@ resources:
     bracken: 4
     kraken_biom: 2
     extract_taxon_reads: 4
-    download_sra: 6
+    compress_extracted: 6                     # pigz parallelism for extract_taxa outputs
+    download_sra: 6                           # fasterq-dump parallelism; past ~8 the bottleneck is I/O, not CPU
   mem_mb:
     # ── shared ──
     multiqc: 2000

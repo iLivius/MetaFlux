@@ -281,16 +281,26 @@ if MODE == "amplicon":
     PRIMER_HASH = _primer_pair_hash(PRIMER_FWD, PRIMER_REV)
 
     # ── Amplicon-probe wiring (from the marker profile) ──
-    #   16S → pcr mode, in-silico PCR of the primers against SILVA.
-    #   ITS → direct mode, lengths read from the UNITE UCHIME ITS1/ITS2 subregion.
+    #   pcr mode    (16S, 18S, rpoB) → in-silico PCR of the primers against a
+    #               full-length reference (SILVA / SILVA-Euk / FROGS).
+    #   direct mode (ITS, gyrB)      → lengths read straight from a reference that
+    #               is already amplicon-length (UNITE UCHIME / DD7RZ8).
     PROBE_MODE        = PROFILE["probe_mode"]
+    if PROBE_MODE not in ("pcr", "direct"):
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r} has an invalid probe_mode "
+            f"{PROBE_MODE!r} — must be 'pcr' or 'direct'."
+        )
     PROBE_REF_FASTA   = REF_PATHS[PROFILE["probe_ref"].format(region=ITS_REGION)]
     PROBE_REF_TAG     = PROFILE["probe_ref_tag"].format(region=ITS_REGION)
-    # Only the pcr probe path consumes this statistic; fail with a usable message
-    # rather than a bare KeyError when a marker's key is absent from the config.
+    # Every marker except ITS can reach resolve_expected_length() in pick_trunclen.py
+    # (ITS returns early and never resolves a stat) — so gate this validation on
+    # amp_type, not probe_mode. A direct-mode marker like gyrB still needs a valid
+    # probe_length_stat entry if it is ever run with expected_length: auto, even
+    # though its own probe never runs an in-silico PCR.
     _stat_key = PROFILE["probe_stat_key"]
     _stat_cfg = config["amplicon"].get("probe_length_stat", {}) or {}
-    if PROBE_MODE == "pcr" and _stat_key not in _stat_cfg:
+    if AMPLICON_TYPE != "ITS" and _stat_key not in _stat_cfg:
         sys.exit(
             f"[MetaFlux] amplicon.probe_length_stat is missing the '{_stat_key}' key that "
             f"marker {AMPLICON_TYPE} needs. Add it, e.g.\n"
@@ -308,11 +318,34 @@ if MODE == "amplicon":
 
     WANTS_PROBE = _wants_probe(amp_cfg)
 
+    # ITS's length_filter never resolves expected_length through pick_trunclen.py
+    # (its ITS branch always writes expected_length: null to trunclen.json, since
+    # truncLen is fixed to c(0,0) for ITS regardless of amplicon length — see
+    # 50a_pick_trunclen.py). dada_length_filter's mode=auto has two ways to size its
+    # window: the probe JSON (only produced when WANTS_PROBE, i.e. expected_length:
+    # 'auto'), or a fallback that reads expected_length out of trunclen.json. For ITS
+    # with a manual expected_length, WANTS_PROBE is False (no probe JSON) and the
+    # fallback hits that permanent null, crashing on int(None) — AFTER the full DADA2
+    # run. Catch the combination here instead, before anything expensive runs.
+    if AMPLICON_TYPE == "ITS" and amp_cfg["length_filter"]["mode"] == "auto" and not WANTS_PROBE:
+        sys.exit(
+            "[MetaFlux] ITS with amplicon.length_filter.mode: auto needs "
+            "amplicon.expected_length: 'auto' too, so a probe-based length window can be "
+            "built — a manual (non-'auto') expected_length gives the ITS length filter "
+            "nothing to size its window from. Either set expected_length: 'auto', or set "
+            "length_filter.mode: manual with an explicit length_filter.range."
+        )
+
     # ── Extraction / taxonomy globals (from the marker profile) ──
     EXTRACTION_ENABLED  = amp_cfg["extraction"].get("enabled", True)
     MARKER_EXTRACTOR    = PROFILE["extractor"]           # metaxa2 | itsx | none
+    if MARKER_EXTRACTOR not in ("metaxa2", "itsx", "none"):
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r} has an invalid extractor "
+            f"{MARKER_EXTRACTOR!r} — must be 'metaxa2', 'itsx', or 'none'."
+        )
 
-    # A marker whose profile has no region extractor (18S, gyrB) defines no
+    # A marker whose profile has no region extractor (18S, gyrB, rpoB) defines no
     # target_extract rule in 70_extract.smk. Leaving extraction.enabled true would
     # make the DAG ask for seqs_extracted.fasta, which nothing produces — a
     # confusing missing-input error. Force it off and say so instead.
@@ -339,8 +372,8 @@ if MODE == "amplicon":
 
     # ── Taxonomy rank model (from the marker profile) ──
     # Drives the taxonomy-string builder in both 80a (rdp) and 80c (sintax),
-    # replacing the previously hardcoded 7-rank tuples. 16S/ITS share the
-    # Linnaean 7 today; a future 9-rank marker (PR2) supplies its own here.
+    # replacing the previously hardcoded 7-rank tuples. 16S/ITS/gyrB/rpoB use the
+    # Linnaean 7; 18S/PR2 is the one 9-rank marker today.
     # rdp path rank model
     TAX_LEVELS    = PROFILE["tax_levels"]
     RANK_LETTERS  = PROFILE["rank_letters"]
@@ -352,6 +385,26 @@ if MODE == "amplicon":
     SINTAX_TAX_LEVELS    = PROFILE.get("sintax_tax_levels",    TAX_LEVELS)
     SINTAX_RANK_LETTERS  = PROFILE.get("sintax_rank_letters",  RANK_LETTERS)
     SINTAX_RANK_PREFIXES = PROFILE.get("sintax_rank_prefixes", RANK_PREFIXES)
+
+    # These three (and the sintax_* triad) are positionally matched, hand-maintained
+    # lists in the marker pack — nothing else in the pipeline checks they line up.
+    # A miscounted pack silently corrupts taxonomy strings instead of erroring: R's
+    # out-of-range vector indexing returns NA (80a renders "NAvalue"), and Python's
+    # zip() silently truncates to the shortest list (80c drops trailing ranks) —
+    # neither crashes. Catch the malformed pack here instead, at parse time.
+    if not (len(TAX_LEVELS) == len(RANK_LETTERS) == len(RANK_PREFIXES)):
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r} has mismatched rank-model list "
+            f"lengths: tax_levels={len(TAX_LEVELS)}, rank_letters={len(RANK_LETTERS)}, "
+            f"rank_prefixes={len(RANK_PREFIXES)} — all three must be the same length."
+        )
+    if not (len(SINTAX_TAX_LEVELS) == len(SINTAX_RANK_LETTERS) == len(SINTAX_RANK_PREFIXES)):
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r} has mismatched sintax rank-model "
+            f"list lengths: sintax_tax_levels={len(SINTAX_TAX_LEVELS)}, "
+            f"sintax_rank_letters={len(SINTAX_RANK_LETTERS)}, "
+            f"sintax_rank_prefixes={len(SINTAX_RANK_PREFIXES)} — all three must be the same length."
+        )
 
     # ── Contaminant keep/discard (config-only; no per-marker code default) ──
     # Lists of rank-prefixed tokens (e.g. k__Bacteria, o__Chloroplast) matched
@@ -433,7 +486,6 @@ else:  # MODE == "shotgun"
     TAX_LEV          = sht_cfg["bracken"]["tax_lev"]
     BRACKEN_THRESH   = int(sht_cfg["bracken"]["threshold"])
     EXTRACT_TAXA     = list(sht_cfg.get("extract_taxa", []) or [])
-    DL_THREADS       = int(sht_cfg.get("download_threads", 4))
 
     # ── OTU-table taxon filter (shotgun counterpart of amplicon keep/discard) ──
     # Same rank-aware token matching; applied to the final otu_table. Config-only,
@@ -459,7 +511,8 @@ else:  # MODE == "shotgun"
     elif _hash_mb:
         KRAKEN2_MEM_MB = int(_hash_mb * 1.1)
     else:
-        # only reached if the DB path doesn't exist yet — conservative ~100 GB default
+        # reached when hash.k2d isn't present under an existing kraken_db dir yet
+        # (e.g. the DB is still downloading/being built) — conservative ~100 GB default
         KRAKEN2_MEM_MB = 110000
 
     # ── BioProject SRA fetch ──
@@ -625,7 +678,7 @@ if MODE == "amplicon":
 
 # ────────────────────── rule all targets ───────────────────────
 def _amplicon_targets():
-    """Default target list for mode=amplicon. Mirrors DADAism v3 rule-all."""
+    """Default target list for mode=amplicon — the files `rule all` requests for an amplicon run."""
     targets = [
         # Raw FASTQ symlinks (1.reads/ — visibility only)
         *expand(OUT / "1.reads" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
@@ -680,7 +733,7 @@ def _amplicon_targets():
 
 
 def _shotgun_targets():
-    """Default target list for mode=shotgun. Mirrors MetaFlux v0.1.0 rule-all."""
+    """Default target list for mode=shotgun — the files `rule all` requests for a shotgun run."""
     out = [
         *expand(OUT / "01.preprocessing" / "{s}_fastp.json",          s=SAMPLES),
         *expand(OUT / "02.classification" / "{s}_report.txt",         s=SAMPLES),

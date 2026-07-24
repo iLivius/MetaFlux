@@ -1,9 +1,12 @@
 # Per-taxon read extraction via KrakenTools.
 #
 # wildcards.taxon is the slug (e.g. "bacteria"); we map it back to the real
-# scientific name via params.target so we can grep the Bracken report for the
-# NCBI taxid at rank D. --include-children means we get everything under the
-# requested taxon, not just reads classified exactly at that rank.
+# scientific name via params.target so we can grep the Bracken report for its
+# NCBI taxid. The name is matched at WHATEVER rank it appears in the report
+# (domain, genus, species, ...) — there is no rank restriction, so extract_taxa
+# can name a broad group (Bacteria) or a single species (Escherichia coli)
+# equally well. --include-children then pulls every read under that taxid, not
+# just reads classified exactly at it.
 #
 # Only activated when shotgun.extract_taxa is non-empty (the corresponding
 # targets are only added to rule all in that case — see _shotgun_targets()
@@ -31,7 +34,10 @@ rule extract_taxon_reads:
         r"""
         target="{params.target}"
         # Find the NCBI taxid for the requested taxon name in the bracken report.
-        taxid=$(awk -v t="$target" -F '\t' '$6 ~ t {{print $5; exit}}' {input.report})
+        # index(), not a ~ regex match: a taxon name containing regex metacharacters
+        # (e.g. "Bacteroides sp.") would otherwise be interpreted as a pattern instead
+        # of matched literally.
+        taxid=$(awk -v t="$target" -F '\t' 'index($6, t) > 0 {{print $5; exit}}' {input.report})
         echo "{wildcards.sample}: taxon='$target' taxid=$taxid" > {log}
         if [ -n "$taxid" ]; then
             extract_kraken_reads.py -k {input.kraken} \
@@ -56,7 +62,7 @@ rule compress_extracted:
     output:
         r1 = OUT / "04.extracted_reads" / "{sample}_{taxon}_R1.fastq.gz",
         r2 = OUT / "04.extracted_reads" / "{sample}_{taxon}_R2.fastq.gz",
-    threads: DL_THREADS
+    threads: lambda wc: threads_for("compress_extracted")
     conda:
         "../../envs/kraken2.yaml"
     log:
