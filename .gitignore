@@ -19,10 +19,9 @@ __pycache__/
 *~
 *.swp
 
-# Internal staging notes (content folded into README.md)
-README_notes.md
-NEW_MARKERS_NOTES.md
-CONFIG_DESIGN_NOTES.md
+# Internal design/staging notes — archived under design-history/, kept private
+# (historical rationale only; not part of the shipped repo or the docs)
+design-history/
 
 # Personal / customized run configs — only config.yaml (the template) is tracked
 config/*.yaml
