@@ -125,7 +125,7 @@ mode.
         DADA2 ASVs      │               │  Kraken2 classify
         Metaxa2 / ITSx* │               │  Bracken abundance
         length filter   │               │  kraken-biom OTU table
-        SILVA / UNITE   │               │  KrakenTools per-taxon reads*
+        multi-marker    │               │  KrakenTools per-taxon reads*
         taxonomy        │               │
                         ▼               ▼
               ASV table + taxonomy   OTU table + reports
@@ -313,7 +313,7 @@ references:
   # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS) are
   # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
   # DB filenames and download URLs, and MetaFlux fetches (and, for rpoB, converts)
-  # them on first use into refdb_root. You only need an entry here to RELOCATE one,
+  # them on first use into refdb_root. An entry here is only needed to RELOCATE one,
   # e.g. `silva: {train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz}`.
   refdb_root: refdb                       # where fetched databases are cached
   phix:                                   # [shared] — only amplicon fetches/indexes it
@@ -385,8 +385,8 @@ only a genus named exactly that — never a loose substring elsewhere in the lin
 - An empty list means that direction does nothing; `enabled: false` turns the whole
   filter off and keeps every ASV.
 
-There is **no hidden default** — whatever you list is exactly what is applied, so set
-these to suit your marker:
+There is **no hidden default** — whatever is listed here is exactly what gets applied,
+so set these per marker:
 
 | Marker | keep | discard |
 |--------|------|---------|
@@ -411,7 +411,7 @@ automatically on first run and cached under `refdb/`:
   PR2, so it sizes the length window far more reliably.
 - **PR2 (v5.1.1)** is the taxonomy reference, being the better-curated protist database.
 
-Two things differ from 16S/ITS and are handled for you:
+Two things differ from 16S/ITS, both handled automatically:
 
 - **No region extractor.** There is no 18S equivalent of Metaxa2/ITSx in MetaFlux, so
   `extraction.enabled` is forced off (with a warning) — the ASV length filter still runs.
@@ -453,7 +453,7 @@ reference is fetched automatically on first run and cached under `refdb/`:
 - **DD7RZ8 v6** (GTDB r226, INRAE) is both the taxonomy reference and the amplicon-length
   probe substrate — one trainset, no second database needed.
 
-Two things differ from 16S/ITS/18S and are handled for you:
+Two things differ from 16S/ITS/18S, both handled automatically:
 
 - **The reference is already amplicon-length.** DD7RZ8 ships primer-trimmed in-silico
   amplicons (~247 bp, range 234–270), not full-length genes — so `probe_mode: direct`
@@ -470,9 +470,9 @@ rank, so the usual keep/discard filter can drop paralogs with no extra machinery
 discard: [other]     # or, equivalently: keep: [gyrB]
 ```
 
-There's no universal right answer for how much `other` to expect from your own
-primers/samples — leave it empty on a first run so the paralog fraction is visible in
-the output, then decide.
+There's no universal right answer for how much `other` to expect — it depends on the
+primers and samples in use. Leave it empty on a first run so the paralog fraction is
+visible in the output, then decide.
 
 #### Running rpoB (bacterial RNA polymerase subunit B)
 
@@ -486,7 +486,7 @@ under `refdb/`:
   (`workflow/scripts/refdb/frogs_rpob_to_dada2.py`) rewrites headers into a plain DADA2
   lineage before DADA2 ever sees the file.
 
-Two things differ from 16S/ITS/18S and are handled for you:
+Two things differ from 16S/ITS/18S, both handled automatically:
 
 - **`probe_mode: pcr`.** Unlike gyrB, the rpoB reference is full-length, so the amplicon
   window is recovered the same way as for 16S/18S: in-silico PCR of the primers against

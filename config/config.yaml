@@ -49,10 +49,10 @@ output:
 #   shotgun  → BBDuk's bundled phix174_ill.ref.fa.gz (no download/index needed)
 # kraken_db is shotgun-only and must be supplied separately.
 references:
-  # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk) are NOT listed here.
-  # Each marker pack (workflow/markers/<type>.yaml) declares its own DB filenames and
-  # download URLs, and MetaFlux fetches them on first use into refdb_root. You only
-  # need an entry here to RELOCATE one, e.g.
+  # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS) are
+  # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
+  # DB filenames and download URLs, and MetaFlux fetches them on first use into
+  # refdb_root. An entry here is only needed to RELOCATE one, e.g.
   #     silva: {train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz}
   refdb_root: refdb            # where fetched databases are cached
 
@@ -183,7 +183,7 @@ amplicon:
       #   16S  : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
       #   ITS  : keep [k__Fungi]                  discard []
       #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
-      #                                                       # use k__Eukaryota with SILVA-Euk
+      #                                                        # use k__Eukaryota with SILVA-Euk
       #   gyrB : no recommended default — the DD7RZ8 paralog tag (discard: [other])
       #          is a separate, structural filter; see README "Running gyrB"
       #   rpoB : no recommended default — FROGS RefSeq has no non-rpoB contamination
