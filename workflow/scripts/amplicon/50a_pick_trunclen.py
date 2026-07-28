@@ -381,15 +381,52 @@ def main() -> int:
                 log(f"[pick_trunclen] ERROR: raise_trunc cannot satisfy overlap "
                     f"(deficit={deficit}, headroom R1={headroom_r1}+R2={headroom_r2})")
                 return 3
-            bump_r1 = min(headroom_r1, math.ceil(deficit * headroom_r1 / (headroom_r1 + headroom_r2)))
-            bump_r2 = deficit - bump_r1
-            if bump_r2 > headroom_r2:
-                bump_r2 = headroom_r2
-                bump_r1 = deficit - bump_r2
+
+            # Which read gives up the deficit is decided by the QUALITY of the bases
+            # about to be added, not by how many are left.
+            #
+            # Splitting by headroom alone (ceiling - cut) is actively perverse: headroom
+            # is largest exactly where the cut landed early, i.e. where quality collapsed
+            # soonest. On typical Illumina that is R2, so the read with the worst tail
+            # would be extended furthest — pushing the recovery deepest into the bases
+            # least worth keeping, which then cost reads at maxEE anyway.
+            #
+            # Instead, walk the deficit one base at a time and each time extend whichever
+            # read has the better aggregated Q1 at the position it would gain. Ties go to
+            # R1, which is the stronger read on Illumina chemistry. A read stops being a
+            # candidate once its own headroom is used up.
+            q_by_pos_r1 = {pos: q for pos, _end, q in agg_r1}
+            q_by_pos_r2 = {pos: q for pos, _end, q in agg_r2}
+
+            bump_r1 = bump_r2 = 0
+            gained_q_r1: list[float] = []
+            gained_q_r2: list[float] = []
+            for _ in range(deficit):
+                can_r1 = bump_r1 < headroom_r1
+                can_r2 = bump_r2 < headroom_r2
+                if not can_r1 and not can_r2:
+                    break
+                # Quality of the next base each read would gain; missing positions sort last.
+                next_q_r1 = q_by_pos_r1.get(cut_r1 + bump_r1 + 1, float("-inf")) if can_r1 else float("-inf")
+                next_q_r2 = q_by_pos_r2.get(cut_r2 + bump_r2 + 1, float("-inf")) if can_r2 else float("-inf")
+                if next_q_r1 >= next_q_r2:
+                    gained_q_r1.append(next_q_r1)
+                    bump_r1 += 1
+                else:
+                    gained_q_r2.append(next_q_r2)
+                    bump_r2 += 1
+
             cut_r1 += bump_r1
             cut_r2 += bump_r2
             resolved_via = "raise_trunc"
-            log(f"[pick_trunclen] Raised: R1 +{bump_r1}, R2 +{bump_r2}")
+
+            def _mean_q(vals: list[float]) -> str:
+                finite = [v for v in vals if v != float("-inf")]
+                return f"{sum(finite) / len(finite):.1f}" if finite else "n/a"
+
+            log(f"[pick_trunclen] Raised: R1 +{bump_r1} (mean Q1 of added bases "
+                f"{_mean_q(gained_q_r1)}), R2 +{bump_r2} (mean Q1 {_mean_q(gained_q_r2)}); "
+                "allocation is quality-weighted, not headroom-weighted")
 
         elif resolve_policy == "relax_q":
             q_try = q_threshold
