@@ -1,0 +1,95 @@
+site_name: MetaFlux
+site_description: Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow
+site_author: Livio Antonielli
+repo_url: https://github.com/iLivius/MetaFlux
+repo_name: iLivius/MetaFlux
+edit_uri: edit/main/docs/
+
+# Where the Markdown sources live. `mkdocs serve` renders these to a local
+# preview; `mkdocs build` writes the static site to site/ (gitignored).
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant       # click-through without a full page reload
+    - navigation.tracking      # URL follows the section you are reading
+    - navigation.sections      # top-level groups rendered as sidebar sections
+    - navigation.top           # back-to-top button
+    - navigation.indexes       # a section can have its own landing page
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy        # copy button on every code block
+    - content.action.edit      # "edit this page" link back to GitHub
+  palette:
+    # Light mode (default) with a toggle to dark.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition                 # note/warning/tip callout boxes
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details           # collapsible callouts
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences       # nested code blocks, diagrams
+  - pymdownx.tabbed:
+      alternate_style: true    # tabbed content (e.g. per-marker examples)
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Quick start: getting-started/quick-start.md
+      - Choosing a mode: getting-started/choosing-a-mode.md
+  - Amplicon mode:
+      - Overview: amplicon/overview.md
+      - Markers:
+          - amplicon/markers/index.md
+          - 16S rRNA: amplicon/markers/16S.md
+          - ITS: amplicon/markers/its.md
+          - 18S rRNA: amplicon/markers/18S.md
+          - gyrB: amplicon/markers/gyrb.md
+          - rpoB: amplicon/markers/rpob.md
+      - Amplicon length and truncation: amplicon/length-and-truncation.md
+      - Keeping and discarding taxa: amplicon/taxon-filter.md
+  - Shotgun mode:
+      - Overview: shotgun/overview.md
+      - Reference databases: shotgun/databases.md
+      - Decontamination: shotgun/decontamination.md
+      - Per-taxon read extraction: shotgun/read-extraction.md
+  - Reference:
+      - Configuration: reference/configuration.md
+      - Output files: reference/output.md
+      - Running MetaFlux: reference/running.md
+  - Troubleshooting: troubleshooting.md
+  - About:
+      - Rationale: about/rationale.md
+      - Test datasets: about/test-datasets.md
+      - Citation and references: about/citation.md
