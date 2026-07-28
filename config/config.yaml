@@ -136,11 +136,18 @@ amplicon:
     subsample_files: 12                       # number of files sampled by dada2::qa() per direction
     manual_r1: #260                           # used only when mode == manual
     manual_r2: #240
+    min_read_coverage_pct: 95                 # auto mode only: a cut is never placed past the
+                                              # length this % of a sample's reads still reach.
+                                              # DADA2 DISCARDS reads shorter than truncLen, so a
+                                              # cut above the read-length bulk loses the library,
+                                              # not just a few bases. Falco reports quality up to
+                                              # the LONGEST read in a file, which on a clean run
+                                              # is what the cut would otherwise follow. Raise
+                                              # towards 100 to allow longer cuts and lose more
+                                              # short reads; lower to be more conservative.
     # 16S, 18S, gyrB and rpoB all use the same Q-based picker + overlap constraint.
     # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
     # no hard cut is applied; quality is controlled by maxEE and min_len only.
-    # NOTE: on very clean runs, `auto` can place truncLen above the (trimmed)
-    # read-length bulk and drop all reads — see README Troubleshooting.
 
   # ASV length filter applied AFTER target extraction (Metaxa2/ITSx) so the
   # filtered distribution is directly comparable to the probe distribution.

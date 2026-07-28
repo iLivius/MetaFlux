@@ -33,6 +33,7 @@ rule pick_trunclen:
         manual_r1       = config["amplicon"]["trunc_len"]["manual_r1"],
         manual_r2       = config["amplicon"]["trunc_len"]["manual_r2"],
         probe_stat      = PROBE_LENGTH_STAT,
+        min_read_coverage_pct = config["amplicon"]["trunc_len"]["min_read_coverage_pct"],
     log:
         LOGS / "pick_trunclen.log",
     threads: lambda wc: threads_for("pick_trunclen")

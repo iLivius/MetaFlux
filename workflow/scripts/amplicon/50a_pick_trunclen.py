@@ -94,6 +94,99 @@ def parse_qbins(fastqc_data_path: Path) -> list[tuple[int, int, float]]:
     return bins
 
 
+# ── Read how long the reads in one sample actually are ───────────
+def parse_length_distribution(fastqc_data_path: Path) -> list[tuple[int, float]]:
+    """Return [(length, n_reads), ...] from a falco fastqc_data.txt.
+
+    Falco's ">>Sequence Length Distribution" block says how many reads ended at
+    each length. We need it because the quality table alone is misleading: falco
+    reports a quality bin for every position up to the LONGEST read in the file,
+    even when only a handful of reads get that far. After primer trimming most
+    reads stop a little short of the full read length, so trusting the quality
+    table's last position means trusting a position backed by a few reads.
+
+    The length field is usually a single integer, but falco bins it ("270-274")
+    once the spread is wide, exactly like the quality table. A binned entry is
+    counted at its LOWEST length: we only want to claim a read reached a position
+    if it certainly did.
+    """
+    counts: list[tuple[int, float]] = []
+    in_block = False
+    with fastqc_data_path.open() as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if line.startswith(">>Sequence Length Distribution"):
+                in_block = True
+                continue
+            if not in_block:
+                continue
+            if line.startswith(">>END_MODULE"):
+                break
+            if line.startswith("#"):
+                continue  # header row
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+            length_field = parts[0]
+            n_reads = float(parts[1])
+            if "-" in length_field:
+                lo, _hi = length_field.split("-", 1)
+                length = int(lo)          # conservative: shortest length in the bin
+            else:
+                length = int(length_field)
+            counts.append((length, n_reads))
+    return counts
+
+
+# ── How far do most of this sample's reads actually reach? ────────
+def read_coverage_cap(length_counts: list[tuple[int, float]], min_pct: float) -> int | None:
+    """Longest position at least `min_pct` percent of the sample's reads still reach.
+
+    Input is parse_length_distribution's output for one sample. Walking from the
+    longest length downwards and accumulating reads, we stop as soon as the running
+    total covers the requested percentage — that length is the cap.
+
+    Why this matters: DADA2's filterAndTrim DISCARDS any read shorter than truncLen
+    rather than padding it. So a truncLen above this cap does not merely trim fewer
+    bases, it throws away every read that fell short. On a library whose quality
+    never degrades, the quality-based cut has nothing to stop it landing there.
+
+    Returns None if the file had no length data, in which case the caller leaves
+    the sample uncapped and behaves as before.
+    """
+    if not length_counts:
+        return None
+    total = sum(n for _length, n in length_counts)
+    if total <= 0:
+        return None
+    needed = total * min_pct / 100.0
+    running = 0.0
+    for length, n in sorted(length_counts, reverse=True):
+        running += n
+        if running >= needed:
+            return length
+    # Reached here only through float rounding; the shortest length covers everything.
+    return min(length for length, _n in length_counts)
+
+
+# ── Drop quality bins past a sample's usable read length ─────────
+def cap_bins_at(bins: list[tuple[int, int, float]], cap: int | None) -> list[tuple[int, int, float]]:
+    """Trim a sample's quality bins so none extends past `cap`.
+
+    A bin straddling the cap is shortened to end on it; bins entirely beyond it are
+    dropped. `cap=None` means "no length data for this sample" and returns the bins
+    untouched.
+    """
+    if cap is None:
+        return bins
+    out: list[tuple[int, int, float]] = []
+    for bin_start, bin_end, q1 in bins:
+        if bin_start > cap:
+            continue
+        out.append((bin_start, min(bin_end, cap), q1))
+    return out
+
+
 # ── Convert binned quality scores to one value per cycle position ─
 def expand_bins_to_positions(bins: list[tuple[int, int, float]]) -> dict[int, float]:
     """Expand binned Q1 to a per-position dict: {pos: q1_of_containing_bin}."""
@@ -117,10 +210,15 @@ def aggregate_q1_across_samples(per_sample_bins: list[list[tuple[int, int, float
     logic the same.
 
     Coverage gate: only keep positions covered by at least `min_coverage_pct`
-    of samples. Default 100 means truncLen is capped at the read length of the
-    shortest sample, so no sample silently loses every read at filterAndTrim.
-    Lower it (e.g. 95) if you are willing to sacrifice short-read outliers in
-    exchange for longer truncLen on the majority.
+    of SAMPLES. Default 100 means every sample must reach the position, so the
+    ceiling is the shortest sample's usable read length.
+
+    Note what this gate does NOT do: it counts samples, not reads. Lowering it
+    admits positions that some samples never reach, which RAISES the ceiling —
+    the opposite of sacrificing short-read outliers. Reads that are too short
+    within a sample are handled before this function is called, by capping each
+    sample's bins with read_coverage_cap(); that is the gate that protects
+    against truncLen landing above the bulk of the data.
     """
     if not per_sample_bins:
         raise ValueError("No samples to aggregate.")
@@ -281,6 +379,7 @@ def main() -> int:
     manual_r1       = p.manual_r1
     manual_r2       = p.manual_r2
     probe_stat  = str(p.probe_stat)
+    min_read_coverage_pct = float(p.min_read_coverage_pct)
 
     log(f"[pick_trunclen] amp_type={amp_type} mode={mode} q_threshold={q_threshold}")
     log(f"[pick_trunclen] R1 falco files: {len(falco_r1)}; R2 falco files: {len(falco_r2)}")
@@ -301,12 +400,58 @@ def main() -> int:
     # ── Auto mode: parse quality files and find the primary cuts ─
     bins_r1 = [parse_qbins(p) for p in falco_r1]
     bins_r2 = [parse_qbins(p) for p in falco_r2]
-    # Per-sample max read length (from each falco file's last bin), used to
-    # report which sample drives the coverage-capped ceiling.
-    file_max_r1 = sorted(((max(b[1] for b in s), p.parent.name) for s, p in zip(bins_r1, falco_r1) if s),
-                         key=lambda x: x[0])
-    file_max_r2 = sorted(((max(b[1] for b in s), p.parent.name) for s, p in zip(bins_r2, falco_r2) if s),
-                         key=lambda x: x[0])
+
+    # Cap each sample at the length most of its reads still reach, BEFORE looking
+    # at quality. Falco reports a quality bin for every position up to the longest
+    # read in a file, so without this step the ceiling is set by however few reads
+    # happened to run to full length — and since filterAndTrim discards reads
+    # shorter than truncLen, a cut placed there loses nearly the whole library.
+    if not 0 < min_read_coverage_pct <= 100:
+        log(f"[pick_trunclen] ERROR: trunc_len.min_read_coverage_pct must be >0 and <=100, "
+            f"got {min_read_coverage_pct}")
+        return 2
+
+    caps_r1 = [read_coverage_cap(parse_length_distribution(p), min_read_coverage_pct) for p in falco_r1]
+    caps_r2 = [read_coverage_cap(parse_length_distribution(p), min_read_coverage_pct) for p in falco_r2]
+    bins_r1 = [cap_bins_at(b, c) for b, c in zip(bins_r1, caps_r1)]
+    bins_r2 = [cap_bins_at(b, c) for b, c in zip(bins_r2, caps_r2)]
+
+    # A sample whose bins were emptied has no usable positions left, which would break
+    # the aggregation below. In practice this needs reads shorter than the first quality
+    # bin, so it means the input is not what the run assumes — say the wrong files, or
+    # reads already trimmed to almost nothing. Fail here with a readable reason rather
+    # than further down with an index error.
+    for label, caps, capped, paths in (("R1", caps_r1, bins_r1, falco_r1),
+                                       ("R2", caps_r2, bins_r2, falco_r2)):
+        for cap, s, path in zip(caps, capped, paths):
+            if not s:
+                log(f"[pick_trunclen] ERROR: {label} sample {path.parent.name} has no quality "
+                    f"positions left after capping at {cap} bp "
+                    f"({min_read_coverage_pct}% read-coverage). Check the primer-trimmed reads.")
+                return 2
+
+    # Report which sample sets each ceiling, and by how much the read-coverage cap
+    # pulled it in — a large gap here is the signature of the failure described above.
+    def cap_report(caps, bins, falco_paths, label):
+        rows = []
+        for cap, s, path in zip(caps, bins, falco_paths):
+            if not s:
+                continue
+            raw_max = max(b[1] for b in parse_qbins(path))
+            rows.append((cap if cap is not None else raw_max, raw_max, path.parent.name))
+        if not rows:
+            return
+        rows.sort(key=lambda x: x[0])
+        capped, raw_max, name = rows[0]
+        log(f"[pick_trunclen] {label} ceiling {capped} bp, set by {name} "
+            f"(its longest read is {raw_max} bp; {min_read_coverage_pct}% of its reads reach {capped} bp)")
+        if raw_max - capped >= 10:
+            log(f"[pick_trunclen] NOTE: {label} read-coverage cap pulled the ceiling in by "
+                f"{raw_max - capped} bp. Without it the cut could have landed above most reads.")
+
+    cap_report(caps_r1, bins_r1, falco_r1, "R1")
+    cap_report(caps_r2, bins_r2, falco_r2, "R2")
+
     agg_r1 = aggregate_q1_across_samples(bins_r1)
     agg_r2 = aggregate_q1_across_samples(bins_r2)
 
@@ -315,14 +460,8 @@ def main() -> int:
     max_r1 = agg_r1[-1][1]
     max_r2 = agg_r2[-1][1]
     log(f"[pick_trunclen] Primary cuts at Q1>={q_threshold}: R1={primary_r1}, R2={primary_r2}")
-    log(f"[pick_trunclen] Coverage-capped read length ceilings (all samples must reach the position): "
+    log(f"[pick_trunclen] Ceilings after the read-coverage and all-samples gates: "
         f"R1={max_r1}, R2={max_r2}")
-    if file_max_r1:
-        shortest = file_max_r1[0]
-        log(f"[pick_trunclen] Shortest-R1 sample: {shortest[1]} (max R1 = {shortest[0]} bp) — drives the R1 ceiling")
-    if file_max_r2:
-        shortest = file_max_r2[0]
-        log(f"[pick_trunclen] Shortest-R2 sample: {shortest[1]} (max R2 = {shortest[0]} bp) — drives the R2 ceiling")
 
     if primary_r1 < 50 or primary_r2 < 50:
         log(f"[pick_trunclen] WARNING: very short primary cuts (R1={primary_r1}, R2={primary_r2}); inspect falco reports.")
