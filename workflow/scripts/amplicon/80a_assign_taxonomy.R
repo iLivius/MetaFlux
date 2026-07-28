@@ -126,11 +126,26 @@ taxa_unique <- assignTaxonomy(unique_seqs, refdb_path,
                               taxLevels = tax_levels,
                               verbose = TRUE)
 
-# addSpecies for 16S only; species_db is empty list for ITS
+# addSpecies for 16S only; species_db is an empty list for every other marker
+# (ITS, 18S, gyrB, rpoB — see 80_taxonomy.smk), so this block just does
+# nothing for them. addSpecies works completely differently from
+# assignTaxonomy above: it is an EXACT sequence match against a separate
+# species-level reference, not the bootstrapped RDP classifier, so there is no
+# confidence score at this step — a species is only assigned when the match
+# is unambiguous (addSpecies' allowMultiple defaults to FALSE, so ties are
+# left blank rather than guessed), and even then only kept if the genus
+# assignTaxonomy already gave that ASV agrees with the matched reference's
+# genus. tryRC is passed here too, using the same amplicon.taxonomy.try_rc
+# setting as assignTaxonomy above, so an ASV whose stored orientation is the
+# reverse complement of the reference gets the same chance at a species match
+# as it did at a genus match — otherwise a sequence that only classified
+# because assignTaxonomy tried its reverse complement could reach addSpecies
+# and silently fail to match anything, for no reason a user could see from
+# the config.
 species_db_list <- snakemake@input[["species_db"]]
 if (length(species_db_list) > 0L) {
   message("[assign_taxonomy] addSpecies against ", species_db_list[[1]])
-  taxa_unique <- addSpecies(taxa_unique, species_db_list[[1]])
+  taxa_unique <- addSpecies(taxa_unique, species_db_list[[1]], tryRC = try_rc)
 }
 
 # Expand back: index by each ASV's sequence so identical-sequence ASVs share rows
@@ -232,31 +247,31 @@ if (isTRUE(filter_enabled) && n_before_filter > 0L && nrow(asv_table) == 0L) {
 }
 
 # ── Output (a): asv_table.txt — rows=ASV_IDs ─────────────────────────────────
+# The main table: one row per ASV, one column per sample (read counts) plus a
+# taxonomy column. Its sample columns are summed again downstream by rule
+# aggregate_read_counts to build the final stage of read_tracking.txt.
 dir.create(dirname(snakemake@output[["asv_table"]]), recursive = TRUE, showWarnings = FALSE)
 write.table(asv_table, file = snakemake@output[["asv_table"]], col.names = NA, sep = "\t")
 
 # ── Output (b): asv_table_seqs.txt — rows=sequences ──────────────────────────
+# Identical to (a), except each row is named by the ASV's actual sequence
+# instead of its short ASV_N id — for matching these ASVs directly against
+# sequences from another tool or database, without going through the id.
 asv_table_seqs <- asv_table
 rownames(asv_table_seqs) <- seqs_sub[rownames(asv_table)]
 write.table(asv_table_seqs, file = snakemake@output[["asv_table_seqs"]], col.names = NA, sep = "\t")
 
 # ── Output (c): taxon_seq_table.txt — rows=ASV_IDs, parsed cols + sequence ───
+# Same ASVs and taxonomy as (a), but with the taxonomy split into one column
+# per rank (Kingdom, Phylum, ...) instead of one semicolon-joined string, plus
+# the ASV's sequence — convenient for filtering or grouping by a single rank
+# without string-parsing the taxonomy column first. Has no per-sample counts.
 taxon_table <- taxa_df[rownames(asv_table), , drop = FALSE]
 taxon_table$sequence <- seqs_sub[rownames(asv_table)]
 write.table(taxon_table, file = snakemake@output[["taxon_seq_table"]], col.names = NA, sep = "\t")
 
 message("[assign_taxonomy] DONE. Outputs written to ", dirname(snakemake@output[["asv_table"]]))
 
-# The main table: one row per ASV, one column per sample (read counts) plus a
-# taxonomy column. Its sample columns are summed again downstream by rule
-# aggregate_read_counts to build the final stage of read_tracking.txt.
 sink(type = "message")
 sink(type = "output")
 close(log_con)
-# Identical to (a), except each row is named by the ASV's actual sequence
-# instead of its short ASV_N id — for matching these ASVs directly against
-# sequences from another tool or database, without going through the id.
-# Same ASVs and taxonomy as (a), but with the taxonomy split into one column
-# per rank (Kingdom, Phylum, ...) instead of one semicolon-joined string, plus
-# the ASV's sequence — convenient for filtering or grouping by a single rank
-# without string-parsing the taxonomy column first. Has no per-sample counts.
