@@ -11,6 +11,11 @@
 # Only activated when shotgun.extract_taxa is non-empty (the corresponding
 # targets are only added to rule all in that case — see _shotgun_targets()
 # in 00_common.smk).
+#
+# Terminal output: the extracted per-taxon FASTQs are not read by any other
+# rule in this pipeline. They exist for whatever the user wants to do next
+# with just that taxon's reads — assemble a genome from a single genus's
+# reads, hand a species's reads to a dedicated strain-typing tool, and so on.
 
 rule extract_taxon_reads:
     input:

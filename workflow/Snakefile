@@ -1,14 +1,29 @@
 # MetaFlux v2.1.0 — Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow.
 #
-# Invocation (from the repository root):
+# This is the entry point Snakemake actually reads (the file every `snakemake` command
+# ultimately parses), but almost none of the pipeline's logic lives in it. Its only job
+# is to load the config, decide which of the two analysis modes was requested, and
+# stitch together the rule files that implement whichever mode that is. Read this file
+# to find out WHERE something lives, not to find out WHAT the workflow does — for that,
+# start at rules/shared/00_common.smk (shared setup every rule depends on) or the first
+# numbered file under rules/amplicon/ or rules/shotgun/ for the mode you care about.
+#
+# Invocation (from the repository root — this matters, see the note on configfile
+# below):
 #   snakemake --sdm conda --cores N --configfile config/config.yaml
 # (--sdm is the short alias for --software-deployment-method, which replaced
-#  the deprecated --use-conda flag in modern Snakemake.)
+#  the deprecated --use-conda flag in modern Snakemake. It tells Snakemake to build
+#  each rule's own conda environment from the .yaml files under workflow/envs/ the
+#  first time that rule runs, so nothing except Snakemake itself has to be installed
+#  by hand.)
 #
-# Mode is selected via config["mode"]: 'amplicon' or 'shotgun'.
-#   amplicon → rules/amplicon/*.smk  (DADA2-based multi-marker amplicon workflow)
+# Mode is selected via config["mode"]: 'amplicon' or 'shotgun'. Only one mode's rules
+# are ever loaded into a given run — the other mode's rule files are not even read —
+# so there is no risk of an amplicon rule accidentally firing during a shotgun run:
+#   amplicon → rules/amplicon/*.smk  (DADA2-based multi-marker amplicon workflow:
+#              16S / ITS / 18S / gyrB / rpoB, chosen by amplicon.type in the config)
 #   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken-based shotgun workflow)
-# Shared modules (rules/shared/*.smk) are always included.
+# Shared modules (rules/shared/*.smk) are always included, in both modes.
 
 import glob
 
@@ -25,19 +40,43 @@ Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow
 Livio Antonielli, May 2026
 """)
 
-# Resolve config path relative to invocation dir, not Snakefile dir.
+# Loads config/config.yaml as the base layer for every run (see "Which file a
+# setting actually comes from" in the docs for the full precedence rules). The path
+# string here is resolved against the directory `snakemake` is RUN from, not against
+# where this Snakefile lives — so this only works launched from the repository root,
+# the supported way to invoke MetaFlux. Run from elsewhere without --configfile,
+# Snakemake aborts outright; run from elsewhere WITH --configfile, it silently uses
+# only that file with no template underneath. A file passed via --configfile on the
+# command line is merged on top of this one, key by key; anything not overridden
+# there still comes from here.
 configfile: "config/config.yaml"
 
-# Shared: 00_common resolves MODE + paths + helpers; everything else depends on it.
+# Shared setup, always loaded first: resolves MODE from the config, builds the
+# absolute input/output paths every rule uses, and defines the small helper functions
+# (threads_for, mem_mb_for, the marker-pack loader) that later files call. Everything
+# below this line assumes 00_common.smk has already run.
 include: "rules/shared/00_common.smk"
 
-# Mode-specific rule modules — sorted glob preserves numeric order (10_, 20_, ...).
+# Pulls in every rule file for whichever mode was selected — rules/amplicon/*.smk or
+# rules/shotgun/*.smk, never both. Filenames are numerically prefixed (10_, 20_, 30_,
+# ...) purely so a directory listing reads in pipeline order; `sorted()` on the glob
+# is what turns that naming convention into the include order, though Snakemake itself
+# does not care what order rules are declared in — it builds the run from the DAG of
+# file dependencies, not from file order. The prefixes are a readability aid for
+# whoever opens the directory, not a control-flow mechanism.
 for _f in sorted(glob.glob(f"{workflow.basedir}/rules/{MODE}/*.smk")):
     include: _f
 
-# Shared report (MultiQC) — included last so it sees every upstream rule's outputs.
+# The MultiQC report rule. Included last deliberately: it globs for whatever stats
+# files the mode-specific rules above happened to produce, so it has to be parsed
+# after every rule that could produce one of those files already exists in the DAG.
 include: "rules/shared/90_report.smk"
 
 
+# The default target Snakemake builds when no specific file is requested on the
+# command line — this is what actually runs for a plain `snakemake --configfile ...`
+# with no target argument. all_targets() (defined in 00_common.smk) returns the
+# amplicon file list or the shotgun file list depending on MODE, so "rule all" itself
+# never needs to know which mode is active.
 rule all:
     input: all_targets()

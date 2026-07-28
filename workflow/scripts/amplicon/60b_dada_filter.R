@@ -1,14 +1,41 @@
 #!/usr/bin/env Rscript
-# Per-sample DADA2 filterAndTrim.
-# TruncLen is read from the pipeline's trunclen.json (produced by pick_trunclen.py).
-# Outputs the filtered FASTQ pair and a per-sample JSON with read-in/out counts
-# that dada_seqtab.R collects for the full pipeline read-tracking table.
+# Quality-filters and length-trims one sample's read pair before DADA2 denoising.
+#
+# What this is for: the cleanup step between primer trimming and DADA2's own
+# denoising (rule dada_seqtab, next in the chain). It removes reads that are
+# too low-quality or the wrong length to trust, and cuts every surviving read
+# to a fixed length so all reads entering the denoiser are directly comparable
+# position-by-position (DADA2's error model is learned per-position, so mixed
+# read lengths would misalign it).
+#
+# Input: this sample's primer-stripped FASTQ pair from 3.stripped/ (rule
+# trim_primers, Cutadapt, see 30_preprocess.smk), plus trunclen.json — the
+# truncLen decision made once for the whole run by rule pick_trunclen
+# (50a_pick_trunclen.py). This script runs once per sample (Snakemake
+# wildcard {sample}), so it only ever sees one R1/R2 pair at a time.
+#
+# What it does: dada2::filterAndTrim() (the call near the bottom of this
+# file) is DADA2's read-filtering function. In one pass over each read it:
+# cuts the read to the truncLen decided above (a fixed-position 3' cut —
+# anything shorter than that is dropped outright, not padded); trims further,
+# adaptively, at the first base whose quality score falls to trunc_q or below;
+# then drops the read if it now has more than max_ee "expected errors" (the
+# sum of the per-base error probabilities implied by the quality scores — a
+# read-wide error budget, not a single bad base) or falls outside the
+# [min_len, max_len] length window.
+#
+# Output: the filtered FASTQ pair (4.filtered/) that dada_seqtab.R denoises
+# next, plus a small JSON with this sample's reads-in/reads-out counts, which
+# dada_seqtab.R reads back in to build the pipeline-wide read-tracking table.
 
 # ── Load packages and redirect output to the log file ───────────
 if (!requireNamespace("pacman", quietly = TRUE))
   install.packages("pacman", repos = "https://cloud.r-project.org/")
 suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite))
 
+# sink() below redirects everything this script prints from here on —
+# messages, warnings, DADA2's own progress output — into the rule's log file
+# instead of the console, so the log: file Snakemake tracks has the full record.
 log_con <- file(snakemake@log[[1]], open = "wt")
 sink(log_con, type = "output")
 sink(log_con, type = "message")
@@ -17,6 +44,9 @@ sink(log_con, type = "message")
 sample <- snakemake@wildcards[["sample"]]
 message("[dada_filter] sample=", sample)
 
+# trunclen.json holds ONE truncLen decision shared by the whole run (both
+# directions), not a per-sample value — every sample calls filterAndTrim with
+# the same truncLen so all ASVs later line up position-for-position.
 tl      <- fromJSON(snakemake@input[["trunclen_json"]])
 trunc_r1 <- as.integer(tl[["r1"]])
 trunc_r2 <- as.integer(tl[["r2"]])
@@ -83,6 +113,16 @@ dir.create(dirname(filt_r1), recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(snakemake@output[["stats"]]), recursive = TRUE, showWarnings = FALSE)
 
 # ── Filter and trim reads ────────────────────────────────────────
+# maxN is hardcoded to 0 below, not read from config: DADA2's denoiser cannot
+# handle any ambiguous (N) bases at all, so this is a hard requirement of the
+# method, not a tunable setting.
+# rm.phix is hardcoded FALSE below, independent of amplicon.decontamination.
+# remove_phix. When that flag is on, PhiX removal already happened upstream
+# via bowtie2 (rule rm_phix, 30_preprocess.smk) before primer trimming even
+# ran — an alignment against the actual PhiX genome, more sensitive than
+# filterAndTrim's own built-in PhiX check — so repeating a weaker check here
+# would add nothing. When remove_phix is off, no PhiX screening happens at any
+# stage of the amplicon path; that is what turning the flag off means.
 out <- filterAndTrim(
   fn_r1, filt_r1,
   fn_r2, filt_r2,
@@ -99,6 +139,9 @@ out <- filterAndTrim(
 )
 
 # ── Write per-sample read counts to JSON ─────────────────────────
+# out is filterAndTrim's own return value: a matrix with one row per input
+# file pair and reads.in/reads.out columns. This script always passes exactly
+# one sample's pair, so out always has exactly one row — [1L, ...] below.
 reads_in  <- as.integer(out[1L, "reads.in"])
 reads_out <- as.integer(out[1L, "reads.out"])
 message("[dada_filter] reads in=", reads_in, " out=", reads_out,

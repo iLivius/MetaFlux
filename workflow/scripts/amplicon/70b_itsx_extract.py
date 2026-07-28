@@ -1,16 +1,42 @@
 #!/usr/bin/env python3
-"""Run ITSx on ASV sequences to extract the target ITS sub-region (ITS1 or ITS2),
-deduplicate identical extracted sequences across ASVs, and sum the seqtab counts.
+"""ITSx: trim ASVs down to the ITS sub-region actually used for fungal ID.
+
+This is the ITS "target_extract" step (see 70_extract.smk), run only when
+amplicon.extraction.enabled is true. ITS (Internal Transcribed Spacer) is the
+standard fungal barcode marker: it sits between two conserved ribosomal genes
+in the arrangement SSU-ITS1-5.8S-ITS2-LSU, and unlike 16S it varies a lot in
+length between species, which is exactly why the ASV length filter downstream
+(60d_dada_length_filter.py) needs a wide window rather than one fixed cut.
+ITSx scans each input sequence against a library of HMM profiles — precomputed
+statistical models of what each conserved flanking gene (SSU, 5.8S, LSU) looks
+like, one profile per reference lineage — to find where those genes end and
+the variable ITS1/ITS2 region begins, then extracts just that region.
+
+Input: seqs.fasta and seqtab_head_names.txt, straight from dada_seqtab.R — the
+full, pre-length-filter set of ASVs (amplicon sequence variants — DADA2's
+exact-sequence output unit; see rule target_extract in 70_extract.smk).
 
 Run with --only_full F so that partial detections are kept — mandatory for
-targeted ITS1/ITS2 amplicon data where the full ITS (flanked by SSU+LSU) is
-never present in a single read. -t all scans all eukaryote HMM profiles.
+targeted ITS1/ITS2 amplicon data, where a single short read only ever contains
+ONE flanking gene (e.g. 5.8S but not LSU for ITS2), never both, so requiring a
+"full" detection (both flanks present) would discard every real read. -t all
+scans all eukaryote HMM profiles, not just fungi-specific ones — so a non-
+fungal eukaryote that happened to co-amplify (e.g. plant or protist ITS) is
+still recognised and extracted here rather than silently dropped as "not
+found"; excluding it is left to the taxonomy keep/discard filter downstream
+(amplicon.taxonomy.filter, typically keep: [k__Fungi] for this marker).
 
 ITSx-output dedup: distinct DADA2 ASVs can yield identical extracted ITS
 sequences when they differ only in flanking 5.8S/LSU bases (e.g. multi-primer
 or multiplex amplicon designs). Such ASVs are collapsed into a single
 representative (the lowest-numbered ASV ID per group, which DADA2 orders by
 abundance) and their per-sample counts are summed in the seqtab.
+
+Output: seqs_extracted.fasta (deduplicated extracted ITS1/ITS2 sequences),
+seqtab_extracted_head_names.txt (matching, summed read counts), and
+itsx_collapse_map.tsv (an audit trail of which original ASVs each output ASV
+represents) are read next by dada_length_filter (60d_dada_length_filter.py).
+ITSx's own raw output files are kept under the working prefix directory for QC.
 """
 import shutil
 import subprocess

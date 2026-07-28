@@ -1,6 +1,32 @@
 #!/usr/bin/env python3
-"""Parse vsearch --sintax tabbedout output into the same three table formats
-produced by 80a_assign_taxonomy.R (RDP path).
+"""Assign a taxonomic lineage to each ASV using VSEARCH's SINTAX classifier.
+
+This is one of the two implementations of the assign_taxonomy rule (see rule
+assign_taxonomy in 80_taxonomy.smk), selected when config amplicon.taxonomy.
+method is "sintax" (the default) rather than "rdp". SINTAX is a k-mer-based
+classifier: instead of aligning each ASV to reference sequences, it compares
+short fixed-length substrings (k-mers) of the ASV against those of every
+reference sequence and picks the best-matching lineage, which is much cheaper
+than alignment and scales well to large reference databases. This is a
+different algorithm from the RDP naive Bayesian classifier the other path
+(80a_assign_taxonomy.R) uses, but this script is written to produce byte-
+identical table STRUCTURE, so every script downstream of assign_taxonomy is
+agnostic to which classifier actually ran.
+
+Input: seqs (the length-filtered ASV FASTA, seqs_lenfilt.fasta) and
+seqtab_names (its matching read-count table, seqtab_lenfilt_head_names.txt) —
+both produced by dada_length_filter (60d_dada_length_filter.py), i.e. this is
+the FINAL ASV set, nothing upstream of this step still changes which ASVs
+exist. refdb is the marker's SINTAX-formatted reference database (e.g. SILVA
+for 16S, UNITE for ITS — see taxonomy_sintax_db in workflow/markers/*.yaml).
+
+Mechanism: runs `vsearch --sintax`, which reports, for each ASV, a lineage at
+every rank together with a bootstrap confidence per rank — bootstrap here means
+vsearch repeatedly resamples the ASV's k-mers and re-classifies, and the
+confidence is the fraction of those resamples that agreed on that rank's call.
+Only ranks whose confidence clears --sintax_cutoff (config
+amplicon.taxonomy.sintax_cutoff) are kept; deeper ranks are left blank rather
+than reported unreliably.
 
 VSEARCH --tabbedout columns:
   1  query ID
@@ -13,6 +39,10 @@ Output files (identical structure to the RDP path):
   asv_table.txt       — rows=ASV_IDs,   cols=[samples..., taxonomy]
   asv_table_seqs.txt  — rows=sequences, cols=[samples..., taxonomy]
   taxon_seq_table.txt — rows=ASV_IDs,   cols=[Kingdom..Species, sequence]
+These three files are final pipeline deliverables (requested by `rule all`);
+the only thing that reads one of them back in is aggregate_read_counts.py,
+which sums asv_table.txt's sample columns to report the post-taxonomy-filter
+read count per sample.
 
 All outputs use R write.table quoting conventions (character values double-quoted,
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
@@ -60,7 +90,15 @@ def logmsg(msg: str) -> None:
 
 
 def _strip_existing_prefix(val: str) -> str:
-    """Remove any leading rank prefix that UNITE sometimes embeds in values."""
+    """Remove any leading rank prefix that UNITE sometimes embeds in values.
+
+    Some reference databases (UNITE for ITS) store the rank prefix as part of
+    the taxon name itself, e.g. the genus field literally reads "g__Fusarium"
+    rather than "Fusarium". If we didn't strip that off first, build_tax_string
+    (below) would add its own prefix on top and produce "g__g__Fusarium". This
+    runs unconditionally on every value regardless of marker, so a reference
+    that does NOT embed prefixes is simply unaffected (nothing to strip).
+    """
     for pfx in RANK_PREFIX:
         if val.startswith(pfx):
             return val[len(pfx):]
@@ -177,6 +215,12 @@ with tabbedout.open() as fh:
         if not parts:
             continue
         query_id      = parts[0]
+        # Normally column 4 (index 3), the accepted-taxonomy field described above
+        # (module docstring, tabbedout column 4). If a line doesn't have 4 columns,
+        # fall back to column 2 (index 1) — note that column holds the FULL taxonomy
+        # WITH per-rank confidence values in parentheses (d:Bacteria(0.98)), a
+        # different format from column 4's plain d:Bacteria; parse_sintax_column
+        # below does not strip that parenthetical part off.
         accepted_col  = parts[3] if len(parts) >= 4 else (parts[1] if len(parts) >= 2 else "")
         sintax_result[query_id] = parse_sintax_column(accepted_col)
 

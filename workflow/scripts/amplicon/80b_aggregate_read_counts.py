@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Aggregate per-stage read counts into a single wide-format tracking table.
+"""Build one table showing how many reads each sample lost at every pipeline step.
+
+Purpose: every step in the amplicon pipeline can lose reads for a sample —
+low-quality reads dropped at filtering, pairs that fail to merge, sequences
+flagged as chimeric (a chimera is a PCR artifact: one read stitched together
+from two different source templates, which DADA2 detects and removes because
+it isn't a real biological sequence), ASVs (amplicon sequence variants —
+DADA2's exact-sequence output unit) trimmed away by the length filter, and so
+on. A sample that quietly loses 90% of its reads at one step is a red flag —
+this table is what lets you see it, one row per sample, one column per stage,
+rather than having to open half a dozen separate log files.
 
 Columns (left to right):
   raw → nophix → stripped → filtered → denoised → merged → non_chimeric
@@ -8,6 +18,10 @@ Columns (left to right):
 Pipeline order: dada_seqtab → target_extract (optional) → dada_length_filter
                 → assign_taxonomy. When extraction is disabled, post_extraction
                 is omitted from the table.
+
+Each column's number comes from a different upstream file, produced by a
+different rule, in a different format — the four parse_* functions below each
+know how to read one of those formats:
 
 Count files produced by preprocess.smk use the format:
   /path/to/{sample}_R1.fastq[.gz] : N
@@ -19,6 +33,9 @@ columns: stripped, filtered, denoised, merged, non_chimeric.
 
 Seqtab files (TSV, row-names=samples, cols=ASV_IDs) → rowSums = reads at that stage.
 asv_table.txt (TSV, row-names=ASV_IDs, cols=[samples..., taxonomy]) → colSums = reads per sample.
+
+Output (read_tracking.txt) is a final deliverable of the pipeline (requested
+directly by `rule all`) — nothing downstream reads it back in.
 """
 import sys
 from pathlib import Path
@@ -128,6 +145,10 @@ stages += ["post_length_filter", "post_taxonomy_filter"]
 out_path = Path(sm.output.counts)
 out_path.parent.mkdir(parents=True, exist_ok=True)
 
+# .get(s, "NA") below: if a sample is missing from a given stage's source file
+# entirely (rather than present with a recorded count, even a zero), the table
+# shows "NA" for that cell instead of silently writing a 0 that could be misread
+# as "this sample had zero reads here" when really the file just never mentions it.
 with out_path.open("w") as out:
     out.write("sample\t" + "\t".join(stages) + "\n")
     for s in samples:

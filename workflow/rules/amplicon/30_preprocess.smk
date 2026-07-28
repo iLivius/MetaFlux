@@ -22,6 +22,14 @@ rule link_reads:
 # ──────────────────────── Read counts ──────────────────────────
 # Counts reads (R1) at each pipeline stage. Format = "{sample} : {n}";
 # trailing line "Total read count : N" is skipped by parsers.
+# These three counts files (raw / nophix / stripped) are read back later by
+# aggregate_read_counts (80_taxonomy.smk), which joins them with the DADA2 and
+# taxonomy counts into one read-tracking table for the whole run.
+#
+# count_reads_raw handles both .gz and plain .fastq input because the run's raw
+# FASTQs (in fastq_dir) can be either; count_reads_nophix and count_reads_stripped
+# only ever zcat, because their inputs are rm_phix's and trim_primers' outputs,
+# which this pipeline always writes gzipped.
 
 rule count_reads_raw:
     input:
@@ -97,6 +105,14 @@ rule count_reads_stripped:
 
 
 # ──────────────────────── PhiX removal ─────────────────────────
+# Aligns each sample's raw read pair against the PhiX bowtie2 index (built by
+# build_phix_index, 10_refdb.smk) and keeps only the pairs that DON'T align —
+# bowtie2's --un-conc-gz writes the pairs that fail to align concordantly (i.e.
+# as a proper pair) to a gzipped FASTQ pair, which is exactly the "not PhiX"
+# read set this rule wants. Runs only when amplicon.decontamination.remove_phix
+# is true; when it's false, trim_primers reads straight from the raw FASTQs
+# instead (see primer_trim_upstream in 00_common.smk). Output feeds trim_primers
+# and the "nophix" falco QC stage.
 rule rm_phix:
     input:
         r1  = lambda wc: raw_fastq(wc.sample, 1),
@@ -136,6 +152,12 @@ rule rm_phix:
 
 
 # ──────────────────────── Primer revcomps ──────────────────────
+# Reverse-complements the fwd/rev primer FASTAs once, up front, with seqtk.
+# trim_primers (below) needs these to catch primer read-through at the 3' end:
+# if a read runs past the amplicon and into the OTHER primer site, that primer
+# shows up there in its reverse-complement orientation, not its original one.
+# Computing the revcomps here (once) rather than inside trim_primers (once per
+# sample) avoids repeating the same seqtk call for every sample in the run.
 rule revcomp_primers:
     input:
         fwd = PRIMER_FWD,
@@ -156,11 +178,21 @@ rule revcomp_primers:
 
 
 # ──────────────────────── Primer trimming ──────────────────────
-# Cutadapt with cross-paired 3' adapters:
+# Removes the fwd/rev primers from each read pair with Cutadapt, using
+# cross-paired 3' adapters:
 #   Pass A: -g fwd -G rev   +   -a rev_rc -A fwd_rc
 #   Pass B (swap, only if orientation=mixed):
 #           -g rev -G fwd   +   -a fwd_rc -A rev_rc
 #   Then revcomp pass-B output and concat with pass-A.
+#
+# Why pass B exists: some library preps come back with reads in mixed
+# orientation — part of a sample's R1 file is actually a reverse read, and part
+# of R2 is actually a forward read. Trimming with the forward primer alone
+# (pass A only) simply loses those flipped pairs as "primer not found". Setting
+# amplicon.primers.orientation: mixed adds pass B, which re-tries with the
+# primers swapped, then reverse-complements its output so it lines back up with
+# pass A's orientation before the two are concatenated into one output file.
+# With orientation: fixed (the default), only pass A runs.
 rule trim_primers:
     input:
         # r1/r2 resolve to 2.no_phix when REMOVE_PHIX else the raw FASTQs.
@@ -186,13 +218,30 @@ rule trim_primers:
         "../../envs/cutadapt.yaml"
     threads: lambda wc: threads_for("cutadapt")
     shell:
-        # MultiQC's cutadapt module reads the JSON's input.path1 field for
-        # sample naming. To distinguish 5' and 3' passes (and to keep them
-        # from clashing with bowtie2's bare {sample}), each cutadapt call
-        # reads from a stage-named symlink, so the JSON records
-        # '{sample}_5prime_R1' / '{sample}_3prime_R1' as inputs. The regex
-        # in multiqc_config.yaml strips those suffixes back to '{sample}'
-        # behind a "Primer trim 5'|3'" prefix.
+        # Why the symlinks below, instead of just handing cutadapt the real files:
+        #
+        # Each sample goes through cutadapt twice here — once to cut the forward
+        # primer off the front of the reads (5' pass), once to cut the reverse
+        # primer's leftover off the back (3' pass). MultiQC has to show both in the
+        # report as two separate rows, but it does not take the sample name from
+        # the output filename we choose — it digs it out of cutadapt's own JSON
+        # stats file, from the path of the INPUT file cutadapt was given. So
+        # whatever name we hand cutadapt as input is the name that ends up in the
+        # report, whether we intended that or not.
+        #
+        # If both passes were simply given "{sample}", both JSON files would report
+        # the same name, and the report would show only one row where two are
+        # needed (and it could even be confused with bowtie2's own PhiX-removal
+        # stats, which already use the bare "{sample}" name).
+        #
+        # The fix: before each cutadapt call, we make a symlink — a renamed pointer
+        # to the same file, nothing is copied — that spells out which pass this is,
+        # e.g. "{sample}_5prime_R1.fastq.gz". Cutadapt reads through the symlink
+        # and writes THAT name into its JSON. multiqc_config.yaml then has a rule
+        # that recognises the "_5prime"/"_3prime" tag and rewrites it back to a
+        # clean "Primer trim 5'|3' | {sample}" label in the final report. Only the
+        # report's bookkeeping passes through this detour — the real output files
+        # keep their normal "{sample}_R1.fastq.gz" names.
         r"""
         mkdir -p $(dirname {output.r1}) $(dirname {output.json_pa5})
         tmpdir=$(mktemp -d -p $(dirname {output.r1}) {wildcards.sample}.cutadapt.XXXX)

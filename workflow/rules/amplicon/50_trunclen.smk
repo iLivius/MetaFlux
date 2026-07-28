@@ -1,9 +1,30 @@
-# Auto-pick truncLen by parsing falco's per-base quality table.
-# 16S/18S/gyrB/rpoB: first bin where median-across-samples Q1 < q_threshold, then
-# enforce the overlap constraint (truncR1 + truncR2 >= amplicon_length + min_overlap)
-# via resolve_policy. ITS: the same first-drop cut is computed and recorded, but the
-# overlap constraint is skipped — truncLen is overridden to c(0,0) in dada_filter.
-# Manual mode bypasses Q analysis, using config-provided truncLen values.
+# Decides how far to trim R1 and R2 before DADA2 sees them, and writes that decision
+# to trunclen.json. Nothing downstream re-derives it: the overlap check further down
+# this file, dada_filter (which applies the trim), and dada_length_filter all just
+# read this rule's output.
+#
+# In auto mode, R1 and R2 are each cut using falco's per-base quality table for that
+# sample set, in three steps:
+#   1. Read-coverage cap — each sample is first capped at the read length that
+#      min_read_coverage_pct of its reads still reach. Falco's quality table runs to
+#      the LONGEST read in a file however few reads got that far, so without this cap
+#      a clean run could pick a position almost no read actually reaches. See
+#      50a_pick_trunclen.py for the full reasoning and a worked example.
+#   2. Quality-based cut — within what step 1 left standing, cut just before the
+#      first position where quality (the median Q1 across samples) drops below
+#      q_threshold.
+#   3. Overlap check (16S, 18S, gyrB, rpoB only) — the two cuts must still leave
+#      enough overlap for DADA2 to merge R1 and R2:
+#      truncR1 + truncR2 >= amplicon_length + min_overlap. If they don't,
+#      resolve_policy decides whether to extend the cuts, relax q_threshold, or stop.
+#
+# ITS never reaches step 3: ITS amplicons vary too much in length for a single fixed
+# cut to be sensible, so dada_filter overrides truncLen to c(0,0) regardless of what
+# this rule computes. The step-2 cut is still written to trunclen.json for the
+# record, it just has no effect on an ITS run.
+#
+# Manual mode (trunc_len.mode: manual) skips all of the above and takes truncLen
+# straight from manual_r1 / manual_r2 in the config.
 
 rule pick_trunclen:
     input:

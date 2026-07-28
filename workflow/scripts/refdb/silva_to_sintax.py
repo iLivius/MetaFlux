@@ -31,12 +31,23 @@ from pathlib import Path
 
 sm = snakemake  # noqa: F821
 
+# Paths come from rule convert_silva_sintax in 10_refdb.smk:
+#   input.fasta  = the SILVA DADA2 trainset (fetch_silva_train's downloaded file)
+#   output.fasta = the SINTAX-formatted FASTA this script writes (cached as
+#                  silva_sintax in 16S.yaml; consumed next by VSEARCH's sintax
+#                  command when taxonomy.method: sintax is chosen for 16S)
+#   log[0]       = a plain-text log for a human to check after the run; nothing
+#                  downstream reads it
 in_path  = Path(sm.input.fasta)
 out_path = Path(sm.output.fasta)
 log_path = Path(sm.log[0])
 
+# SINTAX rank-letter codes, one per lineage position in order: domain, phylum,
+# class, order, family, genus. Matches 16S.yaml's rank_letters entry.
 RANK_LETTERS = ("d", "p", "c", "o", "f", "g")
 
+# Running totals for the log summary at the end, plus seq_id: the sequential
+# integer used as each record's new SINTAX ID (see the WHY note above).
 n_converted = 0
 n_sequences = 0
 seq_id      = 0
@@ -52,6 +63,8 @@ with (gzip.open(in_path,  "rt") as fi,
         line = line.rstrip("\n")
 
         if not line.startswith(">"):
+            # Sequence line (the DNA letters) — passed through unchanged, just
+            # re-adding the newline that was stripped above.
             fo.write(line + "\n")
             n_sequences += 1
             continue
@@ -60,6 +73,11 @@ with (gzip.open(in_path,  "rt") as fi,
         # Strip leading ">" and split on ";", dropping empty tokens.
         ranks = [r.strip() for r in line[1:].split(";") if r.strip()]
 
+        # Pair each rank letter with the lineage value at the same position
+        # (RANK_LETTERS[0]=d with ranks[0]=Kingdom, and so on). If this lineage
+        # has fewer than 6 ranks — a shallow or partial SILVA classification —
+        # stop at whatever is actually present instead of inventing empty ranks
+        # for the rest (see the module docstring's note on missing ranks).
         pairs = [
             f"{RANK_LETTERS[i]}:{ranks[i]}"
             for i in range(min(len(ranks), len(RANK_LETTERS)))
@@ -69,6 +87,8 @@ with (gzip.open(in_path,  "rt") as fi,
         fo.write(f">{seq_id};tax={','.join(pairs)}\n")
         n_converted += 1
 
+    # Summary for a human checking the refdb rebuild; nothing downstream parses
+    # this log.
     log.write(
         f"[silva_to_sintax] {n_converted} headers converted, "
         f"{n_sequences} sequence lines written\n"

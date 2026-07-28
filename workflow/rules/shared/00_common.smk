@@ -1,8 +1,30 @@
 # Shared utilities: mode dispatch, path resolution, sample discovery,
 # per-rule resource lookups, and mode-specific globals.
 #
-# This module is included first in the Snakefile and resolves everything
-# that downstream rule modules consume at parse time.
+# This module is included first in the Snakefile (before any amplicon or shotgun
+# rule file), and it runs entirely at PARSE time — before any actual analysis rule
+# executes — because everything in it either validates the config outright (calling
+# sys.exit with a specific message the moment something is wrong) or builds a Python
+# value that later rule files read as a plain variable. A rule elsewhere in the
+# workflow that writes `params: threads_for("some_rule")` or reads `AMPLICON_TYPE` is
+# relying on this file having already run and set those names at the module level.
+#
+# Concretely, this file is where these things get decided, once, for the whole run:
+#   - which mode is active (MODE) and the absolute paths every rule reads/writes
+#     (FASTQ_DIR, OUT, LOGS, BENCH, ...)
+#   - per-rule CPU/RAM lookups (threads_for, mem_mb_for) that every `resources:` and
+#     `threads:` block in every rule file calls instead of hard-coding a number
+#   - for amplicon mode: which marker is running (AMPLICON_TYPE), that marker's full
+#     profile of facts (PROFILE, loaded from workflow/markers/<type>.yaml — see the
+#     "Marker registry" section below), and every resolved reference-database path
+#   - for shotgun mode: the Kraken2/Bracken settings and the PhiX/host decontamination
+#     toggles
+#   - which samples exist and how their FASTQ files are named (SAMPLES, EXTN,
+#     FASTQ_NAMING), discovered once here rather than re-globbed by every rule
+#   - the final target file list `rule all` builds (all_targets(), at the bottom)
+#
+# If you are reading a rule file and wondering where some ALL_CAPS name or helper
+# function it uses comes from, it is almost certainly defined somewhere in this file.
 
 import csv
 import hashlib
@@ -18,16 +40,26 @@ from snakemake.io import glob_wildcards
 
 
 # ────────────────────────── Mode dispatch ──────────────────────
+# The single config key that decides which half of the workflow exists at all. Every
+# `if MODE == "amplicon":` / `else:` block further down in this file — and the choice
+# of which rules/<mode>/*.smk directory the Snakefile includes — reads this one
+# variable. Checked and failed here, at the very top, so a typo in the config
+# (`mode: amplikon`) stops the run immediately with a clear message instead of
+# surfacing later as a confusing missing-variable error deep in some rule file.
 MODE = config["mode"].lower()
 if MODE not in ("amplicon", "shotgun"):
     sys.exit(f"config.mode must be 'amplicon' or 'shotgun' (got: {config['mode']!r})")
 
 
 # ────────────────────────── Path resolution ────────────────────
-# All filesystem paths are absolute Path objects, resolved at parse time.
-# No `workdir:` directive — shell rules execute from the invocation dir.
-FASTQ_DIR = Path(config["input"]["fastq_dir"]).resolve()
-OUT       = Path(config["output"]["out_dir"]).resolve()
+# Every directory a rule reads from or writes to, computed once here as an absolute
+# Path so that no rule file has to know or care what directory `snakemake` happened to
+# be launched from. There is deliberately no `workdir:` directive anywhere in this
+# workflow — shell commands run from wherever you invoked snakemake, and it is
+# `.resolve()` here, not a workdir change, that turns the config's (possibly relative)
+# `fastq_dir` / `out_dir` into paths that work regardless.
+FASTQ_DIR = Path(config["input"]["fastq_dir"]).resolve()   # where this run's raw reads live
+OUT       = Path(config["output"]["out_dir"]).resolve()    # where every output of this run goes
 LOGS      = OUT / "logs"
 BENCH     = OUT / "benchmarks"
 
@@ -35,17 +67,31 @@ BENCH     = OUT / "benchmarks"
 REFDB_PHIX_FASTA  = Path(config["references"]["phix"]["fasta"]).resolve()
 REFDB_PHIX_PREFIX = REFDB_PHIX_FASTA.with_suffix("")   # strip .fna → bowtie2 index basename
 
-# Project-internal cache that survives across runs and out_dirs.
+# A cache directory INSIDE the repository (not under OUT), so its contents survive
+# across different runs and different output directories. Currently holds only the
+# amplicon-probe JSON/FASTA cache (see PROBE_JSON below): the in-silico PCR of a given
+# marker's primers against its reference is the same regardless of which samples you
+# are running, so it is computed once here and reused by every subsequent run that
+# shares the same marker + primer pair, rather than being tied to one out_dir.
 PROJECT_DIR     = Path(workflow.basedir).parent.resolve()
 PROBE_CACHE_DIR = PROJECT_DIR / "refdb" / "cache"
 
-# Safe in both modes: BioProject mode needs fastq_dir to be writable.
+# Created immediately, before any rule needs it, because BioProject mode (shotgun's
+# SRA-fetch path) writes downloaded FASTQs into this directory — it has to exist
+# before the first download rule can run, and a plain "does this directory exist" read
+# earlier in this file would otherwise fail on a first-ever run.
 FASTQ_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ────────────────────── Resource lookups ───────────────────────
-# Single source of truth for per-rule threads / mem_mb is config["resources"].
-# Rules reference these via lambda wc: threads_for("<rule>"), etc.
+# Every rule in every rule file asks for its CPU and memory allotment through these
+# two functions rather than writing a number directly in its own `threads:` /
+# `resources:` block. That means a single YAML block — config["resources"] — is the
+# only place per-rule compute limits are ever set; changing how many threads
+# `dada_seqtab` gets means editing one line in the config, not hunting through rule
+# files for a hard-coded `threads: 8`. A rule not named in the config falls back to
+# `threads_default` / `mem_mb_default`, so adding a new rule never requires touching
+# the config first.
 def threads_for(rule_name: str) -> int:
     cfg = config.get("resources", {})
     return int(cfg.get("threads", {}).get(rule_name, cfg.get("threads_default", 1)))
@@ -57,10 +103,15 @@ def mem_mb_for(rule_name: str) -> int:
 
 
 # ────────────────────── Marker registry ────────────────────────
-# One profile per amplicon marker. Adding a marker means adding an entry here
-# (plus its reference-fetch rule in amplicon/10_refdb.smk) — every choice that
-# used to be a scattered `if AMPLICON_TYPE == "16S" else ...` now lives in one
-# place, so a new marker can no longer silently inherit the ITS branch.
+# "A marker" here means everything that differs between 16S, ITS, 18S, gyrB and rpoB
+# but is a FACT about that marker rather than a choice about your particular run: which
+# reference database to measure amplicon length against, which database to classify
+# against, whether a region-extraction tool exists for it, and how many taxonomic
+# ranks its reference carries. One profile (a "pack") holds all of that per marker.
+# Adding a marker means adding an entry here (plus its reference-fetch rule in
+# amplicon/10_refdb.smk) — every choice that used to be a scattered
+# `if AMPLICON_TYPE == "16S" else ...` now lives in one place, so a new marker can no
+# longer silently inherit the ITS branch by falling through an incomplete if-chain.
 #
 #   probe_mode          "pcr"    — in-silico PCR of the primers against a
 #                                  full-length reference (16S/SILVA).
@@ -154,6 +205,17 @@ def _as_taxon_list(v):
 
 
 # ────────────────────── Amplicon-only globals ──────────────────
+# Runs only when mode: amplicon. Everything from here down to the matching `else:`
+# (shotgun globals) is normally never even evaluated on a shotgun run — this whole
+# block exists to turn a config plus a marker pack into the roughly twenty ALL_CAPS
+# variables the amplicon rule files (rules/amplicon/*.smk) use directly: which marker
+# is active, every resolved reference-database path, the taxonomy rank model, the
+# region-extractor choice, and so on. The block is ordered roughly the way a run
+# actually needs these facts: references first, then which marker was requested and
+# its profile, then the probe (amplicon-length measurement) setup, then extraction and
+# taxonomy. Several `sys.exit(...)` calls are mixed in along the way — each one is a
+# config or marker-pack problem that would otherwise only surface as a confusing
+# crash much later, once DADA2 or a taxonomy rule is already running.
 if MODE == "amplicon":
     amp_cfg = config["amplicon"]
 
@@ -453,6 +515,13 @@ if MODE == "amplicon":
 
 
 # ────────────────────── Shotgun-only globals ───────────────────
+# The shotgun counterpart of the amplicon block above — runs only when mode: shotgun,
+# and only one of the two blocks ever executes for a given run. Shotgun mode has no
+# marker packs and no probe/truncation machinery to resolve, so this block is
+# considerably shorter: it validates the user-supplied Kraken2 database, resolves the
+# decontamination and classification settings rules/shotgun/*.smk read directly, and
+# works out how much memory to give the Kraken2 rule from the database's own size on
+# disk (see _kraken_hash_size_mb below) rather than a fixed guess.
 else:  # MODE == "shotgun"
     sht_cfg = config["shotgun"]
 
@@ -522,6 +591,13 @@ else:  # MODE == "shotgun"
 
 
 # ────────────────────── Sample discovery ───────────────────────
+# Works out the run's sample list exactly once, here, rather than letting every rule
+# file glob fastq_dir independently — SAMPLES, EXTN and FASTQ_NAMING (below) are then
+# just plain variables every rule file's `expand(..., sample=SAMPLES)` calls read.
+# Discovery differs by source: local files are found by globbing fastq_dir for a
+# {sample}_R1 / {sample}_1 naming pattern (_discover_local); a shotgun BioProject fetch
+# instead asks NCBI which SRA runs belong to that BioProject (_fetch_bioproject_runs)
+# and treats each run accession as a "sample".
 ALLOWED_EXTENSIONS = ("fastq", "fq", "fastq.gz", "fq.gz")
 BAD_CHARS = set("*#@%^/! ?&:;|<>")             # underscore allowed — SRR ids don't use it
 
@@ -677,6 +753,15 @@ if MODE == "amplicon":
 
 
 # ────────────────────── rule all targets ───────────────────────
+# Snakemake builds only what it is asked to build, starting from a target file and
+# working backwards through whatever rules produce it. `rule all` in the Snakefile
+# (`input: all_targets()`) is what gets asked for on a plain `snakemake` invocation
+# with no specific file named on the command line, so the two functions below are, in
+# effect, the definition of "a complete run" for each mode: every file listed here
+# (and everything upstream of it in the DAG) gets built; anything NOT listed here does
+# not, even if some rule in the workflow is capable of producing it. Adding a new
+# final output to the pipeline means adding its path to the relevant list here, or
+# `snakemake` will happily finish without ever having produced it.
 def _amplicon_targets():
     """Default target list for mode=amplicon — the files `rule all` requests for an amplicon run."""
     targets = [

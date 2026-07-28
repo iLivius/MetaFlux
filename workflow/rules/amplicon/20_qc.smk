@@ -16,6 +16,16 @@ def _falco_input(wildcards):
     raise ValueError(f"unknown falco stage: {wildcards.stage}")
 
 
+# Runs falco (a fast, drop-in re-implementation of FastQC — same reports, much
+# quicker on large FASTQs) on one sample, one read direction, one pipeline stage.
+# Input comes from _falco_input above: the raw FASTQ, the PhiX-filtered FASTQ
+# (2.no_phix/, only when PhiX removal is on), or the primer-trimmed FASTQ
+# (3.stripped/) depending on which {stage} wildcard Snakemake is building.
+# Output is the standard FastQC-style trio (fastqc_data.txt, fastqc_report.html,
+# summary.txt) in a per-sample/direction/stage folder. The "stripped" stage's
+# fastqc_data.txt is not just a report: pick_trunclen (50_trunclen.smk) reads its
+# per-base quality table to decide where to truncate reads before DADA2. Every
+# stage's output also feeds the MultiQC aggregate report at the end of the run.
 rule falco:
     input:
         fastq = _falco_input,

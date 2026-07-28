@@ -88,25 +88,45 @@ def parse_kraken2_report(path: Path) -> tuple[int, int]:
 
 
 def _index(paths: list[str], strip_suffix: str) -> dict[str, Path]:
+    """Turn a flat list of per-sample file paths into a {sample_id: path} lookup,
+    recovering the sample id by stripping the stage's fixed filename suffix
+    (e.g. "_fastp.json") from each file's basename. Snakemake's expand() gives
+    us these paths in SAMPLES order already, but indexing by sample id makes
+    the per-sample loop below (and any missing-file bug) trivial to reason
+    about, instead of relying on every input list staying in lock-step order."""
     return {Path(p).name.replace(strip_suffix, ""): Path(p) for p in paths}
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+# Paths, sample list, and the two decontamination toggles all come from rule
+# aggregate_read_counts in 80_stats.smk. output.counts (stats/read_tracking.txt)
+# is a terminal deliverable listed in _shotgun_targets() (00_common.smk) —
+# requested directly by `rule all`; nothing further in the pipeline reads it.
 sm = snakemake  # noqa: F821
 
 log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
 log_fh = log_path.open("w")
 
+# remove_phix / remove_host mirror REMOVE_PHIX / HOST_GENOMES from 00_common.smk:
+# whether those decontamination steps ran at all for this run, which decides
+# whether the "nophix" / "no_host" columns exist below.
 samples     = list(sm.params.samples)
 remove_phix = bool(sm.params.remove_phix)
 remove_host = bool(sm.params.remove_host)
 
+# Build one {sample_id: path} lookup per pipeline stage (see _index above), so
+# the per-sample loop below can fetch each sample's file by name instead of
+# assuming every input list is in the same order. The phix/host indexes are
+# only built when that stage actually ran; otherwise they stay empty and are
+# never consulted (guarded by remove_phix / remove_host below).
 fastp_idx   = _index(list(sm.input.fastp_jsons),    "_fastp.json")
 kraken_idx  = _index(list(sm.input.kraken_reports), "_report.txt")
 phix_idx    = _index(list(sm.input.phix_stats),     "_dephix_stats.txt") if remove_phix else {}
 host_idx    = _index(list(sm.input.host_stats),     "_dehost_stats.txt") if remove_host else {}
 
+# Column header for the output TSV — must match the column order the per-sample
+# loop below appends to `row`, one column per pipeline stage that actually ran.
 stages = ["sample", "raw"]
 if remove_phix:
     stages.append("nophix")
@@ -116,23 +136,36 @@ stages += ["trimmed", "classified", "unclassified"]
 
 rows: list[list[str]] = []
 
+# One row per sample, columns built in the same order as `stages` above.
 for s in samples:
+    # fastp's own "before" count is always read, even when PhiX removal ran:
+    # it's only actually used for the "raw" column when PhiX removal did NOT
+    # run (the else branch below); when PhiX removal did run, "raw" instead
+    # comes from BBDuk's own total further down, since fastp then sees reads
+    # only after PhiX has already been stripped out.
     fastp_before, fastp_passed = parse_fastp_counts(fastp_idx[s])
 
     row: list[str] = [s]
 
     if remove_phix:
+        # "raw" = every read pair BBDuk saw; "nophix" = same minus PhiX matches.
         phix_total, phix_matched = parse_bbduk_stats(phix_idx[s])
         row.append(str(phix_total))
         row.append(str(phix_total - phix_matched))
     else:
+        # No PhiX step, so fastp is the first thing to see the raw reads —
+        # its "before filtering" count IS the raw count here.
         row.append(str(fastp_before))
 
     if remove_host:
+        # Pairs left after BBMap's host-genome decontamination step.
         row.append(str(parse_host_surviving(host_idx[s])))
 
+    # "trimmed" = pairs that passed fastp's adapter/quality filter, regardless
+    # of whether PhiX/host removal ran before it.
     row.append(str(fastp_passed))
 
+    # "classified" / "unclassified" = Kraken2's own split of the trimmed reads.
     classified, unclassified = parse_kraken2_report(kraken_idx[s])
     row.append(str(classified))
     row.append(str(unclassified))

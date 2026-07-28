@@ -22,6 +22,10 @@
 # PhiX is separate: it is a decontamination reference, not taxonomy — fetched and
 # bowtie2-indexed below.
 
+# Downloads the PhiX genome — a sequencing-control genome Illumina runs routinely
+# spike into the flow cell — from the NCBI URL in the config. This raw FASTA feeds
+# build_phix_index below; rm_phix (30_preprocess.smk) then aligns every sample's
+# reads against that index to strip out PhiX contamination before primer trimming.
 rule fetch_phix:
     output:
         fasta = REFDB_PHIX_FASTA,
@@ -39,6 +43,10 @@ rule fetch_phix:
         """
 
 
+# Builds the bowtie2 index from the PhiX FASTA fetched above (a one-time cost —
+# the index is reused by every sample and every future run against this reference).
+# Consumed by rm_phix (30_preprocess.smk), which aligns each sample's reads
+# against it and keeps only the reads that do NOT map, i.e. the non-PhiX reads.
 rule build_phix_index:
     input:
         fasta = REFDB_PHIX_FASTA,
@@ -201,6 +209,11 @@ rule convert_rpob_to_dada2:
 # on PR2); PR2 is the taxonomy reference. PR2 ships two files with DIFFERENT
 # rank depths — the DADA2 one (9 ranks) feeds the rdp path, the UTAX one
 # (8 ranks) feeds sintax — so both are fetched independently.
+#
+# None of the three gets a bespoke rule here: all three are plain downloads
+# (no `archive` key in 18S.yaml), so they fall through to the generated fetch
+# loop at the bottom of this file (Tier 0), which builds fetch_silva_euk,
+# fetch_pr2_dada2 and fetch_pr2_utax automatically.
 
 
 # ── Generated reference fetches ───────────────────────────────────────────

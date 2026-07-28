@@ -1,4 +1,24 @@
-# Aggregate QC across upstream rule outputs via MultiQC.
+# Aggregate QC across upstream rule outputs via MultiQC — the very last rule
+# in the pipeline, for EITHER mode, and shared by both.
+#
+# This file is included last in the Snakefile, after whichever mode's rule
+# files (rules/amplicon/*.smk or rules/shotgun/*.smk) were pulled in — see the
+# comment in the Snakefile itself. That ordering matters because the two
+# functions below (_multiqc_inputs / _multiqc_scan_dirs) branch on MODE and
+# list the exact stats/log files the ACTIVE mode's rules produce (falco,
+# cutadapt, bowtie2 for amplicon; fastp, kraken2, bracken, BBDuk/BBMap for
+# shotgun) — those rules need to already exist in the DAG for Snakemake to
+# know how to build their outputs, which is only guaranteed once this file
+# comes after them. Separately, at RUN time, the MultiQC tool itself also
+# walks the directories named in scan_dirs looking for anything else it
+# recognizes: inputs[] is what tells Snakemake's dependency graph which files
+# must exist first; scan_dirs is what tells MultiQC where to look once they do.
+#
+# Because this file works for either mode, nothing below should assume an
+# amplicon-only or shotgun-only file exists outside of the two MODE branches
+# in _multiqc_inputs/_multiqc_scan_dirs — that's the only place the two modes
+# are told apart.
+#
 # Inputs and scan dirs are mode-dependent: amplicon path adds falco, cutadapt,
 # and bowtie2 (PhiX) logs; shotgun path adds fastp, kraken, bracken, BBDuk PhiX
 # stats, and (when host_genomes is set) BBMap host-removal stats.
@@ -52,6 +72,13 @@ def _multiqc_scan_dirs():
     ]
 
 
+# Runs the MultiQC tool once over every stats/log directory listed in
+# scan_dirs, and writes one aggregate HTML report (plus its accompanying
+# multiqc_data/ directory of parsed tables) — the single-file summary a
+# human actually looks at after a run finishes. This is the last rule in the
+# DAG for either mode: rule all (all_targets() in 00_common.smk) lists
+# multiqc_report.html as a target for both amplicon and shotgun runs, so
+# nothing downstream of this rule exists.
 rule multiqc:
     input:
         **_multiqc_inputs(),

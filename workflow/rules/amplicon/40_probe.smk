@@ -15,7 +15,9 @@
 #
 # Both modes compute the same length distribution statistics and write a JSON;
 # downstream pick_trunclen reads probe_length_stat from config to select which
-# statistic to use as expected_length.
+# statistic to use as expected_length. Two other rules read this same JSON:
+# dada_filter (ITS only, to derive its per-read min_len floor) and
+# dada_length_filter (to size its ASV-length keep window) — see 60_dada2.smk.
 #
 # Output is cached under refdb/cache/ and survives across pipeline reruns.
 # Filename encodes amplicon type, reference tag, and a hash of both primer

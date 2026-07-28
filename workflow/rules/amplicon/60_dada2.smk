@@ -1,12 +1,32 @@
-# DADA2 rules: quality plots → per-sample filter → all-sample denoising chain
-# → length filter.
+# DADA2 rules: this file turns the primer-trimmed FASTQs in 3.stripped/ (written
+# by trim_primers, 30_preprocess.smk) into a table of ASVs — DADA2's term for
+# "amplicon sequence variant", an inferred true biological sequence resolved to
+# single-nucleotide precision, as opposed to a fuzzy-radius OTU cluster. Order:
 #
-# dada_quality_plots  : plotQualityProfile on stripped reads (aggregate diagnostic).
+# dada_quality_plots  : plotQualityProfile on stripped reads (aggregate diagnostic
+#                       only — does not feed any decision; pick_trunclen decides
+#                       truncLen separately, from falco's tables, in 50_trunclen.smk).
 # dada_filter         : per-sample filterAndTrim using truncLen from trunclen.json.
-# dada_seqtab         : learnErrors → dada → mergePairs → makeSeqtab → removeBimeras.
+# dada_seqtab         : learnErrors → dada → mergePairs → makeSeqtab → removeBimeras,
+#                       run once across ALL samples together so ASVs are called
+#                       consistently for the whole run, not sample by sample.
 # dada_length_filter  : ASV length window applied AFTER target extraction (see 70_extract.smk).
 
 
+# Applies a final length window to the ASVs coming out of DADA2 (and, if
+# extraction is enabled, out of target_extract). This is a plausibility filter,
+# not a taxonomic one: even after denoising and chimera removal, off-target
+# amplification, primer dimers, or extraction artifacts can leave a few ASVs at
+# lengths that don't make sense for the marker being run. The keep window is
+# centred on the amplicon_probe length distribution (or a manual range from
+# config — see 60d_dada_length_filter.py for the exact priority order between
+# manual range, probe-based auto, and its fallback).
+# Reads BOTH seqs_pre (dada_seqtab's raw seqs.fasta, kept only so the stats JSON
+# can show the pre- vs post-extraction length distributions side by side) and
+# the actual filter source (seqs_extracted.fasta when extraction ran, otherwise
+# seqs.fasta again). Writes the length-filtered FASTA/seqtab that assign_taxonomy
+# classifies (via _seqs_for_taxonomy / _seqtab_for_taxonomy in 00_common.smk) and
+# that aggregate_read_counts folds into the run's read-tracking table.
 rule dada_length_filter:
     input:
         # seqs_pre: always the pre-extraction DADA2 FASTA, used to record the
@@ -44,6 +64,13 @@ rule dada_length_filter:
         "../../scripts/amplicon/60d_dada_length_filter.py"
 
 
+# Plots the aggregate per-base quality profile (both directions, every sample
+# together) of the primer-trimmed reads in 3.stripped/. This is a picture for a
+# human to look at — it does NOT feed pick_trunclen's truncation decision, which
+# is computed separately and automatically from falco's per-sample quality
+# tables (50_trunclen.smk). Nothing downstream reads these plots either; they
+# are a QC artifact bundled with the run's other outputs, not an input to
+# anything else in the pipeline.
 rule dada_quality_plots:
     input:
         fnFs = expand(OUT / "3.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
@@ -64,6 +91,17 @@ rule dada_quality_plots:
         "../../scripts/amplicon/60a_dada_quality_plots.R"
 
 
+# Runs DADA2's filterAndTrim on one sample's primer-trimmed reads (3.stripped/).
+# truncLen comes from trunclen.json — pick_trunclen's decision — and cuts every
+# read to that length, discarding any read shorter than it. ITS is the one
+# exception: 60b_dada_filter.R overrides truncLen to c(0, 0) for it, because a
+# fixed cut would discard genuinely short fungal amplicons (see 50_trunclen.smk
+# for the full reasoning). maxEE/truncQ/min_len/max_len come straight from
+# config for every marker, except min_len, which for ITS only can instead be
+# derived from the probe JSON when dada2.filter.min_len_stat is set (see the
+# script for the trade-off that makes). Writes the filtered FASTQ pair that
+# dada_seqtab reads below, plus a small per-sample JSON of reads in/out that
+# dada_seqtab folds into the run's read-tracking counts.
 rule dada_filter:
     input:
         r1            = OUT / "3.stripped" / "{sample}_R1.fastq.gz",
@@ -94,6 +132,30 @@ rule dada_filter:
         "../../scripts/amplicon/60b_dada_filter.R"
 
 
+# The core DADA2 step, run ONCE across every sample's filtered reads together —
+# unlike dada_filter above, which runs per sample — because that is what lets
+# DADA2 build one shared error model and call ASVs consistently across the
+# whole run:
+#   learnErrors  → fits a per-direction error model from a subsample of the
+#                  filtered reads (learn_errors.nbases in config).
+#   dada         → the actual denoising step: infers which true biological
+#                  sequence (ASV) each read most likely came from, correcting
+#                  for the sequencing errors the model above describes. `pool`
+#                  controls whether samples borrow strength from each other
+#                  when doing this (false/pseudo/true — see config for the
+#                  trade-off).
+#   mergePairs   → stitches each sample's denoised R1 and R2 into one
+#                  full-length ASV wherever they overlap by at least
+#                  merge.min_overlap bp.
+#   makeSequenceTable → assembles every sample's merged ASVs into one
+#                  sample x ASV count matrix.
+#   removeBimeraDenovo → flags and drops chimeric ASVs: sequences that look
+#                  like the front half of one real ASV spliced to the back half
+#                  of another — a PCR artifact, not a real organism.
+# Writes seqs.fasta (the ASV sequences), two seqtab flavours (ASV-ID-keyed and
+# sequence-keyed), a per-sample read-tracking table, and the error-model
+# diagnostic plots. Consumed next by target_extract (if extraction is enabled,
+# 70_extract.smk) or directly by dada_length_filter above.
 rule dada_seqtab:
     input:
         r1           = expand(OUT / "4.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),

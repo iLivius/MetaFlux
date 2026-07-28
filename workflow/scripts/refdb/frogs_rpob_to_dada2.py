@@ -46,6 +46,13 @@ from pathlib import Path
 
 sm = snakemake  # noqa: F821 (injected by Snakemake)
 
+# Paths come from rule convert_rpob_to_dada2 in 10_refdb.smk:
+#   input.fasta  = the raw FROGS FASTA (fetch_rpob_archive's output, still gzipped,
+#                  still FROGS-shaped)
+#   output.fasta = the DADA2 trainset FASTA this script writes (cached as rpob_frogs
+#                  in rpoB.yaml; consumed next by rule assign_taxonomy for rpoB)
+#   log[0]       = a plain-text log for a human to check after the run; nothing
+#                  downstream reads it
 in_path  = Path(sm.input.fasta)
 out_path = Path(sm.output.fasta)
 log_path = Path(sm.log[0])
@@ -64,6 +71,9 @@ def _open_maybe_gzip(path: Path, mode: str):
     return open(path, mode)
 
 
+# Running totals, used only for the summary line written to the log at the
+# end — DADA2 doesn't read the log, so these exist purely so a human can
+# sanity-check the conversion afterwards (right number of sequences, etc.)
 n_headers = 0
 n_seq_lines = 0
 
@@ -74,6 +84,8 @@ with (_open_maybe_gzip(in_path, "rt") as fi,
       gzip.open(out_path, "wt") as fo,
       log_path.open("w") as log):
 
+    # Walk the FASTA one line at a time. A header line (">...") is rewritten
+    # below; every other line is sequence data and is copied through as-is.
     for line_no, line in enumerate(fi, 1):
         if line.startswith(">"):
             # Apply both edits, in order, to the header (newline preserved), and
@@ -109,6 +121,8 @@ with (_open_maybe_gzip(in_path, "rt") as fi,
             n_seq_lines += 1
         fo.write(line)
 
+    # Final tally for whoever checks the log after a refdb rebuild — not parsed
+    # by Snakemake or any downstream rule.
     log.write(
         f"[frogs_rpob_to_dada2] {n_headers} headers rewritten, "
         f"{n_seq_lines} sequence line(s) passed through\n"

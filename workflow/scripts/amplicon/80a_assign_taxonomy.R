@@ -1,14 +1,48 @@
 #!/usr/bin/env Rscript
-# Taxonomy assignment for DADA2 ASVs via DADA2's RDP classifier.
-# assignTaxonomy (SILVA/UNITE DADA2 format) + addSpecies (16S only).
-# Reads the length-filtered (and, if enabled, Metaxa2/ITSx-extracted) seqs FASTA
-# (seqs_lenfilt.fasta) and the ASV_#-keyed seqtab (seqtab_lenfilt_head_names.txt).
-# Writes three output tables + applies optional contaminant filter.
+# Assigns a taxonomic lineage to every ASV, using DADA2's implementation of
+# the RDP Naive Bayesian classifier (Wang et al. 2007, Applied and
+# Environmental Microbiology).
+#
+# What this is for: for each ASV sequence, assignTaxonomy compares its
+# k-mers (short, fixed-length subsequences — 8 bp here, the method's own
+# setting) against a reference database of sequences with known taxonomy
+# (SILVA for 16S, UNITE for ITS, PR2 for 18S, ...), and works down the rank
+# hierarchy (kingdom -> ... -> genus) assigning the best-supported taxon at
+# each level. Confidence at each rank comes from BOOTSTRAPPING: the
+# classifier repeats the classification 100 times over random subsets of the
+# sequence's own k-mers, and the fraction of those 100 repeats that agree is
+# the "bootstrap confidence" for that rank. A rank is only kept if its
+# confidence is >= min_boot; ranks that don't clear the bar come back NA
+# rather than a shaky guess. For 16S only, addSpecies then adds one more,
+# final rank on top — see the addSpecies block below for how that step
+# differs from assignTaxonomy.
+#
+# Input: the length-filtered ASV FASTA (seqs_lenfilt.fasta) and its matching
+# ASV_#-keyed sequence table (seqtab_lenfilt_head_names.txt), both from rule
+# dada_length_filter (60d_dada_length_filter.py) — the FASTA after any
+# Metaxa2/ITSx region extraction and the post-extraction ASV length window,
+# i.e. this run's final ASV set. Also reads the marker's reference database
+# (refdb) and, for 16S only, the addSpecies reference (species_db).
+#
+# Output: three views of the same classification — asv_table.txt (rows =
+# ASV_N ids, one taxonomy string per ASV), asv_table_seqs.txt (same, but rows
+# = the raw ASV sequence instead of its short id), and taxon_seq_table.txt
+# (rows = ASV_N ids, one column per rank instead of a single semicolon-joined
+# string, plus the sequence). All three have the optional keep/discard
+# contaminant filter already applied (see further down this file). Of the
+# three, only asv_table.txt is read again inside this pipeline: rule
+# aggregate_read_counts (80b_aggregate_read_counts.py) sums each sample's
+# column as the final "taxonomy" stage of the pipeline-wide read-tracking
+# table (read_tracking.txt). The other two are terminal outputs for whatever
+# analysis comes after this pipeline.
 
 if (!requireNamespace("pacman", quietly = TRUE))
   install.packages("pacman", repos = "https://cloud.r-project.org/")
 suppressPackageStartupMessages(pacman::p_load(dada2, data.table))
 
+# sink() below redirects everything this script prints from here on —
+# messages, warnings, DADA2's own progress output — into the rule's log file
+# instead of the console, so the log: file Snakemake tracks has the full record.
 log_con <- file(snakemake@log[[1]], open = "wt")
 sink(log_con, type = "output")
 sink(log_con, type = "message")
@@ -33,6 +67,11 @@ set.seed(seed)
 message("[assign_taxonomy] amp_type=", amp_type, " (", prefix_style, " ranks)")
 
 # ── Read FASTA (simple parser — no seqinr dependency) ─────────────────────────
+# Plain-text FASTA parsing, no extra package needed: find every header line
+# (starts with ">"), take the id as everything up to the first space, and
+# join all the lines between one header and the next into a single sequence
+# string. Works whether the FASTA wraps sequences over multiple lines or
+# writes one line per record.
 read_fasta_simple <- function(path) {
   lines <- readLines(path)
   header_idx <- which(startsWith(lines, ">"))
@@ -208,6 +247,16 @@ write.table(taxon_table, file = snakemake@output[["taxon_seq_table"]], col.names
 
 message("[assign_taxonomy] DONE. Outputs written to ", dirname(snakemake@output[["asv_table"]]))
 
+# The main table: one row per ASV, one column per sample (read counts) plus a
+# taxonomy column. Its sample columns are summed again downstream by rule
+# aggregate_read_counts to build the final stage of read_tracking.txt.
 sink(type = "message")
 sink(type = "output")
 close(log_con)
+# Identical to (a), except each row is named by the ASV's actual sequence
+# instead of its short ASV_N id — for matching these ASVs directly against
+# sequences from another tool or database, without going through the id.
+# Same ASVs and taxonomy as (a), but with the taxonomy split into one column
+# per rank (Kingdom, Phylum, ...) instead of one semicolon-joined string, plus
+# the ASV's sequence — convenient for filtering or grouping by a single rank
+# without string-parsing the taxonomy column first. Has no per-sample counts.

@@ -1,10 +1,34 @@
 #!/usr/bin/env python3
-"""Run Metaxa2 on ASV sequences, collect all extracted SSU sequences,
-and subset seqtab_head_names.txt to the retained ASV IDs.
+"""Metaxa2: confirm and trim ASVs down to their actual SSU rRNA region.
 
-Metaxa2 is run with -t all (all domains); the pipeline keeps every extracted
-sequence regardless of domain — taxonomic gatekeeping happens post-assignment
-via the contaminant filter in assign_taxonomy.R.
+This is the 16S "target_extract" step (see 70_extract.smk), run only when
+amplicon.extraction.enabled is true. Metaxa2 uses HMM profiles — precomputed
+statistical models of what a real SSU rRNA sequence looks like, built one per
+domain (bacteria, archaea, eukaryote, plus mitochondrial and chloroplast SSU,
+which are bacterial in origin) — to find the true rRNA boundaries inside each
+input sequence and say which domain it best matches. We run it here because
+DADA2's ASVs (amplicon sequence variants — DADA2's exact-sequence output unit)
+are not guaranteed to all be genuine 16S: some can be non-specific amplification
+or other artifacts that survived denoising. Metaxa2 re-confirms the sequence is
+real rRNA and, where the ASV runs slightly past the true rRNA boundary (e.g.
+into a flanking region), trims it back to just that region.
+
+Input: seqs.fasta and seqtab_head_names.txt, straight from dada_seqtab.R — the
+full, pre-length-filter ASV set (see rule target_extract in 70_extract.smk).
+
+Run with -t all (all domains); every sequence Metaxa2 successfully classifies
+to ANY domain is kept, none are dropped here for being non-bacterial. Domain-
+based decisions (e.g. discarding chloroplast/mitochondrial SSU as contaminants)
+are deferred to the keep/discard contaminant filter that runs after taxonomy
+assignment (80a_assign_taxonomy.R for the rdp path, 80c_parse_sintax.py for the
+sintax path) — that filter works off the assigned lineage, which is a more
+reliable signal than Metaxa2's domain call alone.
+
+Output: seqs_extracted.fasta (cleaned, trimmed sequences) and
+seqtab_extracted_head_names.txt (the matching read-count table, subset to the
+ASVs Metaxa2 could extract) are read next by dada_length_filter
+(60d_dada_length_filter.py), which applies the ASV length window. Metaxa2's
+own raw output files are kept under the working prefix directory for QC.
 """
 import subprocess
 import sys
@@ -12,6 +36,14 @@ from pathlib import Path
 
 
 def subset_seqtab_by_ids(in_path: Path, kept_ids: set[str], out_path: Path, log) -> None:
+    """Drop seqtab columns (ASVs) that Metaxa2 did not extract.
+
+    in_path is the full seqtab_head_names.txt from dada_seqtab.R (every ASV,
+    every sample's read count). kept_ids are the ASV IDs Metaxa2 did extract
+    (built below, while parsing its output FASTA). Any ASV not in kept_ids —
+    Metaxa2 could not confirm it as SSU rRNA in any domain — has its whole
+    column removed, so its read counts drop out of every downstream table.
+    """
     with in_path.open() as fh:
         raw_header = fh.readline().rstrip("\n")
         data_lines = fh.readlines()
@@ -48,12 +80,13 @@ cmd = [
     "metaxa2",
     "-i", input_fasta,
     "-o", prefix,
-    "-t", "all",
+    "-t", "all",          # search all domain HMM profiles (bacteria/archaea/eukaryote)
     "--cpu", str(threads),
-    "--fasta", "T",
-    "--table", "T",
-    "--plus", "T",
-    "--silent", "T",
+    "--fasta", "T",       # write the extracted-sequence FASTA (*.extraction.fasta)
+    "--table", "T",       # write the per-sequence domain/taxonomy table
+    "--plus", "T",        # also detect chloroplast/mitochondrial SSU (organelle-derived,
+                          # bacterial in origin) rather than treating them as unclassifiable
+    "--silent", "T",      # suppress Metaxa2's own console output (everything goes to our log)
 ]
 log.write(f"[metaxa2_extract] Running: {' '.join(cmd)}\n")
 log.flush()
@@ -70,7 +103,12 @@ if not extraction_fasta.exists():
     log.close()
     sys.exit(1)
 
-# Write cleaned FASTA: keep only first token of each header as ASV ID
+# Write cleaned FASTA: Metaxa2 writes each header as the ASV ID immediately
+# followed by "|<rRNA subunit tag>", then a space and a free-text description,
+# e.g. ">ASV_12|SSU Bacterial 16S rRNA (253 bp) From domain 1 to 253 on +".
+# Taking the first whitespace token gives "ASV_12|SSU"; splitting that on "|"
+# isolates the plain ASV ID — this is what has to match the seqtab column
+# headers for the subset below.
 kept_ids: set[str] = set()
 output_fasta.parent.mkdir(parents=True, exist_ok=True)
 with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
@@ -90,10 +128,13 @@ with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
 
 log.write(f"[metaxa2_extract] {len(kept_ids)} ASV(s) extracted\n")
 
-# Copy Metaxa2's results summary (a QC report, NOT consumed by any downstream
-# rule). The real extraction output — the FASTA above — is already validated, so a
-# missing summary must not fail an otherwise-complete run; but warn loudly and leave
-# a self-explaining placeholder rather than a silent empty file.
+# Copy Metaxa2's extraction results table: one row per input sequence, with
+# extracted length, rRNA subunit type, completeness, match e-value/score, and
+# extraction coordinates (plus a chimera flag where relevant). It is a QC
+# reference only — NOT consumed by any downstream rule. The real extraction
+# output — the FASTA above — is already validated, so a missing results file
+# must not fail an otherwise-complete run; but warn loudly and leave a
+# self-explaining placeholder rather than a silent empty file.
 # (Same missing-summary policy as 70b_itsx_extract.py — tolerant but loud.)
 results_src = Path(f"{prefix}.extraction.results")
 results_out.parent.mkdir(parents=True, exist_ok=True)
