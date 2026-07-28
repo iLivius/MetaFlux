@@ -83,8 +83,8 @@ For each sample and each named taxon:
 The reads come from the classified-read FASTQs Kraken2 wrote
 (`02.classification/{sample}_R1.fastq.gz` and `_R2.fastq.gz`), which is why those
 files are kept rather than deleted. Reads Kraken2 could not classify are not in that
-pool and can never be extracted — extraction only ever redistributes reads that
-already carry an assignment.
+pool and can never be extracted — extraction only ever pulls out reads that already
+carry a Kraken2 assignment.
 
 ## Output
 

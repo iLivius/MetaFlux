@@ -142,7 +142,8 @@ faster and writes the same `fastqc_data.txt`, `fastqc_report.html` and `summary.
 one directory per sample, direction and stage under `stats/falco/`.
 
 Running the same QC three times is what makes it possible to see *where* reads were lost
-and *how* the quality profile changed, instead of only seeing the endpoint. Each Falco call
+and *how* the quality profile changed, instead of only seeing the final, post-trimming
+snapshot. Each Falco call
 is fed a stage-renamed symlink of its input, because MultiQC takes the sample name from the
 filename recorded inside `fastqc_data.txt` — without that, the three stages of one sample
 would collapse into a single entry.

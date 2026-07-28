@@ -64,8 +64,8 @@ Reads must carry the `fastq.gz` extension, or plain `fastq` if uncompressed. `fq
 `fq.gz` are accepted by the startup check but are never resolved afterwards — the
 rules look only for `.fastq.gz` and `.fastq` — and in shotgun mode the missing
 `.fastq.gz` path matches the `download_sra` rule under `_R1`/`_R2` naming, so the run
-tries to fetch each local sample from SRA rather than reporting the real problem; with
-`_1`/`_2` naming it stops with a missing-input error instead. The check itself sees
+tries to fetch each local sample from SRA rather than reporting that the extension is
+unsupported; with `_1`/`_2` naming it stops with a missing-input error instead. The check itself sees
 only the R1 files: a mixture of extensions among them stops the run at startup, but
 the R2 files are never inspected, so uniformity across the directory is not enforced.
 
@@ -257,7 +257,8 @@ optional read extraction step, which looks up taxids in the Bracken report.
     **They are estimated, not observed.** A value in `otu_table.tsv` is not a count of
     reads that Kraken2 assigned to that taxon. It is Bracken's estimate of how many
     reads *originated* from it, after redistributing reads that Kraken2 had left at
-    coarser ranks. Reporting these as observed assignments overstates what was measured.
+    coarser ranks. Reporting Bracken's estimates as observed assignments overstates what
+    was measured.
 
     **They do not account for every classified read.** Bracken reports only at the
     target rank. Reads classified above it that cannot be pushed down — because the

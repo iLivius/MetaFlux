@@ -35,8 +35,8 @@ a cut placed there discards nearly everything.
 MetaFlux guards against this by default: `amplicon.trunc_len.min_read_coverage_pct`
 (95) caps each sample at the length that percentage of its reads still reach, before
 quality is considered at all. **If you are hitting this error on a default config, the
-guard is already on and something else is going on** — check the two situations at the
-bottom of this entry first.
+guard is already on, so the cause is one of the two edge cases below, not a missing
+guard** — check them first.
 
 That is the trap. After primer trimming most reads end a little earlier than the
 full read length, and DADA2's `filterAndTrim` **discards any read shorter than

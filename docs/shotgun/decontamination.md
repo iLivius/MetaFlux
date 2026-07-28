@@ -22,7 +22,7 @@ it, so switching one off is safe: with PhiX removal disabled, host removal reads
 raw FASTQs; with both disabled, fastp does. Nothing needs to be renamed and no empty
 placeholder files are written.
 
-Note that the decontaminated FASTQs are marked temporary — Snakemake deletes them
+The decontaminated FASTQs are marked temporary — Snakemake deletes them
 once the next step has consumed them. The statistics files they produce are kept, and
 are what `stats/read_tracking.txt` reports on; of the two, only the BBDuk PhiX file is
 in a format MultiQC parses.
@@ -33,7 +33,8 @@ in a format MultiQC parses.
 
 PhiX is the small bacteriophage genome routinely spiked into Illumina runs as a
 sequencing control. Those reads are genuine sequence and will not be classified as
-anything real, but removing them early keeps the read counts honest.
+anything real, but removing them early stops them from inflating the denominator of
+every relative abundance computed downstream.
 
 BBDuk matches reads by k-mer against `phix174_ill.ref.fa.gz`, which ships inside the
 `bbmap` conda package. Nothing is downloaded and no index is built. The settings are
@@ -56,10 +57,11 @@ The stats file carries BBDuk's `#Total` and `#Matched` counts. MultiQC picks it 
 automatically, and the read tracking table derives both the `raw` and `nophix`
 columns from it (halving BBDuk's per-read counts to get read pairs).
 
-Leaving this on is the sensible default unless the lab is known to have skipped the
-spike-in. In shotgun data PhiX is a small fraction anyway, so switching it off costs
-few reads — but it also removes the only independent count of the reads *entering*
-the pipeline, which is what the read-tracking table uses for its `raw` column.
+Leaving PhiX removal on is the sensible default unless the lab is known to have
+skipped the spike-in. In shotgun data PhiX is a small fraction anyway, so switching it
+off costs few reads — but it also removes the only independent count of the reads
+*entering* the pipeline, which is what the read-tracking table uses for its `raw`
+column.
 
 ## Host removal
 
@@ -85,7 +87,7 @@ be a local path or a URL (`http`, `https` or `ftp`). An empty list skips the who
 step. Multiple entries are concatenated into a single reference and indexed once, so
 adding a second host costs one index build, not a second pass over the reads.
 
-The three rules do this in order:
+Host removal runs through three rules, in this order:
 
 1. **`fetch_host_refs`** resolves every entry — downloading URLs, copying local
    files, gzipping any plain FASTA — and concatenates them into
@@ -214,7 +216,8 @@ With both steps off the run stops at fastp instead, which requires the same thin
 the two files.
 
 **Repair the pairing first.** `repair.sh` comes from the same `bbmap` conda package
-MetaFlux already installs for these rules, so nothing new has to be added:
+MetaFlux already installs for `decontam_phix` and `decontam_host`, so nothing new has
+to be added:
 
 ```bash
 repair.sh in1=R1.fastq.gz in2=R2.fastq.gz \

@@ -514,8 +514,11 @@ from the count table, and both keyed forms of the table are rewritten:
 
 The stats JSON reports the pre-extraction distribution alongside the post-extraction one
 even when extraction is enabled, which makes it easy to see how much Metaxa2 or ITSx
-actually trimmed off each ASV. For 16S the two usually match closely; for ITS they do
-not, which is the point.
+actually trimmed off each ASV. For 16S the two usually match closely, because a 16S
+amplicon sits entirely inside the gene and Metaxa2 has almost nothing to trim; for ITS
+they typically diverge, because ITSx strips off the flanking 5.8S/SSU/LSU rRNA fragments
+that surround the true ITS region — a large gap here reflects real trimming, not a
+problem with the filter.
 
 If the window removes every ASV, the rule fails rather than writing an empty table —
 the message says to widen the window or check the probe.

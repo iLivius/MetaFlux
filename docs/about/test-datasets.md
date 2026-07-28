@@ -101,11 +101,14 @@ the low-quality 3′ tails of both reads, where a mismatch is most likely — so
 `maxMismatch: 0` removes many of the rest. A third of the merged reads went with them.
 
 On this mock it cost no taxa: all four expected genera are still recovered from the 12
-remaining ASVs, along with the two Saccharomycetes sequences that carry the unresolved
-remainder. A defined community of four genera is a soft test of that, though — on a
-richer or more length-variable community the same loss could take real taxa with it. If
-an ITS run merges far fewer reads than expected, these are the two parameters to look at
-first, and `min_overlap: 10` with `max_mismatch: 2` is a defensible choice for ITS.
+remaining ASVs. The other two ASVs never resolve past class level — both stop at
+Saccharomycetes with no genus call, rather than being assigned to the wrong genus, so
+they represent a classification gap rather than an error. A defined community of only
+four genera is a weak test of that distinction, though — on a richer or more
+length-variable community the same read loss could take real taxa down with it, not
+just leave them unresolved. If an ITS run merges far fewer reads than expected, these
+are the two parameters to look at first, and `min_overlap: 10` with `max_mismatch: 2`
+is a defensible choice for ITS.
 
 ## What the two truncation paths are tested on
 

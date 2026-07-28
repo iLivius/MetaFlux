@@ -240,7 +240,11 @@ amplicon:
     chimera:
       method: consensus
       min_fold_parent: 4
-      allow_one_off: false                    # accept bimeras with 1 mismatch to parent (relaxed mode)
+      allow_one_off: false                    # DADA2 default. FALSE means STRICTER, not looser: a
+                                              # sequence one mismatch/indel away from an exact bimera
+                                              # gets flagged as chimeric too, on top of exact matches.
+                                              # Setting this true is the relaxed direction — it keeps
+                                              # those near-miss sequences instead of removing them.
 
 # ═══════════════════════════════════════════════════════════════
 # Shotgun-only configuration — ignored when mode: amplicon

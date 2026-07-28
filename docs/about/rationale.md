@@ -36,7 +36,7 @@ overlap check, `resolve_policy` decides what happens:
 |--------|--------------|
 | `raise_trunc` *(default)* | Extends the cuts past the quality drop to recover the missing bases, taking each base from whichever read has the better quality at the position it would gain |
 | `relax_q` | Lowers the quality threshold one step at a time, down to `q_floor` (15), re-cutting until the overlap holds |
-| `error` | Aborts and reports the deficit, leaving the choice with the analyst |
+| `error` | Aborts and reports the overlap shortfall in bp, leaving the choice with the analyst |
 
 The chosen values are written to `stats/trunclen.json` and consumed by
 `dada_filter`. Setting `mode: manual` bypasses the analysis and uses `manual_r1`

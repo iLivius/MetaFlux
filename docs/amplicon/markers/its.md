@@ -303,7 +303,7 @@ ASV_7             ASV_7,ASV_142       2          231
 ASVs from which ITSx cannot extract the requested region are dropped from both the
 FASTA and the count table. If the region file comes back empty, the rule stops with an
 error: that usually means the amplicon does not cover the subregion named in
-`its_region`, or the primers do not match the assumption.
+`its_region`, or the primers used do not actually target that subregion.
 
 ## Taxonomy
 

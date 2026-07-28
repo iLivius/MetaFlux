@@ -694,7 +694,7 @@ default: whatever is listed is exactly what is applied.
 | 16S | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS | `[k__Fungi]` | `[]` |
 | 18S | `[d__Eukaryota]` (PR2 ranks; `k__Eukaryota` with SILVA-Euk) — note this also drops ASVs left unclassified at Domain, which on some 18S datasets is a large fraction; see [18S](../amplicon/markers/18S.md) before applying it | `[]` |
-| gyrB | no recommended default — the DD7RZ8 paralog tag is a separate, structural filter | |
+| gyrB | no recommended default — paralogs are removed with `discard: [other]` on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter | |
 | rpoB | no recommended default — FROGS RefSeq has no equivalent contamination to remove | |
 
 Contaminants a blank extraction control reveals go in `discard`, e.g.
@@ -798,13 +798,14 @@ The full treatment is on
     fungi, so with 2×300 reads the longer amplicons overlap by only a little — exactly
     the pairs a 10 → 12 bp requirement drops, and their short overlap sits in the
     low-quality 3′ tails where `max_mismatch: 0` then removes more. A third of the
-    merged reads went. On the mock that cost no genera, but for ITS on a more variable
-    community `min_overlap: 10` with `max_mismatch: 2` is a defensible setting.
-| `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The resulting sequences are not real contigs and the length filter must be set accordingly. |
+    merged reads were lost to these two settings. On the mock that cost no genera, but
+    for ITS on a more variable community `min_overlap: 10` with `max_mismatch: 2` is a
+    defensible setting.
+| `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so `length_filter.mode: auto` is no longer sizing a meaningful window — switch to `manual` with an explicit `range` sized for the concatenated length. |
 | `merge.trim_overhang` | Trims bases that read past the far end of the amplicon | `true` | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
 | `chimera.method` | `removeBimeraDenovo` method | `consensus` | Chimeras are called per sample and the verdicts pooled. |
 | `chimera.min_fold_parent` | How much more abundant a parent must be than its suspected chimera | `4` | DADA2's `minFoldParentOverAbundance`, raised above the package default. Higher is **more permissive**: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the note below. |
-| `chimera.allow_one_off` | Also flags sequences one mismatch away from a perfect chimera | `false` | A relaxed mode; more aggressive, and more likely to remove real variants. |
+| `chimera.allow_one_off` | Also flags sequences one mismatch away from a perfect chimera | `false` (DADA2's own default) | `false` is the **stricter** setting, not a relaxed one — near-miss sequences get flagged as chimeric alongside exact matches, so more real variants risk being removed. Setting it `true` is what relaxes this: only exact bimera matches are flagged, and near-misses are kept. |
 
 !!! tip "Where to look before changing the chimera settings"
 
