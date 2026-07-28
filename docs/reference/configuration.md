@@ -37,6 +37,188 @@ Each section below is tagged with the mode that consumes it: `[shared]`,
 `[amplicon]`, or `[shotgun]`. Keys belonging to the mode that is not running are
 ignored entirely.
 
+## Which file a setting actually comes from
+
+Four kinds of file get mentioned across this site, and only three of them decide
+anything. It is worth being explicit about which is which, because they are easy to
+confuse once you are reading the documentation and the config side by side.
+
+| File | Where | Read by | Can it change a run? |
+|---|---|---|---|
+| These documentation pages | `docs/**.md` | people | **No** |
+| The config template | `config/config.yaml` | Snakemake | Yes — always, as the base layer |
+| A run config | any `.yaml` given to `--configfile` | Snakemake | Yes — merged on top |
+| A marker pack | `workflow/markers/<type>.yaml` | Snakemake | Yes — but in its own namespace |
+
+!!! warning "Documentation pages set nothing"
+
+    Everything on this site is prose rendered from Markdown, including the per-marker
+    pages. **Nothing under `docs/` is ever read by Snakemake.** The YAML blocks shown
+    on these pages are illustrations of what to put in your own config — they are not
+    in force anywhere, and they cannot override or be overridden by anything.
+
+    So the question "if two pages disagree, which one wins?" has no winner: neither
+    does. A disagreement between two documentation pages is simply a documentation
+    bug. The file that decides is `config/config.yaml` plus whatever you merge on top
+    of it.
+
+### The config layers
+
+Three layers, each beating the one before it:
+
+1. **`config/config.yaml`** — the Snakefile hard-codes `configfile: "config/config.yaml"`.
+   That path is resolved against the directory snakemake **runs in**, not against the
+   Snakefile, so it loads on every run launched from the repository root — the supported
+   way to invoke MetaFlux. Started from somewhere else, Snakemake either aborts
+   (`Workflow defines configfile config/config.yaml but it is not present`) or, if you
+   passed `--configfile`, silently uses that file *alone* with no template underneath.
+2. **`--configfile my_run.yaml`** — merged on top, key by key, at any depth.
+3. **`--config key=value`** — command line, beats both. Only **top-level** keys can be
+   named this way: `--config mode=shotgun` works, `--config amplicon.dada2.merge.min_overlap=99`
+   is rejected outright. Nested settings belong in a `--configfile`.
+
+The merge in step 2 is nested rather than wholesale, which is what makes short run
+configs practical. A run config naming two settings changes exactly those two:
+
+```yaml
+# my_run.yaml — an overlay that changes two settings
+amplicon:
+  dada2:
+    merge:
+      min_overlap: 10
+output:
+  out_dir: /data/my_run_out
+```
+
+Running with `--configfile my_run.yaml` gives `min_overlap: 10` and the new output
+directory, while `max_mismatch`, `just_concatenate`, every `trunc_len` key and
+everything else still come from the template. You never have to restate a block to
+change one value inside it.
+
+This is an **overlay, not a complete run config**: it inherits the template's
+`/path/to/...` placeholders for `input.fastq_dir` and `amplicon.primers`, which still
+have to be replaced before anything runs.
+
+!!! warning "The merge recurses only through blocks"
+
+    Key-by-key merging happens as long as what you write at each level is itself a
+    block. Write a key with a list, a scalar, or **no value at all**, and it replaces
+    that whole subtree in the template instead of merging into it.
+
+    The dangerous form is the last one, because it looks like an unfinished thought
+    rather than an instruction:
+
+    ```yaml
+    amplicon:
+      trunc_len:        # <- no value: YAML reads this as null
+    ```
+
+    That silently deletes all eight `trunc_len` keys the template provides, and the run
+    fails later with a `KeyError` from deep inside the workflow rather than a config
+    error. Same for `max_ee: [1]`, which replaces `[2, 5]` outright rather than merging
+    element-wise. If you do not intend to change a block, leave it out entirely.
+
+!!! tip "The flip side, and why `keep`/`discard` ship commented out"
+
+    Because the template is *always* underneath, a concrete value left in it silently
+    applies to any run that does not set its own. Harmless for a thread count; not
+    harmless for `amplicon.taxonomy.filter.keep`, where a 16S `[k__Bacteria, k__Archaea]`
+    left in the template would discard every ASV of an 18S run. That is why those two
+    lines ship commented out — see the warning above.
+
+### Marker packs live beside the config, not inside it
+
+A marker pack holds *facts about the marker*: which database the classifier uses, which
+reference the amplicon-length probe measures, whether a region extractor exists, how many
+slots the marker's rank model has. A run config holds *choices about this
+experiment*: primers, expected length, truncation, taxon filter, paths.
+
+The two are kept in genuinely separate namespaces. A pack is read into `MARKERS[type]`
+and never merged into `config`, so a setting cannot silently arrive from both places.
+This is enforced by construction rather than convention: across all five shipped packs,
+**no pack key appears anywhere under `amplicon:` in the config template**. The only name
+the two share at all is `references`, handled below.
+
+If you genuinely need a different pack — another database release, a different rank
+model — put a file of the same name in `config/markers/`. That is a whole-file
+replacement, not a per-key merge: your file supersedes the shipped pack entirely, so it
+must declare everything the pack needs, not just the part you wanted to change.
+
+### Where a pack and the config do interact
+
+Two directions, and they are not symmetrical.
+
+**A config entry overriding a pack** happens in exactly one place: database locations.
+Every pack declares a default filename and download URL for each database it owns, and
+the run config only has to name one when you want to **relocate** it — to point at a
+copy already on a shared filesystem rather than let MetaFlux download its own:
+
+```yaml
+references:
+  silva:
+    train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz
+```
+
+A **non-empty** `references.*` entry wins; the pack default is used otherwise. The test
+is truthiness, so an entry left `null` or blank counts as absent and falls back to the
+pack silently rather than erroring. The key that relocates each database is listed in
+[Markers](../amplicon/markers/index.md).
+
+**A pack overriding the config** is the other direction, and it is the one case where
+the workflow does not do what your config literally said. It is worth knowing about,
+because if you copy a config between markers you will meet it.
+
+It happens when a setting asks for something that does not exist *for the marker you
+chose* — not something unwise, something genuinely unavailable. Two cases ship today,
+and they behave differently on purpose:
+
+| You asked for | On these markers | What happens |
+|---|---|---|
+| `extraction.enabled: true` | 18S, gyrB, rpoB | **warning, the run continues** with extraction off |
+| `taxonomy.method: sintax` | gyrB, rpoB | **error, the run stops** |
+
+#### Region extraction
+
+Metaxa2 cuts the ribosomal gene out of a 16S ASV; ITSx cuts ITS1 or ITS2 out of a
+fungal one. gyrB and rpoB are protein-coding genes, so neither tool applies to them,
+and the 18S pack declares no extractor either. All three say `extractor: none`, and the
+workflow builds no extraction step at all for them.
+
+If your config still says `extraction.enabled: true`, the pipeline would go looking for
+`seqs_extracted.fasta` — a file no rule produces — and Snakemake would stop with a
+missing-input error naming a filename you never asked for. Instead MetaFlux turns the
+setting off itself and tells you on stderr:
+
+```text
+[MetaFlux] warning: marker 18S has no target-region extractor;
+ignoring amplicon.extraction.enabled: true (no extraction step will run)
+```
+
+Note this one is a **warning** — the run proceeds. If you adapted a 16S config for an
+18S run, extraction quietly not happening is the correct outcome, not a fault to chase.
+
+#### SINTAX classification
+
+VSEARCH's `--sintax` needs a database in its own format. SILVA, UNITE and PR2 all have
+one, so 16S, ITS and 18S can be classified either way. gyrB's DD7RZ8 trainset and
+rpoB's FROGS build ship an RDP-style training set only, so those two packs leave
+`taxonomy_sintax_db` empty. Asking for sintax there stops the run at once, naming the
+alternative:
+
+```text
+[MetaFlux] marker gyrB has no SINTAX reference database, so
+amplicon.taxonomy.method: sintax is not available for it. Use method: rdp.
+```
+
+This one errors rather than falling back, and the asymmetry with the case above is
+deliberate. Switching off a step that could not have run costs you nothing you could
+otherwise have had. Silently classifying with a different algorithm than the one you
+asked for would change your results without telling you — so it refuses instead.
+
+Neither case is really the pack "winning an argument". Nothing is being weighed against
+anything: the config asked for a tool that does not exist for that marker, and the pack
+is simply where that fact happens to be written down.
+
 ## The four lines that define a run
 
 Most of the file is tuning that can stay at its defaults. Four settings describe
@@ -373,8 +555,12 @@ that cannot merge is lost entirely.
     271 bp, which is the difference between retaining 9 read pairs out of 908,768 and
     retaining 90.9% of the library.
 
-    Raising it towards 100 allows longer cuts and discards more short reads; at exactly
-    `100` the guard is off. Lowering it is more conservative and costs read length.
+    Mind the direction: the value is a guarantee about reads, so raising it asks for a
+    position more reads reach and therefore gives a **shorter** cut with fewer reads
+    discarded. Lowering it gives a longer cut and discards more. Between about 80 and 99
+    it barely moves, because read lengths cluster. `100` is a cliff rather than an off
+    switch — it demands every read reach the cut, collapsing the ceiling onto the single
+    shortest read in the file. No value disables the guard.
     `logs/pick_trunclen.log` prints each sample's longest read next to the length the
     requested percentage reaches, and emits a `NOTE` when the two differ by 10 bp or
     more.
@@ -545,7 +731,7 @@ The full treatment is on
 | `pool` | How samples are pooled during ASV inference | `false` | `false` treats each sample independently (fastest); `"pseudo"` runs a second pass informed by ASVs seen across samples; `true` pools all samples (most sensitive to rare variants, most expensive). Strings are read case-insensitively. |
 | `max_ee` | `filterAndTrim`'s `maxEE` — the expected-error ceiling per read, as `[R1, R2]` | `[2, 5]` | R2 is looser because reverse reads degrade faster on Illumina chemistry. |
 | `trunc_q` | `filterAndTrim`'s `truncQ` — trims each read at the first base at or below this quality | `2` | The DADA2 default. This is the adaptive 3′ trim, distinct from the fixed `truncLen` cut. It is applied **before** `truncLen`; see the note below. |
-| `filter.min_len` | Per-read length floor after trimming | `50` | Used for every marker; for ITS it is the fallback when no probe is available. |
+| `filter.min_len` | Per-read length floor after trimming | `20` | DADA2's own `filterAndTrim` default. Used for every marker; for ITS it is the fallback when `min_len_stat` is unset. |
 | `filter.min_len_stat` | Optionally derives `min_len` from the probe distribution instead | `null` | **ITS only, opt-in.** Left `null`, every marker uses `filter.min_len`. Setting a statistic (e.g. `q1`) puts the floor near 175 bp, above ~24% of the UNITE reference — see [ITS](../amplicon/markers/its.md). The other markers never take this path: their probe measures the full amplicon, which exceeds read length. |
 | `filter.max_len` | Per-read length ceiling | `null` | `null` means no upper limit. |
 

@@ -125,8 +125,9 @@ The working fix at the time was `mode: manual` at 270 / 239, worked out by measu
 read-length distribution by hand. That this was necessary at all was the argument for
 `amplicon.trunc_len.min_read_coverage_pct`, which now caps each sample at the length 95%
 of its reads still reach before quality is consulted. On this library it brings the R1
-ceiling to 271, and `auto` returns **271 / 239** unaided — within 0.02% of the
-hand-picked values, carrying 90.9% of raw reads through to the final table.
+ceiling to 271, and `auto` returns **271 / 239** unaided, carrying 90.9% of raw reads
+through to the final table — 828,018 reads against 828,170 for the hand-picked
+270 / 239, a difference of 0.02%.
 
 The config is therefore back on `mode: auto`, deliberately: it is the working test that
 the guard does its job. Note also that only R1 was ever the problem. R2's quality did

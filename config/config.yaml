@@ -142,9 +142,14 @@ amplicon:
                                               # cut above the read-length bulk loses the library,
                                               # not just a few bases. Falco reports quality up to
                                               # the LONGEST read in a file, which on a clean run
-                                              # is what the cut would otherwise follow. Raise
-                                              # towards 100 to allow longer cuts and lose more
-                                              # short reads; lower to be more conservative.
+                                              # is what the cut would otherwise follow.
+                                              # Direction: HIGHER is stricter and gives a SHORTER
+                                              # cut (more reads survive); lower gives a longer cut
+                                              # and discards more short reads. Do NOT set 100 --
+                                              # it demands that every read reach the cut, so the
+                                              # ceiling collapses to the single shortest read in
+                                              # the file (79 bp on the 18S test set). There is no
+                                              # value that switches the guard off.
     # 16S, 18S, gyrB and rpoB all use the same Q-based picker + overlap constraint.
     # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
     # no hard cut is applied; quality is controlled by maxEE and min_len only.

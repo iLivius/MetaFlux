@@ -87,22 +87,121 @@ considered if **all** samples have data there, so the run-wide ceiling is the sm
 the per-sample ceilings and no sample is cut beyond its own range. This gate is fixed at
 100% in the code and is not exposed as a config key.
 
-The order matters. The across-sample gate counts samples, not reads, so on its own it
-cannot see that a position is backed by three reads out of a hundred thousand — which is
-exactly how a cut used to end up above the bulk of the data on very clean runs. The log
-reports both, and flags when the read-coverage cap did real work:
+The order matters, and the next section is why.
+
+### Why the read-coverage gate exists
+
+This is the one part of truncation worth understanding properly, because when it goes
+wrong it does not go slightly wrong — it costs the entire run. Three separate facts
+combine into the problem, and none of them is obviously dangerous on its own.
+
+**One: reads are not all the same length once the primer is off.** A library that came
+off the sequencer at a uniform 301 bp does not stay uniform. The primer does not sit at
+exactly the same offset in every read, and 3′ quality trimming removes different amounts
+from different reads. What comes out of primer trimming is ragged: most reads clustered
+tightly around one length, with a thin tail running longer.
+
+**Two: Falco reports quality for every position that any read reached.** If a single
+read out of two hundred thousand happens to be 289 bp long, Falco's per-base quality
+table has a row for position 289. That table says nothing about *how many* reads got
+that far — it is a quality profile, not a census.
+
+**Three: DADA2 discards short reads rather than padding them.** `filterAndTrim` with
+`truncLen = N` cuts every read at position N **and throws away outright any read that
+never reached N**. There is no partial credit.
+
+Put those together and the failure assembles itself. On a clean run, per-base quality
+never drops below `q_threshold`, so the picker has no quality signal to cut on and simply
+runs to the end of the table. The end of the table was written by the longest read in the
+file. Fact three then deletes everything shorter.
+
+!!! example "What that looks like on real data"
+
+    `Surface_dolomite`, the 18S test set, R1 after primer trimming: **211,974 reads**.
+    Reading Falco's length distribution from the longest length downwards:
+
+    | Read length | reads ending exactly here | reads reaching **at least** here |
+    |---|--:|--:|
+    | 289 bp | 1 | 1 |
+    | 288 bp | 2 | 3 |
+    | 285 bp | 16 | 23 |
+    | 282 bp | 850 | 908 |
+    | **281 bp** | **91,042** | 91,950 |
+    | 276 bp | 25,516 | 122,513 |
+    | 275 bp | 37,199 | 159,712 |
+    | 272 bp | 135 | 162,376 |
+    | **271 bp** | **49,512** | **211,888** |
+
+    Read from the quality tables alone, the run-wide ceiling came out at **288 bp** —
+    set by a different sample, since this one's own table runs to 289. Either way, only
+    **three reads here are 288 bp or longer**, so a cut there discards 211,971 of
+    211,974. That is not hypothetical: before this gate existed the four-sample 18S run
+    kept 9 read pairs out of 908,768 and finished with 3 ASVs.
+
+**What the gate does instead.** Before quality is consulted at all, each sample is asked
+one question: *what is the longest position that at least `min_read_coverage_pct` of my
+reads still reach?* Ninety-five percent of 211,974 is about 201,375. Walking up the
+right-hand column above: at 272 bp only 162,376 reads (76.6%) qualify, which is not
+enough; at 271 bp 211,888 do. So 271 becomes this sample's ceiling and the quality table
+is truncated there. The picker now cannot choose anything beyond it, whatever the quality profile
+says.
+
+Two properties are worth noticing:
+
+- **You usually keep far more than you asked for.** The setting is a floor, not a target.
+  Because read lengths cluster rather than spreading evenly, the 95% request here
+  actually retains 99.96% of the sample.
+- **It is per sample, and then the strictest one wins.** The four 18S samples capped at
+  275, 271, 276 and 271, so the run-wide R1 ceiling is 271. No sample is ever cut past
+  its own limit.
+
+**Reading it in the log.** `logs/pick_trunclen.log` names the sample that set each
+ceiling and flags when the gate did real work:
 
 ```text
 [pick_trunclen] R1 ceiling 271 bp, set by Surface_dolomite_R1_stripped (its longest read is 289 bp; 95.0% of its reads reach 271 bp)
 [pick_trunclen] NOTE: R1 read-coverage cap pulled the ceiling in by 18 bp. Without it the cut could have landed above most reads.
 ```
 
-That `NOTE` is worth reading rather than skipping. A large gap between a sample's longest
-read and its 95% length means the read lengths are ragged, which is normal after primer
-trimming but extreme on markers whose amplicons vary in length — the ITS test set shows
-an 89 bp gap. Raising `min_read_coverage_pct` towards 100 allows longer cuts at the cost
-of discarding more short reads, and at exactly 100 it reproduces the old behaviour along
-with its failure mode.
+The `NOTE` fires when the gap is 10 bp or more, and is worth reading rather than
+skipping. A large gap means the read lengths are ragged — normal after primer trimming,
+and extreme for markers whose amplicons genuinely vary in length, where the ITS test set
+shows an 89 bp gap.
+
+**When to change it.** Rarely — and note which way it runs, because it is the opposite
+of what "raise the percentage to be more permissive" would suggest. The value is a
+*guarantee about reads*, not an allowance about length: asking for a higher percentage
+asks for a position more reads reach, which is necessarily **further in**.
+
+| | Effect on the cut | Effect on reads |
+|---|---|---|
+| **Raise** it (e.g. 99) | **shorter** | fewer discarded |
+| **Lower** it (e.g. 90) | **longer** | more discarded |
+
+Measured on `Surface_dolomite` R1, so the shape is visible:
+
+| `min_read_coverage_pct` | 50 | 80 | 90 | **95** | 98 | 99 | 100 |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| resulting cap | 276 | 271 | 271 | **271** | 271 | 271 | **79** |
+
+Two things fall out of that. Between roughly 80 and 99 the value barely matters, because
+read lengths cluster rather than spreading evenly — so there is little to gain by tuning
+it. And **`100` is a cliff, not an off switch**: it demands that *every* read reach the
+cut, so the ceiling collapses onto the single shortest read in the file. On this sample
+that is 79 bp, which then fails the overlap constraint and stops the run.
+
+!!! warning "There is no value that disables this gate"
+
+    `100` does not restore the old behaviour — it is the most aggressive setting
+    available, not the least. If you want the old behaviour for comparison, there is no
+    config value for it; use `mode: manual` and set the lengths yourself.
+
+The gate runs under `mode: auto` only — in `manual` mode the lengths come straight from
+`manual_r1` / `manual_r2` and no quality table is consulted at all, so the value has no
+effect. (The key itself still has to be present and numeric even for a manual run, which
+the shipped template guarantees.) On the 18S set the default picks 271/239 unaided —
+against 270/239 worked out by hand from a retention curve — the run keeps 828,018 reads
+where the hand-picked pair kept 828,170, a difference of 0.02%.
 
 **The cut itself.** Walking the aggregated profile from position 1, the cut is placed at
 the last cycle still at or above `q_threshold` — that is, one position before the first
@@ -162,9 +261,10 @@ comes out below 50 bp, which usually means the falco reports are worth a look.
 
     `amplicon.min_overlap` (default `12`) is used **only** in the truncation arithmetic
     below — it decides where the reads are cut. `amplicon.dada2.merge.min_overlap`
-    (default `10`) is the threshold `mergePairs` applies at runtime to each individual
-    pair. Setting the design constraint a little above the runtime threshold leaves a
-    couple of bases of margin.
+    (also `12`, DADA2's own default) is the threshold `mergePairs` applies at runtime to
+    each individual pair. They now hold the same value, so the truncation is sized for
+    exactly the overlap the merge step will demand; raising the design constraint above
+    the runtime threshold is what buys a margin.
 
 In `manual` mode the quality analysis is skipped completely: the two configured values
 are written straight to `stats/trunclen.json` and used as they are. No overlap check is
@@ -442,7 +542,7 @@ What this means in practice:
   in `amplicon.dada2.filter.min_len_stat`, when that is set (it is `null` by default).
   The ITS probe measures extracted ITS1/ITS2 lengths, which are below per-read length
   and therefore a sensible per-read floor. When no probe JSON exists, ITS falls back to
-  the fixed `amplicon.dada2.filter.min_len` (default `50`). Every other marker always
+  the fixed `amplicon.dada2.filter.min_len` (default `20`). Every other marker always
   uses that config value, because their probe measures the full amplicon — longer than a
   single read, so using it as a per-read floor would drop everything.
 
@@ -500,8 +600,10 @@ comes in at 271, `auto` returns 271/239 unaided, and the run keeps 90.9% of its 
 
 It can still bite in two situations:
 
-- **`min_read_coverage_pct` raised towards 100.** At 100 the old behaviour is back
-  exactly. Values above roughly 99 are worth treating with suspicion for the same reason.
+- **`min_read_coverage_pct` lowered.** A lower percentage permits a longer cut, which
+  is the direction that brings this failure back. (Raising it shortens the cut instead,
+  and `100` collapses the ceiling onto the shortest read in the file rather than
+  disabling anything.)
 - **Read lengths so ragged that even the 95% length is unrepresentative** — possible on
   heavily quality-trimmed input, or where a marker's amplicons vary enormously in length.
 

@@ -84,8 +84,10 @@ taken.
 
 **`pcr`** — in-silico PCR. The probe takes the supplied primer FASTAs and runs two
 cutadapt passes against a full-length reference: first keep the reference sequences that
-carry the forward primer at their 5′ end and trim it off, then, of those, keep the ones
-that carry the reverse-complemented reverse primer at their 3′ end and trim that off too.
+in which the forward primer matches, trimming it and everything upstream, then, of
+those, keep the ones in which the reverse-complemented reverse primer matches, trimming
+it and everything downstream. Neither match is anchored — the references are whole
+genes, so the primers bind inside them.
 What survives is the set of amplicons those primers would produce from that reference, and
 their lengths are the distribution. This is the mode for 16S, 18S and rpoB, because SILVA,
 SILVA-Euk and the FROGS rpoB build all contain whole genes.

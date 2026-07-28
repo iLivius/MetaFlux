@@ -67,16 +67,18 @@ removes almost everything, and DADA2 has nothing left to work with.
     Eighteen base pairs separate "loses everything" from "loses nothing".
 
     With the 95% read-coverage cap the R1 ceiling comes in at 271 instead of 288, and
-    `auto` now returns 271 / 239 on this library with no manual intervention — within
-    0.02% of the 270 / 239 that had to be worked out by hand. It carries 90.9% of its
-    raw reads through to the final table.
+    `auto` now returns 271 / 239 on this library with no manual intervention. It carries
+    90.9% of its raw reads through to the final table: 828,018 reads, against 828,170
+    for the 270 / 239 that previously had to be worked out by hand — a difference of
+    0.02%.
 
 **Why it can still happen with the guard on.** Two cases:
 
-1. **`min_read_coverage_pct` was raised.** At `100` the guard is off and the old
-   behaviour is back exactly; anything above about 99 is close enough to be suspect.
-   This is the first thing to check, since it is the only way to reintroduce the
-   failure through configuration alone.
+1. **`min_read_coverage_pct` was lowered.** The value is a guarantee about reads, so
+   a *lower* percentage permits a *longer* cut — that is the direction that reintroduces
+   this failure, and it is the first thing to check. Raising it does the opposite, and
+   `100` is not an off switch: it collapses the ceiling onto the single shortest read in
+   the file, which fails the overlap constraint instead.
 2. **Read lengths are ragged enough that even the 95% length is unrepresentative.**
    Heavily pre-trimmed input does this, as do markers whose amplicons genuinely vary
    in length. `logs/pick_trunclen.log` tells you directly — it prints each sample's
