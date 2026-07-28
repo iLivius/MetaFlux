@@ -32,15 +32,26 @@ trunc_q      <- as.integer(snakemake@params[["trunc_q"]])
 amp_type     <- snakemake@params[["amp_type"]]
 min_len_stat <- snakemake@params[["min_len_stat"]]
 
-# min_len: filterAndTrim's min_len is a PER-READ length floor.
-#   ITS: the probe distribution (extracted ITS2 lengths, ~140-260 bp) is
-#        below per-read length, so auto-derive min_len from probe[min_len_stat].
-#   Non-ITS (16S, 18S, gyrB, rpoB): the probe distribution — where one exists —
-#        is the full amplicon length (~400 bp for 16S V3-V4/V5-V7), which exceeds
-#        per-read length and would drop every read; gyrB/rpoB don't run this probe
-#        for min_len purposes at all. Fall back to the config's manual min_len.
+# min_len: filterAndTrim's min_len is a PER-READ length floor. It normally comes
+# straight from the config (DADA2's own default is 20).
+#
+# ITS only, and only when min_len_stat is set: the floor can instead be derived from
+# the probe distribution, which for ITS is the extracted ITS1/ITS2 subregion length.
+# That is OPT-IN because it is a trade-off, not a free improvement: the UNITE
+# reference bottoms out at 17 bp (ITS1) / 38 bp (ITS2), so a stat like q1 (~175 bp)
+# sits above roughly a quarter of known fungal ITS diversity and discards reads from
+# genuinely short amplicons — the same bias that setting truncLen to c(0,0) for ITS
+# exists to avoid. Leave min_len_stat null to keep the config floor for every marker.
+#
+# The other markers never take this path: their probe measures the full amplicon
+# (~400 bp for 16S V3-V4), which exceeds per-read length and would drop every read.
 probe_json_path <- snakemake@input[["probe_json"]]
-if (amp_type == "ITS" && length(probe_json_path) > 0L && file.exists(probe_json_path[[1]])) {
+use_probe_min_len <- (
+  amp_type == "ITS" &&
+  !is.null(min_len_stat) && !is.na(min_len_stat) && nzchar(as.character(min_len_stat)) &&
+  length(probe_json_path) > 0L && file.exists(probe_json_path[[1]])
+)
+if (use_probe_min_len) {
   probe   <- fromJSON(probe_json_path[[1]])
   min_len <- as.integer(probe[[min_len_stat]])
   message("[dada_filter] min_len auto-set from probe ", min_len_stat, "=", min_len, " bp (ITS)")

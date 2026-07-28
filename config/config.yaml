@@ -198,8 +198,13 @@ amplicon:
     max_ee: [2, 5]                            # filterAndTrim maxEE [R1, R2]
     trunc_q: 2                                # filterAndTrim truncQ — adaptive 3' trim at first base <= this Q (DADA2 default)
     filter:
-      min_len: 50                             # per-read length floor (always used for 16S; fallback for ITS when probe unavailable)
-      min_len_stat: q1                        # ITS-only: probe JSON statistic for auto min_len (min|q1|median|q3|p95|p99|max)
+      min_len: 20                             # per-read length floor; 20 is DADA2's own filterAndTrim default
+      # ITS-only, opt-in: derive min_len from the probe distribution instead
+      # (min|q1|median|q3|p95|p99|max). Left null, every marker uses min_len above.
+      # Setting q1 puts the floor near 175 bp, above ~24% of the UNITE reference
+      # (ITS1 bottoms out at 17 bp, ITS2 at 38), which discards genuinely short
+      # fungal amplicons — the bias truncLen: c(0,0) exists to avoid. See the ITS page.
+      min_len_stat: null
       max_len: null                           # null = no upper length filter (Inf)
 
     learn_errors:
@@ -211,9 +216,13 @@ amplicon:
       omega_a: 1e-40                          # ASV inference sensitivity (DADA2 default); lower = stricter = fewer ASVs
 
     merge:
-      min_overlap: 10                         # runtime mergePairs threshold in bp (design constraint in amplicon.min_overlap)
-      max_mismatch: 2
-      just_concatenate: false                 # ITS safety valve: skip overlap merging (NNNNN join)
+      min_overlap: 12                         # runtime mergePairs threshold in bp = DADA2 default
+                                              # (the design constraint is amplicon.min_overlap)
+      max_mismatch: 0                         # DADA2 default. Zero is deliberate: after denoising,
+                                              # a mismatch in the overlap is evidence the pair should
+                                              # not be merged rather than a sequencing error.
+      just_concatenate: false                 # joins EVERY pair with an N spacer and never merges on
+                                              # overlap — not a selective rescue; see the ITS page
       trim_overhang: true                     # trim bases overhanging amplicon ends; safe for 16S, necessary for short ITS
 
     chimera:
