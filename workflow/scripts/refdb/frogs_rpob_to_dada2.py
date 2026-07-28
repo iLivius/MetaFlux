@@ -21,7 +21,7 @@ WHAT IT DOES (two edits per header, sequence lines untouched)
   1. drop the leading ">ACCESSION Root;"  -> the lineage now starts at k__Bacteria
   2. strip every " [id: N]" database tag
 
-The result is a 7-rank GTDB lineage with prefixes already embedded and a GTDB-style
+The result is a 7-rank NCBI RefSeq lineage with prefixes already embedded and a
 binomial species — consumed by the rpoB marker pack as taxonomy_refdb (prefix_style
 "embedded"). Input and output are both gzipped; sequence lines pass through verbatim
 so ASV-facing sequences are never altered.

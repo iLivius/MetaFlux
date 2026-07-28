@@ -2,7 +2,7 @@
 #
 # pcr mode (16S, 18S, rpoB):    two-pass cutadapt against a full-length reference
 #                    (SILVA / SILVA-Euk / FROGS) — keep reference sequences that
-#                    carry both the fwd primer at 5' and revcomp(rev) at 3'.
+#                    contain both the fwd primer and revcomp(rev).
 #                    Surviving trimmed sequences = the in-silico PCR products.
 #
 # direct mode (ITS, gyrB): measure lengths directly from a reference that is

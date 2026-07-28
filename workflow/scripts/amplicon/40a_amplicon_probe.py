@@ -4,9 +4,9 @@
 PCR mode (16S, 18S, rpoB): two-pass cutadapt against a full-length reference
   (SILVA / SILVA-Euk / FROGS).
   Pass 1: ``-g file:fwd`` with ``--discard-untrimmed``
-          → keep reference sequences with the forward primer at 5', trim it off.
+          → keep reference sequences containing the forward primer, trim it off.
   Pass 2: ``-a file:rev_rc`` with ``--discard-untrimmed``
-          → of those, keep sequences with revcomp(rev) at 3', trim it off.
+          → of those, keep sequences containing revcomp(rev), trim it off.
           The survivors are the in-silico amplicon bodies.
 
 Direct mode (ITS, gyrB): no primer trimming. The reference is ALREADY an
@@ -91,7 +91,7 @@ def pct(sorted_lengths: list[int], p: float) -> int:
 
 out_amplicons.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Two-pass in-silico PCR (16S) ─────────────────────────────────
+# ── Two-pass in-silico PCR (16S, 18S, rpoB) ──────────────────────
 if probe_mode == "pcr":
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -108,7 +108,7 @@ if probe_mode == "pcr":
             log.close()
             sys.exit(res.returncode)
 
-        # Pass 1: keep only sequences that start with the forward primer
+        # Pass 1: keep only sequences where the forward primer matches anywhere (unanchored)
         run([
             "cutadapt", "-j", str(threads),
             "-g", f"file:{fwd}",
@@ -118,7 +118,7 @@ if probe_mode == "pcr":
             str(ref_fasta),
         ], "pass1 (5' fwd)")
 
-        # Pass 2: of those, keep only sequences that end with the reverse primer
+        # Pass 2: of those, keep only sequences where the reverse primer matches anywhere (unanchored)
         run([
             "cutadapt", "-j", str(threads),
             "-a", f"file:{rev_rc}",
@@ -145,7 +145,7 @@ if probe_mode == "pcr":
 else:
     log.write(
         f"\n[amplicon_probe] direct mode: reading lengths from {ref_fasta} "
-        "(UNITE UCHIME pre-extracted ITS subregion, no cutadapt)\n"
+        "(reference is already amplicon-length, no cutadapt)\n"
     )
     log.flush()
 

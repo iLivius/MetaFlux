@@ -75,7 +75,11 @@ message("[assign_taxonomy] Classifying ", length(unique_seqs),
 # taxLevels comes from the marker profile so the classifier matches the reference's
 # actual depth. For 16S/ITS these are the Linnaean 7, identical to DADA2's own
 # default (so passing them explicitly changes nothing); a 9-rank reference such as
-# PR2 (domain..species) needs them declared or assignTaxonomy would truncate to 7.
+# PR2 (domain..species) needs them declared — assignTaxonomy sizes the output from
+# the reference's own depth, so undeclared levels arrive as unnamed columns AND the
+# names that were declared slide onto the wrong ranks (PR2's Family would be labelled
+# Species). make_tax_string below looks values up by name, so that misnaming is the
+# damaging half, not the unnamed tail.
 taxa_unique <- assignTaxonomy(unique_seqs, refdb_path,
                               minBoot = min_boot,
                               multithread = threads,

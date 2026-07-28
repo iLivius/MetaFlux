@@ -1,12 +1,12 @@
 # MetaFlux marker pack: rpoB (bacterial RNA polymerase subunit B).
 # See 16S.yaml for what belongs in a pack and what does not.
 #
-# Protein-coding single-copy marker (Ogier et al. 2019); resolves species/strains
-# that 16S V3-V4 cannot. Reference is the FROGS RefSeq build (complete + chromosome
+# Protein-coding single-copy marker (Ogier et al. 2019); resolves species that
+# 16S V3-V4 cannot. Reference is the FROGS RefSeq build (complete + chromosome
 # genomes, FetchMGS-extracted, 47k sequences). Unlike gyrB's DD7RZ8, these are
 # FULL-LENGTH rpoB genes (~4 kb), so:
-#   - probe_mode: pcr  — in-silico PCR of the primers recovers the ~435 bp amplicon
-#     window from the full gene (a direct read would return the whole gene, wrong).
+#   - probe_mode: pcr  — in-silico PCR of the primers recovers the amplicon body
+#     from the full gene (a direct read would return the whole gene, wrong).
 #   - no region extractor — there is no rpoB equivalent of Metaxa2/ITSx.
 probe_mode:          pcr
 probe_ref:           rpob_frogs
@@ -24,8 +24,8 @@ extractor:           none
 
 # Rank model. After conversion (10_refdb.smk convert_rpob_to_dada2) the header is
 #   >k__Bacteria;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Genus_species
-# a GTDB lineage with ranks already prefixed and a GTDB-style binomial species —
-# the same shape as 16S but with GTDB names. "embedded" = emit values verbatim.
+# an NCBI RefSeq lineage with ranks already prefixed and a binomial species —
+# the same shape as 16S. "embedded" = emit values verbatim.
 tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
 rank_letters:  [d, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
 rank_prefixes: [k__, p__, c__, o__, f__, g__, s__] # not applied under embedded style

@@ -117,8 +117,8 @@ amplicon:
                                               # Manual: provide a single integer (bp) or [min, max] range.
   probe_length_stat:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max
-    18S: p95                                  # 18S V4 has a ragged upper tail — p95 keeps the window permissive
-    rpoB: p95                                 # only required if rpoB runs with expected_length: auto
+    18S: p95                                  # 18S V4 has a ragged upper tail — p95 keeps the overlap constraint permissive
+    rpoB: p95                                 # required whenever rpoB runs, auto or not
                                               # ITS: overlap constraint not checked (truncLen overridden to c(0,0))
   min_overlap: 12                             # design overlap in bp — truncLen constraint ONLY
                                               # (runtime mergePairs uses dada2.merge.min_overlap)
@@ -145,8 +145,6 @@ amplicon:
   # ASV length filter applied AFTER target extraction (Metaxa2/ITSx) so the
   # filtered distribution is directly comparable to the probe distribution.
   # Auto window: [probe_q1 − window_margin, probe_p95 + window_margin].
-  # P95 used (not P99): SILVA/UNITE p99 tails contain anomalously long
-  # reference sequences that do not reflect real amplicon lengths.
   length_filter:
     mode: auto                                # auto | manual
     window_margin: 50                         # bp added/subtracted from probe q1 (lower) and p95 (upper)
@@ -210,7 +208,7 @@ amplicon:
 
     # ── Tier 2: advanced tuning ──
     dada:
-      omega_a: 1e-40                          # ASV inference sensitivity (DADA2 default); lower = more ASVs
+      omega_a: 1e-40                          # ASV inference sensitivity (DADA2 default); lower = stricter = fewer ASVs
 
     merge:
       min_overlap: 10                         # runtime mergePairs threshold in bp (design constraint in amplicon.min_overlap)
@@ -230,9 +228,6 @@ shotgun:
   decontamination:
     # PhiX is still routinely spiked into Illumina runs — keep this on unless the
     # lab is known to have skipped the spike-in.
-    # NOTE: BBDuk (and the BBMap host step) require uniform-length reads. If the
-    # input was adapter/quality-trimmed before deposition (variable lengths), set
-    # this false and skip host removal — see README Troubleshooting.
     remove_phix: true                         # BBDuk vs bundled phix174_ill.ref.fa.gz; false = skip
 
     # Host / contaminant removal with BBMap (alignment-based — more sensitive than
@@ -243,26 +238,29 @@ shotgun:
     #
     # For HUMAN, use a MASKED reference — masking ribosomal/low-complexity regions
     # and sequences homologous to microbes/plants/fungi prevents real microbial
-    # reads from being falsely removed. The BBTools-authors' masked human genome
-    # (hg19 + viral masking, 889 MB) is on Zenodo:
+    # reads from being falsely removed. A masked human genome (Handley 2020, hg19 +
+    # viral masking, 889 MB) is on Zenodo:
     #   https://zenodo.org/records/4116107   →   human_virus_masked.fasta.gz
     # Because it is ~900 MB, download it once to a local path rather than
     # re-fetching the URL on every fresh run.
     host_genomes: []                          # e.g. [/path/to/human_virus_masked.fasta.gz]; [] = skip
     #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz     # masked human (889 MB) — see README
     #   - /path/to/human_virus_masked.fasta.gz                                                # local alternative (recommended for repeat runs)
-    host_min_id: 0.95                         # BBMap minid — min alignment identity to call a read host-derived
+    host_min_id: 0.95                         # BBMap minid — approximate minimum alignment identity for host removal
 
   fastp:
     min_read_length: 100                      # --length_required after trimming
                                               # 100 is comfortable for 150 bp reads; ~70 for HiSeq 2x100.
 
   # Kraken2 confidence threshold — higher = stricter.
-  # Hill et al. 2025 (CAMI3) suggests 0.05–0.15 is the sweet spot for PlusPF-like DBs;
-  # 0.15 (below) sits at the strict end of that range.
+  # Wright et al. 2023 swept 0.00–1.00 on simulated samples and found two optima,
+  # depending on the metric: 0.60 by mean F1, and 0.15 by L1 distance, weighted
+  # UniFrac, and recall/precision over the reads actually classified. 0.15 is also
+  # what Nyström-Persson et al. 2025 used to benchmark on the CAMI2 datasets.
+  # 0.15 (below) favours accurate relative abundances over raw classified counts.
   kraken:
     confidence: 0.15
-    hit_groups: 3                             # minimum distinct k-mer hits per read to keep a classification
+    hit_groups: 3                             # minimum distinct hit groups per read to keep a classification
     # Two memory-control strategies (only one applies at runtime):
     #   1. mmap on  — kernel pages the DB on demand AND shares pages across
     #                 concurrent kraken2 processes via the OS file cache.
