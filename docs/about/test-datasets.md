@@ -18,9 +18,21 @@ tracked by git, since they carry local paths.
 | rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 | Univ_rpoB_deg | FROGS RefSeq |
 
 The three mock-community sets (ITS, gyrB, rpoB) have known composition, so they check
-taxonomy as well as mechanics. The ITS run recovers the expected yeast genera —
-*Hanseniaspora*, *Rhodotorula*, *Debaryomyces*, *Yamadazyma* — with the remainder
-resolved to Saccharomycetes.
+taxonomy as well as mechanics. The ITS run recovers four of the expected yeast genera —
+*Hanseniaspora*, *Rhodotorula*, *Debaryomyces*, *Yamadazyma* — but stops at class
+(Saccharomycetes) for two ASVs that between them carry 43% of all reads, one of them
+alone accounting for 42%. That is not a small residual: it is the single largest
+component of the run, and independent searches (BLAST against NCBI nt, and a direct
+search against the UNITE reference this pipeline uses) put both sequences at 99%+
+identity to *Saccharomyces*, most likely *S. cerevisiae*. The reference is not missing
+this organism — VSEARCH's `--sintax` bootstrap step simply returns no consensus at
+order, family or genus for it, evidently because several *Saccharomyces* species share
+near-identical ITS2 sequence in this exact amplicon window. On this mock, that is a real
+classification gap on what is very likely its single most common species, not evidence
+of missing reference coverage. See
+[the merge-parameter section below](#effect-of-moving-the-merge-parameters-to-dada2s-defaults)
+for how this same gap shows up under the other `dada2.merge` setting too, as a different
+set of ASVs carrying a similar fraction of reads.
 
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —
@@ -33,33 +45,22 @@ sets.
 
 ## Check a public dataset before adopting it
 
-Assembling these five sets meant rejecting three others, each for a different reason,
-and in every case the submission metadata looked fine. It is worth running the same
-three checks on any BioProject before building a run around it — they cost a few
-minutes and each of them caught something.
+Assembling these five sets meant rejecting other candidates along the way, each for a
+reason that only became clear from the reads themselves — the submission metadata looked
+fine in every case. The checks below are the ones that have caught something so far, not
+a closed list: a dataset can fail in a way none of these three catch, and the only real
+defence is checking the reads before committing a run to them, not trusting the
+description.
 
-**Do the reads still carry their primers?** MetaFlux trims primers with cutadapt under
-`--discard-untrimmed`, so a library deposited *after* primer removal loses every read
-at that step. [PRJNA1138067](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1138067), an
-otherwise ideal two-species ITS2 mock, is deposited primer-trimmed and was rejected.
+| Check | How to run it without trusting the metadata | What it catches |
+|---|---|---|
+| **Do the reads still carry their primers?** | Count the most common 22-mer at the 5′ end of R1 across a few thousand reads. A real primer is the same sequence in every sample; if the most common 5′ sequence instead tracks the mix of organisms per sample, there is no primer left. | A library already primer-trimmed before deposition. MetaFlux trims primers with `--discard-untrimmed`, so a pre-trimmed library loses every read at that step. |
+| **Is it genuinely paired?** | Compare each run's reported `avgLength` against what the stated read length and layout imply — a 2×300 paired run should read roughly 600, not roughly 300. | A BioProject labelled `PAIRED` in its metadata but archived R1-only. Converting it yields one full FASTQ and a second file of zero-length reads. |
+| **Is it the platform the description says?** | Read the `platform` and `library_layout` fields directly from the ENA/SRA run table, not the free-text study description. | A description naming one platform while the run table's own `platform` field names something else entirely (e.g. a different sequencing technology, or single-end where paired-end was assumed). |
 
-To tell without trusting the metadata, count the most common 22-mer at the 5′ end of R1
-across a few thousand reads. A primer is the same in every sample; biological sequence
-tracks the community. In that rejected dataset the 5′ end split 76% / 20% between two
-mock samples — the ratio of the two species, not a primer. The adopted 18S set passes
-the same test cleanly: TAReuk454FWD1 opens 98.5% of R1 and TAReukREV3 98.1% of R2.
-
-**Is it genuinely paired?** [PRJNA326072](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA326072)
-is labelled PAIRED but was archived R1-only. The tell is in the run metadata before
-downloading anything: every run reports `avgLength` around 290, where a real 2×300
-paired run reports around 600. Converting it produces one full file and one file of
-zero-length reads. Its sister deposit PRJNA305879, from the same paper, is properly
-paired — 27 of 27 runs at `avgLength` 600–601 — and is the set now used.
-
-**Is it the platform you think?** PRJEB23971 was proposed as an 18S candidate on the
-strength of a description reading "Illumina MiSeq". It is 454 GS FLX Titanium, and
-single-end. Read the `platform` and `library_layout` fields from the ENA or SRA run
-table rather than the free-text study description.
+Each of these has cost a rejected dataset once; none of them is guaranteed to be the next
+failure mode. Treat this table as a starting checklist rather than a full list of what can
+go wrong with public sequencing data.
 
 ## Effect of moving the merge parameters to DADA2's defaults
 
@@ -101,14 +102,18 @@ the low-quality 3′ tails of both reads, where a mismatch is most likely — so
 `maxMismatch: 0` removes many of the rest. A third of the merged reads went with them.
 
 On this mock it cost no taxa: all four expected genera are still recovered from the 12
-remaining ASVs. The other two ASVs never resolve past class level — both stop at
-Saccharomycetes with no genus call, rather than being assigned to the wrong genus, so
-they represent a classification gap rather than an error. A defined community of only
-four genera is a weak test of that distinction, though — on a richer or more
-length-variable community the same read loss could take real taxa down with it, not
-just leave them unresolved. If an ITS run merges far fewer reads than expected, these
-are the two parameters to look at first, and `min_overlap: 10` with `max_mismatch: 2`
-is a defensible choice for ITS.
+remaining ASVs. The class-only fraction described above (almost certainly *Saccharomyces*)
+is not an artefact of this parameter change either — checked directly against the looser
+10/2 setting, where it is 7 separate ASVs rather than 2 (the looser overlap tolerance
+lets more marginal read variants through, so the same underlying signal is split across
+more low-abundance ASVs), carrying 42.5% of that run's final reads versus 43.3% here.
+The exact ASVs differ, but the fraction stuck at class level is essentially unchanged —
+this classification gap is a property of the reference and classifier for this organism,
+not of the merge parameters. A defined community of only four confidently-named genera is
+a weak test of that distinction, though — on a richer or more length-variable community
+the same read loss could take real taxa down with it, not just leave them unresolved. If
+an ITS run merges far fewer reads than expected, these are the two parameters to look at
+first, and `min_overlap: 10` with `max_mismatch: 2` is a defensible choice for ITS.
 
 ## What the two truncation paths are tested on
 
