@@ -208,20 +208,22 @@ if res.returncode != 0:
     sys.exit(res.returncode)
 
 # ── Parse tabbedout ────────────────────────────────────────────────────────
+# Every line --tabbedout writes has exactly 4 columns, even for a query with no
+# hit at all (columns 2-4 are then just empty rather than absent) — verified
+# directly against vsearch, including a forced no-hit case. A line with a
+# different shape means something upstream changed (a vsearch version with a
+# different --tabbedout format, a corrupted file, ...), not a case to guess
+# through silently, so it fails here with the line itself in the message.
 sintax_result: dict[str, dict[str, str]] = {}
 with tabbedout.open() as fh:
-    for line in fh:
+    for lineno, line in enumerate(fh, start=1):
         parts = line.rstrip("\n").split("\t")
-        if not parts:
-            continue
-        query_id      = parts[0]
-        # Normally column 4 (index 3), the accepted-taxonomy field described above
-        # (module docstring, tabbedout column 4). If a line doesn't have 4 columns,
-        # fall back to column 2 (index 1) — note that column holds the FULL taxonomy
-        # WITH per-rank confidence values in parentheses (d:Bacteria(0.98)), a
-        # different format from column 4's plain d:Bacteria; parse_sintax_column
-        # below does not strip that parenthetical part off.
-        accepted_col  = parts[3] if len(parts) >= 4 else (parts[1] if len(parts) >= 2 else "")
+        if len(parts) != 4:
+            sys.exit(
+                f"[assign_taxonomy] {tabbedout}:{lineno}: expected 4 tab-separated "
+                f"columns from vsearch --tabbedout, got {len(parts)}: {line!r}"
+            )
+        query_id, accepted_col = parts[0], parts[3]
         sintax_result[query_id] = parse_sintax_column(accepted_col)
 
 logmsg(f"SINTAX: {len(sintax_result)} query results parsed")
