@@ -63,9 +63,16 @@ The `amplicon_probe` rule works in one of two ways depending on the marker:
 | PCR | 16S, 18S, rpoB | Two-pass in-silico PCR with Cutadapt: keep reference sequences carrying the forward primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end; the surviving trimmed sequences are the predicted products | SILVA, SILVA-Euk, FROGS |
 | Direct | ITS, gyrB | Measure lengths straight off a reference that is already amplicon-length — no primer binding sites needed | UNITE UCHIME pre-extracted ITS1/ITS2, DD7RZ8 pre-trimmed amplicons |
 
-Direct mode exists because in-silico PCR is unreliable for these two. The common
-ITS primers (ITS1F, ITS4) bind in flanking rRNA regions that UNITE sequences do
-not contain, so a PCR-style probe would recover almost nothing.
+Direct mode exists because in-silico PCR is unreliable for these two, for two
+different reasons. The common ITS primers (ITS1F, ITS4) bind in flanking rRNA
+regions that UNITE sequences do not contain, so a PCR-style probe would recover
+almost nothing. gyrB's DD7RZ8 reference has the opposite problem: it is not a
+whole-gene database at all — its sequences were already cut down to the
+in-silico amplicon (with the Barret 2015 primer sites removed in the process)
+when the trainset itself was built. An in-silico PCR against it would be
+searching for primer-binding sites that are no longer there, so it would also
+recover almost nothing, just for the reverse reason: too little sequence
+outside the amplicon for ITS, none at all for gyrB.
 
 Both modes produce the same thing: a length distribution summarised as JSON.
 The consumers read it differently. `probe_length_stat` picks which
