@@ -7,10 +7,10 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-v2.1.0
+v2.2.0
 ```
 
-**Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow.**
+**Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.**
 
 ![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A59.0-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -39,7 +39,7 @@ the methodological caveats — lives on the documentation site.
 ## Synopsis
 
 MetaFlux is a [Snakemake](https://snakemake.github.io/) workflow that takes raw
-paired-end Illumina reads through to a taxonomically annotated abundance table. It
+paired-end short reads through to a taxonomically annotated abundance table. It
 runs in one of two modes, selected by a single config key:
 
 - **`amplicon`** — a [DADA2](https://benjjneb.github.io/dada2/)-based pipeline for
@@ -59,7 +59,7 @@ Both modes run from the same command and the same config file, and produce a sin
                  ┌──────────────┬───────────────┐
    config: mode  │   amplicon   │    shotgun    │
                  └──────┬───────┴───────┬───────┘
-        raw paired-end Illumina reads (R1/R2)
+        raw paired-end short reads (R1/R2)
                         │               │
         bowtie2 PhiX*   │               │  BBDuk PhiX*  +  BBMap host*
         Cutadapt primer │               │  fastp trim
@@ -141,7 +141,7 @@ Choosing and downloading a Kraken2 index, and the memory it needs, are covered i
 Publications that use MetaFlux should cite this repository. A formal release with a
 Zenodo DOI is forthcoming:
 
-> Antonielli, L. (2026). *MetaFlux: a unified Illumina multi-marker amplicon and
+> Antonielli, L. (2026). *MetaFlux: a unified short-read multi-marker amplicon and
 > shotgun taxonomic profiling workflow.* Zenodo. DOI: pending release.
 
 MetaFlux is a wrapper around published tools and reference databases, and those do the

@@ -1,5 +1,5 @@
 site_name: MetaFlux
-site_description: Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow
+site_description: Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
 site_author: Livio Antonielli
 repo_url: https://github.com/iLivius/MetaFlux
 repo_name: iLivius/MetaFlux

@@ -537,7 +537,7 @@ that cannot merge is lost entirely.
 | `q_threshold` | Quality below which `auto` cuts | `20` | The picker reads the lower quartile (Q1) of the per-base quality at each cycle from Falco's report, takes the median across samples, and cuts just before the first position where that value falls below the threshold. |
 | `q_floor` | Lowest threshold `relax_q` may descend to | `15` | Only used by the `relax_q` policy. |
 | `resolve_policy` | What to do when the quality-based cuts leave too little overlap | `raise_trunc` | See below. |
-| `subsample_files` | Carried in the template but not read by any rule in v2.1.0 | `12` | The picker uses every sample's Falco report, not a subsample. |
+| `subsample_files` | Carried in the template but not read by any rule currently | `12` | The picker uses every sample's Falco report, not a subsample. |
 | `manual_r1` / `manual_r2` | Explicit R1 and R2 truncation lengths | unset | Required when `mode: manual` — the run fails if either is missing. Ignored for ITS. |
 | `min_read_coverage_pct` | `auto` only: a cut is never placed past the length this percentage of a sample's reads still reach | `95` | Read from Falco's "Sequence Length Distribution". See the note below — this is the guard against `auto` discarding an entire library. |
 

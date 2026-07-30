@@ -1,4 +1,4 @@
-# MetaFlux v2.1.0 — Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow.
+# MetaFlux v2.2.0 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.
 #
 # This is the entry point Snakemake actually reads (the file every `snakemake` command
 # ultimately parses), but almost none of the pipeline's logic lives in it. Its only job
@@ -34,8 +34,8 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-MetaFlux v2.1.0
-Unified Illumina multi-marker amplicon and shotgun taxonomic profiling workflow
+MetaFlux v2.2.0
+Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
 
 Livio Antonielli, May 2026
 """)

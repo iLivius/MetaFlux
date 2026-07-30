@@ -5,7 +5,7 @@
 Publications that use MetaFlux should cite this repository. A formal release with
 a Zenodo DOI is forthcoming:
 
-> Antonielli, L. (2026). *MetaFlux: a unified Illumina multi-marker amplicon and
+> Antonielli, L. (2026). *MetaFlux: a unified short-read multi-marker amplicon and
 > shotgun taxonomic profiling workflow.* Zenodo. DOI: pending release.
 
 MetaFlux is a wrapper around published tools and reference databases, and those
