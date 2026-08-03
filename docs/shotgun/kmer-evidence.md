@@ -3,10 +3,9 @@
 !!! note "Read this after [Choosing confidence and threshold](confidence-and-threshold.md)"
 
     The single biggest precision lever in shotgun mode is Bracken's depth-scaled read
-    threshold, covered on that page. Benchmarked across a real mock community and three
-    CAMI II environments, this gate adds **at most 0.002 F1** on top of a correctly
-    scaled threshold — it is not redundant, but it is a backstop for a narrow class of
-    error, not the main event. Read the threshold page first if you have not.
+    threshold, covered on that page. Set that first. This gate is a backstop for a narrow
+    class of error the threshold cannot see — valuable when it fires, but off by default;
+    see [Why the default is `enabled: false`](#why-the-default-is-enabled-false).
 
 Kraken2's read count tells you how many reads it chose to label with a taxon. It does
 not tell you how much sequence *unique to that organism* actually turned up in the
@@ -244,13 +243,52 @@ filter that corrects *names* rather than *biology* should look like.
     a threshold roughly ten times the fixed one, far outside the range it was fitted on.
     MetaFlux uses the fixed converted value and leaves the scaling to you.
 
+## Why the default is `enabled: false`
+
+Not because the gate is untested — it has been run across 45 real and simulated samples
+spanning four environments — but because a correctly scaled
+[Bracken threshold](confidence-and-threshold.md) already removes most of what it would
+remove. Measured at the depth-scaled threshold, the gate changes species-level F1 by a
+mean of **+0.0009**, and by *exactly* zero on the strain-madness and rhizosphere sets at
+every depth tested. Left at the old fixed `-t 10` it was worth about nine times more
+(mean +0.0079) — which is the clearest statement of its role: **it is a safety net for an
+untuned pipeline, not a second independent filter.**
+
+### But "no change in F1" is not "no change in the table"
+
+The two filters ask different questions. The threshold asks *how many reads*; the gate
+asks *how much distinct sequence*. A taxon can pass one and fail the other, and an
+aggregate score of 250+ species barely notices when a single one flips.
+
+*Pseudomonas* sp. JS425, in four real wastewater samples, with the threshold already
+scaled by `alpha = 5e-05`:
+
+| Sample | classified pairs | auto `-t` | JS425 reads | distinct minimizers | passes `-t`? | gate |
+|---|--:|--:|--:|--:|:--|:--|
+| 21 | 2,178,755 | 109 | 373 | 189 | **yes** | prune |
+| 22 | 3,417,552 | 171 | 103 | 188 | no | prune |
+| 23 | 1,603,408 | 80 | 302 | 188 | **yes** | prune |
+| 24 | 2,114,321 | 106 | 123 | 190 | **yes** | prune |
+
+373 reads is an unremarkable count that clears any sensible floor. 189 distinct
+minimizers, each hit some 62 times, is not — and Bracken amplified that call to 64,961
+reads, 3% of the sample and rank 9 in the community. A correctly tuned threshold keeps it
+in three samples of four; the gate removes it in all four. Note also what the threshold
+alone produces here: the same taxon present in three samples and absent from the fourth,
+purely because the cut-off landed differently — a presence/absence pattern that is an
+artefact, and one that can survive into a figure.
+
+Those samples have no ground truth, so they contributed no F1 at all. That is precisely
+why the benchmark shows +0.0009 and the gate is still worth having.
+
+**When to turn it on:** environmental or otherwise poorly-covered communities, where reads
+from organisms absent from the database have to land somewhere. For gut, clinical, or
+anything close to RefSeq, leave it off. Either way the preview gated report is written
+even when disabled, so `diff` it against the Kraken2 report before deciding.
+
 ## Validation status
 
-The default is `enabled: false`. Not because the gate is untested — it has since been run
-across 45 real and simulated samples spanning four environments — but because, as the
-benchmark below shows, most of what it would change on a well-covered sample is now
-already handled by the [depth-scaled Bracken threshold](confidence-and-threshold.md), and
-turning on a second filter you have not looked at is still not something to do by default.
+What the gate was tested against, and what those tests could and could not show.
 
 ### What has been checked
 
