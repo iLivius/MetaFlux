@@ -942,13 +942,17 @@ alongside the report.
 ```yaml
   bracken:
     tax_lev: S
-    threshold: 10
+    threshold: auto
+    threshold_alpha: 5.0e-05
+    threshold_min: 10
 ```
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `tax_lev` | Rank at which abundance is re-estimated: `D`, `P`, `C`, `O`, `F`, `G` or `S` | `S` | Drop to `G` for a shallow database, where species-level calls are not supported by the reference content. |
-| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `10` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). It is a floor on direct evidence, not on the final estimate: a species whose reads Kraken2 mostly left at genus level — common where the database holds several close relatives — can be dropped despite being abundant. Lower it if that is a concern, and expect a longer tail of one-read taxa. |
+| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this and why the historic fixed default of 10 costs up to 0.34 F1 on real data. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
+| `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Benchmark-fitted; the optimum is a broad plateau, so this rarely needs adjusting — see the threshold page for what moving it costs. |
+| `threshold_min` | Floor for the auto-computed threshold | `10` | Prevents a near-zero threshold on a very shallow or heavily filtered sample. Also Bracken's own historic default. |
 
 Bracken redistributes the reads Kraken2 assigned to internal nodes down to the
 target rank. Bracken databases ship k-mer distributions for several read lengths

@@ -31,11 +31,32 @@
 # input; writes a re-estimated Bracken report plus a plain-text per-taxon
 # table. kraken_biom (below) assembles the reports across all samples into
 # one table.
+#
+# WHICH REPORT THIS READS. One of two files, decided once when the workflow is
+# parsed by shotgun.kmer_evidence.enabled (KMER_GATE_ENABLED, 00_common.smk):
+#   gate off (default) — Kraken2's own report, exactly as before the k-mer
+#                        evidence rule existed. Nothing changes.
+#   gate on            — the gated report from rule kmer_evidence
+#                        (40_kmer_evidence.smk): the same report with taxa that
+#                        failed the k-mer evidence check removed and their reads
+#                        handed back to their parent, for Bracken to redistribute
+#                        among the relatives that passed. Mostly it can: where a
+#                        parent still has a surviving taxon at the target rank the
+#                        reads move, but where pruning emptied the parent completely
+#                        Bracken has no destination and drops them (measured at
+#                        -0.16% of reads on the MetaFlux test data). The per-sample
+#                        kmer_evidence log estimates this before Bracken runs.
+# Bracken itself runs either way — the gate filters Bracken's input, it does not
+# replace or bypass Bracken. The corrected counts therefore propagate through
+# kraken_biom into the final otu_table, which is the whole point of putting the
+# gate here rather than on the finished table.
+#
 # priority: 2, continuing the pipeline-order countdown started in
 # 30_preprocess.smk — see that file's header for why.
 rule bracken:
     input:
-        report = OUT / "02.classification" / "{sample}_report.txt",
+        report = (OUT / "02b.evidence" / "{sample}_report_gated.txt") if KMER_GATE_ENABLED
+                 else (OUT / "02.classification" / "{sample}_report.txt"),
         json   = OUT / "01.preprocessing" / "{sample}_fastp.json",
     output:
         report = OUT / "03.abundance" / "{sample}_report.txt",
@@ -43,7 +64,9 @@ rule bracken:
     params:
         db      = str(KRAKEN_DB),
         tax_lev = TAX_LEV,
-        thresh  = BRACKEN_THRESH,
+        thresh  = BRACKEN_THRESH,     # a number, or the literal word "auto"
+        alpha   = BRACKEN_ALPHA,      # used only when thresh == "auto"
+        min_t   = BRACKEN_MIN_T,      # floor for the auto value
     threads: lambda wc: threads_for("bracken")
     resources:
         mem_mb = lambda wc: mem_mb_for("bracken"),
@@ -69,8 +92,37 @@ rule bracken:
             print best_k
         }}')
         echo "{wildcards.sample}: mean=$mean kmer=$closest" > {log}
+
+        # Minimum-read threshold. With a fixed number in the config it is used as given.
+        # With "auto" it is derived here, at run time, because it depends on how many
+        # read pairs THIS sample actually got classified — a number that does not exist
+        # until Kraken2 has finished, i.e. long after the workflow was parsed.
+        #
+        # The classified count is the clade total on the report's root row (taxid 1).
+        # Columns are counted from the RIGHT so this works on both report layouts: the
+        # standard 6-column one and the 8-column one produced by
+        # --report-minimizer-data. From the end, the fields are always
+        # ... rank_code, taxid, name, so taxid is $(NF-1) and the clade total is $2.
+        thresh="{params.thresh}"
+        if [ "$thresh" = "auto" ]; then
+            classified=$(awk -F'\t' '$(NF-1) == "1" {{ print $2; exit }}' {input.report})
+            if [ -z "$classified" ] || [ "$classified" -le 0 ] 2>/dev/null; then
+                echo "[bracken] WARNING: could not read a classified-read count from" \
+                     "{input.report}; falling back to the floor {params.min_t}" >> {log}
+                thresh={params.min_t}
+            else
+                # threshold = max(min_t, alpha * classified), rounded to a whole read.
+                thresh=$(awk -v c="$classified" -v a={params.alpha} -v m={params.min_t} \
+                    'BEGIN {{ t = int(a * c + 0.5); if (t < m) t = m; print t }}')
+                echo "[bracken] auto threshold: {params.alpha} x $classified classified" \
+                     "read pairs -> -t $thresh" >> {log}
+            fi
+        else
+            echo "[bracken] fixed threshold from config: -t $thresh" >> {log}
+        fi
+
         bracken -d {params.db} -i {input.report} -r "$closest" \
-            -l {params.tax_lev} -t {params.thresh} \
+            -l {params.tax_lev} -t "$thresh" \
             -o {output.out} -w {output.report} >> {log} 2>&1
         """
 

@@ -300,7 +300,111 @@ shotgun:
   # Target rank: D | P | C | O | F | G | S. Drop to G for a shallow DB.
   bracken:
     tax_lev: S
-    threshold: 10                             # min read count per taxon
+
+    # Minimum Kraken2 read count for a taxon to take part in the redistribution.
+    # This is the single most important accuracy setting in the shotgun path, and it
+    # is NOT the stringency knob most people reach for.
+    #
+    #   auto      derive it from the sample's own sequencing depth (recommended)
+    #   <integer> use this fixed count, as Bracken's own default 10 does
+    #
+    # WHY auto. The right threshold scales with depth: a taxon supported by 50 reads
+    # in a 2-million-pair sample is far better evidenced than the same 50 reads in a
+    # 15-million-pair one. Benchmarked across a commercial mock (ZymoBIOMICS D6331)
+    # and three CAMI II environments (marine, strain-madness, rhizosphere), the best
+    # threshold rose in direct proportion to the number of classified read pairs —
+    # the fitted exponent was 0.97, i.e. simple proportionality. Any FIXED value
+    # therefore gets worse as you sequence deeper: on CAMI marine, species-level F1
+    # fell from 0.74 to 0.58 across an 8x depth increase at the fixed default of 10,
+    # while a depth-scaled threshold held steady at ~0.83.
+    #
+    # WHAT auto DOES. After Kraken2 has run, the number of classified read PAIRS is
+    # read from the report and the threshold is set to
+    #     threshold = max(threshold_min, threshold_alpha * classified_pairs)
+    # so it is computed per sample, not per run. The chosen value is written to the
+    # bracken log for that sample.
+    threshold: auto
+
+    # Scaling coefficient for auto mode. 5e-05 was the best single value across every
+    # benchmarked dataset: it costs a mean of 0.023 F1 against tuning each sample
+    # individually (median 0.014), because the optimum is a broad plateau rather than
+    # a sharp peak. Leaving the threshold at a flat 10 costs up to 0.34 F1. Roughly:
+    # 2M pairs -> 100, 5M -> 250, 15M -> 750.
+    #
+    # Confirmed on a second, independent pass: refitting from scratch across all 41
+    # CAMI II marine/rhizosphere/strain-madness samples (not just the 5 used for the
+    # first fit) and a Kraken2 PlusPF build eight months newer put the true median
+    # optimum at 6.0e-05 -- a 1.2x shift on 8x more, fully independent data. No change
+    # made; see docs/shotgun/confidence-and-threshold.md for the full comparison.
+    #
+    # Optional refinement if you know your community, though rarely worth the trouble:
+    #   3e-05  defined mixtures / low diversity (tens of species)
+    #   1e-04  complex communities (100+ species)
+    threshold_alpha: 5.0e-05
+
+    # Floor for auto mode, so a very shallow or heavily filtered sample never ends up
+    # with a threshold of nearly zero. Also Bracken's own historical default.
+    threshold_min: 10
+
+  # ── Species-level k-mer evidence ──────────────────────────────────────────
+  # Kraken2's read count says HOW MANY reads hit a taxon. It says nothing about
+  # whether they hit the whole genome or piled up on one short conserved stretch
+  # shared with a relative. MetaFlux runs Kraken2 with --report-minimizer-data,
+  # which adds a count of DISTINCT minimizers per clade — a proxy for how much
+  # different sequence the reads actually covered. A real organism has many; a
+  # spurious call is usually a few positions matched over and over.
+  #
+  # This block turns that number into an optional filter that runs BETWEEN
+  # Kraken2 and Bracken. It does not replace or skip Bracken: it hands Bracken a
+  # cleaned report, so the correction flows into the normal otu_table.
+  #
+  # ALWAYS WRITTEN, whether enabled or not:
+  #   02b.evidence/{sample}_species_evidence.tsv   per-taxon evidence + verdict
+  #   02b.evidence/{sample}_report_gated.txt       what the gate would remove
+  #   stats/kmer_evidence/{sample}_evidence.png    reads vs distinct minimizers
+  # Look at those first. `enabled` only decides whether Bracken reads the gated
+  # report or the original one.
+  kmer_evidence:
+    enabled: false                            # false = report only, pipeline unchanged
+
+    # Distinct-minimizer floor. A taxon below this is removed and its reads are
+    # handed back to its parent for Bracken to redistribute among the relatives
+    # that passed, rather than deleted. That preserves nearly all of them but not
+    # quite all: if EVERY species under a genus fails, Bracken has nowhere at the
+    # target rank to send that genus's reads and drops them (measured: -0.16% of
+    # reads on the four test samples). Check the per-sample logs for your own data.
+    #
+    # UNITS — the easy mistake. Published thresholds are in unique K-MERS:
+    #   KrakenUniq (Breitwieser & Salzberg 2018): ~2,000 per million reads, or
+    #     1,000 for pathogen discovery in patient samples
+    #   Refining filtering criteria of the Kraken family (2026): ~1,000 optimal
+    #     by F1; read-count filtering "largely unnecessary" when unique k-mers
+    #     are high
+    #   aMeta (Pochon et al. 2023): ships 1,000 unique k-mers + 200 reads
+    # Kraken2's column counts MINIMIZERS, which are a sample of the k-mers. Each
+    # k-mer spans w = k - l + 1 candidate minimizers and the expected density of
+    # selected ones is 2/(w+1). For the usual k=35, l=31 that is w=5, density
+    # 1/3 — about one distinct minimizer per three k-mers. So the published
+    # 1,000 k-mers is ~333 here. Using 1,000 directly would make the filter three
+    # times harsher than its authors intended.
+    # Check k and l on the first line of your database's inspect.txt.
+    min_distinct_minimizers: 333
+
+    # Clade-read floor, applied together with the above (a taxon must clear both).
+    # aMeta pairs its k-mer filter with 200 reads; the 2026 paper found read
+    # filtering largely unnecessary once the k-mer count is high, so the default
+    # here is 0 = k-mer evidence only. Set to e.g. 200 to reproduce aMeta's pair.
+    min_reads: 0
+
+    # Safety rail: never remove a taxon to which KRAKEN2 directly assigned more than
+    # this share of the sample's classified reads, however thin its evidence looks.
+    # 0.01 = 1%. Note the denominator is Kraken2's clade reads over all classified
+    # reads — NOT the taxon's share of the final Bracken table, which is usually much
+    # larger. So this is a backstop against a pathological case, not a routine
+    # override: on the four test samples it never fired. That is deliberate. A rail
+    # keyed on post-Bracken abundance would have rescued the clearest false positive
+    # in the test data, which is precisely the taxon the gate exists to remove.
+    never_prune_above_fraction: 0.01
 
   # OTU-table taxon filter — the shotgun counterpart of amplicon.taxonomy.filter.
   # Uses the SAME rank-aware token machinery: each token (k__Bacteria, g__Homo,
@@ -348,6 +452,7 @@ resources:
     decontam_host: 16
     fastp: 16
     kraken2: 16
+    kmer_evidence: 1                          # single-threaded text pass over one report
     bracken: 4
     kraken_biom: 2
     extract_taxon_reads: 4
@@ -375,6 +480,7 @@ resources:
     # shotgun.kraken.memory_mapping + actual hash.k2d size. The value here is
     # an inert fallback used only if KRAKEN_DB is unreadable.
     kraken2: 20000
+    kmer_evidence: 2000                       # holds one parsed report in memory (~1-2 MB of text)
     bracken: 4000
     kraken_biom: 2000
     extract_taxon_reads: 2000

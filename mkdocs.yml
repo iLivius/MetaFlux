@@ -83,6 +83,8 @@ nav:
       - Overview: shotgun/overview.md
       - Reference databases: shotgun/databases.md
       - Decontamination: shotgun/decontamination.md
+      - Choosing confidence and threshold: shotgun/confidence-and-threshold.md
+      - Species-level k-mer evidence: shotgun/kmer-evidence.md
       - Per-taxon read extraction: shotgun/read-extraction.md
   - Reference:
       - Configuration: reference/configuration.md

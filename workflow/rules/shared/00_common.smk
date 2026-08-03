@@ -553,8 +553,54 @@ else:  # MODE == "shotgun"
     KRAKEN_MMAP      = bool(sht_cfg["kraken"].get("memory_mapping", True))
     KRAKEN2_THREADS  = sht_cfg["kraken"].get("threads") or threads_for("kraken2")
     TAX_LEV          = sht_cfg["bracken"]["tax_lev"]
-    BRACKEN_THRESH   = int(sht_cfg["bracken"]["threshold"])
+
+    # Bracken's minimum-read threshold. Either a fixed integer, or the string "auto",
+    # in which case the rule works it out per sample from that sample's own classified
+    # read count (see the config comment, and the shell block in 45_abundance.smk).
+    # It cannot be resolved here: the number of classified reads is only known after
+    # Kraken2 has run, which is long after the workflow is parsed.
+    _bracken_thresh = sht_cfg["bracken"]["threshold"]
+    if isinstance(_bracken_thresh, str) and _bracken_thresh.strip().lower() == "auto":
+        BRACKEN_THRESH = "auto"
+    else:
+        BRACKEN_THRESH = int(_bracken_thresh)
+        if BRACKEN_THRESH < 0:
+            sys.exit("[MetaFlux] shotgun.bracken.threshold must be >= 0, or the word 'auto'")
+    BRACKEN_ALPHA  = float(sht_cfg["bracken"].get("threshold_alpha", 5.0e-05))
+    BRACKEN_MIN_T  = int(sht_cfg["bracken"].get("threshold_min", 10))
+    if not 0 < BRACKEN_ALPHA < 1:
+        sys.exit(f"[MetaFlux] shotgun.bracken.threshold_alpha must be a small fraction "
+                 f"(e.g. 5.0e-05), got {BRACKEN_ALPHA}")
     EXTRACT_TAXA     = list(sht_cfg.get("extract_taxa", []) or [])
+
+    # ── Species-level k-mer evidence (rule kmer_evidence, 40_kmer_evidence.smk) ──
+    # The rule itself always runs and always writes its evidence table, plot and
+    # gated report. KMER_GATE_ENABLED decides one thing only: whether rule bracken
+    # takes the gated report or Kraken2's original (see 45_abundance.smk). Defaults
+    # are duplicated here so a config written before this block existed still parses.
+    _kmer_cfg          = sht_cfg.get("kmer_evidence", {}) or {}
+    KMER_GATE_ENABLED  = bool(_kmer_cfg.get("enabled", False))
+    KMER_MIN_DISTINCT  = int(_kmer_cfg.get("min_distinct_minimizers", 333))
+    KMER_MIN_READS     = int(_kmer_cfg.get("min_reads", 0))
+    KMER_PROTECT_FRAC  = float(_kmer_cfg.get("never_prune_above_fraction", 0.01))
+
+    if KMER_MIN_DISTINCT < 0 or KMER_MIN_READS < 0:
+        sys.exit("[MetaFlux] shotgun.kmer_evidence: min_distinct_minimizers and "
+                 "min_reads must be >= 0")
+    if not 0 < KMER_PROTECT_FRAC <= 1:
+        sys.exit("[MetaFlux] shotgun.kmer_evidence.never_prune_above_fraction must be "
+                 f"a fraction in (0, 1], got {KMER_PROTECT_FRAC}")
+
+    # The default threshold is converted from species-level literature (see the
+    # config comment). Pointed at any coarser rank it is far too permissive to mean
+    # anything — a genus pools every species under it — so say so rather than let it
+    # look like a considered choice.
+    if KMER_GATE_ENABLED and TAX_LEV != "S":
+        sys.stderr.write(
+            f"[MetaFlux] warning: shotgun.kmer_evidence is enabled at rank {TAX_LEV}, but "
+            f"min_distinct_minimizers={KMER_MIN_DISTINCT} was derived for SPECIES. Check the "
+            f"evidence tables before trusting the pruned output at this rank.\n"
+        )
 
     # ── OTU-table taxon filter (shotgun counterpart of amplicon keep/discard) ──
     # Same rank-aware token matching; applied to the final otu_table. Config-only,
@@ -825,6 +871,13 @@ def _shotgun_targets():
         *expand(OUT / "02.classification" / "{s}_output.txt",         s=SAMPLES),
         *expand(OUT / "02.classification" / "{s}_R1.fastq.gz",        s=SAMPLES),
         *expand(OUT / "02.classification" / "{s}_R2.fastq.gz",        s=SAMPLES),
+        # k-mer evidence: requested unconditionally, so the evidence table and plot
+        # exist on every shotgun run even when the gate is switched off. Asking for
+        # these also builds the gated report (same rule, three outputs), which is
+        # what makes "diff it before you trust it" possible.
+        *expand(OUT / "02b.evidence" / "{s}_species_evidence.tsv",    s=SAMPLES),
+        *expand(OUT / "02b.evidence" / "{s}_report_gated.txt",        s=SAMPLES),
+        *expand(OUT / "stats" / "kmer_evidence" / "{s}_evidence.png", s=SAMPLES),
         *expand(OUT / "03.abundance" / "{s}_report.txt",              s=SAMPLES),
         *expand(OUT / "03.abundance" / "{s}_output.txt",              s=SAMPLES),
         OUT / "03.abundance" / "otu_table.tsv",
