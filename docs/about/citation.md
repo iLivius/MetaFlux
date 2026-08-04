@@ -62,6 +62,13 @@ Portions of this codebase were developed with the assistance of Claude Code.
 34. Leinonen, R., Sugawara, H. & Shumway, M. (2011). The Sequence Read Archive. *Nucleic Acids Research*. (SRA Toolkit — prefetch, fasterq-dump — and NCBI E-utilities; https://github.com/ncbi/sra-tools)
 35. Wright, R. J., Comeau, A. M. & Langille, M. G. I. (2023). From defaults to databases: parameter and database choice dramatically impact the performance of metagenomic taxonomic classification tools. *Microbial Genomics* 9(3). https://doi.org/10.1099/mgen.0.000949 (source of the Kraken2 `confidence: 0.15` default)
 36. Nyström-Persson, J., Bapatdhar, N. & Ghosh, S. (2025). Precise and scalable metagenomic profiling with sample-tailored minimizer libraries. *NAR Genomics and Bioinformatics* 7(2), lqaf076. https://doi.org/10.1093/nargab/lqaf076 (CAMI2 benchmarking at `confidence: 0.15`)
+37. Breitwieser, F. P. & Salzberg, S. L. (2018). KrakenUniq: confident and fast metagenomics classification using unique k-mer counts. *Genome Biology* 19:198. https://doi.org/10.1186/s13059-018-1568-0 (origin of the unique-k-mer evidence idea behind `shotgun.kmer_evidence`)
+38. Pochon, Z., et al. (2023). aMeta: an accurate and memory-efficient ancient metagenomic profiling workflow. *Genome Biology* 24:242. https://doi.org/10.1186/s13059-023-03083-9 (source of the paired 1,000 unique k-mers + 200 reads convention)
+39. Oskolkov, N. (2026). Refining filtering criteria of Kraken family of tools for accurate taxonomic profiling of ancient metagenomic data. *Frontiers in Microbiology* 17:1603339. https://doi.org/10.3389/fmicb.2026.1603339 (source of `min_distinct_minimizers: 333` after unit conversion, and of `min_reads: 0`)
+40. Ye, S. H., et al. (2019). Benchmarking Metagenomics Tools for Taxonomic Classification. *Cell* 178(4):779–794. https://doi.org/10.1016/j.cell.2019.07.010 (principle that a read-count threshold should scale with sequencing depth — the basis of `bracken.threshold: auto`)
+41. Meyer, F., et al. (2022). Critical Assessment of Metagenome Interpretation: the second round of challenges. *Nature Methods* 19:429–440. https://doi.org/10.1038/s41592-022-01431-4 (CAMI II marine, plant-associated and strain-madness datasets used to fit `threshold_alpha`)
+42. Meyer, F., et al. (2019). Assessing taxonomic metagenome profilers with OPAL. *Genome Biology* 20:51. https://doi.org/10.1186/s13059-019-1646-y (independent scorer used to cross-check the benchmark)
+43. Zymo Research. ZymoBIOMICS Gut Microbiome Standard (D6331), Instruction Manual v1.2.0. https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf (mock community with known composition used for validation)
 
 ## License
 

@@ -161,7 +161,7 @@ There is published guidance, and it is worth reading before inventing a number.
 | Source | Recommendation |
 |---|---|
 | [KrakenUniq](https://link.springer.com/article/10.1186/s13059-018-1568-0) (Breitwieser & Salzberg, 2018) | ~2,000 unique k-mers per million reads; 1,000 for pathogen discovery in patient samples |
-| [Refining filtering criteria of the Kraken family](https://pmc.ncbi.nlm.nih.gov/articles/PMC13223122/) (2026) | ~1,000 unique k-mers optimal by F1 across three ancient-metagenome dataset types; read-count filtering "largely unnecessary" when the unique k-mer count is high; suggests scaling with depth, ~200 per 100,000 reads |
+| [Oskolkov (2026)](https://doi.org/10.3389/fmicb.2026.1603339), *Front. Microbiol.* 17:1603339 | ~1,000 unique k-mers optimal by F1 across three ancient-metagenome dataset types; filtering on unique k-mers **alone** was sufficient, with no read-count filter needed; suggests scaling with depth, ~200 unique k-mers per 100,000 reads |
 | [aMeta](https://link.springer.com/article/10.1186/s13059-023-03083-9) (Pochon et al., 2023) | Ships 1,000 unique k-mers **and** 200 assigned reads as user-configurable defaults |
 
 !!! warning "Those numbers are k-mers. Kraken2 reports minimizers. Not the same unit."
@@ -445,8 +445,9 @@ reasonable until it is measured.
 count correlates with read count (Pearson *r* = +0.71 on log-log across 2,312 species
 calls), so some of what it removes, it removes for being rare. This is why the published
 thresholds pair the k-mer count with an explicit read floor — `min_reads` exists for
-exactly that, and is 0 by default only because the 2026 paper found read filtering
-largely unnecessary once the k-mer count is high.
+exactly that, and is 0 by default only because
+[Oskolkov (2026)](https://doi.org/10.3389/fmicb.2026.1603339) found that filtering on
+unique k-mers alone was enough to reach the best F1, with no read-count filter needed.
 
 **Normalising to minimizers-per-read inverts the filter.** That ratio *falls* as
 abundance rises (*r* = −0.74) — median 92 for single-read species, 0.68 for species with

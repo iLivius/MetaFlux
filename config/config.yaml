@@ -391,9 +391,10 @@ shotgun:
     min_distinct_minimizers: 333
 
     # Clade-read floor, applied together with the above (a taxon must clear both).
-    # aMeta pairs its k-mer filter with 200 reads; the 2026 paper found read
-    # filtering largely unnecessary once the k-mer count is high, so the default
-    # here is 0 = k-mer evidence only. Set to e.g. 200 to reproduce aMeta's pair.
+    # aMeta pairs its k-mer filter with 200 reads; Oskolkov 2026 (Front. Microbiol.
+    # 17:1603339) found filtering on unique k-mers ALONE was enough to reach the best
+    # F1, with no read-count filter needed, so the default here is 0 = k-mer evidence
+    # only. Set to e.g. 200 to reproduce aMeta's pair.
     min_reads: 0
 
     # Safety rail: never remove a taxon to which KRAKEN2 directly assigned more than

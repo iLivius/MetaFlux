@@ -107,8 +107,8 @@ Two things have to be right or the pruned report quietly corrupts Bracken's arit
 
 THRESHOLD UNITS — THE EASY MISTAKE
 ----------------------------------
-Every published threshold (KrakenUniq, aMeta, and the 2026 filtering-criteria paper)
-is quoted in UNIQUE K-MERS. Kraken2's column 5 counts DISTINCT MINIMIZERS, which are
+Every published threshold (KrakenUniq 2018, aMeta 2023, and Oskolkov 2026 in
+Front. Microbiol. 17:1603339) is quoted in UNIQUE K-MERS. Kraken2's column 5 counts DISTINCT MINIMIZERS, which are
 a sample of the k-mers, not all of them. Each k-mer of length k spans w = k - l + 1
 candidate minimizers of length l, and the standard expected density of selected
 minimizers is 2 / (w + 1). For the usual nucleotide settings (k = 35, l = 31) that is
