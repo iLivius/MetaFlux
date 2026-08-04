@@ -254,6 +254,16 @@ every depth tested. Left at the old fixed `-t 10` it was worth about nine times 
 (mean +0.0079) — which is the clearest statement of its role: **it is a safety net for an
 untuned pipeline, not a second independent filter.**
 
+!!! note "Which database build those two numbers come from"
+
+    Both figures are from gate-on/gate-off pairs measured on the **2025-10 PlusPF**
+    build (15 sample-depth combinations at the scaled threshold, 11 at the fixed one).
+    The later 41-sample re-run on the 2026-06 build was executed with the gate on
+    throughout and had no gate-off arm, so it did not re-measure this contrast. The
+    mechanism does not depend on the database and coverage barely moved between the two
+    builds (see [the threshold page](confidence-and-threshold.md)), so these are not
+    expected to shift — but they have not been re-confirmed on the newer index.
+
 ### But "no change in F1" is not "no change in the table"
 
 The two filters ask different questions. The threshold asks *how many reads*; the gate

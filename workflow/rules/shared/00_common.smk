@@ -723,7 +723,7 @@ for _s in SAMPLES:
         sys.exit(f"[MetaFlux] sample '{_s}' has disallowed characters")
 
 sys.stderr.write(
-    f"[MetaFlux v2.2.0] mode={MODE}, input={INPUT_MODE}, "
+    f"[MetaFlux v2.3.0] mode={MODE}, input={INPUT_MODE}, "
     f"{len(SAMPLES)} sample(s) in {FASTQ_DIR}\n"
 )
 

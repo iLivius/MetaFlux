@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# MetaFlux v2.2.0 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
+# MetaFlux v2.3.0 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
 # TEMPLATE configuration. Replace every `/path/to/...` placeholder with a real path,
 # choose a `mode`, and set the references that mode needs. A convenient pattern is to
