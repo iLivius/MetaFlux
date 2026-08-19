@@ -316,7 +316,7 @@ references:
   refdb_root: refdb
   phix:
     fasta: refdb/phix/phix.fna
-    fetch_url: ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz
+    fetch_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz
   kraken_db: /path/to/kraken2_db
 ```
 
