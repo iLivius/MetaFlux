@@ -4,7 +4,7 @@ MetaFlux is a [Snakemake](https://snakemake.github.io/) workflow that takes raw
 paired-end short reads through to a taxonomically annotated abundance table. It
 covers two kinds of study — marker-gene metabarcoding and shotgun metagenomics — and a
 single key in the config file, `mode`, decides which of the two runs. This site
-documents version **v2.3.0**.
+documents version **v2.3.1**.
 
 MetaFlux belongs to the [BioFlux](https://github.com/stars/iLivius/lists/bioflux)
 family of pipelines.

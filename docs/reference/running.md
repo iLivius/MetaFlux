@@ -39,7 +39,7 @@ job starts. A dry run therefore catches, among others:
 The same parse step prints a banner line to stderr:
 
 ```text
-[MetaFlux v2.3.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
+[MetaFlux v2.3.1] mode=amplicon, input=local, 24 sample(s) in /data/fastq
 ```
 
 Checking that the sample count is the expected one costs nothing and catches a

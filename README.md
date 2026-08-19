@@ -7,7 +7,7 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-v2.3.0
+v2.3.1
 ```
 
 **Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.**
