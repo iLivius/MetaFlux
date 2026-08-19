@@ -1,0 +1,2474 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../running/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Output files - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#output-files" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Output files
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Amplicon mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reads-1reads-4filtered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reads: 1.reads/ → 4.filtered/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inside-5dada2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inside 5.dada2/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.taxonomy/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stats/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiqc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        multiqc/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logs-benchmarks-and-_aux" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        logs/, benchmarks/ and _aux/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outside-out_dir-the-probe-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outside out_dir: the probe cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shotgun mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#01preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        01.preprocessing/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#02classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        02.classification/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#03abundance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        03.abundance/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#04extracted_reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        04.extracted_reads/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statsread_trackingtxt-samplestsv-and-multiqc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stats/read_tracking.txt, samples.tsv and multiqc/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#taxonomy-strings-in-the-final-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxonomy strings in the final tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Amplicon mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reads-1reads-4filtered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reads: 1.reads/ → 4.filtered/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inside-5dada2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inside 5.dada2/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.taxonomy/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stats/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiqc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        multiqc/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logs-benchmarks-and-_aux" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        logs/, benchmarks/ and _aux/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#outside-out_dir-the-probe-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outside out_dir: the probe cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shotgun mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#01preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        01.preprocessing/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#02classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        02.classification/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#03abundance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        03.abundance/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#04extracted_reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        04.extracted_reads/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statsread_trackingtxt-samplestsv-and-multiqc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stats/read_tracking.txt, samples.tsv and multiqc/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#taxonomy-strings-in-the-final-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxonomy strings in the final tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/reference/output.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="output-files">Output files<a class="headerlink" href="#output-files" title="Permanent link">&para;</a></h1>
+<p>Everything a run produces goes under the directory named in <code>output.out_dir</code>.
+Two things are deliberately written elsewhere: reference databases, which are
+cached under <code>references.refdb_root</code> (<code>refdb/</code> by default) so that every run
+reuses the same downloads, and — in shotgun BioProject mode — the FASTQs fetched
+from SRA, which land in <code>input.fastq_dir</code>.</p>
+<p>Inside <code>out_dir</code> the directories are numbered in the order the stages run, so a
+plain <code>ls</code> reads like the pipeline itself. Both modes also write <code>logs/</code> (one log
+per rule, one per sample where the rule runs per sample), <code>stats/read_tracking.txt</code>
+and <code>multiqc/multiqc_report.html</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">One output directory per mode</p>
+<p>Amplicon and shotgun runs use different numbered directories, but they share
+the names <code>stats/read_tracking.txt</code> and <code>multiqc/multiqc_report.html</code>. Pointing
+both modes at the same <code>out_dir</code> overwrites those two files. Give each mode its
+own <code>out_dir</code>.</p>
+</div>
+<hr />
+<h2 id="amplicon-mode">Amplicon mode<a class="headerlink" href="#amplicon-mode" title="Permanent link">&para;</a></h2>
+<h3 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>out_dir/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── 1.reads/          # symlinks to the input FASTQs (visibility only)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── 2.no_phix/        # PhiX-filtered reads      (absent when remove_phix: false)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── 3.stripped/       # primer-trimmed reads
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── 4.filtered/       # DADA2 filterAndTrim output
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── 5.dada2/          # ASV sequences and count tables at each stage
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│                     # (+ _sintax_raw.tsv on the sintax path)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── multiqc/          # multiqc_report.html + multiqc_data/
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── logs/             # per-rule logs
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── benchmarks/       # runtime/memory for rm_phix and trim_primers
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>└── _aux/primers/     # reverse-complemented primers used by Cutadapt
+</code></pre></div>
+<p>Three files carry the result of an amplicon run: <code>6.taxonomy/asv_table.txt</code>
+(ASV × sample counts plus a taxonomy string), <code>5.dada2/seqs_lenfilt.fasta</code> (the
+sequences those ASV IDs refer to), and <code>stats/read_tracking.txt</code> (how many reads
+survived each stage, per sample). Everything else is intermediate data or QC.</p>
+<h3 id="reads-1reads-4filtered">Reads: <code>1.reads/</code> → <code>4.filtered/</code><a class="headerlink" href="#reads-1reads-4filtered" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Directory</th>
+<th>Files</th>
+<th>Rule</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1.reads/</code></td>
+<td><code>{sample}_R1.fastq.gz</code>, <code>_R2</code></td>
+<td><code>link_reads</code></td>
+<td>Symlinks pointing back at <code>input.fastq_dir</code>. Nothing reads from here — the downstream rules open the originals. The links exist so the run directory shows which files went in.</td>
+</tr>
+<tr>
+<td><code>2.no_phix/</code></td>
+<td><code>{sample}_R1.fastq.gz</code>, <code>_R2</code></td>
+<td><code>rm_phix</code></td>
+<td>Bowtie2 against the fetched PhiX reference; the pairs that do <em>not</em> align are kept. Present only when <code>amplicon.decontamination.remove_phix</code> is <code>true</code> (the default).</td>
+</tr>
+<tr>
+<td><code>3.stripped/</code></td>
+<td><code>{sample}_R1.fastq.gz</code>, <code>_R2</code></td>
+<td><code>trim_primers</code></td>
+<td>Cutadapt removes the primers at the 5' end and any read-through of the opposite primer at the 3' end. With <code>primers.orientation: mixed</code> a second pass recovers reads that arrived the other way round and reverse-complements them back.</td>
+</tr>
+<tr>
+<td><code>4.filtered/</code></td>
+<td><code>{sample}_R1_filt.fastq.gz</code>, <code>_R2_filt</code></td>
+<td><code>dada_filter</code></td>
+<td>DADA2 <code>filterAndTrim</code> with the <code>truncLen</code> decided in <code>stats/trunclen.json</code>. This is the last per-sample FASTQ; from here DADA2 works on all samples at once.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="inside-5dada2">Inside <code>5.dada2/</code><a class="headerlink" href="#inside-5dada2" title="Permanent link">&para;</a></h3>
+<p>The directory looks busy, but most of it is the same two artifacts — the <strong>ASV
+sequences</strong> and the <strong>ASV count table</strong> — written out again after each processing
+step. The table reads left to right in pipeline order. Within the count tables,
+<code>head_names</code> columns are <code>ASV_#</code> identifiers and <code>head_seqs</code> columns are the full
+ASV sequence; the counts are identical, only the labels differ.</p>
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>DADA2</th>
+<th>+ Extraction <em>(optional)</em></th>
+<th>+ Length filter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ASV sequences</strong> (FASTA)</td>
+<td><code>seqs.fasta</code></td>
+<td><code>seqs_extracted.fasta</code></td>
+<td><code>seqs_lenfilt.fasta</code></td>
+</tr>
+<tr>
+<td><strong>Counts</strong> — <code>ASV_#</code> keyed</td>
+<td><code>seqtab_head_names.txt</code></td>
+<td><code>seqtab_extracted_head_names.txt</code></td>
+<td><code>seqtab_lenfilt_head_names.txt</code></td>
+</tr>
+<tr>
+<td><strong>Counts</strong> — sequence keyed</td>
+<td><code>seqtab_head_seqs.txt</code></td>
+<td>—</td>
+<td><code>seqtab_lenfilt_head_seqs.txt</code></td>
+</tr>
+<tr>
+<td><strong>Extras</strong></td>
+<td><code>read.counts</code></td>
+<td>Metaxa2 / ITSx results and working dir</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The rules behind the columns are <code>dada_seqtab</code>, <code>target_extract</code> and
+<code>dada_length_filter</code>, in that order.</p>
+<p>The last populated column is the final result. <code>assign_taxonomy</code> reads exactly two
+of these files: the length-filtered FASTA <code>seqs_lenfilt.fasta</code> and the
+<code>ASV_#</code>-keyed <code>seqtab_lenfilt_head_names.txt</code>. (The read-tracking step also opens
+<code>read.counts</code> and the <code>head_names</code> seqtabs, but only to count reads per stage.)
+The sequence-keyed tables — <code>seqtab_head_seqs.txt</code> and
+<code>seqtab_lenfilt_head_seqs.txt</code> — are terminal deliverables: the same counts
+relabelled by sequence, convenient for merging runs or feeding another tool, but
+no rule in the workflow reads them.</p>
+<p>With extraction switched off, the middle column does not exist and the length
+filter runs straight on the DADA2 output. Extraction is off whenever
+<code>amplicon.extraction.enabled</code> is <code>false</code>, and is forced off (with a warning) for
+markers that have no region extractor — 18S, gyrB and rpoB.</p>
+<p><strong>The extras.</strong> <code>read.counts</code> is a TSV written by <code>dada_seqtab</code>: one row per
+sample, columns <code>stripped</code>, <code>filtered</code>, <code>denoised</code>, <code>merged</code>, <code>non_chimeric</code>. It
+is the raw material for the DADA2 part of <code>stats/read_tracking.txt</code>.</p>
+<p>The extraction step leaves a per-extractor trail:</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>Extractor</th>
+<th>Files in <code>5.dada2/</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td>Metaxa2</td>
+<td><code>metaxa2_extraction.results.txt</code> (Metaxa2's own summary) plus the raw <code>seqs.*</code> working files under <code>metaxa2/</code></td>
+</tr>
+<tr>
+<td>ITS</td>
+<td>ITSx</td>
+<td><code>itsx_extraction.summary.txt</code>, <code>itsx_collapse_map.tsv</code>, plus the raw <code>seqs.*</code> working files under <code>_itsx_tmp/</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>itsx_collapse_map.tsv</code> is worth knowing about. Two ASVs can differ only in the
+flanking 5.8S/LSU sequence; once ITSx trims those flanks away the remaining ITS1
+or ITS2 region is identical, so the ASVs are merged into one and their counts are
+added. The map records which original <code>ASV_#</code> went into which representative, so
+that merge is auditable rather than silent.</p>
+<h3 id="6taxonomy"><code>6.taxonomy/</code><a class="headerlink" href="#6taxonomy" title="Permanent link">&para;</a></h3>
+<p>Three tables, all written by <code>assign_taxonomy</code>, all built from the same filtered
+set of ASVs. They differ only in what labels the rows.</p>
+<p>With <code>taxonomy.method: sintax</code> — the shipped default — the directory also holds
+<code>_sintax_raw.tsv</code>, the raw VSEARCH <code>--tabbedout</code> result the parser was fed. It is
+kept for troubleshooting and no rule reads it.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Rows</th>
+<th>Columns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>asv_table.txt</code></td>
+<td><code>ASV_#</code></td>
+<td>one per sample, then <code>taxonomy</code></td>
+</tr>
+<tr>
+<td><code>asv_table_seqs.txt</code></td>
+<td>the ASV sequence</td>
+<td>one per sample, then <code>taxonomy</code></td>
+</tr>
+<tr>
+<td><code>taxon_seq_table.txt</code></td>
+<td><code>ASV_#</code></td>
+<td>one per taxonomic rank, then <code>sequence</code></td>
+</tr>
+</tbody>
+</table>
+<p>The rank columns in <code>taxon_seq_table.txt</code> come from the marker pack, so they
+match the reference's actual depth: <code>Kingdom … Species</code> for 16S, ITS and rpoB,
+<code>Gene, Phylum … Species</code> for gyrB, and PR2's nine ranks
+(<code>Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species</code>)
+for 18S.</p>
+<div class="admonition note">
+<p class="admonition-title">File format</p>
+<p>These follow R's <code>write.table(col.names = NA)</code> conventions, on both the rdp
+and the sintax path: tab-separated, the header line starts with an empty cell
+for the row-name column, and text values (row names, taxonomy strings, rank
+names) are wrapped in double quotes. <code>read.table(..., sep = "\t", header = TRUE,
+row.names = 1)</code> in R and <code>pd.read_csv(..., sep = "\t", index_col = 0)</code> in
+pandas both read them without extra arguments.</p>
+</div>
+<p>The contaminant filter (<code>amplicon.taxonomy.filter.keep</code> / <code>.discard</code>) has already
+been applied when these tables are written, so the ASVs it removed are absent
+here — see <a href="../../amplicon/taxon-filter/">keeping and discarding taxa</a>.</p>
+<h3 id="stats"><code>stats/</code><a class="headerlink" href="#stats" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>read_tracking.txt</code></td>
+<td>The per-stage summary, described below.</td>
+</tr>
+<tr>
+<td><code>1.raw_reads.counts</code></td>
+<td>R1 read count per sample, <code>{sample} : N</code>, with a trailing total.</td>
+</tr>
+<tr>
+<td><code>2.nophix_reads.counts</code></td>
+<td>Same, after PhiX removal. Only when <code>remove_phix: true</code>.</td>
+</tr>
+<tr>
+<td><code>3.stripped_reads.counts</code></td>
+<td>Same, after primer trimming.</td>
+</tr>
+<tr>
+<td><code>trunclen.json</code></td>
+<td>The truncation decision: what <code>truncLen</code> was chosen for R1 and R2 and how. See <a href="../../amplicon/length-and-truncation/">amplicon length and truncation</a>.</td>
+</tr>
+<tr>
+<td><code>falco/{sample}_R{1,2}_{stage}/</code></td>
+<td>Falco QC per sample, per read direction, per stage (<code>raw</code>, <code>nophix</code>, <code>stripped</code>), each holding <code>fastqc_data.txt</code>, <code>fastqc_report.html</code> and <code>summary.txt</code>.</td>
+</tr>
+<tr>
+<td><code>cutadapt/{sample}.passA_5prime.cutadapt.json</code> and <code>.passA_3prime.</code></td>
+<td>Cutadapt's own report for the 5' and 3' trimming passes. These feed MultiQC. The extra swap pass run under <code>orientation: mixed</code> writes no JSON and does not appear in MultiQC.</td>
+</tr>
+<tr>
+<td><code>dada2/{sample}.filter_stats.json</code></td>
+<td>Per-sample <code>filterAndTrim</code> result.</td>
+</tr>
+<tr>
+<td><code>dada2/stripped_read_R{1,2}_qual_plot.png</code> and <code>.pdf</code></td>
+<td>Aggregate quality profile of the primer-trimmed reads — the picture behind the <code>truncLen</code> choice.</td>
+</tr>
+<tr>
+<td><code>dada2/filtered_read_R{1,2}_error_plot.png</code> and <code>.pdf</code></td>
+<td>DADA2 error-model fit. A bad fit here explains a bad ASV set downstream.</td>
+</tr>
+<tr>
+<td><code>dada2/asv_length_stats.json</code> and <code>asv_length_hist.png</code></td>
+<td>ASV length distributions, described below.</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>read_tracking.txt</code></strong> is one row per sample, one column per stage, in pipeline
+order:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>raw → [nophix] → stripped → filtered → denoised → merged → non_chimeric
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    → [post_extraction] → post_length_filter → post_taxonomy_filter
+</code></pre></div>
+<p><code>nophix</code> appears only when PhiX removal ran, <code>post_extraction</code> only when the
+extraction step ran. The last column counts reads still present after the
+contaminant filter, so the drop between <code>post_length_filter</code> and
+<code>post_taxonomy_filter</code> is exactly what the keep/discard lists removed. A sample
+that collapses at one particular column points straight at the step to inspect.</p>
+<p><strong><code>asv_length_stats.json</code></strong> and the matching histogram record ASV lengths at
+three points: <code>pre_extraction_asvs</code> (straight out of DADA2), <code>filter_source_asvs</code>
+(what the length filter was actually given — the extracted sequences when
+extraction ran, otherwise the same as pre-extraction), and <code>kept_asvs</code> (what
+survived the length window). The JSON also records the window itself
+(<code>filter_window</code>, with <code>min</code>, <code>max</code> and where those came from) and
+<code>n_dropped_by_length_filter</code>. This is most informative for ITS, where ITSx trims
+a lot; for 16S the first two distributions usually look the same.</p>
+<h3 id="multiqc"><code>multiqc/</code><a class="headerlink" href="#multiqc" title="Permanent link">&para;</a></h3>
+<p><code>multiqc_report.html</code> collects the Falco reports for all three read stages, the
+Cutadapt JSONs and the Bowtie2 PhiX logs into one page. <code>multiqc_data/</code> holds the
+parsed numbers behind it. Falco writes FastQC-format output, so MultiQC files it
+under a "FastQC" heading. MultiQC renames the three Falco stages to
+<code>QC | raw reads</code>, <code>QC | PhiX-filtered reads</code> and <code>QC | primer-trimmed reads</code>; the
+renaming rules are in the shipped MultiQC config.</p>
+<h3 id="logs-benchmarks-and-_aux"><code>logs/</code>, <code>benchmarks/</code> and <code>_aux/</code><a class="headerlink" href="#logs-benchmarks-and-_aux" title="Permanent link">&para;</a></h3>
+<p><code>logs/</code> holds the captured stdout/stderr of every rule, laid out as
+<code>logs/&lt;rule&gt;/&lt;sample&gt;.log</code> for per-sample rules and <code>logs/&lt;rule&gt;.log</code> for the
+rest. It is the first place to look when a rule fails.</p>
+<p><code>benchmarks/</code> holds Snakemake's runtime and memory measurements, but only for the
+two rules that declare them: <code>rm_phix</code> and <code>trim_primers</code>.</p>
+<p><code>_aux/primers/</code> holds the reverse-complemented primer FASTAs that Cutadapt needs
+for 3' read-through trimming. They are generated from the primer files given in
+<code>amplicon.primers</code>, and are of no interest after the run.</p>
+<h3 id="outside-out_dir-the-probe-cache">Outside <code>out_dir</code>: the probe cache<a class="headerlink" href="#outside-out_dir-the-probe-cache" title="Permanent link">&para;</a></h3>
+<p>When <code>amplicon.expected_length</code> is <code>auto</code>, the amplicon-length probe writes its
+result to <code>refdb/cache/</code> inside the MetaFlux checkout, not to <code>out_dir</code>. This one
+path is fixed: unlike the reference databases it does not follow
+<code>references.refdb_root</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.json
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.amplicons.fa.gz
+</code></pre></div>
+<p>The filename carries the marker, the reference it was probed against, and a hash
+of both primer sequences, so the probe is skipped on every later run with the same
+marker and primers — including runs writing to a different <code>out_dir</code>. Changing a
+primer changes the hash and the probe runs again.</p>
+<hr />
+<h2 id="shotgun-mode">Shotgun mode<a class="headerlink" href="#shotgun-mode" title="Permanent link">&para;</a></h2>
+<h3 id="layout_1">Layout<a class="headerlink" href="#layout_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>out_dir/
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── 01.preprocessing/    # QC reports and decontamination stats (reads are temporary)
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── 02.classification/   # Kraken2 reports, per-read output, classified reads
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── 03.abundance/        # Bracken reports + otu_table.tsv / otu_table.biom
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── 04.extracted_reads/  # per-taxon reads (only when extract_taxa is set)
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>├── stats/               # read_tracking.txt
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── multiqc/             # multiqc_report.html + multiqc_data/
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── samples.tsv          # sample → source → FASTQ manifest
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>└── logs/                # per-rule logs
+</code></pre></div>
+<p>The result of a shotgun run is <code>03.abundance/otu_table.tsv</code> (taxon × sample
+abundances) with its BIOM twin <code>otu_table.biom</code>, the per-sample Bracken reports
+next to them, and <code>stats/read_tracking.txt</code>.</p>
+<h3 id="01preprocessing"><code>01.preprocessing/</code><a class="headerlink" href="#01preprocessing" title="Permanent link">&para;</a></h3>
+<p>The cleaned FASTQs here are <strong>temporary</strong> — Snakemake removes a file marked that
+way as soon as every rule that needed it has finished: <code>_dephix</code> goes once host
+removal (or fastp) has read it, <code>_dehost</code> once fastp has, and <code>_trim</code> once Kraken2
+has. What persists is the QC and the counts:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Written by</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{sample}_fastp.html</code> / <code>_fastp.json</code></td>
+<td><code>trim_adapters</code></td>
+<td>fastp's adapter and quality trimming report. The JSON is also read by MultiQC, by the read-tracking step, and by Bracken (to pick the k-mer distribution matching the post-trim read length).</td>
+</tr>
+<tr>
+<td><code>{sample}_dephix_stats.txt</code></td>
+<td><code>decontam_phix</code></td>
+<td>BBDuk PhiX-removal counts. Only when <code>shotgun.decontamination.remove_phix: true</code>.</td>
+</tr>
+<tr>
+<td><code>{sample}_dehost_stats.txt</code></td>
+<td><code>decontam_host</code></td>
+<td>Surviving non-host pairs after BBMap. Only when <code>shotgun.decontamination.host_genomes</code> is non-empty.</td>
+</tr>
+<tr>
+<td><code>refs/bbmap_index/</code></td>
+<td><code>build_host_index</code></td>
+<td>The BBMap index of the host reference, built once and reused for every sample. Host removal only.</td>
+</tr>
+</tbody>
+</table>
+<p>The temporary FASTQs are named for the stage they came off:
+<code>{sample}_dephix_R{1,2}.fastq.gz</code> (BBDuk, PhiX) → <code>{sample}_dehost_R{1,2}.fastq.gz</code>
+(BBMap, host) → <code>{sample}_trim_R{1,2}.fastq.gz</code> (fastp). Each stage is optional;
+the chain simply skips what is switched off. The concatenated host reference
+<code>refs/host_combined.fna.gz</code> is temporary too — it is deleted once the BBMap index
+has been built from it. See <a href="../../shotgun/decontamination/">decontamination</a>.</p>
+<h3 id="02classification"><code>02.classification/</code><a class="headerlink" href="#02classification" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{sample}_report.txt</code></td>
+<td>Kraken2's tree report.</td>
+</tr>
+<tr>
+<td><code>{sample}_output.txt</code></td>
+<td>Kraken2's per-read assignment — one line per read pair. Large, and only useful for read extraction and troubleshooting.</td>
+</tr>
+<tr>
+<td><code>{sample}_R1.fastq.gz</code>, <code>_R2</code></td>
+<td>The reads Kraken2 managed to classify. Kept, because per-taxon extraction reads them.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">The Kraken2 report has extra columns</p>
+<p>MetaFlux runs Kraken2 with <code>--report-minimizer-data</code>, which inserts two
+minimizer-count columns into the report. The result has 8 columns rather than
+the standard 6, with rank, taxid and name pushed to the right. Anything that
+parses these reports by column position needs to know that — including the
+workflow's own read-tracking script, which reads rank from column 6.</p>
+</div>
+<h3 id="03abundance"><code>03.abundance/</code><a class="headerlink" href="#03abundance" title="Permanent link">&para;</a></h3>
+<p>Bracken re-estimates abundance from the Kraken2 report at the rank set in
+<code>shotgun.bracken.tax_lev</code>, correcting the read counts that Kraken2 leaves stranded
+at higher ranks.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{sample}_report.txt</code></td>
+<td>The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC.</td>
+</tr>
+<tr>
+<td><code>{sample}_output.txt</code></td>
+<td>Bracken's own per-taxon table for that sample.</td>
+</tr>
+<tr>
+<td><code>otu_table.biom</code></td>
+<td>Cross-sample abundance table in BIOM (HDF5) format.</td>
+</tr>
+<tr>
+<td><code>otu_table.tsv</code></td>
+<td>The same table as tab-separated text.</td>
+</tr>
+</tbody>
+</table>
+<p>The two OTU tables are rendered from the same filtered table by
+<code>finalize_otu_table</code>, so they always agree. That rule also tidies up what
+<code>kraken-biom</code> produces: it strips the <code>_report</code> suffix from sample names,
+normalises the taxonomy strings (see below), and applies the optional
+<code>shotgun.taxonomy_filter</code> keep/discard lists. The untidied intermediate
+<code>otu_table.raw.biom</code> is temporary and does not survive the run.</p>
+<h3 id="04extracted_reads"><code>04.extracted_reads/</code><a class="headerlink" href="#04extracted_reads" title="Permanent link">&para;</a></h3>
+<p>Only produced when <code>shotgun.extract_taxa</code> lists at least one taxon name. Files are
+<code>{sample}_{taxon}_R1.fastq.gz</code> and <code>_R2</code>, where <code>{taxon}</code> is the configured name
+lowercased with spaces turned into underscores — <code>Escherichia coli</code> becomes
+<code>escherichia_coli</code>. Reads assigned to that taxon <em>and everything below it</em> are
+pulled out of the classified reads. A taxon absent from a sample yields an empty
+pair of files rather than a failure. See
+<a href="../../shotgun/read-extraction/">per-taxon read extraction</a>.</p>
+<h3 id="statsread_trackingtxt-samplestsv-and-multiqc"><code>stats/read_tracking.txt</code>, <code>samples.tsv</code> and <code>multiqc/</code><a class="headerlink" href="#statsread_trackingtxt-samplestsv-and-multiqc" title="Permanent link">&para;</a></h3>
+<p><code>read_tracking.txt</code> is one row per sample, one column per stage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>sample → raw → [nophix] → [no_host] → trimmed → classified → unclassified
+</code></pre></div>
+<p><code>nophix</code> appears only when PhiX removal ran, <code>no_host</code> only when host removal ran.
+<strong>Every number is read pairs</strong>, not reads: BBDuk and fastp count the two mates
+separately and the script halves them, while Kraken2 already counts a pair once.
+<code>classified</code> and <code>unclassified</code> come from the Kraken2 report's root and
+unclassified rows.</p>
+<p><code>samples.tsv</code> is a small manifest with the columns <code>sample</code>, <code>source</code>,
+<code>bioproject</code>, <code>r1</code>, <code>r2</code> — handy for a downstream R or Python script that should
+not have to re-parse the config or re-glob the FASTQ directory. <code>source</code> is
+<code>local</code> or <code>bioproject</code>.</p>
+<p><code>multiqc/multiqc_report.html</code> collects fastp, Kraken2, Bracken and — when PhiX
+removal ran — the BBDuk statistics. BBMap host removal contributes nothing to the
+report; its counts are in <code>stats/read_tracking.txt</code> and its mapping rate in
+<code>logs/decontam_host/{sample}.log</code>.</p>
+<hr />
+<h2 id="taxonomy-strings-in-the-final-tables">Taxonomy strings in the final tables<a class="headerlink" href="#taxonomy-strings-in-the-final-tables" title="Permanent link">&para;</a></h2>
+<p>Both modes write taxonomy the same way structurally: ranks joined by <code>;</code> with no
+space, each rank carrying its prefix (<code>k__</code>, <code>p__</code>, <code>c__</code>, <code>o__</code>, <code>f__</code>, <code>g__</code>,
+<code>s__</code>; 18S uses the PR2 rank set, <code>d__</code>, <code>sg__</code>, <code>dv__</code> and so on). Ranks the
+classifier could not resolve are simply left out, so a string can end early.</p>
+<p>The exact form of the species slot follows the reference database, not the
+pipeline:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Species slot</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SILVA / 16S via <code>rdp</code></td>
+<td><code>s__Genus species</code> (a binomial, space-separated)</td>
+<td><code>s__Bacillus subtilis</code></td>
+</tr>
+<tr>
+<td>UNITE / ITS</td>
+<td>UNITE's own <code>s__Genus_species</code> (underscore), emitted verbatim</td>
+<td><code>s__Genus_species</code></td>
+</tr>
+<tr>
+<td>Shotgun <code>otu_table</code></td>
+<td>the same binomial reconstruction as SILVA, where the reference supplies a bare epithet</td>
+<td><code>s__Bacillus subtilis</code></td>
+</tr>
+<tr>
+<td><code>sintax</code> path</td>
+<td>whatever label the SINTAX database carries</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The binomial is only assembled when the reference hands back a bare, lowercase
+epithet (<code>subtilis</code>). A reference that already returns a complete name — PR2's
+<code>Unruhdinium_kevei</code>, for instance — is passed through untouched, so the genus is
+never glued on twice.</p>
+<hr />
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../configuration/">Configuration</a> — the keys referred to above.</li>
+<li><a href="../running/">Running MetaFlux</a> — what a re-run rebuilds, and what it leaves alone.</li>
+<li><a href="../../troubleshooting/">Troubleshooting</a> — what an empty or collapsing table usually means.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

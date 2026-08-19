@@ -1,0 +1,2468 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../../getting-started/choosing-a-mode/">
+      
+      
+        <link rel="next" href="../markers/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Overview - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#amplicon-mode" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-steps-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The steps at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-phix-removal-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. PhiX removal (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-primer-trimming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Primer trimming
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Primer trimming">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-mixed-orientation-second-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The mixed-orientation second pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-per-stage-qc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Per-stage QC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-amplicon-length-probe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Amplicon-length probe
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-truncation-length-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Truncation-length selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-asv-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ASV inference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-marker-region-extraction-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Marker-region extraction (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-asv-length-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ASV length filter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-taxonomy-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Taxonomy assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-tracking-and-the-qc-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read tracking and the QC report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changes-between-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changes between markers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to go next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-steps-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The steps at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-phix-removal-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. PhiX removal (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-primer-trimming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Primer trimming
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Primer trimming">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-mixed-orientation-second-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The mixed-orientation second pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-per-stage-qc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Per-stage QC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-amplicon-length-probe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Amplicon-length probe
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-truncation-length-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Truncation-length selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-asv-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ASV inference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-marker-region-extraction-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Marker-region extraction (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-asv-length-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ASV length filter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-taxonomy-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Taxonomy assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-tracking-and-the-qc-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read tracking and the QC report
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changes-between-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changes between markers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to go next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/amplicon/overview.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="amplicon-mode">Amplicon mode<a class="headerlink" href="#amplicon-mode" title="Permanent link">&para;</a></h1>
+<p>Amplicon mode takes raw paired-end Illumina metabarcoding reads and returns a table of
+exact amplicon sequence variants (ASVs) with a taxonomic assignment for each one. The
+denoising engine is DADA2; five markers are supported — 16S rRNA, ITS, 18S rRNA, gyrB and
+rpoB — and the marker is what decides which reference databases are used, whether a
+region extractor runs, and which classifiers are available.</p>
+<p>Two config keys define the run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">amplicon</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16S</span><span class="w">          </span><span class="c1"># 16S | ITS | 18S | gyrB | rpoB</span>
+</code></pre></div>
+<p>Everything else is either a path (input reads, output directory, primer FASTAs) or
+tuning. Marker-specific facts — database URLs, rank models, which extractor applies —
+live in the marker packs under <code>workflow/markers/&lt;type&gt;.yaml</code> and are never set by hand.</p>
+<h2 id="the-steps-at-a-glance">The steps at a glance<a class="headerlink" href="#the-steps-at-a-glance" title="Permanent link">&para;</a></h2>
+<p>The pipeline runs as nine stages. Output directories are numbered in pipeline order under
+<code>out_dir</code>, so the directory listing reads like the workflow.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Tool</th>
+<th>Snakemake rule</th>
+<th>Writes to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>PhiX removal <em>(optional)</em></td>
+<td>bowtie2</td>
+<td><code>rm_phix</code></td>
+<td><code>2.no_phix/</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Primer trimming</td>
+<td>Cutadapt</td>
+<td><code>trim_primers</code></td>
+<td><code>3.stripped/</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Per-stage QC</td>
+<td>Falco</td>
+<td><code>falco</code></td>
+<td><code>stats/falco/</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Amplicon-length probe</td>
+<td>Cutadapt (or direct read)</td>
+<td><code>amplicon_probe</code></td>
+<td><code>refdb/cache/</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Truncation-length selection</td>
+<td>in-house</td>
+<td><code>pick_trunclen</code></td>
+<td><code>stats/trunclen.json</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>ASV inference</td>
+<td>DADA2</td>
+<td><code>dada_filter</code>, <code>dada_seqtab</code></td>
+<td><code>4.filtered/</code>, <code>5.dada2/</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Marker-region extraction <em>(optional)</em></td>
+<td>Metaxa2 or ITSx</td>
+<td><code>target_extract</code></td>
+<td><code>5.dada2/</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>ASV length filter</td>
+<td>in-house</td>
+<td><code>dada_length_filter</code></td>
+<td><code>5.dada2/</code>, <code>stats/dada2/</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Taxonomy assignment</td>
+<td>DADA2 RDP or VSEARCH SINTAX</td>
+<td><code>assign_taxonomy</code></td>
+<td><code>6.taxonomy/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Two more rules close the run: <code>aggregate_read_counts</code> builds <code>stats/read_tracking.txt</code>,
+and <code>multiqc</code> builds <code>multiqc/multiqc_report.html</code>.</p>
+<h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">&para;</a></h2>
+<p>Amplicon mode requires local paired FASTQs named <code>{sample}_R1.fastq.gz</code> and
+<code>{sample}_R2.fastq.gz</code> in <code>input.fastq_dir</code>. Sample names are discovered from those
+filenames at parse time — the moment before the run starts, when Snakemake reads the
+config and works out which jobs it will need. SRA-style <code>{sample}_1/_2</code> naming is
+accepted by shotgun mode but rejected here with an explicit error, because the two
+conventions cannot be told apart safely once mixed.</p>
+<p>The raw files are never modified. <code>link_reads</code> symlinks them into <code>1.reads/</code> purely so the
+inputs of a run are visible next to its outputs; every rule that needs raw reads reads
+them from <code>fastq_dir</code> directly.</p>
+<h2 id="1-phix-removal-optional">1. PhiX removal <em>(optional)</em><a class="headerlink" href="#1-phix-removal-optional" title="Permanent link">&para;</a></h2>
+<p>Illumina runs are routinely spiked with the PhiX174 genome as a sequencing control, and
+those reads have no place in a community profile. <code>rm_phix</code> maps each pair against a
+bowtie2 index of the PhiX reference and keeps the pairs that fail to align <em>concordantly</em>
+(<code>--un-conc-gz</code>), which are written to <code>2.no_phix/</code>. Failing to align concordantly is not
+the same as not matching at all: a pair in which only one mate aligned to PhiX is also
+written out and kept, so a small PhiX residue can survive. The shotgun path is stricter —
+BBDuk matches by k-mer and, with its default <code>removeifeitherbad=t</code>, drops a pair as soon
+as either mate matches.</p>
+<p>The reference is fetched once from NCBI (<code>references.phix.fetch_url</code>, RefSeq assembly
+GCF_000819615.1) by <code>fetch_phix</code> and indexed by <code>build_phix_index</code>; both are cached under
+<code>refdb/phix/</code>, so this cost is paid on the first run only.</p>
+<p>Toggled with <code>amplicon.decontamination.remove_phix</code> (shipped default <code>true</code>). When it is
+<code>false</code> the step is skipped entirely: <code>2.no_phix/</code> is not created, Cutadapt reads the raw
+FASTQs instead, and the <code>nophix</code> QC stage, its read count and its read-tracking column all
+disappear rather than showing up empty.</p>
+<p>The bowtie2 alignment summary is written to <code>logs/rm_phix/{sample}_phixFilter.log</code> and is
+picked up by MultiQC, so the PhiX fraction per sample is visible in the report.</p>
+<h2 id="2-primer-trimming">2. Primer trimming<a class="headerlink" href="#2-primer-trimming" title="Permanent link">&para;</a></h2>
+<p>DADA2 requires primer-free reads: universal primers carry degenerate positions, and DADA2
+reads that synthetic variation as real biological variation. This inflates the ASV count
+and, because the spurious variants share long identical stretches, it interferes with
+chimera detection — unremoved primers are the usual cause of an implausibly high chimeric
+fraction. <code>trim_primers</code> runs Cutadapt on the output of step 1 (or on the raw reads when
+PhiX removal is off) and writes to <code>3.stripped/</code>.</p>
+<p>Trimming happens in two calls, because a read can carry primer sequence at both ends:</p>
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Cutadapt options</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5′</td>
+<td><code>-g file:fwd -G file:rev</code>, <code>--discard-untrimmed</code></td>
+<td>Removes the forward primer from R1 and the reverse primer from R2. Pairs without a recognisable primer are dropped.</td>
+</tr>
+<tr>
+<td>3′</td>
+<td><code>-a file:rev_rc -A file:fwd_rc</code></td>
+<td>Removes read-through: when the amplicon is shorter than the read, the sequencer runs past the far end into the reverse complement of the other primer. Reads without read-through pass through untouched.</td>
+</tr>
+</tbody>
+</table>
+<p>The two reverse-complemented primer files are produced once per run by <code>revcomp_primers</code>
+(seqtk) into <code>_aux/primers/</code>.</p>
+<p>Both calls use <code>amplicon.cutadapt.max_error_rate</code> (default <code>0.2</code>, i.e. up to 20% of the
+matched primer length may differ), <code>amplicon.cutadapt.min_length</code> (default <code>50</code>, dropping
+anything shorter after trimming) and <code>--pair-filter=any</code>, which discards both mates when
+either one fails a filter.</p>
+<p>Degeneracy costs nothing from that error budget: Cutadapt reads IUPAC codes in the primer
+natively, so an <code>R</code> in the primer matches A or G for free. The budget is there for
+sequencing errors in the first cycles and for genuine primer/template mismatch, which is
+common with universal primers. Cutadapt's own default is <code>0.1</code>; <code>0.2</code> is deliberately more
+permissive here because the 5′ pass runs with <code>--discard-untrimmed</code>, so a primer that
+fails to match costs the whole pair. The per-sample match rates in <code>stats/cutadapt/</code> — or
+the Cutadapt section of the MultiQC report — show what the tolerance is actually buying.</p>
+<p>There is deliberately <strong>no quality trimming here</strong>: DADA2 learns its error model from the
+run's own quality scores, and pre-trimming on quality would distort it by removing exactly
+the low-quality bases the model needs in order to fit.</p>
+<h3 id="the-mixed-orientation-second-pass">The mixed-orientation second pass<a class="headerlink" href="#the-mixed-orientation-second-pass" title="Permanent link">&para;</a></h3>
+<p>Some library preparations (and most amplicon data pooled from several runs) deliver reads
+in both orientations: in some pairs R1 carries the forward primer, in others it carries
+the reverse one. Because the 5′ call uses <code>--discard-untrimmed</code>, a single fixed-orientation
+pass would silently throw away every swapped pair — often half the data.</p>
+<p>Setting <code>amplicon.primers.orientation: mixed</code> adds a second Cutadapt pass over the same
+input with the primers swapped (<code>-g rev -G fwd</code>, then <code>-a fwd_rc -A rev_rc</code>). Its output is
+reverse-complemented with seqtk so it matches the orientation of the first pass, and then
+concatenated onto it. Both 5′ calls require a recognisable primer on each mate and drop
+the pair otherwise, so a correctly oriented pair is claimed only by the first pass and a
+swapped pair only by the second — nothing is counted twice.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Leave <code>orientation: fixed</code> unless the data really is mixed. The symptom of a wrong
+setting is a large drop in reads at the primer-trimming stage — visible in
+<code>stats/read_tracking.txt</code> and in the Cutadapt section of the MultiQC report.</p>
+</div>
+<p>Per-sample Cutadapt statistics are written as JSON to <code>stats/cutadapt/</code> — one file for the
+5′ call and one for the 3′ call of the first pass. The swap-pass calls are logged but not
+reported separately.</p>
+<h2 id="3-per-stage-qc">3. Per-stage QC<a class="headerlink" href="#3-per-stage-qc" title="Permanent link">&para;</a></h2>
+<p><code>falco</code> profiles reads at each stage of preprocessing: <code>raw</code>, <code>nophix</code> (only when PhiX
+removal ran) and <code>stripped</code>. Falco is a drop-in FastQC replacement that reads FASTQ much
+faster and writes the same <code>fastqc_data.txt</code>, <code>fastqc_report.html</code> and <code>summary.txt</code>,
+one directory per sample, direction and stage under <code>stats/falco/</code>.</p>
+<p>Running the same QC three times is what makes it possible to see <em>where</em> reads were lost
+and <em>how</em> the quality profile changed, instead of only seeing the final, post-trimming
+snapshot. Each Falco call
+is fed a stage-renamed symlink of its input, because MultiQC takes the sample name from the
+filename recorded inside <code>fastqc_data.txt</code> — without that, the three stages of one sample
+would collapse into a single entry.</p>
+<p>The <code>stripped</code>-stage tables are not only a report: <code>pick_trunclen</code> reads their per-base
+quality columns in the next step.</p>
+<h2 id="4-amplicon-length-probe">4. Amplicon-length probe<a class="headerlink" href="#4-amplicon-length-probe" title="Permanent link">&para;</a></h2>
+<p>Two later decisions need to know how long the amplicon should be: the truncation lengths
+(step 5) must leave R1 and R2 overlapping, and the ASV length filter (step 8) needs a
+window of plausible lengths. Rather than hard-coding a number per primer pair, MetaFlux
+measures it from the reference database with the primers actually in use.</p>
+<p><code>amplicon_probe</code> runs only when <code>amplicon.expected_length: auto</code>. It works in one of two
+modes, fixed by the marker pack:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Markers</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pcr</code></td>
+<td>16S, 18S, rpoB</td>
+<td>In-silico PCR. Two Cutadapt passes over a full-length reference: find the forward primer wherever it sits and cut it away along with everything before it, then, of those sequences, find the reverse complement of the reverse primer and cut it away along with everything after it. What survives between the two primer sites is the predicted amplicon.</td>
+</tr>
+<tr>
+<td><code>direct</code></td>
+<td>ITS, gyrB</td>
+<td>The reference is already cut to amplicon length — UNITE's pre-extracted UCHIME ITS1/ITS2 subregions, or DD7RZ8's pre-trimmed gyrB amplicons — so lengths are read straight off it. In-silico PCR would fail here: there are no primer sites left to cut against.</td>
+</tr>
+</tbody>
+</table>
+<p>Either way, the step writes a JSON holding the length distribution: <code>n_amplicons</code>, <code>min</code>,
+<code>q1</code>, <code>median</code>, <code>q3</code>, <code>p95</code>, <code>p99</code>, <code>max</code>, <code>mean</code> and <code>stdev</code>. Which single statistic
+feeds the truncation constraint is set by <code>amplicon.probe_length_stat.&lt;key&gt;</code> (the shipped
+config uses <code>p95</code> for 16S, 18S and rpoB).</p>
+<p>The result is cached in the repository under <code>refdb/cache/</code>, not under <code>out_dir</code>, and the
+filename encodes the marker, the reference, and a short hash of both primer FASTAs. Same
+marker, same reference, same primers means the cached probe is reused — across reruns and
+across different output directories. Change a primer and the hash changes, so the probe is
+recomputed automatically.</p>
+<p>Details, including which statistic to pick and when <code>auto</code> is the wrong choice, are on the
+<a href="../length-and-truncation/">amplicon length and truncation</a> page.</p>
+<h2 id="5-truncation-length-selection">5. Truncation-length selection<a class="headerlink" href="#5-truncation-length-selection" title="Permanent link">&para;</a></h2>
+<p>DADA2's <code>truncLen</code> cuts every read to a fixed length and <strong>discards any read shorter than
+it</strong>. That one number is pulled in opposite directions: cutting shorter removes the
+low-quality 3′ tail the error model dislikes, but cutting too short leaves R1 and R2 no
+longer overlapping, and pairs that cannot be merged are lost.</p>
+<p><code>pick_trunclen</code> writes the decision to <code>stats/trunclen.json</code>, which <code>dada_filter</code> and
+<code>dada_length_filter</code> read. In <code>auto</code> mode it takes the lower-quartile (Q1) quality at each
+cycle from the Falco tables of the <code>stripped</code> stage, takes the median across samples per
+position, and cuts at the last position still at or above <code>trunc_len.q_threshold</code>
+(default <code>20</code>) — that is, one position before the first drop. Only positions covered by
+every sample are considered, so the cut can never exceed the read length of the shortest
+sample.</p>
+<p>It then checks the merge constraint:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>truncLen_R1 + truncLen_R2  &gt;=  expected_length + min_overlap
+</code></pre></div>
+<p><code>min_overlap</code> defaults to <code>12</code> bp. If the quality-based cuts break the constraint,
+<code>trunc_len.resolve_policy</code> decides: <code>raise_trunc</code> (the default) extends the cuts past the
+quality drop, splitting the shortfall between R1 and R2 according to how much room each
+still has; <code>relax_q</code> lowers the quality threshold one point at a time down to
+<code>trunc_len.q_floor</code> (default <code>15</code>) and re-cuts; <code>error</code> stops and reports the shortfall.</p>
+<p>In <code>manual</code> mode the quality analysis is skipped and <code>trunc_len.manual_r1</code> /
+<code>manual_r2</code> are used as given.</p>
+<div class="admonition warning">
+<p class="admonition-title">Clean runs can defeat <code>auto</code></p>
+<p>If quality never drops below the threshold, the cut lands at the full read length —
+but after primer trimming most reads are a little shorter than that, and
+<code>filterAndTrim</code> will then discard almost all of them. The failure appears at step 6 as
+<em>"No reads passed the filter"</em>. The fix is to switch to <code>mode: manual</code> with values a
+little below the length most reads still reach. See
+<a href="../../troubleshooting/">Troubleshooting</a>.</p>
+</div>
+<p>ITS is the exception: the cuts are still computed and recorded, but <code>truncLen</code> is
+overridden to <code>c(0, 0)</code> at the filtering step, because fungal ITS amplicons vary genuinely
+in length and a fixed cut would discard the short ones. Quality control for ITS comes from
+<code>truncQ</code> and <code>maxEE</code> instead. This override also wins over <code>manual</code> mode, so <code>manual_r1</code> /
+<code>manual_r2</code> have no effect for ITS.</p>
+<h2 id="6-asv-inference">6. ASV inference<a class="headerlink" href="#6-asv-inference" title="Permanent link">&para;</a></h2>
+<p>This is the DADA2 core: three rules, run in order.</p>
+<p><strong><code>dada_quality_plots</code></strong> aggregates the per-base quality profile across all primer-trimmed
+samples and saves it as PNG and PDF (<code>stats/dada2/stripped_read_R{1,2}_qual_plot.*</code>).
+Diagnostic only — it does not feed the truncation decision, which comes from Falco via
+<code>pick_trunclen</code>.</p>
+<p><strong><code>dada_filter</code></strong> runs DADA2's <code>filterAndTrim</code> per sample on the reads from <code>3.stripped/</code>,
+using the truncation lengths from <code>stats/trunclen.json</code>. Filtered reads go to <code>4.filtered/</code>,
+and a small per-sample JSON of in/out counts goes to <code>stats/dada2/</code>, where <code>dada_seqtab</code>
+collects it for read tracking. The gates:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Config key</th>
+<th>Shipped default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max expected errors <code>[R1, R2]</code></td>
+<td><code>amplicon.dada2.max_ee</code></td>
+<td><code>[2, 5]</code></td>
+</tr>
+<tr>
+<td>Adaptive 3′ quality trim</td>
+<td><code>amplicon.dada2.trunc_q</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td>Minimum read length</td>
+<td><code>amplicon.dada2.filter.min_len</code></td>
+<td><code>20</code></td>
+</tr>
+<tr>
+<td>Maximum read length</td>
+<td><code>amplicon.dada2.filter.max_len</code></td>
+<td><code>null</code> (no limit)</td>
+</tr>
+</tbody>
+</table>
+<p>Ambiguous bases are not tolerated (<code>maxN = 0</code>), and DADA2's own PhiX screen is always left
+off here (<code>rm.phix = FALSE</code>, hardcoded) — removing PhiX is step 1's job, when step 1 is
+enabled. For ITS, and only when a probe has run (<code>expected_length: auto</code>), <code>min_len</code> is
+instead derived from the probe distribution using <code>amplicon.dada2.filter.min_len_stat</code>
+(default <code>q1</code>) — the extracted ITS subregions are shorter than a read, so a probe-derived
+floor is meaningful there, whereas for the other markers the probe describes the full
+amplicon and would drop every read. Without a probe JSON, ITS falls back to the config
+<code>min_len</code> like every other marker.</p>
+<p><strong><code>dada_seqtab</code></strong> runs the denoising chain once over all samples together:</p>
+<ol>
+<li><code>learnErrors</code> on R1 and R2 separately — builds a run-specific error model from a
+   random subsample of reads (<code>amplicon.dada2.learn_errors.nbases</code>, default <code>1e8</code>).
+   Diagnostic plots go to <code>stats/dada2/filtered_read_R{1,2}_error_plot.*</code>.</li>
+<li><code>derepFastq</code> then <code>dada</code> — the denoising itself, which decides whether a rare sequence
+   is a real variant or a sequencing error of an abundant one.
+   <code>amplicon.dada2.dada.omega_a</code> (default <code>1e-40</code>) sets that sensitivity: it is the
+   abundance p-value a unique sequence must beat to be split off as its own ASV, so lower
+   values are stricter and yield fewer ASVs. The default is deliberately conservative;
+   <em>raising</em> it (say to <code>1e-20</code>) splits off more ASVs, at the cost of more false
+   positives. <code>amplicon.dada2.pool</code> (default <code>false</code>) controls whether samples are
+   processed independently, pseudo-pooled, or fully pooled.</li>
+<li><code>mergePairs</code> — joins R1 and R2 into full amplicons, requiring
+   <code>amplicon.dada2.merge.min_overlap</code> bp of overlap (default <code>12</code>) with at most
+   <code>max_mismatch</code> mismatches (default <code>0</code>) — both DADA2's own defaults.</li>
+<li><code>makeSequenceTable</code> then <code>removeBimeraDenovo</code> — builds the ASV × sample count table and
+   removes chimeras (<code>amplicon.dada2.chimera.method</code>, default <code>consensus</code>).</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Two <code>min_overlap</code> keys, two different jobs</p>
+<p><code>amplicon.min_overlap</code> is a <em>design</em> constraint used only when choosing truncation
+lengths — it makes sure the reads are cut so they can still meet. <code>amplicon.dada2.merge.min_overlap</code>
+is the <em>runtime</em> threshold <code>mergePairs</code> applies to each individual pair.</p>
+</div>
+<p>The outputs land in <code>5.dada2/</code>: <code>seqs.fasta</code> (ASV sequences), <code>seqtab_head_names.txt</code>
+(counts keyed by <code>ASV_#</code> ID), <code>seqtab_head_seqs.txt</code> (the same counts keyed by the full
+sequence) and <code>read.counts</code>.</p>
+<p><code>amplicon.seed</code> (default <code>42</code>) fixes the random-number draw in <code>learnErrors</code>, which is what
+makes a rerun on the same input reproduce the same ASVs.</p>
+<h2 id="7-marker-region-extraction-optional">7. Marker-region extraction <em>(optional)</em><a class="headerlink" href="#7-marker-region-extraction-optional" title="Permanent link">&para;</a></h2>
+<p>What this step does depends on the marker. An ITS ASV carries fragments of the flanking
+rRNA genes — 5.8S, SSU, LSU — outside the marker region proper; ITSx trims them, which
+makes ASV lengths directly comparable to the probe distribution and stops near-identical
+sequences from being split by their flanks alone. A 16S amplicon, by contrast, lies
+entirely inside the 16S gene, since every standard primer binds within it, so Metaxa2 has
+little or nothing to trim. There it acts as a filter instead, dropping ASVs it cannot
+recognise as SSU rRNA — off-target amplification — which is why the pre- and
+post-extraction length distributions normally coincide for 16S.</p>
+<p><code>target_extract</code> runs when <code>amplicon.extraction.enabled</code> is <code>true</code> <strong>and</strong> the marker has an
+extractor:</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>Extractor</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td>Metaxa2</td>
+<td>Run with <code>-t all</code> (all domains). Every extracted sequence is kept; domain-level pruning is left to the taxonomy filter in step 9.</td>
+</tr>
+<tr>
+<td>ITS</td>
+<td>ITSx</td>
+<td>Run with <code>-t all --only_full F</code>. Partial detections must be kept: a targeted ITS1 or ITS2 amplicon never contains the full ITS region. The region kept is the one named by <code>amplicon.its_region</code>.</td>
+</tr>
+<tr>
+<td>18S, gyrB, rpoB</td>
+<td><em>none</em></td>
+<td>No extractor exists in MetaFlux for these. Extraction is forced off with a warning if the config still asks for it.</td>
+</tr>
+</tbody>
+</table>
+<p>Both extractors write <code>seqs_extracted.fasta</code> and <code>seqtab_extracted_head_names.txt</code> into
+<code>5.dada2/</code>, alongside the extractor's own report (<code>metaxa2_extraction.results.txt</code> or
+<code>itsx_extraction.summary.txt</code>) and its full raw output directory, kept for inspection.
+ASVs the extractor could not resolve are dropped at this point.</p>
+<p>ITSx has one extra behaviour worth knowing: distinct ASVs whose extracted subregions come
+out identical — they differed only in the flanks that were just removed — are collapsed
+into a single representative and their per-sample counts summed. The mapping is recorded in
+<code>itsx_collapse_map.tsv</code>.</p>
+<h2 id="8-asv-length-filter">8. ASV length filter<a class="headerlink" href="#8-asv-length-filter" title="Permanent link">&para;</a></h2>
+<p>Off-target amplification and mis-merged pairs tend to show up as ASVs of implausible
+length. <code>dada_length_filter</code> keeps only ASVs inside a length window and writes
+<code>seqs_lenfilt.fasta</code>, <code>seqtab_lenfilt_head_names.txt</code> and
+<code>seqtab_lenfilt_head_seqs.txt</code> to <code>5.dada2/</code>.</p>
+<p>It is not a backstop for chimeras. A bimera carries both parents' primer sites and spans
+the same region, so it comes out the same length as a real amplicon and passes the window
+untouched. Chimeras are removed only by <code>removeBimeraDenovo</code> at step 6, and the chimeric
+fraction in <code>stats/read_tracking.txt</code> is what to watch.</p>
+<p>The filter runs <em>after</em> extraction, so the lengths it sees are the trimmed marker region —
+directly comparable to what the probe measured. The window comes from, in order of
+priority:</p>
+<ol>
+<li><code>amplicon.length_filter.range</code>, when set — an explicit <code>[min, max]</code>.</li>
+<li><code>mode: auto</code> with a probe available — <code>[probe q1 − window_margin, probe p95 + window_margin]</code>,
+   with <code>window_margin</code> defaulting to <code>50</code> bp. P95 rather than P99 sets a tighter ceiling.
+   The ITS probe is the case to watch: it reads lengths straight off pre-extracted
+   ITS1/ITS2 subregions, so its upper tail is real length variation between fungal
+   lineages, and a p95 ceiling will clip genuinely long ITS ASVs, Basidiomycota most
+   of all. For ITS, check
+   <code>stats/dada2/asv_length_hist.png</code> against the window and set an explicit
+   <code>length_filter.range</code> if long-ITS taxa matter.</li>
+<li><code>mode: auto</code> with no probe — a fallback of ±15% around <code>expected_length</code>.</li>
+</ol>
+<p>Two diagnostics go to <code>stats/dada2/</code>. <code>asv_length_stats.json</code> always records three
+distributions — pre-extraction, filter source, and kept. <code>asv_length_hist.png</code> overlays the
+pre-extraction series only when extraction ran; when no extractor applies, the filter
+source is simply the DADA2 output. The gap between the pre-extraction and filter-source
+distributions is exactly how much Metaxa2 or ITSx trimmed; for ITS that gap is usually
+large, for 16S the two normally coincide. If the window ends up excluding everything, the
+rule stops with an error rather than writing an empty table.</p>
+<p>The window logic is covered in full on the
+<a href="../length-and-truncation/">amplicon length and truncation</a> page.</p>
+<h2 id="9-taxonomy-assignment">9. Taxonomy assignment<a class="headerlink" href="#9-taxonomy-assignment" title="Permanent link">&para;</a></h2>
+<p><code>assign_taxonomy</code> classifies the length-filtered ASVs and writes the final tables to
+<code>6.taxonomy/</code>. Two implementations exist and one is chosen when the workflow is parsed,
+based on <code>amplicon.taxonomy.method</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Tool</th>
+<th>Threshold key</th>
+<th>Available for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rdp</code></td>
+<td>DADA2 <code>assignTaxonomy</code> (naive Bayesian RDP classifier), plus <code>addSpecies</code> for 16S</td>
+<td><code>min_boot</code> (default <code>80</code>)</td>
+<td>all five markers</td>
+</tr>
+<tr>
+<td><code>sintax</code></td>
+<td><code>vsearch --sintax</code></td>
+<td><code>sintax_cutoff</code> (default <code>0.8</code>, roughly equivalent to <code>min_boot: 80</code>)</td>
+<td>16S, ITS, 18S</td>
+</tr>
+</tbody>
+</table>
+<p>gyrB and rpoB are RDP-only: their reference releases ship a DADA2 training set and no
+SINTAX build, so <code>method: sintax</code> is rejected at startup with a clear message rather than
+failing later.</p>
+<p>The reference database follows from the marker — SILVA for 16S, UNITE for ITS, PR2 for 18S,
+DD7RZ8 for gyrB, FROGS RefSeq for rpoB — and is fetched on first use. Two of them arrive
+by way of a local conversion step rather than a plain download: the 16S SINTAX database is
+built from the SILVA DADA2 trainset by <code>convert_silva_sintax</code>, and the rpoB reference is
+rebuilt from the FROGS release by <code>convert_rpob_to_dada2</code>. See the
+<a href="../markers/">marker pages</a> for what each one contains.</p>
+<p>Both paths write the same three tables; the <code>sintax</code> path additionally leaves
+<code>_sintax_raw.tsv</code>, the raw VSEARCH output, for troubleshooting.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Rows</th>
+<th>Columns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>asv_table.txt</code></td>
+<td><code>ASV_#</code> IDs</td>
+<td>per-sample counts + taxonomy</td>
+</tr>
+<tr>
+<td><code>asv_table_seqs.txt</code></td>
+<td>ASV sequences</td>
+<td>per-sample counts + taxonomy</td>
+</tr>
+<tr>
+<td><code>taxon_seq_table.txt</code></td>
+<td><code>ASV_#</code> IDs</td>
+<td>one column per rank + the sequence</td>
+</tr>
+</tbody>
+</table>
+<p>The taxonomy string is built from the marker's rank model, so it has the right depth for
+the reference in use — the Linnaean seven for 16S, ITS and rpoB, and nine ranks for
+PR2/18S under <code>method: rdp</code> (PR2's UTAX file merges Division and Subdivision into one
+field, so <code>method: sintax</code> yields eight). gyrB is seven ranks deep too, but its first rank
+is the DD7RZ8 paralog tag — <code>gyrB</code> for the true gene, <code>other</code> for a co-amplified paralog —
+rather than a kingdom, so a gyrB lineage carries no <code>k__</code> segment at all. See the
+<a href="../markers/gyrb/">gyrB page</a>.</p>
+<p>The last thing the step does is apply the keep/discard contaminant filter
+(<code>amplicon.taxonomy.filter</code>), which matches whole rank segments of each ASV's lineage. It
+has no built-in default: left unset, both lists resolve to <code>[]</code> and nothing is filtered.
+The lists have to match the marker being run — a 16S keep list applied to an 18S run would
+discard every ASV. It is described on the
+<a href="../taxon-filter/">keeping and discarding taxa</a> page.</p>
+<h2 id="read-tracking-and-the-qc-report">Read tracking and the QC report<a class="headerlink" href="#read-tracking-and-the-qc-report" title="Permanent link">&para;</a></h2>
+<p>Two rules close the run.</p>
+<p><code>aggregate_read_counts</code> joins the per-stage counts into <code>stats/read_tracking.txt</code>: one row
+per sample, one column per stage, in pipeline order — <code>raw</code>, <code>nophix</code> (only when PhiX
+removal ran), <code>stripped</code>, <code>filtered</code>, <code>denoised</code>, <code>merged</code>, <code>non_chimeric</code>,
+<code>post_extraction</code> (only when extraction ran), <code>post_length_filter</code> and
+<code>post_taxonomy_filter</code>. This is the first file to open when a run produces fewer ASVs than
+expected: it shows which step consumed the reads.</p>
+<p><code>multiqc</code> collects the Falco reports, the Cutadapt JSONs and the bowtie2 PhiX logs into
+<code>multiqc/multiqc_report.html</code>.</p>
+<h2 id="what-changes-between-markers">What changes between markers<a class="headerlink" href="#what-changes-between-markers" title="Permanent link">&para;</a></h2>
+<p>Everything above is the same for all five markers except the four columns below.</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>Probe substrate and mode</th>
+<th>Extractor</th>
+<th>Taxonomy reference</th>
+<th>Methods</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../markers/16S/">16S</a></td>
+<td>SILVA, in-silico PCR</td>
+<td>Metaxa2</td>
+<td>SILVA (+ species assignment)</td>
+<td>rdp, sintax</td>
+</tr>
+<tr>
+<td><a href="../markers/its/">ITS</a></td>
+<td>UNITE UCHIME ITS1/ITS2, direct</td>
+<td>ITSx</td>
+<td>UNITE</td>
+<td>rdp, sintax</td>
+</tr>
+<tr>
+<td><a href="../markers/18S/">18S</a></td>
+<td>SILVA-Euk, in-silico PCR</td>
+<td>none</td>
+<td>PR2</td>
+<td>rdp, sintax</td>
+</tr>
+<tr>
+<td><a href="../markers/gyrb/">gyrB</a></td>
+<td>DD7RZ8, direct</td>
+<td>none</td>
+<td>DD7RZ8</td>
+<td>rdp only</td>
+</tr>
+<tr>
+<td><a href="../markers/rpob/">rpoB</a></td>
+<td>FROGS RefSeq, in-silico PCR</td>
+<td>none</td>
+<td>FROGS RefSeq</td>
+<td>rdp only</td>
+</tr>
+</tbody>
+</table>
+<p>Start with the <a href="../markers/">marker pages</a> before setting up a run: each one covers
+the primers the reference was built for, the filter tokens that make sense for it, and the
+quirks that follow from its database.</p>
+<h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../length-and-truncation/">Amplicon length and truncation</a> — steps 4, 5 and 8 in depth.</li>
+<li><a href="../taxon-filter/">Keeping and discarding taxa</a> — the step-9 contaminant filter.</li>
+<li><a href="../markers/">Markers</a> — per-marker references, primers and defaults.</li>
+<li><a href="../../reference/output/">Output files</a> — what every file under <code>out_dir</code> contains.</li>
+<li><a href="../../reference/configuration/">Configuration</a> — the full config key reference.</li>
+<li><a href="../../troubleshooting/">Troubleshooting</a> — the failure modes worth recognising early.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

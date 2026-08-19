@@ -1,0 +1,4302 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../../shotgun/read-extraction/">
+      
+      
+        <link rel="next" href="../output/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Configuration - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-the-file-is-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the file is loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-file-a-setting-actually-comes-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which file a setting actually comes from
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Which file a setting actually comes from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-config-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The config layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#marker-packs-live-beside-the-config-not-inside-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker packs live beside the config, not inside it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-a-pack-and-the-config-do-interact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where a pack and the config do interact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where a pack and the config do interact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#region-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Region extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sintax-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SINTAX classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-four-lines-that-define-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four lines that define a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-selection-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode selection [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marker-databases-are-declared-by-the-marker-packs-not-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker databases are declared by the marker packs, not here
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-parameters-amplicon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon parameters [amplicon]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Amplicon parameters [amplicon]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marker-region-and-seed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker, region and seed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phix-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PhiX removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#amplicon-length" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon length
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primer-trimming-cutadapt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primer trimming (Cutadapt)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#truncation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Truncation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asv-length-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ASV length filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#target-region-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target-region extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxonomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#taxon-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxon filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dada2-tier-1-operational-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DADA2 — tier 1, operational parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dada2-tier-2-advanced-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DADA2 — tier 2, advanced tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-parameters-shotgun" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun parameters [shotgun]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shotgun parameters [shotgun]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decontamination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decontamination
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapter-and-quality-trimming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter and quality trimming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kraken2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kraken2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bracken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bracken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#otu-table-taxon-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTU-table taxon filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-taxon-read-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-taxon read extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources [shared]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resources [shared]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#threads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-the-file-is-loaded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the file is loaded
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-file-a-setting-actually-comes-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which file a setting actually comes from
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Which file a setting actually comes from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-config-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The config layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#marker-packs-live-beside-the-config-not-inside-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker packs live beside the config, not inside it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-a-pack-and-the-config-do-interact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where a pack and the config do interact
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where a pack and the config do interact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#region-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Region extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sintax-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SINTAX classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-four-lines-that-define-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four lines that define a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-selection-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode selection [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output [shared]
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marker-databases-are-declared-by-the-marker-packs-not-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker databases are declared by the marker packs, not here
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-parameters-amplicon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon parameters [amplicon]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Amplicon parameters [amplicon]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#marker-region-and-seed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Marker, region and seed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phix-removal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PhiX removal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#amplicon-length" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon length
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primer-trimming-cutadapt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primer trimming (Cutadapt)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#truncation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Truncation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asv-length-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ASV length filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#target-region-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target-region extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxonomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#taxon-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxon filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dada2-tier-1-operational-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DADA2 — tier 1, operational parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dada2-tier-2-advanced-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DADA2 — tier 2, advanced tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-parameters-shotgun" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun parameters [shotgun]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shotgun parameters [shotgun]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decontamination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decontamination
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapter-and-quality-trimming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapter and quality trimming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kraken2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kraken2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bracken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bracken
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#otu-table-taxon-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTU-table taxon filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-taxon-read-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-taxon read extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources [shared]
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resources [shared]">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#threads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/reference/configuration.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
+<p>Everything MetaFlux does is decided by one YAML file. There are no command-line
+switches for analysis parameters — the run is fully described by its config, which
+makes it easy to archive next to the results and re-run later.</p>
+<p>The shipped template is <code>config/config.yaml</code>. It is a template: the <code>/path/to/...</code>
+entries are placeholders that must be replaced before anything runs.</p>
+<h2 id="how-the-file-is-loaded">How the file is loaded<a class="headerlink" href="#how-the-file-is-loaded" title="Permanent link">&para;</a></h2>
+<p>The Snakefile hard-codes <code>configfile: "config/config.yaml"</code>, so that file is
+<strong>always</strong> read as a base layer. A file passed with <code>--configfile</code> is merged on top
+of it, and <code>--config key=value</code> on the command line overrides both. A common pattern
+is to copy the template to <code>config/config.local.yaml</code> (git-ignored) and run with
+<code>--configfile config/config.local.yaml</code>, keeping the shipped template untouched.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>snakemake<span class="w"> </span>--sdm<span class="w"> </span>conda<span class="w"> </span>--cores<span class="w"> </span><span class="m">16</span><span class="w"> </span>--configfile<span class="w"> </span>config/config.local.yaml<span class="w"> </span>--dry-run
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Why the taxon filter lists ship commented out</p>
+<p>Because the template is always loaded underneath the run config, any concrete
+value left in it silently applies to runs that do not set their own. That is
+harmless for a thread count and destructive for
+<code>amplicon.taxonomy.filter.keep</code>: a 16S <code>keep: [k__Bacteria, k__Archaea]</code>
+leaking into an 18S run would discard every eukaryotic ASV. The <code>keep</code> and
+<code>discard</code> lines are therefore commented out in the template, so unset they
+resolve to <code>[]</code> — no filtering, which fails safe.</p>
+</div>
+<p>Paths may be absolute or relative. <strong>Relative paths resolve against the directory
+snakemake is invoked from</strong>, not against the location of the config file. Absolute
+paths are safest, especially on a cluster.</p>
+<p>Each section below is tagged with the mode that consumes it: <code>[shared]</code>,
+<code>[amplicon]</code>, or <code>[shotgun]</code>. Keys belonging to the mode that is not running are
+ignored entirely.</p>
+<h2 id="which-file-a-setting-actually-comes-from">Which file a setting actually comes from<a class="headerlink" href="#which-file-a-setting-actually-comes-from" title="Permanent link">&para;</a></h2>
+<p>Four kinds of file get mentioned across this site, and only three of them decide
+anything. It is worth being explicit about which is which, because they are easy to
+confuse once you are reading the documentation and the config side by side.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Where</th>
+<th>Read by</th>
+<th>Can it change a run?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>These documentation pages</td>
+<td><code>docs/**.md</code></td>
+<td>people</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td>The config template</td>
+<td><code>config/config.yaml</code></td>
+<td>Snakemake</td>
+<td>Yes — always, as the base layer</td>
+</tr>
+<tr>
+<td>A run config</td>
+<td>any <code>.yaml</code> given to <code>--configfile</code></td>
+<td>Snakemake</td>
+<td>Yes — merged on top</td>
+</tr>
+<tr>
+<td>A marker pack</td>
+<td><code>workflow/markers/&lt;type&gt;.yaml</code></td>
+<td>Snakemake</td>
+<td>Yes — but in its own namespace</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Documentation pages set nothing</p>
+<p>Everything on this site is prose rendered from Markdown, including the per-marker
+pages. <strong>Nothing under <code>docs/</code> is ever read by Snakemake.</strong> The YAML blocks shown
+on these pages are illustrations of what to put in your own config — they are not
+in force anywhere, and they cannot override or be overridden by anything.</p>
+<p>So the question "if two pages disagree, which one wins?" has no winner: neither
+does. A disagreement between two documentation pages is simply a documentation
+bug. The file that decides is <code>config/config.yaml</code> plus whatever you merge on top
+of it.</p>
+</div>
+<h3 id="the-config-layers">The config layers<a class="headerlink" href="#the-config-layers" title="Permanent link">&para;</a></h3>
+<p>Three layers, each beating the one before it:</p>
+<ol>
+<li><strong><code>config/config.yaml</code></strong> — the Snakefile hard-codes <code>configfile: "config/config.yaml"</code>.
+   That path is resolved against the directory snakemake <strong>runs in</strong>, not against the
+   Snakefile, so it loads on every run launched from the repository root — the supported
+   way to invoke MetaFlux. Started from somewhere else, Snakemake either aborts
+   (<code>Workflow defines configfile config/config.yaml but it is not present</code>) or, if you
+   passed <code>--configfile</code>, silently uses that file <em>alone</em> with no template underneath.</li>
+<li><strong><code>--configfile my_run.yaml</code></strong> — merged on top, key by key, at any depth.</li>
+<li><strong><code>--config key=value</code></strong> — command line, beats both. Only <strong>top-level</strong> keys can be
+   named this way: <code>--config mode=shotgun</code> works, <code>--config amplicon.dada2.merge.min_overlap=99</code>
+   is rejected outright. Nested settings belong in a <code>--configfile</code>.</li>
+</ol>
+<p>The merge in step 2 is nested rather than wholesale, which is what makes short run
+configs practical. A run config naming two settings changes exactly those two:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># my_run.yaml — an overlay that changes two settings</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">dada2</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">merge</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">min_overlap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">output</span><span class="p">:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">out_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/my_run_out</span>
+</code></pre></div>
+<p>Running with <code>--configfile my_run.yaml</code> gives <code>min_overlap: 10</code> and the new output
+directory, while <code>max_mismatch</code>, <code>just_concatenate</code>, every <code>trunc_len</code> key and
+everything else still come from the template. You never have to restate a block to
+change one value inside it.</p>
+<p>This is an <strong>overlay, not a complete run config</strong>: it inherits the template's
+<code>/path/to/...</code> placeholders for <code>input.fastq_dir</code> and <code>amplicon.primers</code>, which still
+have to be replaced before anything runs.</p>
+<div class="admonition warning">
+<p class="admonition-title">The merge recurses only through blocks</p>
+<p>Key-by-key merging happens as long as what you write at each level is itself a
+block. Write a key with a list, a scalar, or <strong>no value at all</strong>, and it replaces
+that whole subtree in the template instead of merging into it.</p>
+<p>The dangerous form is the last one, because it looks like an unfinished thought
+rather than an instruction:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">trunc_len</span><span class="p">:</span><span class="w">        </span><span class="c1"># &lt;- no value: YAML reads this as null</span>
+</code></pre></div>
+<p>That silently deletes all eight <code>trunc_len</code> keys the template provides, and the run
+fails later with a <code>KeyError</code> from deep inside the workflow rather than a config
+error. Same for <code>max_ee: [1]</code>, which replaces <code>[2, 5]</code> outright rather than merging
+element-wise. If you do not intend to change a block, leave it out entirely.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">The flip side, and why <code>keep</code>/<code>discard</code> ship commented out</p>
+<p>Because the template is <em>always</em> underneath, a concrete value left in it silently
+applies to any run that does not set its own. Harmless for a thread count; not
+harmless for <code>amplicon.taxonomy.filter.keep</code>, where a 16S <code>[k__Bacteria, k__Archaea]</code>
+left in the template would discard every ASV of an 18S run. That is why those two
+lines ship commented out — see the warning above.</p>
+</div>
+<h3 id="marker-packs-live-beside-the-config-not-inside-it">Marker packs live beside the config, not inside it<a class="headerlink" href="#marker-packs-live-beside-the-config-not-inside-it" title="Permanent link">&para;</a></h3>
+<p>A marker pack holds <em>facts about the marker</em>: which database the classifier uses, which
+reference the amplicon-length probe measures, whether a region extractor exists, how many
+slots the marker's rank model has. A run config holds <em>choices about this
+experiment</em>: primers, expected length, truncation, taxon filter, paths.</p>
+<p>The two are kept in genuinely separate namespaces. A pack is read into <code>MARKERS[type]</code>
+and never merged into <code>config</code>, so a setting cannot silently arrive from both places.
+This is enforced by construction rather than convention: across all five shipped packs,
+<strong>no pack key appears anywhere under <code>amplicon:</code> in the config template</strong>. The only name
+the two share at all is <code>references</code>, handled below.</p>
+<p>If you genuinely need a different pack — another database release, a different rank
+model — put a file of the same name in <code>config/markers/</code>. That is a whole-file
+replacement, not a per-key merge: your file supersedes the shipped pack entirely, so it
+must declare everything the pack needs, not just the part you wanted to change.</p>
+<h3 id="where-a-pack-and-the-config-do-interact">Where a pack and the config do interact<a class="headerlink" href="#where-a-pack-and-the-config-do-interact" title="Permanent link">&para;</a></h3>
+<p>Two directions, and they are not symmetrical.</p>
+<p><strong>A config entry overriding a pack</strong> happens in exactly one place: database locations.
+Every pack declares a default filename and download URL for each database it owns, and
+the run config only has to name one when you want to <strong>relocate</strong> it — to point at a
+copy already on a shared filesystem rather than let MetaFlux download its own:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">references</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">silva</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz</span>
+</code></pre></div>
+<p>A <strong>non-empty</strong> <code>references.*</code> entry wins; the pack default is used otherwise. The test
+is truthiness, so an entry left <code>null</code> or blank counts as absent and falls back to the
+pack silently rather than erroring. The key that relocates each database is listed in
+<a href="../../amplicon/markers/">Markers</a>.</p>
+<p><strong>A pack overriding the config</strong> is the other direction, and it is the one case where
+the workflow does not do what your config literally said. It is worth knowing about,
+because if you copy a config between markers you will meet it.</p>
+<p>It happens when a setting asks for something that does not exist <em>for the marker you
+chose</em> — not something unwise, something genuinely unavailable. Two cases ship today,
+and they behave differently on purpose:</p>
+<table>
+<thead>
+<tr>
+<th>You asked for</th>
+<th>On these markers</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>extraction.enabled: true</code></td>
+<td>18S, gyrB, rpoB</td>
+<td><strong>warning, the run continues</strong> with extraction off</td>
+</tr>
+<tr>
+<td><code>taxonomy.method: sintax</code></td>
+<td>gyrB, rpoB</td>
+<td><strong>error, the run stops</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="region-extraction">Region extraction<a class="headerlink" href="#region-extraction" title="Permanent link">&para;</a></h4>
+<p>Metaxa2 cuts the ribosomal gene out of a 16S ASV; ITSx cuts ITS1 or ITS2 out of a
+fungal one. gyrB and rpoB are protein-coding genes, so neither tool applies to them,
+and the 18S pack declares no extractor either. All three say <code>extractor: none</code>, and the
+workflow builds no extraction step at all for them.</p>
+<p>If your config still says <code>extraction.enabled: true</code>, the pipeline would go looking for
+<code>seqs_extracted.fasta</code> — a file no rule produces — and Snakemake would stop with a
+missing-input error naming a filename you never asked for. Instead MetaFlux turns the
+setting off itself and tells you on stderr:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[MetaFlux] warning: marker 18S has no target-region extractor;
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ignoring amplicon.extraction.enabled: true (no extraction step will run)
+</code></pre></div>
+<p>Note this one is a <strong>warning</strong> — the run proceeds. If you adapted a 16S config for an
+18S run, extraction quietly not happening is the correct outcome, not a fault to chase.</p>
+<h4 id="sintax-classification">SINTAX classification<a class="headerlink" href="#sintax-classification" title="Permanent link">&para;</a></h4>
+<p>VSEARCH's <code>--sintax</code> needs a database in its own format. SILVA, UNITE and PR2 all have
+one, so 16S, ITS and 18S can be classified either way. gyrB's DD7RZ8 trainset and
+rpoB's FROGS build ship an RDP-style training set only, so those two packs leave
+<code>taxonomy_sintax_db</code> empty. Asking for sintax there stops the run at once, naming the
+alternative:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[MetaFlux] marker gyrB has no SINTAX reference database, so
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>amplicon.taxonomy.method: sintax is not available for it. Use method: rdp.
+</code></pre></div>
+<p>This one errors rather than falling back, and the asymmetry with the case above is
+deliberate. Switching off a step that could not have run costs you nothing you could
+otherwise have had. Silently classifying with a different algorithm than the one you
+asked for would change your results without telling you — so it refuses instead.</p>
+<p>Neither case is really the pack "winning an argument". Nothing is being weighed against
+anything: the config asked for a tool that does not exist for that marker, and the pack
+is simply where that fact happens to be written down.</p>
+<h2 id="the-four-lines-that-define-a-run">The four lines that define a run<a class="headerlink" href="#the-four-lines-that-define-a-run" title="Permanent link">&para;</a></h2>
+<p>Most of the file is tuning that can stay at its defaults. Four settings describe
+what the analysis actually is:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td><code>amplicon</code> or <code>shotgun</code></td>
+</tr>
+<tr>
+<td><code>amplicon.type</code></td>
+<td><code>16S</code>, <code>ITS</code>, <code>18S</code>, <code>gyrB</code>, <code>rpoB</code> (amplicon mode only)</td>
+</tr>
+<tr>
+<td><code>input.fastq_dir</code></td>
+<td>where the paired FASTQs are</td>
+</tr>
+<tr>
+<td><code>output.out_dir</code></td>
+<td>where results go</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mode-selection-shared">Mode selection <code>[shared]</code><a class="headerlink" href="#mode-selection-shared" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">amplicon</span><span class="w">          </span><span class="c1"># amplicon | shotgun</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td>Chooses which set of rules is built into the workflow graph</td>
+<td><code>amplicon</code></td>
+<td>Case-insensitive. Anything other than <code>amplicon</code> or <code>shotgun</code> stops the run at parse time.</td>
+</tr>
+</tbody>
+</table>
+<p>The mode is chosen here, never auto-detected from the data. Amplicon mode requires
+primer FASTAs; shotgun mode supports fetching reads from an NCBI BioProject and
+removing an arbitrary host genome. See
+<a href="../../getting-started/choosing-a-mode/">choosing a mode</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">The mode must match the data</p>
+<p>Both modes accept <code>{sample}_R1/_R2</code> filenames, so pointing amplicon rules at
+shotgun reads does not necessarily error — it just runs the wrong analysis.
+The mode can be flipped for a single run without editing the file:
+<code>--config mode=shotgun</code>.</p>
+</div>
+<hr />
+<h2 id="input-shared">Input <code>[shared]</code><a class="headerlink" href="#input-shared" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">input</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">fastq_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/fastq_dir</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">bioproject</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">        </span><span class="c1"># e.g. PRJNA603575  — shotgun only</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">accession_list</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">    </span><span class="c1"># e.g. [SRR11605259, SRR11605260]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fastq_dir</code></td>
+<td>Directory holding the paired FASTQs for every sample</td>
+<td><code>/path/to/fastq_dir</code> (placeholder)</td>
+<td>Created if it does not exist, because BioProject mode downloads into it. Sample names come from globbing this directory.</td>
+</tr>
+<tr>
+<td><code>bioproject</code></td>
+<td>NCBI BioProject accession to fetch from SRA instead of using local files</td>
+<td><code>null</code></td>
+<td>Shotgun only. <code>null</code> means use whatever is already in <code>fastq_dir</code>.</td>
+</tr>
+<tr>
+<td><code>accession_list</code></td>
+<td>Restricts a BioProject fetch to named runs</td>
+<td><code>null</code></td>
+<td>A YAML list of run accessions. Useful when a BioProject mixes WGS with amplicon or RNA-Seq runs.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>File naming.</strong> Amplicon mode requires <code>{sample}_R1.fastq.gz</code> /
+<code>{sample}_R2.fastq.gz</code> and stops with a clear message if it finds SRA-style
+<code>{sample}_1/_2</code> naming instead. Shotgun mode accepts either convention and detects
+which one is in use. The reads themselves must be <code>.fastq.gz</code> or the uncompressed
+<code>.fastq</code>: <code>fq</code> and <code>fq.gz</code> pass the startup check but are not resolved by the
+rules afterwards. The extension check only looks at the R1 files — a mixture
+there is rejected rather than half-processed, while a mismatched R2 extension is
+not caught, so the whole directory is best kept consistent.</p>
+<p>Sample names are taken from the part of the filename before <code>_R1</code>/<code>_1</code>. Names
+containing any of <code>* # @ % ^ / ! ? &amp; : ; | &lt; &gt;</code> or a space are rejected at parse
+time, since Snakemake treats those characters specially. Underscores are fine.</p>
+<p><strong>BioProject mode.</strong> When <code>bioproject</code> is set, MetaFlux queries NCBI e-utils,
+keeps only runs whose library layout is <code>PAIRED</code>, and caches the run table as
+<code>{bioproject}_runinfo.csv</code> inside <code>fastq_dir</code> so later invocations work offline.
+The <code>download_sra</code> rule then fetches each run with <code>prefetch</code> plus <code>fasterq-dump</code>
+and renames SRA's <code>_1</code>/<code>_2</code> output to <code>_R1</code>/<code>_R2</code>.</p>
+<hr />
+<h2 id="output-shared">Output <code>[shared]</code><a class="headerlink" href="#output-shared" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">output</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">out_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/output_dir</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>out_dir</code></td>
+<td>Root directory for every result, log and benchmark of the run</td>
+<td><code>/path/to/output_dir</code> (placeholder)</td>
+<td>Logs land in <code>out_dir/logs/</code>, benchmark timings in <code>out_dir/benchmarks/</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The directory layout inside <code>out_dir</code> differs by mode and is described in
+<a href="../output/">output files</a>.</p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">references</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">refdb_root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refdb</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">phix</span><span class="p">:</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">fasta</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refdb/phix/phix.fna</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">fetch_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">kraken_db</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/kraken2_db</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>refdb_root</code></td>
+<td>Cache directory for the marker reference databases MetaFlux downloads itself</td>
+<td><code>refdb</code></td>
+<td>Amplicon only. Shared across runs and across output directories, so a database is fetched once and reused.</td>
+</tr>
+<tr>
+<td><code>phix.fasta</code></td>
+<td>Local path of the PhiX genome</td>
+<td><code>refdb/phix/phix.fna</code></td>
+<td>Amplicon mode also builds a bowtie2 index next to it (same basename, <code>.bt2</code> files).</td>
+</tr>
+<tr>
+<td><code>phix.fetch_url</code></td>
+<td>Where the PhiX genome is downloaded from if missing</td>
+<td>NCBI FTP, <code>GCF_000819615.1_ViralProj14015</code></td>
+<td>Fetched once by the <code>fetch_phix</code> rule and gunzipped.</td>
+</tr>
+<tr>
+<td><code>kraken_db</code></td>
+<td>Directory of a prebuilt Kraken2/Bracken index</td>
+<td><code>/path/to/kraken2_db</code> (placeholder)</td>
+<td>Shotgun only, user-supplied — MetaFlux never builds or downloads it. The run stops immediately if the path does not exist.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>PhiX is used by both modes, but differently.</strong> In amplicon mode the FASTA above is
+fetched and indexed, and bowtie2 maps reads against it. In shotgun mode BBDuk uses
+the <code>phix174_ill.ref.fa.gz</code> reference bundled inside the BBTools conda package, so
+neither the download nor the index is needed there.</p>
+<h3 id="marker-databases-are-declared-by-the-marker-packs-not-here">Marker databases are declared by the marker packs, not here<a class="headerlink" href="#marker-databases-are-declared-by-the-marker-packs-not-here" title="Permanent link">&para;</a></h3>
+<p>SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8 and FROGS are <strong>not</strong> listed in the
+config. Each marker pack (<code>workflow/markers/&lt;type&gt;.yaml</code>) declares its own database
+filenames and download URLs, and MetaFlux fetches (and where needed converts) them
+on first use into <code>refdb_root</code>. An entry under <code>references</code> is only needed to
+<strong>relocate</strong> a database — for instance to point at a copy already on a shared
+filesystem:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">references</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">silva</span><span class="p">:</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz</span>
+</code></pre></div>
+<p>When such a key is present it wins; otherwise the path is <code>refdb_root</code> joined with
+the pack's declared filename. The full set of relocatable keys:</p>
+<table>
+<thead>
+<tr>
+<th>Config key</th>
+<th>Marker</th>
+<th>Default location under <code>refdb_root</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>silva.train</code></td>
+<td>16S</td>
+<td><code>silva/silva_nr99_v138.2_toGenus_trainset.fa.gz</code></td>
+</tr>
+<tr>
+<td><code>silva.species</code></td>
+<td>16S</td>
+<td><code>silva/silva_v138.2_assignSpecies.fa.gz</code></td>
+</tr>
+<tr>
+<td><code>silva.sintax</code></td>
+<td>16S</td>
+<td><code>silva/silva_nr99_v138.2_sintax.fa.gz</code> (derived from the trainset, not downloaded)</td>
+</tr>
+<tr>
+<td><code>unite.fasta</code></td>
+<td>ITS</td>
+<td><code>unite/sh_general_release_dynamic_s_all_19.02.2025.fasta</code></td>
+</tr>
+<tr>
+<td><code>unite.sintax</code></td>
+<td>ITS</td>
+<td><code>unite/utax_reference_dataset_all_19.02.2025.fasta.gz</code></td>
+</tr>
+<tr>
+<td><code>unite.uchime_its1</code></td>
+<td>ITS</td>
+<td><code>unite/uchime_its1.fasta</code></td>
+</tr>
+<tr>
+<td><code>unite.uchime_its2</code></td>
+<td>ITS</td>
+<td><code>unite/uchime_its2.fasta</code></td>
+</tr>
+<tr>
+<td><code>silva_euk.fasta</code></td>
+<td>18S</td>
+<td><code>silva_euk/silva_132.18s.dada2.fa.gz</code></td>
+</tr>
+<tr>
+<td><code>pr2.dada2</code></td>
+<td>18S</td>
+<td><code>pr2/pr2_SSU_dada2.fasta.gz</code></td>
+</tr>
+<tr>
+<td><code>pr2.utax</code></td>
+<td>18S</td>
+<td><code>pr2/pr2_SSU_UTAX.fasta.gz</code></td>
+</tr>
+<tr>
+<td><code>gyrb.dada2</code></td>
+<td>gyrB</td>
+<td><code>gyrb/train_set_gyrB_v6.fa.gz</code></td>
+</tr>
+<tr>
+<td><code>rpob.frogs</code></td>
+<td>rpoB</td>
+<td><code>rpob/rpob_refseq_cc_20240707_dada2.fa.gz</code> (the converted DADA2 trainset)</td>
+</tr>
+</tbody>
+</table>
+<p>A reference that has neither a config entry nor a pack default stops the run with a
+message naming both places it could be fixed.</p>
+<hr />
+<h2 id="amplicon-parameters-amplicon">Amplicon parameters <code>[amplicon]</code><a class="headerlink" href="#amplicon-parameters-amplicon" title="Permanent link">&para;</a></h2>
+<p>Ignored entirely when <code>mode: shotgun</code>. The one exception: if <code>amplicon.primers.fwd</code>
+or <code>.rev</code> is filled in during a shotgun run, MetaFlux prints a warning that they are
+being ignored — so a leftover value is visible rather than silently misleading.</p>
+<h3 id="marker-region-and-seed">Marker, region and seed<a class="headerlink" href="#marker-region-and-seed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16S</span><span class="w">             </span><span class="c1"># 16S | ITS | 18S | gyrB | rpoB</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">its_region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ITS2</span><span class="w">      </span><span class="c1"># ITS1 | ITS2 (ignored unless type == ITS)</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td>Selects the marker pack: which databases are used, whether a region extractor runs, how the amplicon length is measured, and which taxonomic ranks the output carries</td>
+<td><code>16S</code></td>
+<td>Matched case-insensitively, so <code>gyrb</code>, <code>GYRB</code> and <code>gyrB</code> all resolve to the shipped <code>gyrB</code> pack. An unknown value lists the available markers and stops.</td>
+</tr>
+<tr>
+<td><code>its_region</code></td>
+<td>Which ITS subregion was amplified</td>
+<td><code>ITS2</code></td>
+<td>Only read when <code>type: ITS</code>. Selects the UNITE UCHIME probe reference and the ITSx region kept after extraction.</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>Fixes the random number generator for the stochastic steps of the amplicon path</td>
+<td><code>42</code></td>
+<td>Passed to <code>dada_seqtab</code> and <code>assign_taxonomy</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Each marker has its own page with the databases it uses and its quirks:
+<a href="../../amplicon/markers/16S/">16S</a>, <a href="../../amplicon/markers/its/">ITS</a>,
+<a href="../../amplicon/markers/18S/">18S</a>, <a href="../../amplicon/markers/gyrb/">gyrB</a>,
+<a href="../../amplicon/markers/rpob/">rpoB</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">How far the seed goes</p>
+<p>DADA2's <code>learnErrors(randomize = TRUE)</code> and <code>assignTaxonomy</code>'s bootstrap
+confidence are fully reproducible with this seed at any thread count —
+verified by running the same data twice at 8 threads and getting identical
+output. VSEARCH's <code>--sintax</code> is not: it races several threads on one random
+number stream, so a handful of per-rank confidence values can still drift
+between runs. For byte-identical <code>sintax</code> output, set
+<code>resources.threads.assign_taxonomy: 1</code>, which is slower but single-streamed.</p>
+</div>
+<h3 id="phix-removal">PhiX removal<a class="headerlink" href="#phix-removal" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="w">  </span><span class="nt">decontamination</span><span class="p">:</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nt">remove_phix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove_phix</code></td>
+<td>Maps reads against the PhiX genome with bowtie2 and keeps the pairs that do not align</td>
+<td><code>true</code></td>
+<td>Set <code>false</code> to skip. The <code>2.no_phix/</code> stage, its read count and the <code>nophix</code> Falco QC stage then do not exist, and Cutadapt reads the raw FASTQs directly.</td>
+</tr>
+</tbody>
+</table>
+<p>PhiX is spiked into most Illumina runs as a low-diversity balancing control; those
+reads are not part of the sample and would be carried into ASV inference.</p>
+<h3 id="primers">Primers<a class="headerlink" href="#primers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="w">  </span><span class="nt">primers</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nt">fwd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/fwd_primer.fasta</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nt">rev</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/rev_primer.fasta</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">orientation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fixed</span><span class="w">      </span><span class="c1"># fixed | mixed</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fwd</code></td>
+<td>FASTA with the forward primer sequence</td>
+<td>placeholder</td>
+<td>Must exist — amplicon mode stops at parse time if either file is missing.</td>
+</tr>
+<tr>
+<td><code>rev</code></td>
+<td>FASTA with the reverse primer sequence</td>
+<td>placeholder</td>
+<td>Reverse complements of both are generated by the <code>revcomp_primers</code> rule; nothing needs to be supplied pre-complemented.</td>
+</tr>
+<tr>
+<td><code>orientation</code></td>
+<td>Whether R1 always carries the forward primer (<code>fixed</code>) or reads may come in either orientation (<code>mixed</code>)</td>
+<td><code>fixed</code></td>
+<td><code>mixed</code> runs a second Cutadapt pass with the primers swapped, reverse-complements its output so both passes agree, and concatenates the two. Anything other than <code>fixed</code>/<code>mixed</code> stops the run.</td>
+</tr>
+</tbody>
+</table>
+<p>The primer pair also drives the probe cache. The cache key is a short hash of both
+primer files, so changing a primer invalidates the cached amplicon-length
+measurement automatically, and reusing the same primers across runs reuses it.</p>
+<h3 id="amplicon-length">Amplicon length<a class="headerlink" href="#amplicon-length" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="w">  </span><span class="nt">expected_length</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span><span class="w">     </span><span class="c1"># int | [min, max] | "auto"</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">probe_length_stat</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">16S</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">p95</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">18S</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">p95</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">rpoB</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">p95</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="nt">min_overlap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span>
+</code></pre></div>
+<p><code>expected_length</code> is the length of the amplicon the primers produce. It is not used
+to filter anything directly — it is the number that decides whether the chosen R1
+and R2 truncation points still leave the pair able to merge.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>expected_length</code></td>
+<td>Amplicon size used for the truncation overlap check</td>
+<td><code>auto</code></td>
+<td><code>auto</code> measures it from the reference database; an integer states it directly; a <code>[min, max]</code> pair states a window and the <strong>maximum</strong> is used for the overlap check.</td>
+</tr>
+<tr>
+<td><code>probe_length_stat.&lt;key&gt;</code></td>
+<td>Which statistic of the measured length distribution <code>auto</code> should take</td>
+<td><code>p95</code> for <code>16S</code>, <code>18S</code> and <code>rpoB</code></td>
+<td>One of <code>min</code>, <code>q1</code>, <code>median</code>, <code>q3</code>, <code>p95</code>, <code>p99</code>, <code>max</code>.</td>
+</tr>
+<tr>
+<td><code>min_overlap</code></td>
+<td>Bases of forward/reverse overlap the truncation picker must preserve</td>
+<td><code>12</code></td>
+<td>A design constraint only. The overlap actually enforced when pairs are merged is <code>dada2.merge.min_overlap</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What <code>auto</code> does per marker.</strong> Markers whose reference is a full-length gene are
+measured by in-silico PCR: the primers are matched against the reference and the
+lengths of the surviving products form the distribution. Markers whose reference is
+already cut to amplicon length are measured directly.</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>How <code>auto</code> measures the amplicon</th>
+<th>Probe reference</th>
+<th>Statistic key read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td>In-silico PCR</td>
+<td>SILVA trainset</td>
+<td><code>16S</code></td>
+</tr>
+<tr>
+<td>ITS</td>
+<td>Direct read of pre-extracted subregion lengths</td>
+<td>UNITE UCHIME ITS1 or ITS2</td>
+<td>not used</td>
+</tr>
+<tr>
+<td>18S</td>
+<td>In-silico PCR</td>
+<td>SILVA-Eukaryotic 18S</td>
+<td><code>18S</code></td>
+</tr>
+<tr>
+<td>gyrB</td>
+<td>Direct read — DD7RZ8 already ships trimmed amplicons</td>
+<td>DD7RZ8</td>
+<td><code>16S</code> (deliberate reuse)</td>
+</tr>
+<tr>
+<td>rpoB</td>
+<td>In-silico PCR — FROGS ships full-length genes</td>
+<td>FROGS RefSeq rpoB</td>
+<td><code>rpoB</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Keep all three <code>probe_length_stat</code> keys</p>
+<p>For every marker except ITS, MetaFlux checks at parse time that the key its
+pack names is present in <code>probe_length_stat</code>, whatever <code>expected_length</code> is set
+to, and exits with the missing key name if it is not. gyrB reads the <code>16S</code>
+key — that is a deliberate reuse, not a typo. Deleting any of the three
+entries breaks the markers that point at it.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">18S V9 must be sized manually</p>
+<p>V4 primer pairs work with <code>auto</code>: the measured window is wide (roughly
+380–595 bp of core amplicon, depending on the pair). V9 (1391F/EukBr) does not,
+because EukBr sits at the 3′ terminus and most references are truncated before
+it — only 24–41% are recovered in silico, so <code>auto</code> would size the window from
+a biased minority. Set it manually, for example <code>expected_length: [115, 150]</code>.</p>
+</div>
+<p>An integer must be between 50 and 10000 bp; a <code>[min, max]</code> pair must have exactly
+two positive numbers with <code>min &lt;= max</code>. Out-of-range or malformed values are
+rejected with an explicit message rather than quietly used.</p>
+<p>Details of the measurement and how it feeds truncation are on
+<a href="../../amplicon/length-and-truncation/">amplicon length and truncation</a>.</p>
+<h3 id="primer-trimming-cutadapt">Primer trimming (Cutadapt)<a class="headerlink" href="#primer-trimming-cutadapt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="w">  </span><span class="nt">cutadapt</span><span class="p">:</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="nt">max_error_rate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nt">min_length</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_error_rate</code></td>
+<td>Cutadapt's <code>-e</code> — the fraction of the matched primer length that may differ</td>
+<td><code>0.2</code></td>
+<td>Cutadapt reads IUPAC codes in the primer natively, so a degenerate primer costs nothing from this budget; it covers sequencing errors in the first cycles and genuine primer/template mismatch, which is common with universal primers. Cutadapt's own default is 0.1 — 0.2 is deliberately more permissive because the 5′ pass runs with <code>--discard-untrimmed</code>, so an unmatched primer costs the whole pair. Check the per-sample match rates in <code>stats/cutadapt/</code> rather than assuming. The same value is reused by the in-silico PCR probe.</td>
+</tr>
+<tr>
+<td><code>min_length</code></td>
+<td>Reads shorter than this after trimming are discarded, together with their mate</td>
+<td><code>50</code></td>
+<td>Cutadapt's <code>--minimum-length</code>, with <code>--pair-filter=any</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>No quality trimming happens at this stage. DADA2's error model is fitted from the
+whole run's quality scores, and pre-trimming by quality would remove the
+low-quality bases it needs in order to learn the quality-to-error relationship.</p>
+<h3 id="truncation">Truncation<a class="headerlink" href="#truncation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="w">  </span><span class="nt">trunc_len</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span><span class="w">                  </span><span class="c1"># auto | manual</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">q_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">q_floor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">resolve_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">raise_trunc</span><span class="w"> </span><span class="c1"># raise_trunc | relax_q | error</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="nt">subsample_files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nt">manual_r1</span><span class="p">:</span><span class="w">                  </span><span class="c1"># e.g. 260</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">    </span><span class="nt">manual_r2</span><span class="p">:</span><span class="w">                  </span><span class="c1"># e.g. 240</span>
+</code></pre></div>
+<p><code>truncLen</code> is one length per read direction; everything past it is discarded. It is
+pulled two ways: cutting shorter removes the low-quality 3′ tail the error model
+dislikes, but cutting too short stops R1 and R2 from reaching each other, and a pair
+that cannot merge is lost entirely.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td><code>auto</code> derives the cuts from observed quality; <code>manual</code> uses the two numbers below</td>
+<td><code>auto</code></td>
+<td>Manual mode skips the quality analysis completely.</td>
+</tr>
+<tr>
+<td><code>q_threshold</code></td>
+<td>Quality below which <code>auto</code> cuts</td>
+<td><code>20</code></td>
+<td>The picker reads the lower quartile (Q1) of the per-base quality at each cycle from Falco's report, takes the median across samples, and cuts just before the first position where that value falls below the threshold.</td>
+</tr>
+<tr>
+<td><code>q_floor</code></td>
+<td>Lowest threshold <code>relax_q</code> may descend to</td>
+<td><code>15</code></td>
+<td>Only used by the <code>relax_q</code> policy.</td>
+</tr>
+<tr>
+<td><code>resolve_policy</code></td>
+<td>What to do when the quality-based cuts leave too little overlap</td>
+<td><code>raise_trunc</code></td>
+<td>See below.</td>
+</tr>
+<tr>
+<td><code>subsample_files</code></td>
+<td>Carried in the template but not read by any rule currently</td>
+<td><code>12</code></td>
+<td>The picker uses every sample's Falco report, not a subsample.</td>
+</tr>
+<tr>
+<td><code>manual_r1</code> / <code>manual_r2</code></td>
+<td>Explicit R1 and R2 truncation lengths</td>
+<td>unset</td>
+<td>Required when <code>mode: manual</code> — the run fails if either is missing. Ignored for ITS.</td>
+</tr>
+<tr>
+<td><code>min_read_coverage_pct</code></td>
+<td><code>auto</code> only: a cut is never placed past the length this percentage of a sample's reads still reach</td>
+<td><code>95</code></td>
+<td>Read from Falco's "Sequence Length Distribution". See the note below — this is the guard against <code>auto</code> discarding an entire library.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">What <code>min_read_coverage_pct</code> is protecting against</p>
+<p>Falco reports a quality bin for every position up to the <strong>longest</strong> read in a
+file, however few reads reach it. <code>filterAndTrim</code> <strong>discards</strong> any read shorter
+than <code>truncLen</code> rather than padding it, so a cut placed where only a handful of
+reads reach does not trim a few bases — it throws away the library. On a run whose
+quality never drops below <code>q_threshold</code>, nothing else stops the cut landing there.</p>
+<p>Before quality is looked at, each sample's bins are therefore cut off at the length
+<code>min_read_coverage_pct</code> of its reads still reach. On the 18S
+<a href="../../about/test-datasets/">test dataset</a> this moves the R1 ceiling from 288 bp to
+271 bp, which is the difference between retaining 9 read pairs out of 908,768 and
+retaining 90.9% of the library.</p>
+<p>Mind the direction: the value is a guarantee about reads, so raising it asks for a
+position more reads reach and therefore gives a <strong>shorter</strong> cut with fewer reads
+discarded. Lowering it gives a longer cut and discards more. Between about 80 and 99
+it barely moves, because read lengths cluster. <code>100</code> is a cliff rather than an off
+switch — it demands every read reach the cut, collapsing the ceiling onto the single
+shortest read in the file. No value disables the guard.
+<code>logs/pick_trunclen.log</code> prints each sample's longest read next to the length the
+requested percentage reaches, and emits a <code>NOTE</code> when the two differ by 10 bp or
+more.</p>
+</div>
+<p>The overlap constraint is <code>truncR1 + truncR2 &gt;= expected_length + min_overlap</code>.
+When the quality-based cuts break it:</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>raise_trunc</code></td>
+<td>Extends both cuts past the quality drop to recover the missing bases, splitting the deficit between R1 and R2 in proportion to how much read length each has left. Errors if even the combined headroom is not enough.</td>
+</tr>
+<tr>
+<td><code>relax_q</code></td>
+<td>Lowers the quality threshold by 1 at a time, down to <code>q_floor</code>, re-cutting until the overlap holds. Errors if the floor is reached without success.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>Stops immediately and reports the shortfall in bp.</td>
+</tr>
+</tbody>
+</table>
+<p>The decision, including which policy resolved it and how much slack is left, is
+written to <code>stats/trunclen.json</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">ITS ignores truncLen</p>
+<p>ITS amplicon length varies genuinely between taxa, so a fixed cut would throw
+away real short amplicons. For ITS the picker still computes and records the
+quality-based cuts, but <code>dada_filter</code> overrides <code>truncLen</code> to <code>c(0, 0)</code>. The
+3′ tail is not left untrimmed: <code>dada2.trunc_q</code> still trims each read
+adaptively, with <code>dada2.max_ee</code> and the per-read minimum length as the quality
+gate. This override also beats <code>mode: manual</code>, so <code>manual_r1</code>/<code>manual_r2</code> have
+no effect for ITS.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">The <code>auto</code> picker can overshoot on very clean runs</p>
+<p>If quality never drops below <code>q_threshold</code>, the cut is placed at the last
+quality bin — which can sit above the bulk of the trimmed read lengths and
+drop every read at the filtering step. See
+<a href="../../troubleshooting/">troubleshooting</a>.</p>
+</div>
+<h3 id="asv-length-filter">ASV length filter<a class="headerlink" href="#asv-length-filter" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="w">  </span><span class="nt">length_filter</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span><span class="w">          </span><span class="c1"># auto | manual</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">window_margin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">range</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">         </span><span class="c1"># [min, max]</span>
+</code></pre></div>
+<p>This filter runs on the ASVs, <strong>after</strong> target extraction, so the lengths it sees are
+directly comparable to the probe distribution the window was built from.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td><code>auto</code> builds the window from the probe; <code>manual</code> requires an explicit <code>range</code></td>
+<td><code>auto</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>window_margin</code></td>
+<td>Bases added below and above the probe window</td>
+<td><code>50</code></td>
+<td>The auto window is <code>[probe_q1 − margin, probe_p95 + margin]</code>.</td>
+</tr>
+<tr>
+<td><code>range</code></td>
+<td>Explicit <code>[min, max]</code> in bp</td>
+<td><code>null</code></td>
+<td>When set it wins, whatever <code>mode</code> says.</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>mode: auto</code> runs without a probe (because <code>expected_length</code> was given
+manually), the window falls back to the resolved expected length ±15%.</p>
+<p>The filter writes <code>stats/dada2/asv_length_stats.json</code> — pre-extraction,
+filter-source and kept distributions side by side — plus a histogram with the window
+drawn on it. If the window removes every ASV the run stops rather than writing an
+empty table.</p>
+<div class="admonition warning">
+<p class="admonition-title">ITS auto needs an auto expected length</p>
+<p><code>type: ITS</code> with <code>length_filter.mode: auto</code> also requires
+<code>expected_length: 'auto'</code>, since ITS never resolves an expected length through
+the truncation picker and the fallback would have nothing to size from.
+MetaFlux catches this combination at parse time, before the expensive DADA2
+run, and the message offers two fixes: set <code>expected_length: 'auto'</code>, or
+switch to <code>length_filter.mode: manual</code> with an explicit <code>range</code>.</p>
+</div>
+<h3 id="target-region-extraction">Target-region extraction<a class="headerlink" href="#target-region-extraction" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="w">  </span><span class="nt">extraction</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>Runs the marker's region extractor over the ASVs, trimming each to the target region and dropping ASVs the extractor cannot place</td>
+<td><code>true</code></td>
+<td>Metaxa2 for 16S, ITSx for ITS. 18S, gyrB and rpoB have no extractor.</td>
+</tr>
+</tbody>
+</table>
+<p>Markers with no extractor (<code>18S</code>, <code>gyrB</code>, <code>rpoB</code>) should be run with
+<code>enabled: false</code>. Left <code>true</code>, MetaFlux prints a warning and forces it off rather
+than asking the workflow graph for a file no rule produces. The ASV length filter
+still runs either way.</p>
+<h3 id="taxonomy">Taxonomy<a class="headerlink" href="#taxonomy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="w">  </span><span class="nt">taxonomy</span><span class="p">:</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sintax</span><span class="w">        </span><span class="c1"># rdp | sintax</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">min_boot</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span><span class="w">          </span><span class="c1"># rdp only</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">sintax_cutoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span><span class="w">    </span><span class="c1"># sintax only</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nt">try_rc</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">          </span><span class="c1"># rdp only</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>method</code></td>
+<td>Which classifier assigns taxonomy</td>
+<td><code>sintax</code></td>
+<td><code>rdp</code> is DADA2's <code>assignTaxonomy</code> (plus <code>addSpecies</code> for 16S); <code>sintax</code> is <code>vsearch --sintax</code>, which uses roughly 2–3 GB regardless of ASV count. Both paths apply the same taxon filter and write the same three tables.</td>
+</tr>
+<tr>
+<td><code>min_boot</code></td>
+<td>RDP bootstrap confidence a rank must reach to be reported</td>
+<td><code>80</code></td>
+<td>Read only by the <code>rdp</code> path. Range 0–100.</td>
+</tr>
+<tr>
+<td><code>sintax_cutoff</code></td>
+<td>SINTAX confidence a rank must reach to be reported</td>
+<td><code>0.8</code></td>
+<td>Read only by the <code>sintax</code> path. Range 0–1; 0.8 is roughly equivalent to <code>min_boot: 80</code>.</td>
+</tr>
+<tr>
+<td><code>try_rc</code></td>
+<td>Also tries the reverse complement of each ASV during classification</td>
+<td><code>true</code></td>
+<td>Read only by the <code>rdp</code> path. The <code>sintax</code> path always searches both strands.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">gyrB and rpoB are rdp-only</p>
+<p>The DD7RZ8 and FROGS releases ship a DADA2 trainset with no SINTAX build, so
+those packs declare no SINTAX reference. <code>method: sintax</code> for either marker is
+refused at startup with a message naming the marker, rather than failing later
+on a missing path.</p>
+</div>
+<h3 id="taxon-filter">Taxon filter<a class="headerlink" href="#taxon-filter" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">      </span><span class="nt">keep</span><span class="p">:</span><span class="w">    </span><span class="c1">#[k__Bacteria, k__Archaea]</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">      </span><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="c1">#[o__Chloroplast, f__Mitochondria]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>Master switch</td>
+<td><code>true</code></td>
+<td><code>false</code> keeps every ASV regardless of the lists.</td>
+</tr>
+<tr>
+<td><code>keep</code></td>
+<td>Tokens defining what survives</td>
+<td>unset → <code>[]</code></td>
+<td>An ASV is kept only if one of its ranks matches a token. An empty list does nothing.</td>
+</tr>
+<tr>
+<td><code>discard</code></td>
+<td>Tokens pruning what <code>keep</code> left</td>
+<td>unset → <code>[]</code></td>
+<td>An ASV is removed if any of its ranks matches a token. Runs after <code>keep</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Each token is matched against a whole segment of the taxonomy string
+(<code>k__Bacteria</code>, <code>o__Chloroplast</code>, <code>g__Ralstonia</code>), so it targets exactly one rank
+and never matches loosely somewhere else in the lineage. There is no built-in
+default: whatever is listed is exactly what is applied.</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>Suggested <code>keep</code></th>
+<th>Suggested <code>discard</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td><code>[k__Bacteria, k__Archaea]</code></td>
+<td><code>[o__Chloroplast, f__Mitochondria]</code></td>
+</tr>
+<tr>
+<td>ITS</td>
+<td><code>[k__Fungi]</code></td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td>18S</td>
+<td><code>[d__Eukaryota]</code> (PR2 ranks; <code>k__Eukaryota</code> with SILVA-Euk) — note this also drops ASVs left unclassified at Domain, which on some 18S datasets is a large fraction; see <a href="../../amplicon/markers/18S/">18S</a> before applying it</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td>gyrB</td>
+<td>no recommended default — paralogs are removed with <code>discard: [other]</code> on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter</td>
+<td></td>
+</tr>
+<tr>
+<td>rpoB</td>
+<td>no recommended default — FROGS RefSeq has no equivalent contamination to remove</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Contaminants a blank extraction control reveals go in <code>discard</code>, e.g.
+<code>discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]</code>. A
+bare string is accepted where a list is expected — <code>keep: k__Fungi</code> is treated as
+<code>keep: [k__Fungi]</code> — so a single token cannot be split into characters by accident.
+The full treatment is on
+<a href="../../amplicon/taxon-filter/">keeping and discarding taxa</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">The old regex keys are refused</p>
+<p>Configs written before the token lists used <code>include_pattern</code> /
+<code>exclude_pattern</code> regexes. Those keys now stop the run with instructions,
+rather than being ignored and leaving the filter silently disabled.</p>
+</div>
+<h3 id="dada2-tier-1-operational-parameters">DADA2 — tier 1, operational parameters<a class="headerlink" href="#dada2-tier-1-operational-parameters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="w">  </span><span class="nt">dada2</span><span class="p">:</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="nt">pool</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">             </span><span class="c1"># false | "pseudo" | true</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nt">max_ee</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">trunc_q</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">      </span><span class="nt">min_len</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">      </span><span class="nt">min_len_stat</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="nt">max_len</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">    </span><span class="nt">learn_errors</span><span class="p">:</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">      </span><span class="nt">nbases</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e8</span>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">      </span><span class="nt">max_consist</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">999</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pool</code></td>
+<td>How samples are pooled during ASV inference</td>
+<td><code>false</code></td>
+<td><code>false</code> treats each sample independently (fastest); <code>"pseudo"</code> runs a second pass informed by ASVs seen across samples; <code>true</code> pools all samples (most sensitive to rare variants, most expensive). Strings are read case-insensitively.</td>
+</tr>
+<tr>
+<td><code>max_ee</code></td>
+<td><code>filterAndTrim</code>'s <code>maxEE</code> — the expected-error ceiling per read, as <code>[R1, R2]</code></td>
+<td><code>[2, 5]</code></td>
+<td>R2 is looser because reverse reads degrade faster on Illumina chemistry.</td>
+</tr>
+<tr>
+<td><code>trunc_q</code></td>
+<td><code>filterAndTrim</code>'s <code>truncQ</code> — trims each read at the first base at or below this quality</td>
+<td><code>2</code></td>
+<td>The DADA2 default. This is the adaptive 3′ trim, distinct from the fixed <code>truncLen</code> cut. It is applied <strong>before</strong> <code>truncLen</code>; see the note below.</td>
+</tr>
+<tr>
+<td><code>filter.min_len</code></td>
+<td>Per-read length floor after trimming</td>
+<td><code>20</code></td>
+<td>DADA2's own <code>filterAndTrim</code> default. Used for every marker; for ITS it is the fallback when <code>min_len_stat</code> is unset.</td>
+</tr>
+<tr>
+<td><code>filter.min_len_stat</code></td>
+<td>Optionally derives <code>min_len</code> from the probe distribution instead</td>
+<td><code>null</code></td>
+<td><strong>ITS only, opt-in.</strong> Left <code>null</code>, every marker uses <code>filter.min_len</code>. Setting a statistic (e.g. <code>q1</code>) puts the floor near 175 bp, above ~24% of the UNITE reference — see <a href="../../amplicon/markers/its/">ITS</a>. The other markers never take this path: their probe measures the full amplicon, which exceeds read length.</td>
+</tr>
+<tr>
+<td><code>filter.max_len</code></td>
+<td>Per-read length ceiling</td>
+<td><code>null</code></td>
+<td><code>null</code> means no upper limit.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title"><code>truncQ</code> runs before <code>truncLen</code>, and the leftovers are discarded rather than kept short</p>
+<p>This is DADA2's own ordering inside <code>filterAndTrim</code>, not something MetaFlux changes,
+but it produces a failure that is easy to misdiagnose. <code>truncQ</code> trims each read at its
+first low-quality base; <code>truncLen</code> is then applied, and any read that <code>truncQ</code> has
+already shortened <strong>below</strong> <code>truncLen</code> is <strong>dropped</strong>, not passed through at its
+shorter length.</p>
+<p>So a run that loses an unexpected share of reads at <code>dada_filter</code> may be losing them
+to <code>truncQ</code>, while the number that looks wrong is <code>truncLen</code>. Before lowering
+<code>truncLen</code>, check the filtering columns in <code>stats/read_tracking.txt</code> and consider
+whether a lower <code>trunc_q</code> is the real cause — particularly on a run whose 3′ quality
+degrades early.</p>
+</div>
+<p>| <code>learn_errors.nbases</code> | Bases sampled to train the error model | <code>1e8</code> | The DADA2 default. Reads are drawn in random order, seeded by <code>amplicon.seed</code>. |
+| <code>learn_errors.max_consist</code> | Maximum self-consistency iterations of the error model | <code>999</code> | Effectively unlimited; the model normally converges long before. |</p>
+<h3 id="dada2-tier-2-advanced-tuning">DADA2 — tier 2, advanced tuning<a class="headerlink" href="#dada2-tier-2-advanced-tuning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="w">    </span><span class="nt">dada</span><span class="p">:</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">      </span><span class="nt">omega_a</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-40</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nt">merge</span><span class="p">:</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">      </span><span class="nt">min_overlap</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">      </span><span class="nt">max_mismatch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">      </span><span class="nt">just_concatenate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">      </span><span class="nt">trim_overhang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span><span class="nt">chimera</span><span class="p">:</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">      </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">consensus</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">      </span><span class="nt">min_fold_parent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="w">      </span><span class="nt">allow_one_off</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dada.omega_a</code></td>
+<td><code>OMEGA_A</code> — how strong the evidence must be before a sequence is called a new ASV rather than an error of an existing one</td>
+<td><code>1e-40</code></td>
+<td>The DADA2 default. A lower value is stricter; a higher one yields more ASVs.</td>
+</tr>
+<tr>
+<td><code>merge.min_overlap</code></td>
+<td><code>mergePairs</code> minimum overlap, in bp, enforced at runtime</td>
+<td><code>12</code></td>
+<td>DADA2's default. This is the one that actually decides whether a pair merges; <code>amplicon.min_overlap</code> is the design constraint used earlier when choosing truncation lengths.</td>
+</tr>
+<tr>
+<td><code>merge.max_mismatch</code></td>
+<td>Mismatches tolerated inside the overlap</td>
+<td><code>0</code></td>
+<td>DADA2's default, and deliberate: after denoising, a mismatch in the overlap is evidence the pair should not merge rather than a sequencing error.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">What these two cost in practice</p>
+<p>Both were previously set looser than DADA2 ships them (10 and 2). Moving them to
+the package defaults was measured by running each of the five
+<a href="../../about/test-datasets/">test datasets</a> twice, once with each pair of values:</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th>Reads merged</th>
+<th>ASVs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td>−1.4%</td>
+<td>273 → 211</td>
+</tr>
+<tr>
+<td>ITS</td>
+<td><strong>−33.5%</strong></td>
+<td>29 → 12</td>
+</tr>
+<tr>
+<td>18S</td>
+<td>−0.6%</td>
+<td>1,508 → 1,268</td>
+</tr>
+<tr>
+<td>gyrB</td>
+<td>−2.7%</td>
+<td>256 → 241</td>
+</tr>
+<tr>
+<td>rpoB</td>
+<td>−0.3%</td>
+<td>48 → 44</td>
+</tr>
+</tbody>
+</table>
+<p>Read counts through filtering and denoising were identical in every case; the whole
+difference appears at the merge step. ASV counts drop much further than reads
+because pairs that merge only with mismatches tolerated tend to yield distinct,
+low-abundance sequences — so the loss is concentrated in rare ASVs. Loosening
+them again recovers those ASVs, at the cost of accepting overlap disagreements
+that DADA2 treats as evidence against merging.</p>
+<p><strong>ITS is the exception worth knowing about.</strong> ITS2 length varies widely between
+fungi, so with 2×300 reads the longer amplicons overlap by only a little — exactly
+the pairs a 10 → 12 bp requirement drops, and their short overlap sits in the
+low-quality 3′ tails where <code>max_mismatch: 0</code> then removes more. A third of the
+merged reads were lost to these two settings. On the mock that cost no genera, but
+for ITS on a more variable community <code>min_overlap: 10</code> with <code>max_mismatch: 2</code> is a
+defensible setting.</p>
+</div>
+<p>| <code>merge.just_concatenate</code> | Joins R1 and R2 with a run of Ns instead of merging on overlap | <code>false</code> | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so <code>length_filter.mode: auto</code> is no longer sizing a meaningful window — switch to <code>manual</code> with an explicit <code>range</code> sized for the concatenated length. |
+| <code>merge.trim_overhang</code> | Trims bases that read past the far end of the amplicon | <code>true</code> | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
+| <code>chimera.method</code> | <code>removeBimeraDenovo</code> method | <code>consensus</code> | Chimeras are called per sample and the verdicts pooled. |
+| <code>chimera.min_fold_parent</code> | How much more abundant a parent must be than its suspected chimera | <code>4</code> | DADA2's <code>minFoldParentOverAbundance</code>, raised above the package default. Higher is <strong>more permissive</strong>: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the note below. |
+| <code>chimera.allow_one_off</code> | Also flags sequences one mismatch away from a perfect chimera | <code>false</code> (DADA2's own default) | <code>false</code> is the <strong>stricter</strong> setting, not a relaxed one — near-miss sequences get flagged as chimeric alongside exact matches, so more real variants risk being removed. Setting it <code>true</code> is what relaxes this: only exact bimera matches are flagged, and near-misses are kept. |</p>
+<div class="admonition tip">
+<p class="admonition-title">Where to look before changing the chimera settings</p>
+<p><code>min_fold_parent: 4</code> is a deliberate departure from the DADA2 default, in the
+direction of removing fewer sequences. The reasoning, and the range of values the
+DADA2 authors and community have discussed for pooled and amplicon-specific data
+(typically 4 to 8), is set out in the upstream discussions — worth reading before
+changing it, since the right value depends on the marker and on how samples were
+pooled:</p>
+<ul>
+<li><a href="https://github.com/benjjneb/dada2/issues/2030">dada2 #2030 — Questions about chimera filtering</a></li>
+<li><a href="https://github.com/benjjneb/dada2/issues/1715">dada2 #1715 — High loss of reads following chimera removal</a></li>
+<li><a href="https://github.com/benjjneb/dada2/issues/1368">dada2 #1368 — Remove chimeras, consensus vs. pooled</a></li>
+</ul>
+<p>A large chimeric fraction is more often a symptom than a parameter problem: check
+that primers were fully removed first, since residual primer sequence is a common
+cause of apparent chimeras.</p>
+</div>
+<hr />
+<h2 id="shotgun-parameters-shotgun">Shotgun parameters <code>[shotgun]</code><a class="headerlink" href="#shotgun-parameters-shotgun" title="Permanent link">&para;</a></h2>
+<p>Ignored entirely when <code>mode: amplicon</code>.</p>
+<h3 id="decontamination">Decontamination<a class="headerlink" href="#decontamination" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">shotgun</span><span class="p">:</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">decontamination</span><span class="p">:</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">    </span><span class="nt">remove_phix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="nt">host_genomes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">    </span><span class="nt">host_min_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.95</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove_phix</code></td>
+<td>BBDuk k-mer matching against the bundled <code>phix174_ill.ref.fa.gz</code>, at <code>k=31 hdist=1</code></td>
+<td><code>true</code></td>
+<td>No download or index build is involved. Keep it on unless the lab is known to have skipped the spike-in.</td>
+</tr>
+<tr>
+<td><code>host_genomes</code></td>
+<td>YAML list of local paths and/or URLs to host FASTA(.gz) references</td>
+<td><code>[]</code></td>
+<td><code>[]</code> skips host removal. Multiple entries are concatenated and indexed once, so one BBMap index serves every sample.</td>
+</tr>
+<tr>
+<td><code>host_min_id</code></td>
+<td>BBMap <code>minid</code> — the alignment identity above which a read is called host-derived</td>
+<td><code>0.95</code></td>
+<td>Reads that do not map are kept.</td>
+</tr>
+</tbody>
+</table>
+<p>Host removal is alignment-based rather than k-mer based, which is more sensitive to
+host reads that diverge from the reference assembly — the approach the BBTools
+authors recommend.</p>
+<div class="admonition warning">
+<p class="admonition-title">Use a masked reference for human</p>
+<p>An unmasked human genome removes real microbial reads that happen to be
+homologous to ribosomal or low-complexity human sequence. The masked reference
+on Zenodo at <code>https://zenodo.org/records/4116107</code> (Handley 2020,
+<code>human_virus_masked.fasta.gz</code>, 889 MB) is a masked hg19 — ribosomal RNA,
+plant, animal and fungal homology and low-entropy sequence removed — with a
+further layer of viral masking added. The
+first set of masks is what stops real microbial reads being discarded as host;
+the viral layer additionally keeps human regions homologous to viruses out of
+the filter, which is the right behaviour when the viral fraction is of
+interest. Because the file is roughly 900 MB, download it once to a local path
+and point <code>host_genomes</code> at it rather than re-fetching the URL on every fresh
+run.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">BBDuk and BBMap both need correctly paired files</p>
+<p>Both tools read R1 and R2 in lockstep and require the two files to hold the
+same number of records in the same order. Read length is not the issue: ragged
+reads, and mates of one pair with different lengths, are processed normally. A
+crash reading <code>java.lang.AssertionError: List size mismatch: N vs M</code> (BBDuk) or
+<code>There appear to be different numbers of reads in the paired input files</code>
+(BBMap) means the pairing is broken — usually because reads were filtered
+before deposition and orphaned mates were left in one file. Repair the FASTQs
+with the tool shipped in the same conda package rather than skipping the step.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>repair.sh<span class="w"> </span><span class="nv">in1</span><span class="o">=</span>R1.fastq.gz<span class="w"> </span><span class="nv">in2</span><span class="o">=</span>R2.fastq.gz<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="nv">out1</span><span class="o">=</span>fixed_R1.fastq.gz<span class="w"> </span><span class="nv">out2</span><span class="o">=</span>fixed_R2.fastq.gz<span class="w"> </span><span class="nv">outs</span><span class="o">=</span>singletons.fastq.gz
+</code></pre></div>
+<p>See <a href="../../troubleshooting/">troubleshooting</a> and
+<a href="../../shotgun/decontamination/">decontamination</a>.</p>
+</div>
+<h3 id="adapter-and-quality-trimming">Adapter and quality trimming<a class="headerlink" href="#adapter-and-quality-trimming" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="w">  </span><span class="nt">fastp</span><span class="p">:</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">    </span><span class="nt">min_read_length</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>min_read_length</code></td>
+<td>fastp's <code>--length_required</code> — reads shorter than this after trimming are dropped</td>
+<td><code>100</code></td>
+<td>Comfortable for 2×150 bp reads; use around 70 for HiSeq 2×100.</td>
+</tr>
+</tbody>
+</table>
+<p>fastp runs with <code>--detect_adapter_for_pe</code>, plus <code>--cut_front</code> and <code>--cut_right</code>
+sliding-window trimming from both ends. Its JSON report is read later by Bracken to
+pick a read-length model, and by the read-tracking table.</p>
+<h3 id="kraken2">Kraken2<a class="headerlink" href="#kraken2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="w">  </span><span class="nt">kraken</span><span class="p">:</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span><span class="nt">confidence</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.15</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">    </span><span class="nt">hit_groups</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">    </span><span class="nt">memory_mapping</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="nt">threads</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>confidence</code></td>
+<td>Fraction of a read's k-mers that must fall inside the clade of the taxon it is assigned to</td>
+<td><code>0.15</code></td>
+<td>Higher is stricter. Kraken2 does not simply reject a read that falls short — it moves the label up the taxonomy until the score clears the threshold, and calls the read unclassified only if even root fails. Raising it therefore mostly pushes assignments to coarser ranks, leaving more for Bracken to redistribute, and only secondarily increases the unclassified fraction. Wright et al. (2023) report two optima on simulated data: 0.60 by mean F1, and 0.15 by L1 distance and by recall/precision over classified reads. The default of 0.15 favours accurate relative abundances; raise it towards 0.60 to favour F1.</td>
+</tr>
+<tr>
+<td><code>hit_groups</code></td>
+<td><code>--minimum-hit-groups</code> — distinct k-mer hit groups a read needs to keep its classification</td>
+<td><code>3</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>memory_mapping</code></td>
+<td>Pages the database from disk on demand instead of loading it into RAM</td>
+<td><code>true</code></td>
+<td>See below.</td>
+</tr>
+<tr>
+<td><code>threads</code></td>
+<td>Pins Kraken2's thread count</td>
+<td><code>null</code></td>
+<td><code>null</code> falls back to <code>resources.threads.kraken2</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Kraken2 is also run with <code>--use-names</code>, <code>--paired</code>, <code>--gzip-compressed</code>,
+<code>--report-minimizer-data</code> and <code>--classified-out</code>, so classified read pairs are kept
+alongside the report.</p>
+<div class="admonition note">
+<p class="admonition-title">Memory mapping decides how much RAM a Kraken2 job asks for</p>
+<p>Kraken2's memory request is computed at parse time, not taken from the
+<code>resources.mem_mb.kraken2</code> entry, which is not read.</p>
+<ul>
+<li><strong><code>memory_mapping: true</code></strong> — the kernel pages the database on demand and
+  shares those pages between concurrent Kraken2 processes through the OS file
+  cache, so running several samples in parallel does not multiply RAM use.
+  Each job is budgeted a fixed 20000 MB of private workspace.</li>
+<li><strong><code>memory_mapping: false</code></strong> — every process loads the whole hash privately.
+  The budget becomes the size of <code>hash.k2d</code> plus 10% headroom, so it
+  self-adjusts to the database in use (a 16 GB PlusPF, a ~100 GB PlusPF, a
+  200+ GB core_nt). If <code>hash.k2d</code> cannot be read yet — while the database is
+  still downloading, say — a conservative 110000 MB is used instead. (With
+  memory mapping on the fixed 20000 MB applies either way, since the index
+  size is never consulted.)</li>
+</ul>
+</div>
+<h3 id="bracken">Bracken<a class="headerlink" href="#bracken" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="w">  </span><span class="nt">bracken</span><span class="p">:</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="w">    </span><span class="nt">tax_lev</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">S</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">    </span><span class="nt">threshold_alpha</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5.0e-05</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="w">    </span><span class="nt">threshold_min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tax_lev</code></td>
+<td>Rank at which abundance is re-estimated: <code>D</code>, <code>P</code>, <code>C</code>, <code>O</code>, <code>F</code>, <code>G</code> or <code>S</code></td>
+<td><code>S</code></td>
+<td>Drop to <code>G</code> for a shallow database, where species-level calls are not supported by the reference content.</td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td>Minimum Kraken2 read count a taxon needs at <code>tax_lev</code> to enter Bracken's estimate</td>
+<td><code>auto</code></td>
+<td>Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). <code>auto</code> computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see <a href="../../shotgun/confidence-and-threshold/">Choosing confidence and threshold</a> for the benchmark behind this and why the historic fixed default of 10 costs up to 0.34 F1 on real data. Set an integer instead of <code>auto</code> to bypass this and use a fixed floor as Bracken does natively.</td>
+</tr>
+<tr>
+<td><code>threshold_alpha</code></td>
+<td>Scaling coefficient used only when <code>threshold: auto</code></td>
+<td><code>5.0e-05</code></td>
+<td><code>threshold = max(threshold_min, threshold_alpha × classified_read_pairs)</code>. Benchmark-fitted; the optimum is a broad plateau, so this rarely needs adjusting — see the threshold page for what moving it costs.</td>
+</tr>
+<tr>
+<td><code>threshold_min</code></td>
+<td>Floor for the auto-computed threshold</td>
+<td><code>10</code></td>
+<td>Prevents a near-zero threshold on a very shallow or heavily filtered sample. Also Bracken's own historic default.</td>
+</tr>
+</tbody>
+</table>
+<p>Bracken redistributes the reads Kraken2 assigned to internal nodes down to the
+target rank. Bracken databases ship k-mer distributions for several read lengths
+(50, 75, 100, 150, 200, 250, 300); MetaFlux reads the post-trimming mean read length
+out of the fastp JSON and picks the closest one, because applying a 150 bp
+distribution to 100 bp reads biases the redistribution.</p>
+<h3 id="otu-table-taxon-filter">OTU-table taxon filter<a class="headerlink" href="#otu-table-taxon-filter" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="w">  </span><span class="nt">taxonomy_filter</span><span class="p">:</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">    </span><span class="nt">keep</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">[]</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">    </span><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>Master switch</td>
+<td><code>false</code></td>
+<td>Off by default: metagenomic sample types vary too much for a universal default to be safe.</td>
+</tr>
+<tr>
+<td><code>keep</code></td>
+<td>Tokens defining what survives</td>
+<td><code>[]</code></td>
+<td>e.g. <code>[k__Bacteria, k__Archaea]</code> for prokaryotes only.</td>
+</tr>
+<tr>
+<td><code>discard</code></td>
+<td>Tokens pruning what <code>keep</code> left</td>
+<td><code>[]</code></td>
+<td>e.g. <code>[g__Homo]</code> as an explicit host safety net.</td>
+</tr>
+</tbody>
+</table>
+<p>This is the shotgun counterpart of <code>amplicon.taxonomy.filter</code> and uses the same
+rank-aware token matching: <code>keep</code> first, then <code>discard</code>, empty list means that
+direction does nothing. It is applied to the final OTU table after Bracken, so it
+changes which OTUs appear in the table and never how reads were classified.</p>
+<h3 id="per-taxon-read-extraction">Per-taxon read extraction<a class="headerlink" href="#per-taxon-read-extraction" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="w">  </span><span class="nt">extract_taxa</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>extract_taxa</code></td>
+<td>NCBI scientific names whose reads should be pulled out into their own FASTQ files</td>
+<td><code>[]</code></td>
+<td><code>[]</code> skips extraction entirely. Example: <code>[Bacteria, Archaea]</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Each name is looked up in the Bracken report at whatever rank it appears, so a broad
+group (<code>Bacteria</code>) and a single species (<code>Escherichia coli</code>) work equally well.
+KrakenTools then extracts every read under that taxid, including its children.
+Output files are named after a slug of the taxon (lower-case, spaces to
+underscores). A taxon absent from a sample yields empty files rather than a failure.
+See <a href="../../shotgun/read-extraction/">per-taxon read extraction</a>.</p>
+<hr />
+<h2 id="resources-shared">Resources <code>[shared]</code><a class="headerlink" href="#resources-shared" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nt">resources</span><span class="p">:</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">  </span><span class="nt">threads_default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">  </span><span class="nt">mem_mb_default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2000</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">  </span><span class="nt">threads</span><span class="p">:</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">    </span><span class="nt">kraken2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="w">    </span><span class="c1"># … one entry per rule</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">  </span><span class="nt">mem_mb</span><span class="p">:</span>
+<a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="w">    </span><span class="nt">kraken2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20000</span>
+<a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a><span class="w">    </span><span class="c1"># … one entry per rule</span>
+</code></pre></div>
+<p>Per-rule CPU and RAM live in one block with global fallbacks. Rules look their
+values up by name; a name that is absent falls back to <code>threads_default</code> or
+<code>mem_mb_default</code>. These values feed straight into Snakemake's resource accounting,
+so they are what a cluster executor turns into job requests.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>threads_default</code></td>
+<td>Threads for any rule with no <code>threads</code> entry</td>
+<td><code>4</code></td>
+</tr>
+<tr>
+<td><code>mem_mb_default</code></td>
+<td>Memory in MB for any rule with no <code>mem_mb</code> entry</td>
+<td><code>2000</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="threads">Threads<a class="headerlink" href="#threads" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rule name</th>
+<th>Mode</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>multiqc</code></td>
+<td>shared</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td><code>falco</code></td>
+<td>amplicon</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td><code>bowtie2</code></td>
+<td>amplicon</td>
+<td>8</td>
+<td>Covers both <code>build_phix_index</code> and the per-sample <code>rm_phix</code> mapping.</td>
+</tr>
+<tr>
+<td><code>cutadapt</code></td>
+<td>amplicon</td>
+<td>4</td>
+<td>Covers both <code>trim_primers</code> and the in-silico PCR probe.</td>
+</tr>
+<tr>
+<td><code>pick_trunclen</code></td>
+<td>amplicon</td>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_quality_plots</code></td>
+<td>amplicon</td>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_filter</code></td>
+<td>amplicon</td>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_seqtab</code></td>
+<td>amplicon</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_length_filter</code></td>
+<td>amplicon</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td><code>target_extract</code></td>
+<td>amplicon</td>
+<td>8</td>
+<td>Metaxa2 or ITSx.</td>
+</tr>
+<tr>
+<td><code>assign_taxonomy</code></td>
+<td>amplicon</td>
+<td>8</td>
+<td>Set to 1 for byte-reproducible <code>sintax</code> output.</td>
+</tr>
+<tr>
+<td><code>aggregate_read_counts</code></td>
+<td>shared</td>
+<td>2</td>
+<td>Present in the config template but not read — the rule declares no <code>threads</code>; see the note below.</td>
+</tr>
+<tr>
+<td><code>decontam_phix</code></td>
+<td>shotgun</td>
+<td>6</td>
+<td>BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead.</td>
+</tr>
+<tr>
+<td><code>build_host_index</code></td>
+<td>shotgun</td>
+<td>16</td>
+<td></td>
+</tr>
+<tr>
+<td><code>decontam_host</code></td>
+<td>shotgun</td>
+<td>16</td>
+<td></td>
+</tr>
+<tr>
+<td><code>fastp</code></td>
+<td>shotgun</td>
+<td>16</td>
+<td>Read by the <code>trim_adapters</code> rule. fastp scales poorly past about 16 threads.</td>
+</tr>
+<tr>
+<td><code>kraken2</code></td>
+<td>shotgun</td>
+<td>16</td>
+<td>Overridden by <code>shotgun.kraken.threads</code> when that is not <code>null</code>.</td>
+</tr>
+<tr>
+<td><code>bracken</code></td>
+<td>shotgun</td>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>kraken_biom</code></td>
+<td>shotgun</td>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td><code>extract_taxon_reads</code></td>
+<td>shotgun</td>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td><code>compress_extracted</code></td>
+<td>shotgun</td>
+<td>6</td>
+<td>pigz parallelism for the extracted read files.</td>
+</tr>
+<tr>
+<td><code>download_sra</code></td>
+<td>shotgun</td>
+<td>6</td>
+<td><code>fasterq-dump</code> parallelism; past about 8 the bottleneck is disk, not CPU.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="memory">Memory<a class="headerlink" href="#memory" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rule name</th>
+<th>Mode</th>
+<th>Default (MB)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>multiqc</code></td>
+<td>shared</td>
+<td>2000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>bowtie2</code></td>
+<td>amplicon</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pick_trunclen</code></td>
+<td>amplicon</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_quality_plots</code></td>
+<td>amplicon</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_filter</code></td>
+<td>amplicon</td>
+<td>2000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>dada_seqtab</code></td>
+<td>amplicon</td>
+<td>16000</td>
+<td>The heaviest amplicon step: error learning, denoising, merging and chimera removal all happen here across every sample at once.</td>
+</tr>
+<tr>
+<td><code>dada_length_filter</code></td>
+<td>amplicon</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>target_extract</code></td>
+<td>amplicon</td>
+<td>8000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>assign_taxonomy</code></td>
+<td>amplicon</td>
+<td>16000</td>
+<td>The <code>rdp</code> path is the demanding one; <code>sintax</code> stays around 2–3 GB whatever the ASV count.</td>
+</tr>
+<tr>
+<td><code>aggregate_read_counts</code></td>
+<td>shared</td>
+<td>2000</td>
+<td>Present in the config template but not read — the rule declares no <code>mem_mb</code>; see the note below.</td>
+</tr>
+<tr>
+<td><code>decontam_phix</code></td>
+<td>shotgun</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>build_host_index</code></td>
+<td>shotgun</td>
+<td>30000</td>
+<td>BBMap index build for the host reference; a masked human genome needs roughly 24–28 GB.</td>
+</tr>
+<tr>
+<td><code>decontam_host</code></td>
+<td>shotgun</td>
+<td>30000</td>
+<td>Mapping against that index.</td>
+</tr>
+<tr>
+<td><code>fastp</code></td>
+<td>shotgun</td>
+<td>8000</td>
+<td>Read by the <code>trim_adapters</code> rule.</td>
+</tr>
+<tr>
+<td><code>kraken2</code></td>
+<td>shotgun</td>
+<td>20000</td>
+<td>Not read — the real figure is computed at parse time from <code>memory_mapping</code> and the actual <code>hash.k2d</code> size.</td>
+</tr>
+<tr>
+<td><code>bracken</code></td>
+<td>shotgun</td>
+<td>4000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>kraken_biom</code></td>
+<td>shotgun</td>
+<td>2000</td>
+<td></td>
+</tr>
+<tr>
+<td><code>extract_taxon_reads</code></td>
+<td>shotgun</td>
+<td>2000</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Names here are lookup labels, not always rule names</p>
+<p>Most entries match a rule name exactly. A few are lookup labels rather than
+rule names: <code>bowtie2</code> covers <code>build_phix_index</code> and <code>rm_phix</code>, <code>cutadapt</code>
+covers <code>trim_primers</code> and <code>amplicon_probe</code>, and <code>fastp</code> is the label used by
+the <code>trim_adapters</code> rule — there is no rule called <code>fastp</code>, and a
+<code>trim_adapters</code> key here is ignored. Rules that declare no <code>threads</code> or
+<code>mem_mb</code> at all — <code>link_reads</code>, <code>count_reads_*</code>, <code>revcomp_primers</code>, the
+<code>fetch_*</code> and <code>convert_*</code> reference rules, <code>samples_manifest</code> and
+<code>aggregate_read_counts</code> — take Snakemake's own defaults and ignore any entry
+of the same name. Adding a key for a rule that does not look it up has no
+effect. Conversely, <code>finalize_otu_table</code> does look its resources up but has
+no entry in the template, so it runs on <code>threads_default</code> and
+<code>mem_mb_default</code>.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

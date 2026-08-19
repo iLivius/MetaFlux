@@ -1,0 +1,2621 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../confidence-and-threshold/">
+      
+      
+        <link rel="next" href="../read-extraction/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Species-level k-mer evidence - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#species-level-k-mer-evidence" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Species-level k-mer evidence
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-extra-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two extra columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-metaflux-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-it-acts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it acts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-a-taxon-is-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a taxon is removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-a-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing a threshold
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choosing a threshold">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-that-does-to-real-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What that does to real data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does-to-the-final-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does to the final table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-default-is-enabled-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the default is enabled: false
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why the default is enabled: false">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#but-no-change-in-f1-is-not-no-change-in-the-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        But "no change in F1" is not "no change in the table"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-has-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What has been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-richness-is-still-over-estimated-with-the-gate-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why richness is still over-estimated with the gate on
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-limitation-worth-knowing-about" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A limitation worth knowing about
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threshold-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threshold stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-extra-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two extra columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-metaflux-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-it-acts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it acts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-a-taxon-is-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a taxon is removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-a-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing a threshold
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choosing a threshold">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-that-does-to-real-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What that does to real data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does-to-the-final-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does to the final table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-default-is-enabled-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the default is enabled: false
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why the default is enabled: false">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#but-no-change-in-f1-is-not-no-change-in-the-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        But "no change in F1" is not "no change in the table"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-has-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What has been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-richness-is-still-over-estimated-with-the-gate-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why richness is still over-estimated with the gate on
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-limitation-worth-knowing-about" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A limitation worth knowing about
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threshold-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threshold stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/shotgun/kmer-evidence.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="species-level-k-mer-evidence">Species-level k-mer evidence<a class="headerlink" href="#species-level-k-mer-evidence" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Read this after <a href="../confidence-and-threshold/">Choosing confidence and threshold</a></p>
+<p>The single biggest precision lever in shotgun mode is Bracken's depth-scaled read
+threshold, covered on that page. Set that first. This gate is a backstop for a narrow
+class of error the threshold cannot see — valuable when it fires, but off by default;
+see <a href="#why-the-default-is-enabled-false">Why the default is <code>enabled: false</code></a>.</p>
+</div>
+<p>Kraken2's read count tells you how many reads it chose to label with a taxon. It does
+not tell you how much sequence <em>unique to that organism</em> actually turned up in the
+sample — and those are different questions.</p>
+<ul>
+<li>A species that is genuinely present contributes many <strong>different</strong> species-specific
+  sequences.</li>
+<li>A spurious call is usually a small set of sequences — conserved, repetitive, or
+  shared with a relative that really is abundant — matched over and over.</li>
+</ul>
+<p>In a read count the two look identical. Running Kraken2 with <code>--report-minimizer-data</code>
+adds the number that separates them. MetaFlux always does.</p>
+<h2 id="the-two-extra-columns">The two extra columns<a class="headerlink" href="#the-two-extra-columns" title="Permanent link">&para;</a></h2>
+<p>The report becomes eight columns instead of six, with two inserted before the rank code:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Column</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Number of minimizers in the read data associated with this taxon</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td>An estimate of the number of <strong>distinct</strong> minimizers in the read data associated with this taxon</td>
+</tr>
+</tbody>
+</table>
+<p>Column 5 is an estimate, not an exact count — Kraken2 uses a HyperLogLog sketch rather
+than storing every minimizer. Both columns are <strong>clade-cumulative</strong>, like the read
+counts.</p>
+<div class="admonition warning">
+<p class="admonition-title">What "associated with this taxon" actually means</p>
+<p>The obvious reading — <em>the minimizers carried by the reads that were assigned to
+this taxon</em> — is wrong, and it changes how you interpret the numbers.</p>
+<p>Kraken2 attributes each minimizer <strong>occurrence</strong> to whichever taxon that minimizer
+maps to <strong>in the database</strong> (its lowest common ancestor), pooled over every read in
+the sample, regardless of where each read finally got assigned.</p>
+<p>The give-away in any real report is taxa with a couple of assigned reads carrying
+hundreds of thousands of minimizer counts. In one test sample a <em>Streptomyces</em> row
+has <strong>2 clade reads and 345,108 total minimizers</strong> — 737× more than the ~468 k-mer
+positions two read pairs physically contain. Under the per-read reading that is
+impossible; under LCA attribution it is ordinary.</p>
+<p>So column 5 for a species means: <strong>how many distinct database minimizers specific to
+that species were seen anywhere in this sample.</strong> That is a statement about how much
+species-specific sequence is present — which is exactly the quantity KrakenUniq
+calls <em>unique k-mers</em>, so the published thresholds below do transfer once the units
+are converted. It is <strong>not</strong> a genome-coverage measure, and describing it as "how
+much of the genome the reads covered" would be wrong.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">The flag itself changes no classification</p>
+<p><code>--report-minimizer-data</code> is purely additive reporting. Verified directly: the same
+5,000 read pairs against the same database twice, identical settings, differing only
+in this flag, gave a byte-for-byte identical per-read output and identical values in
+every shared report column.</p>
+</div>
+<h2 id="reading-the-numbers">Reading the numbers<a class="headerlink" href="#reading-the-numbers" title="Permanent link">&para;</a></h2>
+<p>Two species from one real sample, with similar read counts:</p>
+<table>
+<thead>
+<tr>
+<th>Species</th>
+<th style="text-align: right;">Reads</th>
+<th style="text-align: right;">Distinct minimizers</th>
+<th style="text-align: right;">Total minimizers</th>
+<th style="text-align: right;">Duplicity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Achromobacter xylosoxidans</em></td>
+<td style="text-align: right;">7,756</td>
+<td style="text-align: right;">224,500</td>
+<td style="text-align: right;">980,110</td>
+<td style="text-align: right;">4.4</td>
+</tr>
+<tr>
+<td><em>Novosphingobium</em> sp. RL4</td>
+<td style="text-align: right;">4,597</td>
+<td style="text-align: right;">426</td>
+<td style="text-align: right;">196,778</td>
+<td style="text-align: right;">461.9</td>
+</tr>
+</tbody>
+</table>
+<p>Similar abundance, utterly different evidence. The first is supported by 224,500
+distinct species-specific minimizers. The second is supported by 426, each one seen
+about 460 times.</p>
+<p><strong>Duplicity</strong> (total ÷ distinct) is the most directly readable of the three numbers,
+because it does not require knowing the sequencing depth. It also barely tracks
+abundance — measured Pearson <em>r</em> = <strong>+0.20</strong> against log reads, versus <strong>+0.71</strong> for the
+raw distinct count. That makes it the better number to <em>eyeball</em>. It is nonetheless a
+<strong>worse filter</strong> (see <a href="#what-does-not-work">What does not work</a>), so MetaFlux reports it
+and thresholds the distinct count.</p>
+<h2 id="what-metaflux-writes">What MetaFlux writes<a class="headerlink" href="#what-metaflux-writes" title="Permanent link">&para;</a></h2>
+<p>Every shotgun run produces these, per sample, whether or not the gate is switched on:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>02b.evidence/{sample}_species_evidence.tsv   one row per taxon at the Bracken rank
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>02b.evidence/{sample}_report_gated.txt       the report with failing taxa removed
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>stats/kmer_evidence/{sample}_evidence.png    reads vs distinct minimizers, log-log
+</code></pre></div>
+<p>The gated report is written even when the gate is off, precisely so you can diff it
+against the Kraken2 report and see what enabling the gate would do to <em>your</em> data before
+trusting it.</p>
+<p>The evidence table carries, per taxon: taxid, name, rank, clade and direct reads, total
+and distinct minimizers, duplicity, minimizers per read, percent of classified reads,
+and the verdict with its reason.</p>
+<h2 id="the-gate">The gate<a class="headerlink" href="#the-gate" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">shotgun</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">kmer_evidence</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                     </span><span class="c1"># report only; pipeline unchanged</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">min_distinct_minimizers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">333</span><span class="w">       </span><span class="c1"># the floor; see the unit conversion below</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">min_reads</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">                       </span><span class="c1"># extra read floor, applied together with the above</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">never_prune_above_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span><span class="w">   </span><span class="c1"># safety rail</span>
+</code></pre></div>
+<h3 id="where-it-acts">Where it acts<a class="headerlink" href="#where-it-acts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kraken2  →  kmer_evidence  →  bracken  →  kraken-biom  →  finalize_otu_table
+</code></pre></div>
+<p>The gate sits <strong>between</strong> Kraken2 and Bracken. It does not replace or skip Bracken — it
+hands Bracken a cleaned report instead of the raw one. Because the correction happens
+upstream, it flows all the way through: <strong><code>otu_table.biom</code> and <code>otu_table.tsv</code> become the
+corrected tables.</strong> There is no separate filtered file to reconcile.</p>
+<p>Switching the gate off restores the previous behaviour exactly: Bracken reads Kraken2's
+own report and nothing downstream changes.</p>
+<h3 id="how-a-taxon-is-removed">How a taxon is removed<a class="headerlink" href="#how-a-taxon-is-removed" title="Permanent link">&para;</a></h3>
+<p>Two details have to be right or the pruned report quietly corrupts Bracken's arithmetic.</p>
+<p><strong>Whole subtree, never a bare row.</strong> Bracken rebuilds the taxonomy tree from the
+<em>indentation</em> of the report, attaching each row to the last row one level above it.
+Delete a species row and leave its strain (<code>S1</code>) children behind, and those children get
+re-parented onto whichever species happens to precede them — silently inflating an
+innocent neighbour. So when a taxon fails, everything indented beneath it goes too.</p>
+<p><strong>The reads go back to the parent, not in the bin.</strong> A pruned taxon's whole clade total
+is added to its parent's own-node count, so Bracken redistributes those reads among the
+siblings that passed. The parent's clade total is untouched, so the report's arithmetic
+still balances: for every node, <code>clade == direct + sum(children clade)</code>. Verified on the
+test data — zero violations, zero indentation gaps, and no column other than a parent's
+direct count ever changes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Two things this does not guarantee</p>
+<p><strong>Not all reads land on close relatives.</strong> The rationale for crediting the parent is
+that a spurious call usually borrows evidence from a neighbour. That holds for most
+of the traffic, not all: on four test samples <strong>70%</strong> of the reads gained by
+surviving taxa can be matched to a loss inside the same genus; the other <strong>30%</strong>
+crosses genus or family boundaries.</p>
+<p><strong>Some reads are still lost.</strong> If <em>every</em> species under a genus fails, Bracken has
+nothing left at the target rank to redistribute to, and drops those reads. Measured:
+<strong>−0.16%</strong> of reads, with 27–38 genera per sample emptied completely. Crediting the
+parent is much better than deleting rows outright, but it is not conservation.</p>
+</div>
+<h2 id="choosing-a-threshold">Choosing a threshold<a class="headerlink" href="#choosing-a-threshold" title="Permanent link">&para;</a></h2>
+<p>There is published guidance, and it is worth reading before inventing a number.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://link.springer.com/article/10.1186/s13059-018-1568-0">KrakenUniq</a> (Breitwieser &amp; Salzberg, 2018)</td>
+<td>~2,000 unique k-mers per million reads; 1,000 for pathogen discovery in patient samples</td>
+</tr>
+<tr>
+<td><a href="https://doi.org/10.3389/fmicb.2026.1603339">Oskolkov (2026)</a>, <em>Front. Microbiol.</em> 17:1603339</td>
+<td>~1,000 unique k-mers optimal by F1 across three ancient-metagenome dataset types; filtering on unique k-mers <strong>alone</strong> was sufficient, with no read-count filter needed; suggests scaling with depth, ~200 unique k-mers per 100,000 reads</td>
+</tr>
+<tr>
+<td><a href="https://link.springer.com/article/10.1186/s13059-023-03083-9">aMeta</a> (Pochon et al., 2023)</td>
+<td>Ships 1,000 unique k-mers <strong>and</strong> 200 assigned reads as user-configurable defaults</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Those numbers are k-mers. Kraken2 reports minimizers. Not the same unit.</p>
+<p>Minimizers are a <em>sample</em> of the k-mers, so the same amount of matched reference
+sequence yields a much smaller number.</p>
+<p>How much smaller depends on the database's <code>k</code> and <code>l</code>. Each k-mer of length <code>k</code>
+spans <code>w = k − l + 1</code> candidate minimizer positions of length <code>l</code>, and the standard
+expected density of selected minimizers is <code>2 / (w + 1)</code>. For the usual nucleotide
+settings (<code>k = 35</code>, <code>l = 31</code>) that is <code>w = 5</code> and a density of <code>1/3</code> — roughly <strong>one
+distinct minimizer per three k-mers</strong>.</p>
+<p>So a published <em>1,000 unique k-mers</em> is about <strong>333</strong> here. Applying the published
+number directly to the minimizer column makes the filter roughly three times harsher
+than its authors intended.</p>
+<p>Check <code>k</code> and <code>l</code> on the first line of your database's <code>inspect.txt</code> and recompute if
+they differ. (The <code>2/(w+1)</code> density is the expectation for a random minimizer scheme;
+Kraken2's spaced-seed masking shifts it slightly, so treat 333 as an order-of-
+magnitude conversion, not a precise one.)</p>
+</div>
+<h3 id="what-that-does-to-real-data">What that does to real data<a class="headerlink" href="#what-that-does-to-real-data" title="Permanent link">&para;</a></h3>
+<p>Four wastewater-enrichment metagenomes (naproxen-degrading consortia from a treatment plant), 2,312 species calls pooled. <strong>Read the denominators</strong> — most reads
+in a metagenome stop at genus or above and are never candidates for a species-level
+filter, so the two columns differ by a factor of ~30:</p>
+<table>
+<thead>
+<tr>
+<th>Threshold</th>
+<th style="text-align: right;">Species kept</th>
+<th style="text-align: right;">% of species-rank reads kept</th>
+<th style="text-align: right;">% of all classified reads kept</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td style="text-align: right;">2312 (100%)</td>
+<td style="text-align: right;">100.0%</td>
+<td style="text-align: right;">100.00%</td>
+</tr>
+<tr>
+<td>≥ 200</td>
+<td style="text-align: right;">1050 (45.4%)</td>
+<td style="text-align: right;">99.6%</td>
+<td style="text-align: right;">99.85%</td>
+</tr>
+<tr>
+<td><strong>≥ 333</strong> (converted, <strong>default</strong>)</td>
+<td style="text-align: right;"><strong>754 (32.6%)</strong></td>
+<td style="text-align: right;"><strong>98.7%</strong></td>
+<td style="text-align: right;"><strong>99.54%</strong></td>
+</tr>
+<tr>
+<td>≥ 500</td>
+<td style="text-align: right;">541 (23.4%)</td>
+<td style="text-align: right;">97.8%</td>
+<td style="text-align: right;">99.20%</td>
+</tr>
+<tr>
+<td>≥ 1000 (published number, unconverted)</td>
+<td style="text-align: right;">345 (14.9%)</td>
+<td style="text-align: right;">96.4%</td>
+<td style="text-align: right;">98.70%</td>
+</tr>
+</tbody>
+</table>
+<p>Only 36.5% of classified reads reach species rank at all. The converted threshold has the
+shape a useful filter should have: it drops two thirds of the species <em>names</em> while
+keeping 98.7% of the reads that carried a species label.</p>
+<h3 id="what-it-does-to-the-final-table">What it does to the final table<a class="headerlink" href="#what-it-does-to-the-final-table" title="Permanent link">&para;</a></h3>
+<p>The same four samples, gate off versus on:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Gate off</th>
+<th style="text-align: right;">Gate on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rows in <code>otu_table.tsv</code></td>
+<td style="text-align: right;">357</td>
+<td style="text-align: right;">233</td>
+</tr>
+<tr>
+<td>Total counts</td>
+<td style="text-align: right;">9,287,679</td>
+<td style="text-align: right;">9,271,415 (−0.18%)</td>
+</tr>
+<tr>
+<td>Genera represented</td>
+<td style="text-align: right;">121</td>
+<td style="text-align: right;">71</td>
+</tr>
+</tbody>
+</table>
+<p>Bray–Curtis dissimilarity between the two profiles is <strong>0.026–0.098</strong> at species level and
+<strong>0.005–0.031</strong> at genus level. The genus-level picture barely moves, which is what a
+filter that corrects <em>names</em> rather than <em>biology</em> should look like.</p>
+<div class="admonition danger">
+<p class="admonition-title">It is not only a tail-trim — check before you believe it</p>
+<p>The per-sample log reports the pruned reads using Kraken2's own counts. Bracken
+redistributes higher-rank reads down onto species, so a pruned taxon may have been
+holding far more of the <strong>final</strong> table than it holds in the Kraken2 report — on the
+test data, <strong>6–19× more</strong>. Two or three of every sample's top 20 species disappear.</p>
+<p>The clearest case, and the reason to keep this gate on even though the <a href="../confidence-and-threshold/">depth-scaled
+Bracken threshold</a> does most of the precision work
+elsewhere: <em>Pseudomonas</em> sp. JS425 had 373 Kraken2 reads on 189 distinct minimizers
+(each position hit ~62 times) — comfortably above any sane <em>read-count</em> floor — and
+Bracken inflated it to <strong>64,961 reads, 3% of the sample and rank 9 in the community</strong>.
+A 174× amplification of a thinly-evidenced call that a threshold on read count alone
+cannot see, because the read count itself looked fine. This is a narrow failure mode,
+not the typical one, but when it happens it is large.</p>
+<p>Run once with the gate off, once with it on, and compare <code>03.abundance</code> before
+committing to a threshold.</p>
+</div>
+<div class="admonition danger">
+<p class="admonition-title">The depth-scaling rule does not extrapolate</p>
+<p>The published thresholds come from ancient-DNA and clinical-pathogen work, mostly at
+shallower depth than a modern shotgun run. The depth-scaling suggestion in particular
+should be treated with caution: extrapolated to a multi-million-pair sample it implies
+a threshold roughly ten times the fixed one, far outside the range it was fitted on.
+MetaFlux uses the fixed converted value and leaves the scaling to you.</p>
+</div>
+<h2 id="why-the-default-is-enabled-false">Why the default is <code>enabled: false</code><a class="headerlink" href="#why-the-default-is-enabled-false" title="Permanent link">&para;</a></h2>
+<p>Not because the gate is untested — it has been run across 45 real and simulated samples
+spanning four environments — but because a correctly scaled
+<a href="../confidence-and-threshold/">Bracken threshold</a> already removes most of what it would
+remove. Measured at the depth-scaled threshold, the gate changes species-level F1 by a
+mean of <strong>+0.0009</strong>, and by <em>exactly</em> zero on the strain-madness and rhizosphere sets at
+every depth tested. Left at the old fixed <code>-t 10</code> it was worth about nine times more
+(mean +0.0079) — which is the clearest statement of its role: <strong>it is a safety net for an
+untuned pipeline, not a second independent filter.</strong></p>
+<div class="admonition note">
+<p class="admonition-title">Which database build those two numbers come from</p>
+<p>Both figures are from gate-on/gate-off pairs measured on the <strong>2025-10 PlusPF</strong>
+build (15 sample-depth combinations at the scaled threshold, 11 at the fixed one).
+The later 41-sample re-run on the 2026-06 build was executed with the gate on
+throughout and had no gate-off arm, so it did not re-measure this contrast. The
+mechanism does not depend on the database and coverage barely moved between the two
+builds (see <a href="../confidence-and-threshold/">the threshold page</a>), so these are not
+expected to shift — but they have not been re-confirmed on the newer index.</p>
+</div>
+<h3 id="but-no-change-in-f1-is-not-no-change-in-the-table">But "no change in F1" is not "no change in the table"<a class="headerlink" href="#but-no-change-in-f1-is-not-no-change-in-the-table" title="Permanent link">&para;</a></h3>
+<p>The two filters ask different questions. The threshold asks <em>how many reads</em>; the gate
+asks <em>how much distinct sequence</em>. A taxon can pass one and fail the other, and an
+aggregate score of 250+ species barely notices when a single one flips.</p>
+<p><em>Pseudomonas</em> sp. JS425, in four real wastewater samples, with the threshold already
+scaled by <code>alpha = 5e-05</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Sample</th>
+<th style="text-align: right;">classified pairs</th>
+<th style="text-align: right;">auto <code>-t</code></th>
+<th style="text-align: right;">JS425 reads</th>
+<th style="text-align: right;">distinct minimizers</th>
+<th style="text-align: left;">passes <code>-t</code>?</th>
+<th style="text-align: left;">gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21</td>
+<td style="text-align: right;">2,178,755</td>
+<td style="text-align: right;">109</td>
+<td style="text-align: right;">373</td>
+<td style="text-align: right;">189</td>
+<td style="text-align: left;"><strong>yes</strong></td>
+<td style="text-align: left;">prune</td>
+</tr>
+<tr>
+<td>22</td>
+<td style="text-align: right;">3,417,552</td>
+<td style="text-align: right;">171</td>
+<td style="text-align: right;">103</td>
+<td style="text-align: right;">188</td>
+<td style="text-align: left;">no</td>
+<td style="text-align: left;">prune</td>
+</tr>
+<tr>
+<td>23</td>
+<td style="text-align: right;">1,603,408</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">302</td>
+<td style="text-align: right;">188</td>
+<td style="text-align: left;"><strong>yes</strong></td>
+<td style="text-align: left;">prune</td>
+</tr>
+<tr>
+<td>24</td>
+<td style="text-align: right;">2,114,321</td>
+<td style="text-align: right;">106</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">190</td>
+<td style="text-align: left;"><strong>yes</strong></td>
+<td style="text-align: left;">prune</td>
+</tr>
+</tbody>
+</table>
+<p>373 reads is an unremarkable count that clears any sensible floor. 189 distinct
+minimizers, each hit some 62 times, is not — and Bracken amplified that call to 64,961
+reads, 3% of the sample and rank 9 in the community. A correctly tuned threshold keeps it
+in three samples of four; the gate removes it in all four. Note also what the threshold
+alone produces here: the same taxon present in three samples and absent from the fourth,
+purely because the cut-off landed differently — a presence/absence pattern that is an
+artefact, and one that can survive into a figure.</p>
+<p>Those samples have no ground truth, so they contributed no F1 at all. That is precisely
+why the benchmark shows +0.0009 and the gate is still worth having.</p>
+<p><strong>When to turn it on:</strong> environmental or otherwise poorly-covered communities, where reads
+from organisms absent from the database have to land somewhere. For gut, clinical, or
+anything close to RefSeq, leave it off. Either way the preview gated report is written
+even when disabled, so <code>diff</code> it against the Kraken2 report before deciding.</p>
+<h2 id="validation-status">Validation status<a class="headerlink" href="#validation-status" title="Permanent link">&para;</a></h2>
+<p>What the gate was tested against, and what those tests could and could not show.</p>
+<h3 id="what-has-been-checked">What has been checked<a class="headerlink" href="#what-has-been-checked" title="Permanent link">&para;</a></h3>
+<p>The original single-mock validation below (Zymo D6331) still stands and is kept for the
+worked detail. It has since been extended to <a href="https://www.nature.com/articles/s41592-022-01431-4">CAMI
+II</a>'s marine, rhizosphere, and
+strain-madness gold-standard sets — 41 samples, two Kraken2 database builds eight months
+apart, scored against OPAL — which is where the size and depth questions raised at the
+end of this section were actually answered. The full methodology and the numbers that
+matter for choosing a threshold live on the <a href="../confidence-and-threshold/">confidence and
+threshold</a> page; the finding specific to <em>this</em> gate is that
+it contributes essentially nothing (≤0.002 F1) once the Bracken threshold is scaled
+correctly, but still catches the JS425-style case above that a read-count floor cannot.</p>
+<p>One real mock community: the <a href="https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf">ZymoBIOMICS Gut Microbiome
+Standard (D6331)</a>,
+a shotgun run of ~5.3 M classified read pairs, processed twice through the whole pipeline
+with the gate off and on.</p>
+<p>The standard is sold as 21 strains. A species-level profiler can only ever see <strong>17
+species</strong>, because five of the 21 are <em>Escherichia coli</em> strains at 2.8% each that collapse
+into one <em>E. coli</em> row at 14%. That ceiling is arithmetic, not a reference-database gap.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Gate off</th>
+<th style="text-align: right;">Gate on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>True members recovered</td>
+<td style="text-align: right;">15 / 17</td>
+<td style="text-align: right;"><strong>15 / 17</strong></td>
+</tr>
+<tr>
+<td>False-positive species</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;"><strong>23</strong></td>
+</tr>
+<tr>
+<td>Precision</td>
+<td style="text-align: right;">0.300</td>
+<td style="text-align: right;"><strong>0.395</strong></td>
+</tr>
+<tr>
+<td>F1</td>
+<td style="text-align: right;">0.448</td>
+<td style="text-align: right;"><strong>0.545</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>No true member was removed.</strong> <em>Salmonella enterica</em> — 0.01% of the standard, just 134
+  classified reads — carries 3,547 distinct minimizers at a duplicity of 1.5, ten times
+  clear of the threshold, and survives. That is the distinction the whole method rests on:
+  <em>rare</em> is not the same as <em>poorly evidenced</em>.</li>
+<li>The two members never recovered (<em>Enterococcus faecalis</em> at 0.001%, <em>Clostridium
+  perfringens</em> at 0.0001%) are absent from the Kraken2 report in <strong>both</strong> runs. Both have
+  species entries in the database, so this is a depth limit, not a reference gap and not
+  the gate.</li>
+<li><strong>Quantitative accuracy did not change.</strong> L1 distance to the theoretical composition was
+  43.44 either way, Shannon <em>H</em> 2.146 either way, and Bray–Curtis between the two profiles
+  0.00009 — numerically indistinguishable. The 82 taxa the gate removed held 426 reads
+  between them out of 5.3 million. Any ordination or differential-abundance test would
+  give the same answer from both tables.</li>
+<li><strong>Richness, on the other hand, improved substantially</strong> — which is where the gate did its
+  work on this dataset:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Observed richness</th>
+<th style="text-align: right;">Truth</th>
+<th style="text-align: right;">Gate off</th>
+<th style="text-align: right;">Gate on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Species</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">50 (+194%)</td>
+<td style="text-align: right;"><strong>38 (+124%)</strong></td>
+</tr>
+<tr>
+<td>Genera</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">26 (+53%)</td>
+<td style="text-align: right;"><strong>19 (+12%)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The split is clean: <strong>the gate cleans the name list, it does not touch the abundances.</strong>
+If you report how many taxa you detected, or work with presence/absence, that matters. If
+you only ever compare relative abundances between samples, on data like this it will not
+change your conclusions.</p>
+<h3 id="why-richness-is-still-over-estimated-with-the-gate-on">Why richness is still over-estimated with the gate on<a class="headerlink" href="#why-richness-is-still-over-estimated-with-the-gate-on" title="Permanent link">&para;</a></h3>
+<p>38 species against a true 17 is still nearly double, and it is worth being precise about
+what the extra 21 are, because they are not what the gate is built to catch.</p>
+<p>Of the 23 non-truth species that survive, <strong>19 are congeners of a genuine member</strong> — and
+all four of the remainder are defensible:</p>
+<table>
+<thead>
+<tr>
+<th>Survivor</th>
+<th style="text-align: right;">Reads</th>
+<th style="text-align: right;">Distinct minimizers</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Fusobacterium animalis</em>, <em>vincentii</em>, <em>polymorphum</em></td>
+<td style="text-align: right;">82,228</td>
+<td style="text-align: right;">947–13,157</td>
+<td>Former <strong>subspecies of <em>F. nucleatum</em></strong>, elevated to species rank. Not errors — the mock's genuine member, split by a taxonomy change</td>
+</tr>
+<tr>
+<td><em>Homo sapiens</em></td>
+<td style="text-align: right;">965</td>
+<td style="text-align: right;">10,062</td>
+<td>Trace human DNA from handling. Really there</td>
+</tr>
+<tr>
+<td><em>Shigella dysenteriae</em></td>
+<td style="text-align: right;">839</td>
+<td style="text-align: right;">1,117</td>
+<td><em>Shigella</em> sits phylogenetically inside <em>E. coli</em>; the genomes are near-identical</td>
+</tr>
+<tr>
+<td><em>Sphingomonas paucimobilis</em>, <em>Cutibacterium acnes</em></td>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">464–779</td>
+<td>Textbook extraction-kit and skin contaminants. Plausibly really there</td>
+</tr>
+<tr>
+<td>14 further congeners of <em>Veillonella</em>, <em>Bacteroides</em>, <em>Escherichia</em>, <em>Saccharomyces</em>, <em>Candida</em>, <em>Clostridioides</em></td>
+<td style="text-align: right;">~1,900</td>
+<td style="text-align: right;">400–5,380</td>
+<td>Close relatives of an abundant true member</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern is the point. These survivors all carry <strong>large</strong> distinct-minimizer counts —
+<em>Saccharomyces paradoxus</em> has 5,380 on just 73 reads, at a duplicity of 1.7. That is broad,
+un-repetitive evidence, and it is genuinely in the read data: <em>S. cerevisiae</em> is a real
+member of the standard, and its sequence matches a great deal of what the database files
+under its sister species.</p>
+<p>So there are two different ways a species-level call goes wrong, and only one is an
+evidence problem:</p>
+<ul>
+<li><strong>Thin evidence</strong> — a few conserved minimizers hit over and over. Low distinct count,
+  high duplicity. <strong>The gate removes these.</strong></li>
+<li><strong>Mis-attributed evidence</strong> — a genuinely present organism whose sequence matches a close
+  relative's database entry. High distinct count, low duplicity. <strong>The gate cannot remove
+  these, and arguably should not: the sequence really is present. The label is what is
+  wrong, not the evidence.</strong></li>
+</ul>
+<p>The residual inflation is almost entirely the second kind, which is a property of how
+finely the reference database splits closely related organisms — not something any
+k-mer counting method can detect. The practical consequence is visible in the table above:
+at <strong>genus</strong> rank, where those distinctions disappear, the gate brings richness from +53%
+to <strong>+12%</strong> of the true value.</p>
+<h3 id="what-this-does-not-show">What this does not show<a class="headerlink" href="#what-this-does-not-show" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">A mock community proved the gate safe. Bigger, gold-standard communities showed it is not the main event.</p>
+<p>Every organism in D6331 has a species-level entry in the database used. When that is
+true, classification is already close to correct, false positives are a thin tail of
+near-zero-read taxa, and there is little for an evidence filter to repair — which is
+exactly what the CAMI II follow-up found: with the Bracken threshold scaled to depth,
+this gate adds at most 0.002 F1 across marine, rhizosphere and strain-madness samples.</p>
+<p>The JS425 case above is the one place it still earns its keep: a taxon whose <em>read
+count</em> looks unremarkable but whose <em>distinct sequence support</em> does not. A read-count
+floor, however well scaled, cannot see that distinction by construction.</p>
+</div>
+<p>The four gaps originally listed here — larger and more even communities, several samples
+at several depths, communities containing genomes absent from the reference, and sample
+types beyond gut and wastewater — have since been closed by the CAMI II benchmark
+described on the <a href="../confidence-and-threshold/">confidence and threshold</a> page: 41 samples,
+marine (256–478 species/sample) and rhizosphere (52% of gold species absent from the
+database — the exact "genomes absent from the reference" case), across a depth range and
+two database builds. The result did not overturn the D6331 finding, it confirmed the
+gate's role is narrower than that finding alone suggested: safe, rarely decisive.</p>
+<p>What genuinely remains open: everything above used short-read Illumina data. Long-read
+or hybrid assemblies, and sample types with even sparser reference coverage than
+rhizosphere, are untested. Treat the gate as a tool to run with the evidence tables open
+beside it, not as a setting to switch on and forget.</p>
+<h3 id="a-limitation-worth-knowing-about">A limitation worth knowing about<a class="headerlink" href="#a-limitation-worth-knowing-about" title="Permanent link">&para;</a></h3>
+<p>Very close relatives defeat the method, and no k-mer evidence measure fixes this.
+<em>Shigella dysenteriae</em> is not in D6331, but 13 reads were assigned to it — carrying 1,117
+distinct minimizers, so it passes the gate, and Bracken raised it to 834 reads. <em>Shigella</em>
+and <em>E. coli</em> are similar enough that minimizers the database marks as <em>Shigella</em>-specific
+are genuinely present in <em>E. coli</em> reads. The evidence is real; the label is wrong. That is
+a property of the reference taxonomy, not something this filter can detect.</p>
+<h3 id="threshold-stability">Threshold stability<a class="headerlink" href="#threshold-stability" title="Permanent link">&para;</a></h3>
+<p>An absolute threshold gives a species the same verdict in every sample — up to a point.
+Of 594 species seen in more than one test sample, <strong>119 (20%)</strong> got inconsistent verdicts.
+Splitting them:</p>
+<ul>
+<li><strong>55% are depth-driven</strong> — the organism was genuinely 5× rarer in one sample, and too
+  few reads simply cannot accumulate enough distinct minimizers. Arguably correct.</li>
+<li><strong>45% are knife-edge</strong> — similar read counts, verdict still flips, because the species
+  sits within a whisker of the line. <em>Novosphingobium</em> sp. RL4 above is one: 426 distinct
+  minimizers in one sample (kept) and 293–301 in the other three (pruned), despite
+  duplicity of 460–800 marking it as spurious in all four.</li>
+</ul>
+<p>This is inherent to any hard cut-off, not a defect of this particular number. It is the
+main reason to read the evidence tables rather than trust a threshold blindly.</p>
+<h2 id="what-does-not-work">What does not work<a class="headerlink" href="#what-does-not-work" title="Permanent link">&para;</a></h2>
+<p>Three approaches were tested against real data and rejected. Recorded because each looks
+reasonable until it is measured.</p>
+<p><strong>A threshold on distinct minimizers alone is partly an abundance filter.</strong> The distinct
+count correlates with read count (Pearson <em>r</em> = +0.71 on log-log across 2,312 species
+calls), so some of what it removes, it removes for being rare. This is why the published
+thresholds pair the k-mer count with an explicit read floor — <code>min_reads</code> exists for
+exactly that, and is 0 by default only because
+<a href="https://doi.org/10.3389/fmicb.2026.1603339">Oskolkov (2026)</a> found that filtering on
+unique k-mers alone was enough to reach the best F1, with no read-count filter needed.</p>
+<p><strong>Normalising to minimizers-per-read inverts the filter.</strong> That ratio <em>falls</em> as
+abundance rises (<em>r</em> = −0.74) — median 92 for single-read species, 0.68 for species with
+thousands of reads. A "ratio below 5" rule on one test sample removed 80% of the reads
+that had reached species rank, including the two most abundant species in the sample,
+while retaining every one of the 158 single-read species. It removes the data and keeps
+the noise.</p>
+<p><strong>Thresholding duplicity is more stable-looking but less stable in practice.</strong> Duplicity
+is nearly independent of abundance, which makes it attractive. But as a <em>filter</em> it is
+worse: at a comparable pruning rate it gave 28.5% inconsistent verdicts across samples
+against 20% for the distinct count. It is only consistent at cut-offs so permissive they
+remove almost nothing. Reported, not thresholded.</p>
+<p><strong>Flagging outliers against a fitted trend line finds no distinct population.</strong> Fitting
+<code>log(distinct minimizers)</code> against <code>log(reads)</code> and taking residuals looks principled,
+but the residuals are essentially normal: a "2 SD below the line" rule flagged 13 species
+where a pure Gaussian predicts 12.4. There is no separable cluster to find, so the rule
+just removes the bottom few percent of <em>any</em> sample. Worse, because the line is fitted per
+sample, the same species can fall on opposite sides of it in different samples of one
+study.</p>
+<p>The lesson driving the design: use an <strong>absolute</strong> threshold, so a species gets the same
+verdict in every run, and treat the trend line as a <em>ranking for the eye</em> rather than a
+test.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

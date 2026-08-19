@@ -1,0 +1,2053 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../length-and-truncation/">
+      
+      
+        <link rel="next" href="../../shotgun/overview/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Keeping and discarding taxa - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#keeping-and-discarding-taxa" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Keeping and discarding taxa
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-filter-sits-in-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the filter sits in the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-matching-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How matching works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The three keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-the-shipped-config-has-the-values-commented-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the shipped config has the values commented out
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-starting-points-per-marker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended starting points per marker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-tokens-that-actually-match" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing tokens that actually match
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-filter-empties-the-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the filter empties the table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#seeing-what-the-filter-did" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeing what the filter did
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-shotgun-counterpart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The shotgun counterpart
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-filter-sits-in-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the filter sits in the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-matching-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How matching works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The three keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-the-shipped-config-has-the-values-commented-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the shipped config has the values commented out
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-starting-points-per-marker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended starting points per marker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-tokens-that-actually-match" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing tokens that actually match
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-filter-empties-the-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the filter empties the table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#seeing-what-the-filter-did" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeing what the filter did
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-shotgun-counterpart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The shotgun counterpart
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/amplicon/taxon-filter.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="keeping-and-discarding-taxa">Keeping and discarding taxa<a class="headerlink" href="#keeping-and-discarding-taxa" title="Permanent link">&para;</a></h1>
+<p>Every amplicon run ends with a set of ASVs, each carrying a taxonomy string. Some of
+those ASVs are not what the study is about: chloroplast and mitochondrial reads
+co-amplified by 16S primers, plant or host sequences in an ITS run, a <em>Ralstonia</em> that
+came in with the extraction kit, a <em>parE</em> paralog picked up by gyrB primers. The
+taxonomy filter is where they are removed.</p>
+<p>It is a plain keep/discard list of taxon names, set in
+<code>amplicon.taxonomy.filter</code>. There is no hidden default and no per-marker magic in the
+code — whatever is listed in the config is exactly what gets applied.</p>
+<h2 id="where-the-filter-sits-in-the-run">Where the filter sits in the run<a class="headerlink" href="#where-the-filter-sits-in-the-run" title="Permanent link">&para;</a></h2>
+<p>The filter is the last thing that happens inside the <code>assign_taxonomy</code> rule, after
+classification and before any table is written.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input</td>
+<td><code>5.dada2/seqs_lenfilt.fasta</code> (ASV sequences after the length filter, and after Metaxa2/ITSx extraction where that runs) plus the matching count table <code>5.dada2/seqtab_lenfilt_head_names.txt</code></td>
+</tr>
+<tr>
+<td>Classify</td>
+<td><code>rdp</code> path — DADA2 <code>assignTaxonomy</code> (+ <code>addSpecies</code> for 16S); <code>sintax</code> path — <code>vsearch --sintax</code></td>
+</tr>
+<tr>
+<td>Build lineage</td>
+<td>ranks joined into one taxonomy string per ASV</td>
+</tr>
+<tr>
+<td><strong>Filter</strong></td>
+<td><strong><code>keep</code>, then <code>discard</code>, applied to that string</strong></td>
+</tr>
+<tr>
+<td>Output</td>
+<td><code>6.taxonomy/asv_table.txt</code>, <code>asv_table_seqs.txt</code>, <code>taxon_seq_table.txt</code></td>
+</tr>
+</tbody>
+</table>
+<p>The two classifier paths are separate scripts — <code>workflow/scripts/amplicon/80a_assign_taxonomy.R</code>
+for <code>rdp</code> and <code>workflow/scripts/amplicon/80c_parse_sintax.py</code> for <code>sintax</code> — but they
+implement the same filter with the same behaviour, so the choice of classifier does not
+change how the lists are written.</p>
+<p>The filter removes whole ASVs. A discarded ASV disappears from all three output tables
+at once, counts included, and nothing downstream re-adds it. The cost in reads is
+visible in <code>stats/read_tracking.txt</code>, whose <code>post_taxonomy_filter</code> column is summed from
+the filtered <code>asv_table.txt</code>: comparing it with <code>post_length_filter</code> shows how many
+reads the filter removed, per sample.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Read classification itself is untouched. The filter only decides which of the
+classified ASVs are written out; it never changes the taxonomy an ASV was given.</p>
+</div>
+<h2 id="how-matching-works">How matching works<a class="headerlink" href="#how-matching-works" title="Permanent link">&para;</a></h2>
+<p>Each ASV's taxonomy string is a lineage with ranks joined by <code>;</code> (no space), each rank
+carrying its own prefix:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>k__…;p__…;c__…;o__…;f__…;g__…;s__…
+</code></pre></div>
+<p>A token in <code>keep</code> or <code>discard</code> is compared against <strong>whole rank segments</strong> of that
+string — the pieces between the semicolons — not against the string as a whole. A token
+matches when it is exactly equal to one of those segments.</p>
+<p>That is what makes the lists safe to use at any rank. <code>g__Bacillus</code> matches an ASV whose
+genus is exactly <em>Bacillus</em>, and nothing else: not a differently suffixed genus such as
+<code>g__Bacillus_A</code>, and not a species or family segment that happens to contain the same
+letters. Substring accidents cannot happen.</p>
+<p>An ASV passes the filter as follows:</p>
+<ul>
+<li><strong><code>keep</code> runs first and defines what survives.</strong> An ASV is kept only if at least one
+  of its ranks matches a <code>keep</code> token. <code>keep: [k__Bacteria, k__Archaea]</code> therefore keeps
+  prokaryotes and drops both eukaryotic hits and anything left unclassified at kingdom
+  level — an ASV with an empty lineage matches nothing, so it does not survive a
+  non-empty <code>keep</code>.</li>
+<li><strong><code>discard</code> then prunes what remains.</strong> An ASV is removed if any of its ranks matches
+  a <code>discard</code> token. <code>discard: [o__Chloroplast, f__Mitochondria]</code> removes the usual 16S
+  plastid and host carry-over.</li>
+<li>Because <code>discard</code> runs second, it wins: a taxon named in both lists is removed.</li>
+</ul>
+<h2 id="the-three-keys">The three keys<a class="headerlink" href="#the-three-keys" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">taxonomy</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">keep</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">[</span><span class="nv">k__Bacteria</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">k__Archaea</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">o__Chloroplast</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">f__Mitochondria</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>Master switch. <code>false</code> turns the filter off entirely and every classified ASV is written out, whatever <code>keep</code> and <code>discard</code> contain.</td>
+</tr>
+<tr>
+<td><code>keep</code></td>
+<td>Tokens that define what survives. An empty list (or the key left unset) means this direction does nothing — no ASV is dropped for failing to match.</td>
+</tr>
+<tr>
+<td><code>discard</code></td>
+<td>Tokens that are then removed from the survivors. An empty list means this direction does nothing.</td>
+</tr>
+</tbody>
+</table>
+<p>Both lists accept a bare scalar as well as a YAML list, so <code>keep: k__Fungi</code> and
+<code>keep: [k__Fungi]</code> are equivalent.</p>
+<p>Two consequences worth spelling out, because they are easy to conflate:</p>
+<ul>
+<li><code>enabled: true</code> with both lists empty is a working filter that removes nothing. That
+  is the fail-safe state, not an error.</li>
+<li><code>enabled: false</code> with populated lists ignores those lists completely. It is the quick
+  way to test what the filter was actually costing.</li>
+</ul>
+<h3 id="why-the-shipped-config-has-the-values-commented-out">Why the shipped config has the values commented out<a class="headerlink" href="#why-the-shipped-config-has-the-values-commented-out" title="Permanent link">&para;</a></h3>
+<p><code>config/config.yaml</code> is always loaded as a base layer underneath the <code>--configfile</code>
+given on the command line. Any concrete value written there would silently apply to
+every run that does not override it — 16S tokens leaking into an 18S run, for instance,
+where <code>keep: [k__Bacteria, k__Archaea]</code> would discard every eukaryotic ASV. So the
+template ships the recommended values commented out:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="w">      </span><span class="nt">keep</span><span class="p">:</span><span class="w">    </span><span class="c1">#[k__Bacteria, k__Archaea]</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">      </span><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="c1">#[o__Chloroplast, f__Mitochondria]</span>
+</code></pre></div>
+<p>Left unset they resolve to <code>[]</code>, which filters nothing. Copy the line for the marker in
+use into the run config and uncomment it there.</p>
+<h2 id="recommended-starting-points-per-marker">Recommended starting points per marker<a class="headerlink" href="#recommended-starting-points-per-marker" title="Permanent link">&para;</a></h2>
+<p>These are starting points, not defaults — nothing in the code applies them.</p>
+<table>
+<thead>
+<tr>
+<th>Marker</th>
+<th><code>keep</code></th>
+<th><code>discard</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16S</td>
+<td><code>[k__Bacteria, k__Archaea]</code></td>
+<td><code>[o__Chloroplast, f__Mitochondria]</code></td>
+</tr>
+<tr>
+<td>ITS</td>
+<td><code>[k__Fungi]</code></td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td>18S</td>
+<td><code>[d__Eukaryota]</code> — note this also drops ASVs left unclassified at Domain, which on some 18S datasets is a large fraction; see <a href="../markers/18S/">18S rRNA</a> before applying it</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td>gyrB</td>
+<td><em>no recommended default</em> — see below</td>
+<td></td>
+</tr>
+<tr>
+<td>rpoB</td>
+<td><em>no recommended default</em> — see below</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>18S</strong> uses <code>d__Eukaryota</code>, not <code>k__Eukaryota</code>: the taxonomy reference is PR2, whose
+top rank is Domain and is emitted with the <code>d__</code> prefix. The config template notes that
+a SILVA-Eukaryotic taxonomy reference would carry <code>k__</code> instead.</p>
+<p><strong>gyrB</strong> has no recommended keep/discard, but it does have a filter worth applying, of a
+different kind. The DD7RZ8 reference tags every entry's first rank as <code>gyrB</code> (the true
+gene) or <code>other</code> (a co-amplified paralog such as <em>parE</em>). That tag rides along as an
+ordinary taxonomy rank, so the same machinery drops paralogs with no extra code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">other</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># drops paralogs, keeps ASVs the classifier left unassigned</span>
+</code></pre></div>
+<p><code>keep: [gyrB]</code> is stricter, not equivalent — it also drops every ASV that came back
+unclassified, since an empty lineage matches no keep token.</p>
+<p>Note the tag has no rank prefix — it is emitted verbatim as <code>other</code> or <code>gyrB</code>. How much
+<code>other</code> to expect depends on the primers and the samples, so a sensible first run leaves
+the lists empty, looks at the paralog fraction in the output, and decides after. See
+<a href="../markers/gyrb/">gyrB</a>.</p>
+<p><strong>rpoB</strong> has nothing structurally equivalent. The FROGS RefSeq reference contains only
+rpoB, so there is no paralog or organellar class to filter at this stage. Leave the
+lists empty unless a particular run shows a reason not to. See <a href="../markers/rpob/">rpoB</a>.</p>
+<h2 id="writing-tokens-that-actually-match">Writing tokens that actually match<a class="headerlink" href="#writing-tokens-that-actually-match" title="Permanent link">&para;</a></h2>
+<p>Tokens are compared literally, so they have to be spelled exactly as the reference
+database spells them. The reliable way to get that right is to copy the name from the
+<code>taxonomy</code> column of <code>6.taxonomy/asv_table.txt</code> from a first, unfiltered run.</p>
+<p>The rank prefixes for the Linnaean seven ranks (16S, ITS, gyrB from phylum down, rpoB):</p>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Prefix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kingdom</td>
+<td><code>k__</code></td>
+</tr>
+<tr>
+<td>Phylum</td>
+<td><code>p__</code></td>
+</tr>
+<tr>
+<td>Class</td>
+<td><code>c__</code></td>
+</tr>
+<tr>
+<td>Order</td>
+<td><code>o__</code></td>
+</tr>
+<tr>
+<td>Family</td>
+<td><code>f__</code></td>
+</tr>
+<tr>
+<td>Genus</td>
+<td><code>g__</code></td>
+</tr>
+<tr>
+<td>Species</td>
+<td><code>s__</code></td>
+</tr>
+</tbody>
+</table>
+<p>18S is the exception, because PR2 has more ranks: Domain <code>d__</code>, Supergroup <code>sg__</code>,
+Division <code>dv__</code>, Subdivision <code>sbd__</code>, then Class, Order, Family, Genus, Species with the
+usual prefixes. The <code>sintax</code> path for 18S merges Division and Subdivision into a single
+<code>dv__</code> field, so a subdivision-level token only exists on the <code>rdp</code> path.</p>
+<p>Species-level tokens need extra care, because the exact form follows the reference and
+not the pipeline: SILVA (16S) via <code>rdp</code> yields a binomial with a space, e.g.
+<code>s__Bacillus subtilis</code>, while UNITE (ITS), the GTDB-derived gyrB reference and the
+NCBI RefSeq-derived rpoB reference use an underscore, e.g. <code>s__Staphylococcus_simiae</code>.
+The <code>sintax</code> path emits whatever label its database carries. Copy, do not retype.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>To drop lab or kit contaminants that a negative control revealed, add them to
+<code>discard</code> at the rank that identifies them cleanly — usually genus:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">o__Chloroplast</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">f__Mitochondria</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">g__Ralstonia</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">g__Bradyrhizobium</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+</div>
+<h2 id="when-the-filter-empties-the-table">When the filter empties the table<a class="headerlink" href="#when-the-filter-empties-the-table" title="Permanent link">&para;</a></h2>
+<p>If the filter removes 100% of ASVs, the run stops with an error instead of writing a
+header-only table. In practice that outcome almost always means the lists do not match
+the marker — 16S keep tokens on an ITS run, or <code>k__Eukaryota</code> on an 18S run classified
+against PR2, where the top rank is <code>d__</code>. A silent empty table would be discovered much
+later, in R, with no clue as to why.</p>
+<p>The error names the marker and the number of ASVs lost (numbers below are illustrative):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>the keep/discard filter removed ALL 1843 ASVs (amp_type=ITS). The keep/discard lists
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>likely do not match this marker: for ITS use keep: [k__Fungi]; for 16S use keep:
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>[k__Bacteria, k__Archaea]. Fix amplicon.taxonomy.filter, or set
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>amplicon.taxonomy.filter.enabled: false.
+</code></pre></div>
+<p>The check only fires when the filter is enabled and there were ASVs to begin with, so a
+run that produced no ASVs at all fails earlier and for its own reasons.</p>
+<p>What to check, in order:</p>
+<ol>
+<li>The rank prefix. Does the marker's reference use <code>k__</code> or <code>d__</code> at the top?</li>
+<li>The marker itself — is <code>amplicon.type</code> what the tokens were written for?</li>
+<li>The spelling, against the <code>taxonomy</code> column of a run made with <code>enabled: false</code>.</li>
+</ol>
+<h2 id="seeing-what-the-filter-did">Seeing what the filter did<a class="headerlink" href="#seeing-what-the-filter-did" title="Permanent link">&para;</a></h2>
+<p>Both classifier paths log their counts to <code>logs/assign_taxonomy.log</code>, three lines that
+say exactly how many ASVs each direction cost:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>[assign_taxonomy] Keep filter (k__Bacteria,k__Archaea): 1620 / 1843 ASVs retained
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>[assign_taxonomy] Discard filter (o__Chloroplast,f__Mitochondria): 47 ASV(s) removed
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>[assign_taxonomy] Final ASV count: 1573
+</code></pre></div>
+<p>The <code>sintax</code> path writes the same three lines under an <code>[assign_taxonomy/sintax]</code> tag.
+A <code>keep</code> line that retains far fewer ASVs than expected is worth following up before
+trusting the table: often the reference simply failed to classify those ASVs at the rank
+the token names, rather than the ASVs being genuinely off-target.</p>
+<div class="admonition warning">
+<p class="admonition-title">Retired configuration keys</p>
+<p>Earlier versions used regular expressions, <code>include_pattern</code> and <code>exclude_pattern</code>,
+which carried per-marker defaults. Those keys are gone. A config that still contains
+either of them stops the run at startup with a message showing the keep/discard
+equivalent, rather than running with the filter silently disabled.</p>
+</div>
+<h2 id="the-shotgun-counterpart">The shotgun counterpart<a class="headerlink" href="#the-shotgun-counterpart" title="Permanent link">&para;</a></h2>
+<p>Shotgun runs have their own filter, <code>shotgun.taxonomy_filter</code>, with the same three keys
+and exactly the same whole-segment token matching: <code>keep</code> first, then <code>discard</code>, empty
+list means no-op. It is applied to the final OTU table after Bracken, so it changes
+which OTUs appear in <code>03.abundance/otu_table.tsv</code> and <code>otu_table.biom</code>, never how reads
+were classified.</p>
+<p>Two differences from the amplicon side:</p>
+<ul>
+<li>It ships <strong>off</strong> (<code>enabled: false</code>). Metagenomic sample types vary too much for a
+  universal starting point; common uses are <code>keep: [k__Bacteria, k__Archaea]</code> for
+  prokaryotes only, or <code>discard: [g__Homo]</code> as an explicit host safety net.</li>
+<li>If it removes every OTU, it logs a warning and writes an empty table rather than
+  failing. The amplicon filter is stricter because an amplicon run has exactly one
+  marker to get right, and getting it wrong is the common cause of an empty result.</li>
+</ul>
+<p>See the <a href="../../shotgun/overview/">shotgun overview</a> and the
+<a href="../../reference/configuration/">configuration reference</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
