@@ -125,6 +125,17 @@ was built properly.
 Consuming the filtered set removes that problem outright, and it guarantees
 the tree's tips and the abundance table you pair it with in R are the same feature set.
 
+!!! note "The ASV set can shift slightly between runs, for a reason upstream of this module"
+    With `taxonomy.method: sintax` on more than one thread, VSEARCH races several threads
+    on one random-number stream, so a few per-rank confidence values land on the other
+    side of the cutoff between runs — MetaFlux documents this under `amplicon.seed`. Two
+    runs of the 16S test set from identical configs differed in the taxonomy string of
+    15–16 of 211 ASVs, with **every read count identical**. The drift is below kingdom
+    level, so the contaminant filter kept the same 211 ASVs and the tree was unaffected;
+    but a drift at the rank your `keep` list tests would change which ASVs reach the tree.
+    Set `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
+    byte-reproducible.
+
 !!! warning "The filter has to be doing something"
     If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
     the tree is built from an unfiltered ASV set and the protection above does not apply.
@@ -366,42 +377,229 @@ analysis without it to see whether your conclusion depends on it.
 
 ## Using the tree in R
 
-The tree is the handover point. A typical workflow:
+MetaFlux stops at the tree; this is where you pick it up. Below is a complete worked
+example — from the three files a run leaves behind through to a UniFrac ordination —
+that was written and run against MetaFlux's own 16S test output, so the code is known
+to work rather than merely to look plausible.
+
+### Which packages, and why not phyloseq
+
+The example uses **`ape`** (read and prune the tree), **`phangorn`** (midpoint rooting),
+**`rbiom`** (UniFrac and Faith's PD) and **`vegan`** (ordination, PERMANOVA), plus
+**`decontam`** if you sequenced negative controls.
+
+It deliberately does **not** use `phyloseq`. That is not a judgement on anyone's past
+work — it was the right tool for years — but three things have changed:
+
+- **It is in maintenance mode.** Bioconductor's own successor is the
+  `TreeSummarizedExperiment` / `mia` family, and the *Orchestrating Microbiome Analysis*
+  book is explicitly positioned as the successor to the phyloseq tutorials.
+- **Its object model buys you nothing here.** MetaFlux writes a plain table and a plain
+  Newick file. Assembling them into an S4 object first, only to pull them apart again,
+  adds ceremony between you and your data — and hides exactly the step where the tree and
+  the table can silently stop matching.
+- **Its UniFrac is slow.** It is implemented in R; `rbiom`'s is compiled, and the gap is
+  orders of magnitude on a real ASV set.
+
+If you want a maintained *framework* rather than plain matrices, use
+`TreeSummarizedExperiment` + `mia`: it holds the tree in `rowTree()` and has the same
+metrics. The example below stays framework-free on purpose, so that every object in it is
+a matrix or a data frame you can print and inspect.
+
+### The example
 
 ```r
+# ─────────────────────────────────────────────────────────────────────────────
+# From a MetaFlux 16S run to a UniFrac ordination.
+#
+# Reads the three files a MetaFlux amplicon run leaves behind, filters the ASVs
+# the way a real study does, prunes and roots the tree, and ends at a UniFrac
+# ordination with a PERMANOVA. Every step that can silently corrupt the result
+# is checked rather than assumed.
+#
+# Packages (all CRAN except decontam, which is Bioconductor):
+#   ape       read, prune and inspect the tree
+#   phangorn  midpoint rooting
+#   rbiom     UniFrac and Faith's PD (fast C++; reads a plain matrix + tree)
+#   vegan     ordination and PERMANOVA
+#   decontam  optional, only if you sequenced negative controls
+# ─────────────────────────────────────────────────────────────────────────────
+
 library(ape)
-library(phyloseq)
+library(phangorn)
+library(rbiom)
+library(vegan)
 
-tree <- read.tree("out/7.phylogeny/asv_16s.unrooted.nwk")
+# vegan and rbiom both export rarefy(), and phangorn and vegan both export
+# diversity(); whichever package is attached last silently wins. Every rbiom call
+# below is written as rbiom::fn() so this example cannot break on library() order.
 
-# 1. Prune to your final feature set, AFTER decontam / abundance filtering.
-#    ape::drop.tip(), or phyloseq::prune_taxa() if the tree is in a phyloseq object.
-keep  <- taxa_names(ps_filtered)
-tree  <- drop.tip(tree, setdiff(tree$tip.label, keep))
+out_dir <- "path/to/your/metaflux_output"          # <- edit this
 
-# 2. Root AFTER pruning, not before, and immediately before the metric.
-tree  <- phangorn::midpoint(tree)
+# ── 1. Read what MetaFlux wrote ──────────────────────────────────────────────
+# asv_table.txt: rows are ASVs, columns are your samples plus one `taxonomy`
+# column. R's read.table handles MetaFlux's quoting as-is; check.names = FALSE
+# keeps sample names such as "WT-1" from being mangled into "WT.1".
+asv_table <- read.table(
+  file.path(out_dir, "6.taxonomy", "asv_table.txt"),
+  sep = "\t", header = TRUE, row.names = 1,
+  quote = "\"", comment.char = "", check.names = FALSE
+)
 
-# 3. Now compute your metric.
-#    picante::pd(otu_table, tree)  /  UniFrac(ps, weighted = TRUE)
+# Counts and taxonomy travel together in that file; split them apart, because
+# every numeric step below needs a pure integer matrix.
+taxonomy <- asv_table[, "taxonomy", drop = TRUE]
+names(taxonomy) <- rownames(asv_table)
+counts <- as.matrix(asv_table[, setdiff(colnames(asv_table), "taxonomy"), drop = FALSE])
+
+# The tree. MetaFlux exports it unrooted on purpose: you are about to remove
+# tips, and a root chosen before that stops being the right root afterwards.
+tree <- read.tree(file.path(out_dir, "7.phylogeny", "asv_16s.unrooted.nwk"))
+
+cat(sprintf("read %d ASVs x %d samples; tree has %d tips\n",
+            nrow(counts), ncol(counts), length(tree$tip.label)))
+
+# ── 2. Check the invariant before trusting anything ──────────────────────────
+# Every phylogenetic metric silently returns a number even when the tree and the
+# table describe different features — it is just the wrong number. MetaFlux
+# guarantees these two sets match; verify it anyway, because you are about to
+# subset both and that is where they drift apart.
+stopifnot(setequal(rownames(counts), tree$tip.label))
+stopifnot(!any(duplicated(tree$tip.label)))
+
+# ── 3. Remove contaminants (only if you sequenced negative controls) ─────────
+# Skip this block if you did not. decontam's prevalence method compares how
+# often each ASV appears in true samples versus in blanks; threshold 0.5 is the
+# "more prevalent in controls than in samples" rule, which is the stricter and
+# more usual choice for a well-designed blank set.
+#
+# is_control <- colnames(counts) %in% c("BLANK1", "BLANK2")
+# library(decontam)
+# verdict <- isContaminant(t(counts), neg = is_control, method = "prevalence",
+#                          threshold = 0.5)
+# cat(sprintf("decontam flagged %d of %d ASVs\n", sum(verdict$contaminant), nrow(verdict)))
+# counts <- counts[!verdict$contaminant, !is_control, drop = FALSE]
+
+# ── 4. Filter rare ASVs ──────────────────────────────────────────────────────
+# A plain, defensible rule: keep an ASV seen at least `min_reads` times in at
+# least `min_samples` samples. Tune to your design — this is a study decision,
+# not a technical default. Filtering before the metrics matters because a
+# singleton on a long branch moves Faith's PD and unweighted UniFrac more than
+# any abundant ASV does.
+min_reads   <- 2
+min_samples <- 2
+keep <- rowSums(counts >= min_reads) >= min_samples
+cat(sprintf("abundance filter keeps %d of %d ASVs (%.1f%% of reads)\n",
+            sum(keep), length(keep), 100 * sum(counts[keep, ]) / sum(counts)))
+counts <- counts[keep, , drop = FALSE]
+
+# ── 5. Prune the tree to the ASVs that survived ──────────────────────────────
+# Prune, do not rebuild. Dropping a tip removes it and merges the two branches
+# that met at its parent, so distances among the remaining tips are unchanged.
+# The pruned tree is exactly the full tree restricted to the ASVs you kept, and
+# its branch lengths were estimated from more data than a tree re-inferred from
+# the survivors alone would have had.
+tree <- keep.tip(tree, rownames(counts))
+stopifnot(setequal(rownames(counts), tree$tip.label))
+cat(sprintf("tree pruned to %d tips\n", length(tree$tip.label)))
+
+# ── 6. Root the tree — now, not earlier ─────────────────────────────────────
+# Unweighted UniFrac and Faith's PD both depend on where the root sits. On the
+# MetaFlux 16S test data, moving the root changed unweighted UniFrac distances
+# by up to 7e-3; weighted UniFrac was unaffected. Midpoint rooting is the usual
+# choice when no outgroup is available. Do it here, after pruning, because the
+# midpoint of the full tree is not the midpoint of this one.
+#
+# With a real outgroup, prefer it:  tree <- root(tree, outgroup = "ASV_57", resolve.root = TRUE)
+tree <- midpoint(tree)
+stopifnot(is.rooted(tree))
+
+# ── 7. Even out sequencing depth ────────────────────────────────────────────
+# UniFrac compares which branches samples occupy, so a sample sequenced ten
+# times deeper looks artificially diverse. Rarefying to a common depth is the
+# simple, widely-accepted fix; it discards reads, so check what the depth costs
+# you before accepting it. (If you prefer not to rarefy, skip this and use
+# weighted UniFrac, which is far less depth-sensitive than unweighted.)
+biom  <- rbiom::as_rbiom(counts, tree = tree)
+depth <- rbiom::suggest_rarefy_depth(biom)
+cat(sprintf("sample depths: %s\nrarefying to %d\n",
+            paste(sprintf("%s=%d", colnames(counts), colSums(counts)), collapse = ", "), depth))
+biom_rare <- rbiom::rarefy(biom, depth = depth, seed = 42L)
+
+# ── 8. Alpha diversity: Faith's PD ──────────────────────────────────────────
+# The total branch length of the part of the tree the sample occupies.
+faith <- rbiom::adiv_table(biom_rare, adiv = "faith")
+print(faith[, c(".sample", ".depth", ".diversity")])
+
+# ── 9. Beta diversity: UniFrac ──────────────────────────────────────────────
+# Report both. Unweighted asks which lineages are present and is the sensitive,
+# artefact-prone one; weighted asks how abundant they are and is far more
+# robust. If the two disagree, the difference lives in the rare taxa — which is
+# exactly where a de novo tree from a short marker is least trustworthy.
+uw <- rbiom::bdiv_distmat(biom_rare, bdiv = "unweighted_unifrac")
+wt <- rbiom::bdiv_distmat(biom_rare, bdiv = "weighted_unifrac")
+
+# ── 10. Ordination ──────────────────────────────────────────────────────────
+# PCoA (classical multidimensional scaling) is the standard partner for a
+# distance matrix. The eigenvalues tell you how much of the structure the first
+# two axes actually show — quote it on the axis labels, never omit it.
+pcoa <- cmdscale(uw, k = 2, eig = TRUE)
+var_explained <- 100 * pcoa$eig[1:2] / sum(pcoa$eig[pcoa$eig > 0])
+plot(pcoa$points, pch = 19, cex = 1.4,
+     xlab = sprintf("PCoA 1 (%.1f%%)", var_explained[1]),
+     ylab = sprintf("PCoA 2 (%.1f%%)", var_explained[2]),
+     main = "Unweighted UniFrac, PCoA")
+text(pcoa$points, labels = rownames(pcoa$points), pos = 3, cex = 0.7)
+
+# ── 11. Test a hypothesis ───────────────────────────────────────────────────
+# PERMANOVA asks whether group centroids differ. It is sensitive to differences
+# in within-group spread as well, so always run betadisper alongside: a
+# significant adonis2 with a significant betadisper may only mean one group is
+# more variable than the other.
+#
+# group <- factor(c("treated", "treated", "control", "control", "treated", "control"))
+# print(adonis2(uw ~ group, permutations = 999))
+# print(permutest(betadisper(uw, group), permutations = 999))
 ```
 
-Three things worth internalising:
+### What the checks in it are for
 
-**Prune, don't rebuild.** Dropping tips is well defined: the tip is removed and, where its
-parent becomes a degree-2 node, that node is suppressed by summing the two adjacent branch
-lengths. The crucial property is that **patristic distances among the retained tips are
-unchanged** — verified for this module's own output. So UniFrac or Faith's PD on the
-pruned tree equals what you would get from the full tree restricted to those features. A
-tree re-inferred from only the retained ASVs would differ, and being estimated from fewer
-sequences, generally has *worse*-informed branch lengths. Prune and move on.
+**The invariant check (step 2) is the one not to skip.** Every phylogenetic metric will
+happily return a number when the tree and the table describe different feature sets — it
+is simply the wrong number, and nothing warns you. MetaFlux guarantees the two match on
+output; the check exists because *you* are about to subset both, and that is where they
+drift apart.
 
-**Root after pruning.** See [Rooting](#rooting-the-tree-is-exported-unrooted-and-only-unrooted)
-above. This is the step people get wrong.
+**Prune, don't rebuild.** Dropping a tip removes it and merges the two branches that met
+at its parent, so patristic distances among the remaining tips are unchanged — verified
+on this module's own output. UniFrac or Faith's PD on the pruned tree therefore equals
+what you would get from the full tree restricted to those features. A tree re-inferred
+from only the survivors would differ, and having been estimated from fewer sequences,
+would generally have *worse*-informed branch lengths. Rebuild only if you removed a very
+large fraction of the ASVs, or if the removed set was specifically what distorted the
+topology; there is no benchmarked threshold, so it is a judgement call.
 
-**Only rebuild if you removed a very large fraction of ASVs**, or if the removed set was
-specifically what was distorting the topology. There is no benchmarked threshold for
-this; it is a judgement call.
+**Root after pruning, not before.** This is the step people get wrong, and it is why
+MetaFlux exports the tree unrooted. Measured on the 16S test data: moving the root
+changed unweighted UniFrac distances by up to 7×10⁻³, while weighted UniFrac was
+unaffected to numerical precision. So the root position matters for exactly the metric
+that is already the most artefact-prone.
+
+**Watch the namespace collisions.** `vegan` and `rbiom` both export `rarefy()`, and
+`phangorn` and `vegan` both export `diversity()`. Whichever package is attached last
+wins, silently. The example calls every `rbiom` function as `rbiom::fn()` for that reason.
+
+**Report both UniFracs.** Unweighted asks which lineages are present, weighted asks how
+abundant they are. Unweighted is the sensitive one — it is where a single long branch or
+a contaminant does its damage, and it is the metric the long-branch report exists to
+protect. If the two disagree, the difference lives in the rare taxa, which is where a de
+novo tree from a short marker is least trustworthy.
+
+**PERMANOVA needs replication.** `adonis2` on a handful of samples cannot produce a
+meaningful *p*-value: with two samples per group there are only a few hundred distinct
+permutations. Always pair it with `betadisper` — a significant `adonis2` alongside a
+significant `betadisper` may mean only that one group is more variable than the other,
+not that the centroids differ.
 
 ## What is recorded
 
@@ -420,6 +618,12 @@ and not boilerplate:
 - Neither IQ-TREE nor MAFFT documents any guarantee that results are identical across
   different thread counts, and this has **not been tested empirically** for MetaFlux. If
   you need to reproduce a tree exactly, pin `resources.threads` as well as the seed.
+- **At a fixed seed and thread count the tree is reproducible, but the file is not
+  byte-identical.** Two runs of the 16S test set from freshly downloaded databases gave
+  the same topology (Robinson–Foulds distance 0), the same total tree length and a
+  patristic correlation of 1 — while the Newick text differed in the last printed digit
+  of a few branch lengths. Compare trees with `ape::dist.topo()` or a patristic
+  correlation, never with `diff`.
 - Single-threaded FastTree with `support: false` uses no randomness at all and is fully
   deterministic. Its parallel build, `FastTreeMP`, is documented non-deterministic and is
   **never** used by MetaFlux.
@@ -427,8 +631,8 @@ and not boilerplate:
   explicitly.
 
 Two questions that used to sit here as "not yet verified" now have measured answers,
-from a benchmark on the 211-ASV test set
-(`MetaFlux_run/benchmark_phylogeny_2026-09/` holds the trees, logs and analysis):
+from the benchmark on the 211-ASV test set described on the
+[Phylogeny validation](../about/validation.md) page:
 
 - **The L-INS-i / FFT-NS-2 tier boundary does change the tree.** Same data, same
   backend and model, different tier: 46% of internal branches differ. Part of that is the tree search
@@ -448,8 +652,7 @@ from a benchmark on the 211-ASV test set
 
 ## How these defaults were checked
 
-Two experiments, both archived with trees, logs and scripts in
-`MetaFlux_run/benchmark_phylogeny_2026-09/` and written up on the
+Two experiments, written up in full on the
 [Phylogeny validation](../about/validation.md) page:
 
 - **A sensitivity analysis on the real 211-ASV test run** — one setting changed at a
@@ -459,7 +662,7 @@ Two experiments, both archived with trees, logs and scripts in
 - **A full-gene check on 250 SILVA reference genes** — the V5–V7 amplicon cut out of each
   full-length gene *in silico*, the fragment tree compared to the full-gene tree. Result:
   every fragment tree, under every setting, differs from the full-gene tree on ~58% of
-  internal branches while patristic distances correlate at 0.83–0.88 — and the spread
+  internal branches (Robinson–Foulds distance) while patristic distances correlate at 0.83–0.88 — and the spread
   between settings (0.04) is smaller than the search noise of a single setting.
 
 Read those numbers as *"this choice moved the output by this much on this data"*, not as

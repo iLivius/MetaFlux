@@ -1,10 +1,13 @@
 # Validation of the phylogeny defaults
 
-The measured figures quoted on the [Phylogeny](../amplicon/phylogeny.md) page come
-from two experiments, run on 2–3 September 2026 and archived (trees, alignments, logs, analysis scripts, reports) in
-`MetaFlux_run/benchmark_phylogeny_2026-09/`: a **sensitivity analysis on the real test
-run** and a **full-gene check** on reference sequences.
-It is worth being precise about what kind of evidence each is.
+The [Phylogeny](../amplicon/phylogeny.md) page quotes measured figures for how much the
+module's choices matter and for how much a short amplicon fragment can and cannot
+recover. This page is where those figures come from. Two experiments produced them —
+a **sensitivity analysis on the real 16S test run** and a **full-gene check** against
+reference sequences — and they are different kinds of evidence, so each is described
+with what it can and cannot support. The trees, alignments and analysis scripts behind
+every number are kept with the project's benchmark material and are available on
+request.
 
 !!! note "Terms"
     Patristic distance, Robinson–Foulds distance, UFBoot, likelihood mapping and the
@@ -32,7 +35,7 @@ analysis**: it answers "how much do the outputs move when this choice changes?",
 
 **What was measured, and why that measure.**
 
-- *Topology* — normalized Robinson–Foulds distance (Robinson & Foulds 1981): the share
+- *Topology* — normalized Robinson–Foulds distance, RF for short (Robinson & Foulds 1981): the share
   of internal branches two trees do not have in common, 0 for identical trees, 1 when
   they share none.
 - *Distances* — Pearson correlation between the two trees' patristic distance matrices
@@ -94,14 +97,14 @@ right yardstick for the question "what does a 376 bp fragment lose?".
   seeds** for each backend whose search starts from random choices — IQ-TREE GTR+F+G4, IQ-TREE ModelFinder, RAxML-NG GTR+Γ
   (3 seeds each), FastTree GTR+Γ and JC (deterministic, 1 each), the L-INS-i alignment
   and the trimAl-masked alignment (3 seeds each) — and V4 at pipeline defaults (3 seeds).
-- **Scored against the reference:** normalized RF (topology), patristic correlation
+- **Scored against the reference:** normalized Robinson–Foulds (RF) distance (topology), patristic correlation
   (distances), tree-length ratio (branch-length compression), and genus/family monophyly
   — this time against SILVA's own taxonomy, a genuine external check rather than SINTAX
   calls on ASVs.
 
 **Results** (mean over seeds; reference = full gene, GTR+F+G4, seed 42):
 
-| Tree | RF to reference | Patristic r | Tree length ÷ reference | Genus monophyletic | Family monophyletic |
+| Tree | Robinson–Foulds (RF) distance to reference | Patristic r | Tree length ÷ reference | Genus monophyletic | Family monophyletic |
 |---|--:|--:|--:|--:|--:|
 | Reference rebuilt, seeds 43/44 *(seed-to-seed variation — the noise floor)* | 0.02–0.04 | 0.999–1.000 | 0.98 | 84% | 89% |
 | Reference, ModelFinder (→ GTR+F+R7) | 0.06 | 0.999 | **0.75** | 84% | 89% |
@@ -122,7 +125,7 @@ Support (UFBoot ≥ 95 *and* SH-aLRT ≥ 80): **64%** of internal branches on th
 
 - **The fragment loses most of the topology and keeps a fair amount of the distances.**
   Every V5–V7 tree sits in one band — about 58% of internal branches differ from the
-  full-gene tree (RF 0.56–0.60), while patristic distances correlate at 0.83–0.88. For
+  full-gene tree (Robinson–Foulds distance 0.56–0.60), while patristic distances correlate at 0.83–0.88. For
   scale: the full-gene reference rebuilt with another seed differs from itself by 0.02–0.06, and the same *fragment* alignment rebuilt with another seed by 0.22–0.28 —
   so roughly a third of the fragment's disagreement is the tree search wandering, and
   the rest is information the fragment does not have. That band *is* the framing paragraph at the top of
