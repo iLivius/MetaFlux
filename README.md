@@ -154,7 +154,22 @@ Developed at the [AIT Austrian Institute of Technology](https://www.ait.ac.at/).
 MetaFlux consolidates and modernises methods refined across many amplicon and
 metagenomics collaborations, and is part of the **BioFlux** family of workflows.
 
-Portions of this codebase were developed with the assistance of Claude Code.
+MetaFlux was developed in the context of
+[MICROBE — MICRObiome Biobanking (RI) Enabler](https://cordis.europa.eu/project/id/101094353),
+a Horizon Europe research-infrastructure project coordinated by AIT (2023–2027) that
+develops the methods, and the routes of access, for preserving microbiomes with their
+composition and function intact. This project has received funding from the European
+Union's Horizon Europe research and innovation programme under grant agreement
+No. 101094353.
+
+A large part of MetaFlux — merging the amplicon and shotgun workflows into one, the
+marker packs, two full code audits, this documentation, and the phylogeny module with
+its validation — was built in working sessions with Claude Code. Anthropic accepted
+MetaFlux into their Open Source Program and provided Claude Max for it, generously and
+with no strings attached; that support is what made the pace and the scope of this work
+possible, and it is acknowledged here with real gratitude. The deal on this side has been
+that every line is still read, understood and tested by a human before it goes in — which
+is why the code and these pages read the way they do.
 
 ## License
 

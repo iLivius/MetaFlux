@@ -1,0 +1,500 @@
+# Phylogeny (16S)
+
+Optional. Builds an approximate, same-region 16S marker-fragment phylogeny from the
+eligible ASVs, for exploratory phylogenetic-diversity analysis (e.g. Faith's PD,
+UniFrac) performed in your own downstream tools. It is not a species tree or a resolved
+deep phylogeny: short single-region fragments carry limited deep signal, so treat
+topology beyond close relatives, and any single long branch, with caution.
+
+Off by default. Turn it on with:
+
+```yaml
+amplicon:
+  phylogeny:
+    enabled: true
+```
+
+## Glossary
+
+The terms this page leans on, in plain words. Skip it if you build trees for a living.
+
+| Term | What it means here |
+|---|---|
+| **Alignment** | The ASV sequences written one under the other, with gaps inserted so that equivalent positions line up in the same column. Every tree program reads this, not the raw sequences. |
+| **ASV** | Amplicon sequence variant — DADA2's unit of output: one exact denoised sequence. Each ASV is one **tip** of the tree. |
+| **Backend** | The program that builds the tree from the alignment: IQ-TREE, FastTree or RAxML-NG. |
+| **Branch length** | The length of one line segment in the tree, in expected substitutions per site — how much sequence change separates its two ends. Not time. |
+| **BIC** | Bayesian information criterion. A score for choosing between models: lower is better, and it charges a penalty for every extra parameter, so a model has to earn its complexity. |
+| **Faith's PD** | Phylogenetic diversity: the total branch length of the part of the tree spanned by the ASVs present in a sample. As usually computed (`picante::pd`, default `include.root = TRUE`) the path up to the root is included too, which is why the root position matters. A sum of branch lengths, so anything that scales the tree scales PD. |
+| **FFT-NS-2 / L-INS-i** | MAFFT's two alignment strategies used here. FFT-NS-2 is fast: it builds the alignment in one pass, adding sequences group by group along a rough guide tree. L-INS-i then repeatedly re-aligns to improve it — more accurate, but documented only up to ~200 sequences. |
+| **Γ, +G, +G4, +R, +I** | Ways of letting different alignment positions evolve at different speeds (in rRNA, stems barely change, loops change fast). **+G4** / **Γ**: speeds drawn from a gamma distribution in 4 categories (RAxML-NG and FastTree write it as +G or Γ; FastTree's version uses 20 categories). **+R5**: five speed categories estimated freely (FreeRate). **+I**: a fraction of positions that never change. |
+| **In-silico PCR** | Cutting the amplicon out of a full-length reference gene on the computer, by finding the two primer sites. MetaFlux does this to size amplicons; the full-gene check below does it to make fragments of known origin. |
+| **Likelihood mapping** | A test of how much phylogenetic signal an alignment carries: draw many random **quartets** (sets of four sequences) and ask, for each, whether the data clearly favour one of the three possible ways to connect them. |
+| **Long branch** | A tip joined to the rest of the tree by an unusually long branch — what a contaminant, an off-target sequence, or a genuinely isolated lineage looks like. Inflates PD, distorts unweighted UniFrac. |
+| **Maximum likelihood (ML)** | The way all three backends choose a tree: the tree and branch lengths under which the observed sequences are most probable, given a substitution model. FastTree is an *approximate* ML method. |
+| **Midpoint rooting** | Placing the root halfway along the longest tip-to-tip path. Convenient, but it can move when tips are pruned — whenever the longest path changes — and it is thrown off by a single long branch. |
+| **Model (substitution model)** | The assumed rules of sequence change. **JC** — every change equally likely; **GTR** — each of the six kinds of change (A↔C, A↔G, …) has its own rate; **TPM3u** — a GTR relative in which those six kinds are grouped into three rate parameters; **+F** — base frequencies counted from the data. The site-speed parts (+G4, +R5, +I) are the row above. |
+| **ModelFinder / MOOSE / MFP** | Automatic model choice in IQ-TREE (ModelFinder, requested with `MFP`) and in RAxML-NG (MOOSE, requested with `DNA`). Both try many models and keep the best by BIC. |
+| **Monophyletic** | A group of tips that sit together on the tree as one complete clade, with nothing else mixed in. "Are the ASVs of the same genus monophyletic?" is a rough check of whether the tree reflects known taxonomy. |
+| **Newick** | The text format trees are written in: nested parentheses with branch lengths, e.g. `((ASV_1:0.01,ASV_2:0.02):0.05,ASV_3:0.03);`. |
+| **Outgroup** | A lineage known to sit outside the group of interest. Used to root a tree; a paralogue such as *parE* in a gyrB dataset behaves like one whether you want it or not. |
+| **Outlier fence (Q3 + 3×IQR)** | The standard boxplot rule for calling a value an outlier: the upper quartile plus three times the interquartile range. Used by the long-branch report because it does not care how small the median is. |
+| **Patristic distance** | The distance between two tips measured *along the tree*: add up the branch lengths on the path from one to the other. It is built from the same branch lengths UniFrac and PD use, so two trees whose patristic distances agree give near-identical diversity numbers — which is why it is the comparison that matters most on this page. |
+| **Pendant edge** | The single branch that connects a tip to the rest of the tree. Its length is the most direct measure of how isolated that ASV is. |
+| **Pruning** | Removing tips from a tree. Where a removed tip's parent is left with just one branch in and one out (a "degree-2 node"), that node is dissolved by adding its two branch lengths together, so distances among the remaining tips do not change. |
+| **Robinson–Foulds (RF) distance** | How different two tree shapes are: the number of internal branches present in one tree but not the other. Normalized to 0 (identical) – 1 (nothing in common). Compares only the branching pattern, not branch lengths. |
+| **Root / unrooted** | A rooted tree has a designated oldest point; an unrooted one has only the branching pattern and lengths. MetaFlux exports unrooted trees, because the right root depends on which tips you keep. |
+| **Root-to-tip distance** | The sum of branch lengths from a tip up to the root. Needs a root, so the QC report measures it on a temporary midpoint-rooted copy; the exported tree stays unrooted. Good at spotting a whole clade hanging off one long **stem** (the branch leading to a clade), poor at spotting a single long branch. |
+| **Saturation** | So many repeated changes at the same positions that their history is erased — distances stop growing with divergence. The reason rpoB is excluded. |
+| **Seed** | The starting number for the random choices a tree search makes. Same seed, same data, same settings *and the same thread count* → same tree (see Reproducibility below). `amplicon.seed` is reused here. |
+| **Site pattern** | A distinct column in the alignment. IQ-TREE's work per step scales with the number of these, which is why a ~440-column 16S alignment is "short". |
+| **Split** | The two groups of tips an internal branch separates. Support values and RF distance are both about splits. |
+| **Support (UFBoot, SH-aLRT)** | Numbers on internal branches saying how sure the data are about that split. UFBoot (ultrafast bootstrap): how often the branch reappears when the alignment columns are resampled, read as trustworthy at ≥ 95. SH-aLRT: a per-branch likelihood test, read at ≥ 80. FastTree's "SH-like" supports are on a 0–1 scale and are not bootstraps. |
+| **Tip / internal branch / topology** | A tip (leaf) is an ASV. Internal branches connect groups of tips. The topology is the branching pattern alone, ignoring lengths. |
+| **Tree length** | The sum of all branch lengths. The scale on which PD is measured. |
+| **UniFrac** | A distance between two samples based on how much of the tree's branch length they share (unweighted: presence/absence; weighted: abundance-weighted). Root-dependent. |
+
+## What MetaFlux does and does not do
+
+MetaFlux aligns the ASVs, infers a tree, checks it, and writes it out. That is the whole
+module. It computes **no diversity statistics** — no UniFrac, no Faith's PD, no
+ordination, no PERMANOVA. Those belong in your R session, on your own filtered feature
+set, and the [Using the tree in R](#using-the-tree-in-r) section below is the handover
+point.
+
+The value here is not that MetaFlux can build a tree you could not build yourself. It is
+that the build becomes part of the versioned, seeded, resource-managed run, with every
+resolved setting recorded, instead of a script you re-write for each project.
+
+## 16S only — and why the other markers are not "coming soon"
+
+A de novo tree is only meaningful for a marker that can be **globally aligned across
+divergent taxa**. 16S rRNA meets that test. The others each fail it for a specific,
+published reason, and those reasons are not the same as each other:
+
+- **ITS** is non-coding and hypervariable, with roughly 20-fold length variation across
+  fungi (full-length ITS runs from ~250 bp in some Saccharomycetales to ~1500 bp). It
+  "is not amenable to robust multiple alignments and phylogenetic reconstruction much
+  beyond the genus level" (Tedersoo et al. 2022), and QIIME 2's own fungal ITS tutorial
+  recommends non-phylogenetic metrics such as Bray–Curtis or Jaccard instead. Use those.
+  The old workaround, ghost-tree, is unmaintained.
+- **gyrB** amplicons co-amplify the paralogue *parE* — up to 35% of reads overall, and
+  60–95% within some families (Poirier et al. 2018). A paralogue is an **out-group**, so
+  it enters a tree as a deeply divergent clade on a long stem: it inflates Faith's PD
+  directly and distorts UniFrac while looking exactly like real phylogenetic structure.
+  MetaFlux tags the paralogue so `discard: [other]` can remove it, but that is not
+  applied by default.
+- **rpoB** shows mutational saturation at **all three** codon positions at phylum and
+  domain scope; the marker's reference study for microbial ecology switched to
+  amino-acid alignment for exactly this reason (Case et al. 2007).
+- **18S** is the closest candidate and the one we would revisit first, being an rRNA
+  gene like 16S. But branch lengths from short 18S amplicons are documented to be
+  underestimated (Medlar et al. 2014), V9 in particular carries little phylogenetic
+  signal, and we found no study validating UniFrac or Faith's PD from short 18S
+  amplicons. It is **deferred pending validation**, not excluded on principle.
+
+Protein-coding markers (gyrB, rpoB, and COI when it arrives) would additionally need
+**codon-aware alignment** and a codon or amino-acid substitution model — a plain
+nucleotide alignment of a coding sequence inserts frameshift-breaking gaps that become
+spurious branch length. That is a separate module, not a configuration option.
+
+Enabling `phylogeny` for any marker other than 16S is forced off with a warning when the
+config is read, before anything runs, and the run continues normally.
+
+!!! note "This is a deliberate difference from other pipelines"
+    QIIME 2 and nf-core/ampliseq are marker-agnostic in code. An ampliseq ITS run with a
+    metadata file will build a MAFFT/FastTree phylogeny from bare ITS1 or ITS2 fragments
+    and report weighted UniFrac, unweighted UniFrac and Faith's PD, by default, with no
+    warning. We would rather not produce a number you cannot defend.
+
+## Where the ASVs come from
+
+The tree is built from the ASV set in `6.taxonomy/` — **after** the contaminant filter —
+and never from `5.dada2/seqs_lenfilt.fasta`.
+
+This is the single most important design decision in the module. MetaFlux's contaminant
+filter (`amplicon.taxonomy.filter`: chloroplast, mitochondria, wrong domain, off-target)
+runs *inside* the taxonomy step. The stage-60 FASTA therefore still contains exactly the
+off-target ASVs that a de novo tree renders as long branches — and long branches are what
+distort these metrics. Faith's PD is an absolute sum of branch length, so a long branch
+adds to it directly; unweighted UniFrac is more sensitive still. In one published case, a
+de novo tree gave three low-abundance archaeal ASVs an artificially long branch and
+produced a **fake cluster separation** in unweighted UniFrac that vanished when the tree
+was built properly.
+
+Consuming the filtered set removes that problem outright, and it guarantees
+the tree's tips and the abundance table you pair it with in R are the same feature set.
+
+!!! warning "The filter has to be doing something"
+    If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
+    the tree is built from an unfiltered ASV set and the protection above does not apply.
+    MetaFlux warns, before anything runs, when you enable phylogeny in that state. Check the
+    long-branch report either way.
+
+## Choosing a backend
+
+```yaml
+    backend: iqtree     # iqtree | fasttree | raxml-ng
+```
+
+| Backend | What it is | When to pick it |
+|---|---|---|
+| **`iqtree`** *(default)* | Full maximum likelihood, IQ-TREE 3. Real model selection available. | The default for good reason — the best accuracy/effort trade-off at amplicon scale. |
+| `fasttree` | Approximate ML (heuristic search, ML branch lengths). ~93 s for 10,000 ASVs on one core. | Very large ASV sets, or when you want the same engine QIIME 2 and ampliseq use. |
+| `raxml-ng` | Full ML alternative. | Cross-checking a result against a second full-ML implementation. |
+
+All three write the same canonical outputs, so switching backends does not change how you
+use the result downstream. Their native files are kept in `7.phylogeny/<backend>/`, so
+switching leaves the previous backend's output in place for comparison (the run log
+points this out so you do not mistake it for current output).
+
+### The model
+
+```yaml
+    model: auto         # auto | an explicit model string
+```
+
+`auto` resolves to **GTR+F+G4** for IQ-TREE, **GTR+Γ** for RAxML-NG, and **GTR+Γ** for
+FastTree.
+
+IQ-TREE's own default is `-m MFP`, which runs ModelFinder on every execution — 22 base
+models crossed with frequency and rate-heterogeneity variants. MetaFlux pins a model
+instead, because MFP makes runtime depend on the data and re-does on every run a decision
+that does not change; IQ-TREE's documentation recommends exactly this select-once-then-pin
+pattern for repeated analyses.
+
+Model selection is still available, and whatever it picks is recorded in
+`phylogeny.params.json`:
+
+- `model: MFP` — IQ-TREE's ModelFinder
+- `model: DNA` — RAxML-NG's MOOSE
+- FastTree has **no model selection at all**. Its only nucleotide models are Jukes-Cantor
+  and GTR, so only `gtr` (the default) and `jc` are accepted; anything else is a hard
+  error rather than a silently ignored setting.
+
+!!! info "Worth knowing about FastTree elsewhere"
+    QIIME 2 invokes FastTree with no model flags at all, so the default 16S tree from
+    QIIME 2 and ampliseq is a **Jukes-Cantor** tree, and there is no supported way to
+    change it there. MetaFlux passes `-gtr` explicitly.
+
+!!! info "What ModelFinder actually picks on the 16S test set — and whether it matters"
+    Run once on the real 211-ASV test dataset ([PRJNA305879](../about/test-datasets.md),
+    V5–V7), ModelFinder selects **TPM3u+R5** by BIC: a *simpler* substitution matrix
+    than GTR (three exchange-rate classes instead of six) but a *richer* site-rate
+    model (five free rate categories instead of a 4-category gamma). RAxML-NG's MOOSE
+    agrees on the rate side, fitting GTR+R5. So on this dataset the two selectors agree on replacing the 4-category gamma with
+    FreeRate and disagree on the matrix (TPM3u vs GTR) — the rate model, not the
+    exchange-rate matrix, is where both depart from GTR+F+G4.
+
+    Measured consequence of pinning GTR+F+G4 anyway, on that dataset: patristic
+    distances between the two trees correlate at r = 0.998, per-sample PD at
+    r = 0.9999 with identical sample ranking — the numbers your diversity analysis
+    consumes are effectively unchanged. What does shift is the absolute scale (total
+    tree length 18.6 under GTR+F+G4 vs 15.0 under TPM3u+R5, ~20%) and ~12% of
+    internal branches — largely the poorly supported ones. Two practical rules
+    follow: never compare absolute PD between runs built under different models, and
+    if you want the selected model, run `model: MFP` once and then pin what it picked.
+
+### Branch support
+
+```yaml
+    support: false
+```
+
+Off by default: neither UniFrac nor Faith's PD reads support values, and computing them
+dominates the runtime. `true` adds `-B 1000 --alrt 1000` for IQ-TREE (read as UFBoot ≥ 95
+and SH-aLRT ≥ 80 for a single-gene tree like this one), keeps FastTree's SH-like local
+supports (0–1 scale — these are **not** bootstrap values, and the resampling that
+produces them is seeded from `amplicon.seed`), and is not available for RAxML-NG, where
+it is forced off with a warning.
+
+!!! warning "Support values do not survive rerooting"
+    In Newick a support value is stored as a label on the node below the edge it
+    describes. When you reroot the tree in R, the edge above a node changes for every
+    node between the old and new root, so labels can end up describing splits they were
+    never computed for. Read support values off the unrooted tree as exported; treat
+    them with suspicion on any rerooted copy you make yourself.
+
+## The alignment
+
+The aligner is **MAFFT**, fixed and not selectable. What you can choose is the strategy:
+
+```yaml
+    aligner_strategy: auto      # auto | linsi | fftns2
+```
+
+`auto` applies MetaFlux's own rule at MAFFT's documented ~200-sequence ceiling for its
+accuracy strategies:
+
+| ASVs | Strategy | Flags |
+|---|---|---|
+| < 200 | L-INS-i | `--localpair --maxiterate 1000 --threadit 0` |
+| ≥ 200 | FFT-NS-2 | `--retree 2 --maxiterate 0` |
+
+MAFFT's own `--auto` is deliberately **not** used. Its decision thresholds are not
+published anywhere in MAFFT's documentation — they exist only in the source — and they
+switch on dataset size. Adding a single ASV can cross a boundary and silently change the
+alignment algorithm between two runs of the same study. MetaFlux's rule is documented,
+uses MAFFT's own published ceiling, and the resolved choice is written into
+`phylogeny.params.json`.
+
+Set `fftns2` explicitly if you want two runs of different sizes to be strictly comparable.
+
+`--adjustdirection` is never used: it prefixes reverse-complemented sequences with `_R_`,
+which would break the ASV-ID match against your abundance table with no error raised.
+Orientation is settled upstream, at primer trimming.
+
+### No alignment masking
+
+MetaFlux does not mask, trim, or filter alignment columns, and there is no option to.
+Three reasons:
+
+- Automated alignment filtering **frequently worsens** single-gene phylogenetic inference
+  (Tan et al. 2015) — and a short 16S fragment is exactly that case.
+- IQ-TREE explicitly instructs that constant sites must **not** be removed, because they
+  inform branch-length estimation. Branch lengths are the quantity this module exports.
+- The QIIME/ampliseq mask you might expect this to match is effectively a **pass-through**
+  at its shipped defaults: `max_gap_frequency=1.0` removes nothing ever, and
+  `min_conservation` is computed over non-gap characters only, so a column that is 95%
+  gaps and 5% `A` scores 1.0 and is retained.
+
+So "no masking" is closer to what those pipelines effectively do than it appears, and it
+is honest about it.
+
+This was also checked empirically on the 211-ASV test set, by masking the pipeline's own
+alignment offline and rebuilding the tree (IQ-TREE, GTR+F+G4, same seed): trimAl
+`-automated1` and `-gappyout` each removed 24% of columns, which cut **28% of total tree
+length** (Faith's PD scales directly with that), moved the topology further from every
+other tree in the comparison than any other single choice did, and left genus-level
+coherence no better (10/19 genera monophyletic vs 11/19 unmasked — a difference of one genus). AliFilter was
+gentler (14% of columns) but showed no gain either — and it is not installable from
+bioconda, which rules it out as a MetaFlux option regardless. Nothing in the measurement
+argues for adding a masking step.
+
+## Rooting — the tree is exported unrooted, and only unrooted
+
+`7.phylogeny/asv_16s.unrooted.nwk` is **the** deliverable, and there is deliberately no
+option to produce a rooted copy.
+
+Faith's PD and UniFrac are both root-dependent. In practice you will prune the tree
+before computing them — decontam against your negative-control samples, abundance
+filtering of rare ASVs — and any root placed on the **full** ASV set stops being valid
+the moment the first tip is removed (a midpoint in particular moves). Midpoint rooting
+is also unstable under rate variation and long branches (Mai et al. 2017), which is
+precisely the situation a short-amplicon tree can present. A rooted file that is only
+correct until you do the pruning you will certainly do would be a trap, not a
+convenience.
+
+So rooting happens in your R session, after pruning, immediately before the metric —
+see [Using the tree in R](#using-the-tree-in-r).
+
+## Tip labels
+
+Tips are bare ASV IDs — `ASV_1`, `ASV_2`, … — with no taxonomy appended, ever. Beyond
+tidiness there are two hard reasons: FastTree truncates a name at the first space unless
+names are quoted, and both FastTree and RAxML-NG reject the `:,()` characters a lineage
+string is full of.
+
+Join taxonomy back on in R, keyed on the ASV ID, from `6.taxonomy/asv_table.txt`.
+
+!!! note "ASV IDs are stable within a run, not across runs"
+    IDs are assigned by decreasing abundance when the sequence table is built. `ASV_7` in
+    two different runs is not the same organism.
+
+## Checks, and when no tree is built
+
+`phylo_export` refuses to write the canonical tree unless it passes every check:
+
+- every ASV in `asv_table.txt` appears **exactly once** as a tip, and there are no extra
+  tips;
+- the Newick parses;
+- every branch length is present, finite, and non-negative.
+
+**Fewer than 4 eligible ASVs**: no tree is built, and this is recorded rather than
+treated as a failure. Below four tips there is only one possible unrooted topology, so
+there is nothing to infer. The run completes normally and
+`stats/phylogeny/phylogeny_qc.json` says why:
+
+```json
+{
+  "skipped": true,
+  "reason": "Only 3 eligible ASV(s) ... at least 4 are needed.",
+  "n_eligible": 3
+}
+```
+
+### The long-branch report
+
+This is the number worth looking at. `phylogeny_qc.json` flags tips sitting on unusually
+long branches, by two measures:
+
+- **Pendant edge** — the length of the single branch leading to that tip. This is the
+  **primary flag**. It needs no root, which makes it the right measure for an unrooted
+  tree, and it is the direct expression of what a contaminant looks like: a sequence far
+  from everything else, joined to the rest of the tree by one long branch.
+- **Root-to-tip** on a midpoint-rooted copy, reported alongside. Better at spotting a
+  whole off-target *clade* hanging off one long stem, where each member's own pendant
+  edge is short.
+
+The two use different threshold rules because they behave differently, and both rules
+were tuned on data rather than reasoned out:
+
+- Root-to-tip distances share a root and cluster tightly, so **1.5× the median** works
+  (roughly the ratio in the published artifact case). But this measure is nearly blind
+  to a *single* long branch: on a synthetic test with one planted contaminant, midpoint
+  rooting split the offending branch across the root and the contaminant sat at 1.05×
+  the median — invisible — while its pendant edge was 22.7× the median.
+- Pendant edges cannot use a multiple of the median at all: a real ASV set carries many
+  near-identical sequences whose pendant edges are effectively zero, so the median is
+  close to zero and even generous multiples of it flag far too much of the tree (measured on
+  the 16S test set: 81 of 211 tips at 5× the median, still 33 at 20×). The rule is instead the standard boxplot outlier fence,
+  **Q3 + 3×IQR**, which flagged 7 tips there. Each is the only ASV of its lineage in the
+  run — two are the run's sole Acidobacteriota and Bdellovibrionota — but three are
+  1–5-read ASVs classified no deeper than phylum, and nothing outside the run was
+  checked, so "divergent singleton" and "artefact" cannot be told apart from the tree
+  alone.
+
+The five longest tips by each measure are always listed, whether or not they cross a
+threshold.
+
+Flagged tips are **reported, never removed**: dropping them would desynchronise the tree
+from your abundance table. And a flag is not an accusation — in an environmental sample,
+a long pendant edge is often a genuine divergent lineage with a single representative,
+which is consistent with what the test set shows. Check what the tip was classified
+as, consider whether the contaminant filter should have caught it, and re-run your
+analysis without it to see whether your conclusion depends on it.
+
+## Using the tree in R
+
+The tree is the handover point. A typical workflow:
+
+```r
+library(ape)
+library(phyloseq)
+
+tree <- read.tree("out/7.phylogeny/asv_16s.unrooted.nwk")
+
+# 1. Prune to your final feature set, AFTER decontam / abundance filtering.
+#    ape::drop.tip(), or phyloseq::prune_taxa() if the tree is in a phyloseq object.
+keep  <- taxa_names(ps_filtered)
+tree  <- drop.tip(tree, setdiff(tree$tip.label, keep))
+
+# 2. Root AFTER pruning, not before, and immediately before the metric.
+tree  <- phangorn::midpoint(tree)
+
+# 3. Now compute your metric.
+#    picante::pd(otu_table, tree)  /  UniFrac(ps, weighted = TRUE)
+```
+
+Three things worth internalising:
+
+**Prune, don't rebuild.** Dropping tips is well defined: the tip is removed and, where its
+parent becomes a degree-2 node, that node is suppressed by summing the two adjacent branch
+lengths. The crucial property is that **patristic distances among the retained tips are
+unchanged** — verified for this module's own output. So UniFrac or Faith's PD on the
+pruned tree equals what you would get from the full tree restricted to those features. A
+tree re-inferred from only the retained ASVs would differ, and being estimated from fewer
+sequences, generally has *worse*-informed branch lengths. Prune and move on.
+
+**Root after pruning.** See [Rooting](#rooting-the-tree-is-exported-unrooted-and-only-unrooted)
+above. This is the step people get wrong.
+
+**Only rebuild if you removed a very large fraction of ASVs**, or if the removed set was
+specifically what was distorting the topology. There is no benchmarked threshold for
+this; it is a judgement call.
+
+## What is recorded
+
+`7.phylogeny/phylogeny.params.json` holds everything resolved at run time: the resolved
+aligner strategy, the resolved (or selected) model, effective thread counts, tool
+versions, the seed, SHA-256 checksums of both input tables and the extracted FASTA, and
+any `extra_args`. That record is what lets you pin an automatic choice explicitly later.
+
+## Reproducibility, and what is not yet verified
+
+`amplicon.seed` seeds every backend — there is no separate phylogeny seed.
+
+**Reproducible at a fixed seed *and* a fixed thread count.** That qualification is real
+and not boilerplate:
+
+- Neither IQ-TREE nor MAFFT documents any guarantee that results are identical across
+  different thread counts, and this has **not been tested empirically** for MetaFlux. If
+  you need to reproduce a tree exactly, pin `resources.threads` as well as the seed.
+- Single-threaded FastTree with `support: false` uses no randomness at all and is fully
+  deterministic. Its parallel build, `FastTreeMP`, is documented non-deterministic and is
+  **never** used by MetaFlux.
+- RAxML-NG's default seed is the wall clock, so MetaFlux always passes `--seed`
+  explicitly.
+
+Two questions that used to sit here as "not yet verified" now have measured answers,
+from a benchmark on the 211-ASV test set
+(`MetaFlux_run/benchmark_phylogeny_2026-09/` holds the trees, logs and analysis):
+
+- **The L-INS-i / FFT-NS-2 tier boundary does change the tree.** Same data, same
+  backend and model, different tier: 46% of internal branches differ. Part of that is the tree search
+  itself — on the reference fragments, where seeds were replicated, the *same*
+  alignment rebuilt with another seed already differs by 22–28%, and the tier switch
+  by 34–39% at a matched seed — so the tier is a real effect, but the 46% figure (one
+  tree per setting) does not separate the two. Patristic
+  distances stay far more stable (r = 0.95) and per-sample PD barely moves
+  (r = 0.997), but topology is not comparable across the boundary. If you will
+  compare runs whose ASV counts straddle 200, pin `aligner_strategy: fftns2`.
+- **How much signal a ~440-column alignment of ~376 bp fragments carries**: likelihood mapping (`iqtree3 --lmap`, 5,000
+  quartets, GTR+F+G4) fully resolves **77.9%** of quartets, leaving ~22% partly or
+  fully unresolved; and in a support run (`-B 1000 --alrt 1000`) only **32%** of
+  internal branches meet the documented UFBoot ≥ 95 + SH-aLRT ≥ 80 read. Both numbers
+  say the same thing as the framing paragraph: fine structure and distances are
+  usable, deep topology is not to be trusted.
+
+## How these defaults were checked
+
+Two experiments, both archived with trees, logs and scripts in
+`MetaFlux_run/benchmark_phylogeny_2026-09/` and written up on the
+[Phylogeny validation](../about/validation.md) page:
+
+- **A sensitivity analysis on the real 211-ASV test run** — one setting changed at a
+  time (alignment strategy, masking, backend, model) and the output compared to the
+  pipeline default. Result: no choice moves the distances your diversity metrics use by
+  more than a few percent, and masking removes 28% of tree length for no measurable gain.
+- **A full-gene check on 250 SILVA reference genes** — the V5–V7 amplicon cut out of each
+  full-length gene *in silico*, the fragment tree compared to the full-gene tree. Result:
+  every fragment tree, under every setting, differs from the full-gene tree on ~58% of
+  internal branches while patristic distances correlate at 0.83–0.88 — and the spread
+  between settings (0.04) is smaller than the search noise of a single setting.
+
+Read those numbers as *"this choice moved the output by this much on this data"*, not as
+accuracy claims; the validation page says exactly what each experiment can and cannot
+support.
+
+## Advanced: `extra_args`
+
+```yaml
+    extra_args:
+      mafft: ""
+      iqtree: ""
+      fasttree: ""
+      raxml_ng: ""
+```
+
+Appended verbatim to the tool's command line and recorded in `phylogeny.params.json`.
+**Not validated.** A flag that contradicts the settings above — `-T AUTO`, say — is
+passed straight through and is your responsibility. This is the one route by which the
+machine-dependent behaviour MetaFlux otherwise blocks can re-enter a run. Normally leave
+these empty.
+
+## Resources
+
+Threads and memory come from the shared `resources` block, like every other rule:
+`phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc`. See
+[Configuration](../reference/configuration.md#threads). The defaults are deliberately
+modest, and `phylo_tree` behaves differently per backend — IQ-TREE parallelises across
+alignment columns and a 16S alignment is short; RAxML-NG clamps to its own recommendation
+because it hard-errors when given too many threads; FastTree is pinned single-threaded.
+
+## References
+
+Janssen et al. 2018, *mSystems* 3:e00021-18 (full-gene design) · Medlar et al. 2014, *BMC Evol Biol* 14:235 (fragment branch-length underestimation) · Apprill et al. 2015, *Aquat Microb Ecol* 75:129 and Parada et al. 2016 (V4 primers 806R-B / 515F-Y) · Tan et al. 2015, *Syst. Biol.* 64:778 · Mai et al. 2017, *PLoS ONE* 12:e0182238 ·
+Tedersoo et al. 2022, *Mol Ecol* 31:2769 · Poirier et al. 2018, *PLoS ONE* 13:e0204629 ·
+Case et al. 2007, *Appl Environ Microbiol* 73:278. Tool citations and the benchmark's methods references (Robinson & Foulds, Sokal &
+Rohlf, Faith, Strimmer & von Haeseler, Hoang, Guindon, Schwarz, Tavaré, Kimura, Yang,
+Soubrier, Kalyaanamoorthy) are on the [Citation](../about/citation.md) page.

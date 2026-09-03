@@ -824,6 +824,39 @@ The full treatment is on
     that primers were fully removed first, since residual primer sequence is a common
     cause of apparent chimeras.
 
+### Phylogeny (16S)
+
+`amplicon.phylogeny`. Off by default, and 16S only — enabling it for any other marker is
+forced off with a warning at parse time. Builds a tree from the contaminant-filtered ASVs
+in `6.taxonomy/` for phylogenetic-diversity analysis you perform yourself; MetaFlux
+computes no diversity statistics. The full discussion, including why the other markers are
+excluded and how to use the tree in R, is on the
+[Phylogeny](../amplicon/phylogeny.md) page.
+
+| Key | What it does | Default | Notes |
+|---|---|---|---|
+| `enabled` | Master switch | `false` | With it off, no phylogeny rules exist at all — the DAG is identical to a run before this module existed, and no phylogeny conda environment is built. |
+| `backend` | Which tree program runs | `iqtree` | `iqtree` (full ML, model selection available) \| `fasttree` (approximate ML, much faster, no model selection) \| `raxml-ng` (full ML alternative). All three produce the same canonical outputs. |
+| `aligner_strategy` | Which MAFFT strategy | `auto` | `auto`: <200 ASVs → L-INS-i, ≥200 → FFT-NS-2, at MAFFT's own documented ceiling for its accuracy strategies. `linsi` / `fftns2` force one — useful to keep runs of different sizes comparable. MAFFT's own `--auto` is never used: its thresholds are unpublished and size-dependent. The resolved choice is recorded in `phylogeny.params.json`. |
+| `model` | Substitution model | `auto` | `auto` → `GTR+F+G4` (iqtree), `GTR+Γ` (fasttree, raxml-ng). Pinned rather than searched because IQ-TREE's own `-m MFP` default makes runtime data-dependent and re-decides on every run. Model **selection** is still reachable: `MFP` (IQ-TREE ModelFinder) or `DNA` (RAxML-NG MOOSE), and what it picks is recorded. FastTree has no model selection — only `gtr` or `jc` are accepted, anything else is a hard error rather than a silently ignored value. |
+| `support` | Branch support values | `false` | Off because neither UniFrac nor Faith's PD uses them and they dominate runtime. `true` → `-B 1000 --alrt 1000` (iqtree) or FastTree's SH-like local supports (0–1, **not** bootstrap). Not available for `raxml-ng`: forced off with a warning. Raise `mem_mb.phylo_tree` if you enable it. |
+| `extra_args.{mafft,iqtree,fasttree,raxml_ng}` | Verbatim passthrough | `""` | Appended to the tool's command line and recorded in `phylogeny.params.json`. **Not validated** — this is the one route by which machine-dependent behaviour MetaFlux otherwise blocks (`-T AUTO`, `--threads auto`) can re-enter a run. An unknown key here is a parse-time error, so a typo cannot silently do nothing. |
+
+The seed is `amplicon.seed`, shared with the rest of the amplicon path — there is no
+separate phylogeny seed.
+
+There is deliberately **no rooting option**: the tree is exported unrooted, only. You
+will prune it in R (decontam, abundance filtering) before computing any metric, and a
+root placed on the full ASV set stops being valid at the first pruned tip. A leftover
+`root:` key from a pre-release draft is rejected at parse time with a pointer to the
+docs rather than silently ignored.
+
+!!! warning "Reproducible at a fixed seed *and* a fixed thread count"
+    Neither IQ-TREE nor MAFFT documents any guarantee of identical results across
+    different thread counts, and this has not been tested empirically for MetaFlux. Pin
+    `resources.threads` as well as the seed if you need to reproduce a tree exactly.
+    Single-threaded FastTree with `support: false` uses no randomness at all.
+
 ---
 
 ## Shotgun parameters `[shotgun]`
@@ -1039,6 +1072,11 @@ so they are what a cluster executor turns into job requests.
 | `target_extract` | amplicon | 8 | Metaxa2 or ITSx. |
 | `assign_taxonomy` | amplicon | 8 | Set to 1 for byte-reproducible `sintax` output. |
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
+| `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
+| `phylo_align` | amplicon | 4 | MAFFT. |
+| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. RAxML-NG clamps this further to what its own `--parse` step recommends (often 1–2) because it *hard-errors* when given too many threads for a short alignment. The `fasttree` backend ignores this key — see the note below. |
+| `phylo_export` | amplicon | 1 | Validates the tree, writes the Newick. |
+| `phylo_qc` | amplicon | 1 | Reads the tree once for the QC report. |
 | `decontam_phix` | shotgun | 6 | BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead. |
 | `build_host_index` | shotgun | 16 | |
 | `decontam_host` | shotgun | 16 | |
@@ -1064,6 +1102,10 @@ so they are what a cluster executor turns into job requests.
 | `target_extract` | amplicon | 8000 | |
 | `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count. |
 | `aggregate_read_counts` | shared | 2000 | Present in the config template but not read — the rule declares no `mem_mb`; see the note below. |
+| `phylo_align` | amplicon | 4000 | |
+| `phylo_tree` | amplicon | 8000 | Sized for the most demanding backend. FastTree is measured at ~181 MB for 10,000 ASVs; RAxML-NG estimates ~3.3 GB at 30,000 ASVs by its own formula and prints its estimate in the `phylo_tree` log; IQ-TREE is not separately measured but its likelihood vectors scale comparably. Raise this if you set `support: true`, which was not part of that sizing. |
+| `phylo_export` | amplicon | 2000 | |
+| `phylo_qc` | amplicon | 2000 | |
 | `decontam_phix` | shotgun | 4000 | |
 | `build_host_index` | shotgun | 30000 | BBMap index build for the host reference; a masked human genome needs roughly 24–28 GB. |
 | `decontam_host` | shotgun | 30000 | Mapping against that index. |
@@ -1087,3 +1129,12 @@ so they are what a cluster executor turns into job requests.
     effect. Conversely, `finalize_otu_table` does look its resources up but has
     no entry in the template, so it runs on `threads_default` and
     `mem_mb_default`.
+
+    One more special case: `threads.phylo_tree` is read by the `iqtree` and
+    `raxml-ng` backends but **ignored by `fasttree`**, which is pinned to a single
+    thread in the rule itself. That is not an oversight — FastTree's parallel build
+    is documented non-deterministic both run-to-run and against the serial binary,
+    and its speedup does not reach the maximum-likelihood phase beyond about three
+    cores, so there is nothing to gain and reproducibility to lose. The pin also
+    keeps Snakemake from reserving cores the job cannot use. `mem_mb.phylo_tree`
+    applies to all three backends normally.

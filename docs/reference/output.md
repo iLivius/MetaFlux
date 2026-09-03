@@ -33,7 +33,9 @@ out_dir/
 ├── 5.dada2/          # ASV sequences and count tables at each stage
 ├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
 │                     # (+ _sintax_raw.tsv on the sintax path)
+├── 7.phylogeny/      # alignment + unrooted tree  (only when phylogeny.enabled: true)
 ├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
+│                     # (+ phylogeny/ when phylogeny.enabled: true)
 ├── multiqc/          # multiqc_report.html + multiqc_data/
 ├── logs/             # per-rule logs
 ├── benchmarks/       # runtime/memory for rm_phix and trim_primers
@@ -137,6 +139,36 @@ The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`) has alread
 been applied when these tables are written, so the ASVs it removed are absent
 here — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
 
+### `7.phylogeny/`
+
+Only when `amplicon.phylogeny.enabled: true` (16S only). The whole directory is absent
+otherwise. See [Phylogeny](../amplicon/phylogeny.md).
+
+| File | What it is | What reads it |
+|---|---|---|
+| `asv_16s.unrooted.nwk` | **The deliverable.** Newick tree of the contaminant-filtered ASVs, tips labelled `ASV_N`. Unrooted on purpose — root it in R after pruning. | Nothing in MetaFlux. Your R session. |
+| `asv_16s.aln.fasta` | The MAFFT alignment the tree was built from. Retained so it can be inspected or reused. | `phylo_tree`, `phylo_export`, `phylo_qc`. |
+| `asv_16s.fasta` | The extracted ASV sequences, bare `ASV_N` headers — the module's input. | `phylo_align`. |
+| `phylogeny.params.json` | Everything resolved at run time: aligner strategy, model, thread counts, tool versions, seed, input checksums, `extra_args`. | `phylo_qc`; and you, when you need to pin a choice. |
+| `input.json` | Eligible ASV count, ID list, per-ASV lengths, input checksums. Also what decides whether a tree is attempted. | `phylo_qc`, `phylo_export`. |
+| `aln_run.json` | Per-step provenance for the alignment, merged into `phylogeny.params.json`. | `phylo_export`. |
+| `<backend>/` | The backend's own files — `iqtree/`, `fasttree/` or `raxml-ng/` — plus `tree_run.json`. Inspection only. | `phylo_export` reads the tree and `tree_run.json`; the rest is for you. |
+
+Two things to know about what is and is not here:
+
+- **With fewer than 4 eligible ASVs, only `asv_16s.fasta` and `input.json` are written.**
+  No tree is built and the run still succeeds — `stats/phylogeny/phylogeny_qc.json`
+  records why. Below four tips there is only one possible unrooted topology.
+- **Switching `backend` leaves the previous backend's directory in place**, deliberately,
+  so results can be compared. The `phylo_export` log notes when it finds one. The
+  canonical files at the top level always come from the backend configured *now*.
+
+!!! note "Rebuilding a deleted tree"
+    `stats/phylogeny/phylogeny_qc.json` is the file `rule all` requests; the tree and
+    alignment are built as its dependencies. So deleting `asv_16s.unrooted.nwk` on its own
+    does not trigger a rebuild. Delete the QC report as well, or run
+    `snakemake -R phylo_export`.
+
 ### `stats/`
 
 | Path | Contents |
@@ -148,6 +180,7 @@ here — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
 | `trunclen.json` | The truncation decision: what `truncLen` was chosen for R1 and R2 and how. See [amplicon length and truncation](../amplicon/length-and-truncation.md). |
 | `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix`, `stripped`), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. |
 | `cutadapt/{sample}.passA_5prime.cutadapt.json` and `.passA_3prime.` | Cutadapt's own report for the 5' and 3' trimming passes. These feed MultiQC. The extra swap pass run under `orientation: mixed` writes no JSON and does not appear in MultiQC. |
+| `phylogeny/phylogeny_qc.json` | Only when `phylogeny.enabled: true`. Tip accounting, alignment shape, and the long-branch report — or a record of why no tree was built. Written on every enabled run, including a skipped one. Nothing reads it back; it is for you. See [Phylogeny](../amplicon/phylogeny.md#the-long-branch-report). |
 | `dada2/{sample}.filter_stats.json` | Per-sample `filterAndTrim` result. |
 | `dada2/stripped_read_R{1,2}_qual_plot.png` and `.pdf` | Aggregate quality profile of the primer-trimmed reads — the picture behind the `truncLen` choice. |
 | `dada2/filtered_read_R{1,2}_error_plot.png` and `.pdf` | DADA2 error-model fit. A bad fit here explains a bad ASV set downstream. |

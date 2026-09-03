@@ -246,6 +246,103 @@ amplicon:
                                               # Setting this true is the relaxed direction — it keeps
                                               # those near-miss sequences instead of removing them.
 
+  # ── Optional 16S phylogeny (stage 85) ─────────────────────────────────────
+  # Builds a tree from this run's ASVs so you can compute phylogenetic diversity
+  # (Faith's PD, UniFrac) yourself in R. MetaFlux writes the tree and stops there:
+  # it computes no diversity statistics, no ordination, no PERMANOVA.
+  #
+  # The tree is built from the POST-taxonomy ASV set (6.taxonomy/), i.e. after the
+  # contaminant filter above. That is deliberate: chloroplast, mitochondrial and
+  # off-target ASVs appear in a de novo tree as long branches, which inflate Faith's
+  # PD and can invent sample separations in unweighted UniFrac.
+  #
+  # 16S only. For the other markers a de novo tree is not just untested but
+  # contraindicated — ITS is not reliably alignable above genus level, gyrB
+  # co-amplifies the parE paralogue, rpoB is mutationally saturated at community
+  # scope, and 18S branch lengths from short amplicons are underestimated. Enabling
+  # it for another marker is forced off with a warning. See docs/amplicon/phylogeny.md.
+  #
+  # Threads and memory come from the resources block at the end of this file
+  # (resources.threads.phylo_align / phylo_tree / ...), like every other rule.
+  # The seed is amplicon.seed above — there is no separate phylogeny seed.
+  phylogeny:
+    enabled: false                              # opt-in; nothing below runs while this is false
+                                                # (with it off, the workflow is identical to one
+                                                # built before this module existed)
+
+    backend: iqtree                             # iqtree | fasttree | raxml-ng
+                                                # iqtree   — full ML, real model selection available,
+                                                #            the default. Minutes on a typical ASV set.
+                                                # fasttree — approximate ML, by far the fastest
+                                                #            (~93 s at 10,000 ASVs), no model selection.
+                                                #            What QIIME 2 and ampliseq use by default.
+                                                # raxml-ng — full ML alternative; thread count is
+                                                #            clamped to what it recommends for the
+                                                #            alignment (it hard-errors on too many).
+
+    aligner_strategy: auto                      # auto | linsi | fftns2   (the aligner itself is
+                                                # always MAFFT and is not selectable)
+                                                #   auto:   <200 ASVs → L-INS-i; >=200 → FFT-NS-2.
+                                                #           That boundary is MAFFT's own documented
+                                                #           ceiling for its accuracy strategies.
+                                                #   linsi:  force L-INS-i (slow above ~200 sequences)
+                                                #   fftns2: force FFT-NS-2 — use this to keep two runs
+                                                #           of different sizes directly comparable.
+                                                # MAFFT's own --auto is deliberately NOT used: its
+                                                # thresholds are unpublished and size-dependent, so
+                                                # adding one ASV could silently change the algorithm.
+                                                # The resolved choice is written to
+                                                # 7.phylogeny/phylogeny.params.json.
+
+    model: auto                                 # auto | an explicit model string for the backend
+                                                #   auto → iqtree: GTR+F+G4 | fasttree: gtr | raxml-ng: GTR+G
+                                                #
+                                                # Why auto pins a model instead of searching: IQ-TREE's
+                                                # own default (-m MFP) re-runs ModelFinder on every
+                                                # execution, which makes runtime depend on the data.
+                                                # On the 16S test data the search picked TPM3u+R5 (real
+                                                # ASVs) and GTR+F+I+R5 (reference fragments): a GTR-family
+                                                # matrix with FreeRate site rates. The matrix choice barely
+                                                # moves the distances diversity metrics use (see the docs),
+                                                # so a pinned model is a sound default; IQ-TREE's own advice
+                                                # is to select once with MFP and then pin what it picked.
+                                                #
+                                                # Model SELECTION is still available, and what it picks
+                                                # is recorded in phylogeny.params.json:
+                                                #   iqtree   "MFP" — ModelFinder
+                                                #   raxml-ng "DNA" — MOOSE
+                                                #   fasttree       — has no model selection at all;
+                                                #                    only "gtr" or "jc" are accepted
+                                                #                    (anything else is a hard error,
+                                                #                    rather than silently ignored)
+
+    support: false                              # branch support values. Off by default because neither
+                                                # UniFrac nor Faith's PD uses them, and computing them
+                                                # dominates the runtime.
+                                                #   iqtree   → adds -B 1000 --alrt 1000 (read as
+                                                #              UFBoot >= 95, SH-aLRT >= 80 for a
+                                                #              single-gene tree like this one)
+                                                #   fasttree → keeps its SH-like local supports
+                                                #              (0-1 scale, NOT bootstrap)
+                                                #   raxml-ng → not supported; forced off with a warning
+
+    # There is deliberately no rooting option: the tree is exported UNROOTED, only.
+    # Faith's PD and UniFrac are root-dependent, and you will prune the tree in R
+    # before computing them (decontam against negative controls, abundance filtering
+    # of rare ASVs) — any root placed here would stop being valid at the first pruned
+    # tip. Root in R, AFTER pruning, immediately before the metric
+    # (phangorn::midpoint() or phytools::midpoint.root()).
+
+    extra_args:                                 # advanced escape hatch: appended verbatim to the tool's
+                                                # command line and recorded in phylogeny.params.json.
+                                                # NOT validated — a flag that contradicts the settings
+                                                # above (e.g. -T AUTO) will be passed through and is
+                                                # your responsibility. Normally leave these empty.
+      mafft: ""
+      iqtree: ""
+      fasttree: ""
+      raxml_ng: ""
+
 # ═══════════════════════════════════════════════════════════════
 # Shotgun-only configuration — ignored when mode: amplicon
 # ═══════════════════════════════════════════════════════════════
@@ -447,6 +544,22 @@ resources:
     target_extract: 8
     assign_taxonomy: 8
     aggregate_read_counts: 2
+    # phylogeny (optional, 16S only — see amplicon.phylogeny)
+    phylo_input: 1                            # reads two text tables, writes a FASTA
+    phylo_align: 4                            # MAFFT
+    phylo_tree: 4                             # Applies to the iqtree and raxml-ng backends only.
+                                              # 4 is deliberately modest: IQ-TREE parallelises across
+                                              # alignment COLUMNS, and a 16S amplicon alignment is only
+                                              # ~250-430 columns wide, so more threads buy little and
+                                              # can even be slower. raxml-ng clamps this further to what
+                                              # its own --parse step recommends (usually ~2), because it
+                                              # hard-errors when given too many threads for a short
+                                              # alignment. The fasttree backend ignores this key: it is
+                                              # pinned single-threaded in the rule, since FastTree's
+                                              # parallel binary is documented non-deterministic and the
+                                              # serial one is fast enough that there is nothing to gain.
+    phylo_export: 1                           # validates the tree, writes the Newick
+    phylo_qc: 1                               # reads the tree once for the QC report
     # ── shotgun ──
     decontam_phix: 6
     build_host_index: 16
@@ -472,6 +585,17 @@ resources:
     target_extract: 8000
     assign_taxonomy: 16000
     aggregate_read_counts: 2000
+    # phylogeny (optional, 16S only)
+    phylo_align: 4000
+    phylo_tree: 8000                          # Sized for the most demanding backend. Measured/estimated:
+                                              # FastTree ~181 MB at 10,000 ASVs; raxml-ng ~3.3 GB at
+                                              # 30,000 ASVs by its own formula (it prints an estimate in
+                                              # the phylo_tree log, worth checking on your own data);
+                                              # IQ-TREE is not separately measured but its likelihood
+                                              # vectors scale comparably. Raise this if you enable
+                                              # support: true, which was not part of that sizing.
+    phylo_export: 2000
+    phylo_qc: 2000
     # ── shotgun ──
     decontam_phix: 4000
     build_host_index: 30000                   # BBMap index build for the host reference (masked human ~24-28 GB)

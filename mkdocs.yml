@@ -79,6 +79,7 @@ nav:
           - rpoB: amplicon/markers/rpob.md
       - Amplicon length and truncation: amplicon/length-and-truncation.md
       - Keeping and discarding taxa: amplicon/taxon-filter.md
+      - Phylogeny (16S): amplicon/phylogeny.md
   - Shotgun mode:
       - Overview: shotgun/overview.md
       - Reference databases: shotgun/databases.md
@@ -94,4 +95,5 @@ nav:
   - About:
       - Rationale: about/rationale.md
       - Test datasets: about/test-datasets.md
+      - Phylogeny validation: about/validation.md
       - Citation and references: about/citation.md

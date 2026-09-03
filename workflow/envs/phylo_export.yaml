@@ -1,0 +1,13 @@
+name: phylo-export
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # DendroPy backs the two rules that read a tree back in rather than producing one:
+  # phylo_export (validates the backend's Newick and writes the canonical copies) and
+  # phylo_qc (tip accounting, branch-length checks, the long-branch report). Hand-
+  # rolling a Newick parser and midpoint rooting was the alternative and was rejected:
+  # this is a scientific instrument, and a subtly wrong parser here would corrupt the
+  # one number the whole module exists to produce.
+  - python >=3.10
+  - dendropy >=5.0

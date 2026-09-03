@@ -1,0 +1,13 @@
+name: mafft
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # 7.505+ is the floor because the L-INS-i tier passes --threadit 0, MAFFT's own
+  # switch for turning off the multithreaded iterative refinement that is its one
+  # documented source of run-to-run variation. Note the version numbering: MAFFT's
+  # minor is three digits (7.505, 7.526), so a floor written ">=7.5" would be
+  # satisfied by 7.037 under numeric comparison and pin nothing at all.
+  - mafft >=7.505
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (85b_phylo_align.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter

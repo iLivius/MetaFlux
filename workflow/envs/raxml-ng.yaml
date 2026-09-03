@@ -1,0 +1,10 @@
+name: raxml-ng
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # 2.0+ carries MOOSE, RAxML-NG's built-in model selection (reachable as
+  # model: DNA), which is why no separate ModelTest-NG step exists in this module.
+  - raxml-ng >=2.0
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (85e_phylo_tree_raxml.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter

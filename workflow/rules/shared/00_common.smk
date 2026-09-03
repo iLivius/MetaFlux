@@ -505,6 +505,151 @@ if MODE == "amplicon":
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
         )
 
+    # ── Optional 16S phylogeny (stage 85) ──────────────────────────────────
+    # Opt-in de novo tree for the run's ASVs, so users can compute phylogenetic
+    # diversity (Faith's PD, UniFrac) in their own R session. MetaFlux's job ends
+    # when the Newick is written — it computes no diversity statistics itself.
+    #
+    # Everything here is resolved at parse time so that rules/amplicon/85_phylogeny.smk
+    # can be defined (or not defined at all) without re-reading the config. Every key
+    # is read with an explicit default, following the shotgun kmer_evidence block
+    # above: a config written before this feature existed — including one passed with
+    # --configfile from outside the repo, where config/config.yaml is NOT loaded as a
+    # base layer (see the Snakefile) — must still parse untouched. The guards below
+    # can therefore only ever fire on a value the user actually wrote, never on a
+    # missing key.
+    #
+    # WHY 16S ONLY. A de novo tree is meaningful only for a marker that can be
+    # globally aligned across divergent taxa. ITS is not reliably alignable above
+    # about genus level; gyrB co-amplifies its paralogue parE, which enters a tree as
+    # a long out-group branch and inflates Faith's PD; rpoB is mutationally saturated
+    # at all three codon positions at phylum/domain scope. 18S is the one marker worth
+    # revisiting, but branch lengths from short 18S amplicons are documented to be
+    # underestimated and nobody has validated UniFrac/PD from them. See
+    # docs/amplicon/phylogeny.md for the citations.
+    _phylo_cfg = amp_cfg.get("phylogeny", {}) or {}
+
+    PHYLO_ENABLED          = bool(_phylo_cfg.get("enabled", False))
+    PHYLO_BACKEND          = str(_phylo_cfg.get("backend", "iqtree")).strip().lower()
+    PHYLO_ALIGNER_STRATEGY = str(_phylo_cfg.get("aligner_strategy", "auto")).strip().lower()
+    PHYLO_MODEL            = str(_phylo_cfg.get("model", "auto")).strip()
+    PHYLO_SUPPORT          = bool(_phylo_cfg.get("support", False))
+    PHYLO_EXTRA_ARGS       = dict(_phylo_cfg.get("extra_args", {}) or {})
+
+    # There is deliberately NO rooting option. The tree is exported unrooted, full stop:
+    # users prune it in R first (decontam against negative controls, abundance
+    # filtering), and any root placed here would stop being valid the moment a tip is
+    # removed. A `root:` key in the config is from a pre-release draft of this module —
+    # refuse it with a pointer rather than silently ignoring a setting the user
+    # believes is doing something.
+    if "root" in _phylo_cfg:
+        sys.exit(
+            "[MetaFlux] amplicon.phylogeny.root is not a setting. MetaFlux exports the "
+            "tree UNROOTED only — root it in R after pruning to your final ASV set "
+            "(see docs/amplicon/phylogeny.md). Remove the 'root' key."
+        )
+
+    # Marker guard, in the same "force off with a warning" style as the
+    # EXTRACTION_ENABLED guard above: an unsupported marker is a recoverable config
+    # combination, not a typo, so coerce it to the safe state and say so rather than
+    # aborting a run whose taxonomy half is perfectly valid.
+    if PHYLO_ENABLED and AMPLICON_TYPE != "16S":
+        sys.stderr.write(
+            f"[MetaFlux] warning: amplicon.phylogeny is 16S-only; marker {AMPLICON_TYPE} "
+            "is not supported (see docs/amplicon/phylogeny.md for the per-marker "
+            "reasons). Ignoring amplicon.phylogeny.enabled: true — no tree will be built.\n"
+        )
+        PHYLO_ENABLED = False
+
+    # The remaining guards validate values the user typed. They run even when the
+    # feature is disabled, so a typo is caught the first time it is written rather
+    # than only on the run where it finally matters.
+    if PHYLO_BACKEND not in ("iqtree", "fasttree", "raxml-ng"):
+        sys.exit(
+            f"amplicon.phylogeny.backend must be 'iqtree', 'fasttree' or 'raxml-ng' "
+            f"(got: {PHYLO_BACKEND!r})"
+        )
+    if PHYLO_ALIGNER_STRATEGY not in ("auto", "linsi", "fftns2"):
+        sys.exit(
+            f"amplicon.phylogeny.aligner_strategy must be 'auto', 'linsi' or 'fftns2' "
+            f"(got: {PHYLO_ALIGNER_STRATEGY!r})"
+        )
+    # Unknown extra_args keys are a silent no-op otherwise: writing `iqtre: "-x"`
+    # would simply never reach any tool, and the user would spend an afternoon
+    # wondering why their flag did nothing.
+    _PHYLO_EXTRA_KEYS = ("mafft", "iqtree", "fasttree", "raxml_ng")
+    _bad_extra = sorted(set(PHYLO_EXTRA_ARGS) - set(_PHYLO_EXTRA_KEYS))
+    if _bad_extra:
+        sys.exit(
+            f"[MetaFlux] amplicon.phylogeny.extra_args has unknown key(s) {_bad_extra}. "
+            f"Valid keys are: {', '.join(_PHYLO_EXTRA_KEYS)}"
+        )
+
+    # RAxML-NG support values: bootstrapping dominates this backend's runtime, and
+    # support values are not inputs to UniFrac or Faith's PD, so the setting buys
+    # nothing here. Force it off with a warning rather than silently ignoring it.
+    if PHYLO_ENABLED and PHYLO_SUPPORT and PHYLO_BACKEND == "raxml-ng":
+        sys.stderr.write(
+            "[MetaFlux] warning: amplicon.phylogeny.support is not available for the "
+            "raxml-ng backend (bootstrapping dominates its runtime and support values "
+            "are not used by any downstream diversity metric). Proceeding without support.\n"
+        )
+        PHYLO_SUPPORT = False
+
+    # Model resolution. `auto` is MetaFlux's own choice per backend, pinned rather
+    # than delegated to the tool's search: IQ-TREE's own default (-m MFP) re-searches
+    # 22 base models on every run, which makes runtime data-dependent. On the 16S test
+    # data the selection picked TPM3u+R5 (real ASVs) and GTR+F+I+R5 (reference
+    # fragments) — GTR-family matrices whose choice barely moves the distances the
+    # diversity metrics use (see docs/amplicon/phylogeny.md). IQ-TREE itself documents
+    # this select-once-then-pin pattern.
+    #
+    # A tool's own model search is still reachable — it is the class of automatic
+    # behaviour that WRITES DOWN what it picked (IQ-TREE's choice lands in .iqtree,
+    # RAxML-NG's in .raxml.bestModel), so provenance survives. Set model: MFP or
+    # model: DNA to use it. What is never reachable is automatic behaviour that
+    # depends on the machine rather than the data (-T AUTO, --threads auto), because
+    # the same input must not behave differently on different hardware.
+    _PHYLO_MODEL_AUTO = {
+        "iqtree":   "GTR+F+G4",
+        "fasttree": "gtr",       # FastTree has only JC and GTR; see the guard below
+        "raxml-ng": "GTR+G",
+    }
+    if PHYLO_MODEL.lower() == "auto":
+        PHYLO_MODEL_RESOLVED = _PHYLO_MODEL_AUTO[PHYLO_BACKEND]
+    else:
+        PHYLO_MODEL_RESOLVED = PHYLO_MODEL
+
+    # FastTree is the one backend with no model selection at all: its nucleotide
+    # options are Jukes-Cantor (the default, which is why -gtr is passed explicitly)
+    # and GTR, and nothing else. An unrecognised model string would otherwise be
+    # dropped on the floor and the user would get a GTR tree while believing they had
+    # asked for something else — quietly wrong output, which this workflow treats as
+    # worse than a loud failure.
+    if PHYLO_BACKEND == "fasttree" and PHYLO_MODEL_RESOLVED.lower() not in ("jc", "gtr"):
+        sys.exit(
+            f"[MetaFlux] amplicon.phylogeny.model {PHYLO_MODEL!r} is not available for the "
+            "fasttree backend, which implements only Jukes-Cantor and GTR (no model "
+            "selection). Use 'auto' (= gtr), 'gtr', or 'jc' — or switch to "
+            "backend: iqtree / raxml-ng, which do support model selection."
+        )
+
+    # Advisory only — never forces anything. The whole point of feeding the tree the
+    # POST-taxonomy ASV set is that MetaFlux's contaminant filter has already removed
+    # chloroplast, mitochondrial and wrong-domain sequences, which are exactly the
+    # off-target ASVs that show up in a de novo tree as long branches and distort
+    # UniFrac and Faith's PD. With the filter switched off or its lists empty, the
+    # tree still gets built, but from an unfiltered set — so say so before the run
+    # rather than leaving the user to discover it in the long-branch QC report.
+    if PHYLO_ENABLED and (not FILTER_ENABLED or not (FILTER_KEEP or FILTER_DISCARD)):
+        sys.stderr.write(
+            "[MetaFlux] warning: phylogeny is enabled but the contaminant filter "
+            "(amplicon.taxonomy.filter) is off or has empty keep/discard lists. The "
+            "tree will include any chloroplast, mitochondrial or off-target ASVs, which "
+            "typically appear as long branches and inflate Faith's PD. Check "
+            "stats/phylogeny/phylogeny_qc.json's long-branch report.\n"
+        )
+
     # Taxonomy always reads the length-filtered outputs (dada_length_filter
     # runs after target_extract — see amplicon/60_dada2.smk).
     def _seqs_for_taxonomy(wildcards=None):
@@ -860,6 +1005,32 @@ def _amplicon_targets():
         # MultiQC aggregate
         OUT / "multiqc" / "multiqc_report.html",
     ]
+    # Optional 16S phylogeny (stage 85). ONE target is registered, and it is the QC
+    # report rather than the tree — which needs explaining, because it looks like the
+    # tree has been left unregistered by mistake.
+    #
+    # The reason is the spec's requirement that a run with fewer than 4 eligible ASVs
+    # produce a documented skip rather than a crash: 3 sequences cannot make a
+    # meaningful tree. That decision depends on a number nobody knows until taxonomy
+    # has finished, but this list is built at PARSE time, before anything has run. Ask
+    # for the tree here and a legitimate skip ends the run with a missing-output error.
+    #
+    # So phylo_input is a Snakemake *checkpoint* — a rule after which Snakemake re-reads
+    # the situation and works out the rest of the graph from what that rule actually
+    # produced. phylo_qc's input list is then a function (see 85_phylogeny.smk): with 4
+    # or more ASVs it asks for the alignment, tree, and params file, which is what pulls
+    # that whole chain into the run; with fewer, it asks for none of them and records
+    # the skip instead. Every file in the spec's 7.phylogeny/ layout is still produced
+    # on any normal run — it arrives as a dependency of this one target rather than as
+    # a target itself.
+    #
+    # Practical consequence worth knowing: because the tree is not itself a target,
+    # deleting it while phylogeny_qc.json survives will not trigger a rebuild on its
+    # own. Delete the QC report too, or re-run with `snakemake -R phylo_export`.
+    if PHYLO_ENABLED:
+        targets += [
+            OUT / "stats" / "phylogeny" / "phylogeny_qc.json",
+        ]
     return targets
 
 

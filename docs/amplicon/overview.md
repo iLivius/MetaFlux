@@ -20,8 +20,8 @@ live in the marker packs under `workflow/markers/<type>.yaml` and are never set 
 
 ## The steps at a glance
 
-The pipeline runs as nine stages. Output directories are numbered in pipeline order under
-`out_dir`, so the directory listing reads like the workflow.
+The pipeline runs as nine stages, plus an optional tenth. Output directories are numbered
+in pipeline order under `out_dir`, so the directory listing reads like the workflow.
 
 | # | Step | Tool | Snakemake rule | Writes to |
 |---|------|------|----------------|-----------|
@@ -34,9 +34,15 @@ The pipeline runs as nine stages. Output directories are numbered in pipeline or
 | 7 | Marker-region extraction *(optional)* | Metaxa2 or ITSx | `target_extract` | `5.dada2/` |
 | 8 | ASV length filter | in-house | `dada_length_filter` | `5.dada2/`, `stats/dada2/` |
 | 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `assign_taxonomy` | `6.taxonomy/` |
+| 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `7.phylogeny/`, `stats/phylogeny/` |
 
 Two more rules close the run: `aggregate_read_counts` builds `stats/read_tracking.txt`,
 and `multiqc` builds `multiqc/multiqc_report.html`.
+
+Stage 10 is off by default and runs only for 16S. It takes the contaminant-filtered ASVs
+from `6.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity
+analysis you perform yourself — MetaFlux computes no diversity statistics. See
+[Phylogeny](phylogeny.md).
 
 ## Input
 

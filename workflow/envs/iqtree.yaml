@@ -1,0 +1,12 @@
+name: iqtree
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # IQ-TREE 3 (the rule calls the binary as `iqtree3`). The 3.x floor matters: the
+  # bioconda package also installs an `iqtree` symlink, and a v1/v2 `iqtree` earlier
+  # on PATH would otherwise be a plausible source of a silently different analysis.
+  # Calling iqtree3 explicitly plus this floor makes that collision impossible.
+  - iqtree >=3.1
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (85c_phylo_tree_iqtree.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter

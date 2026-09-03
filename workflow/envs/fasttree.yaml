@@ -1,0 +1,16 @@
+name: fasttree
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Double precision is the property that matters here, and it is about branch
+  # lengths, which are exactly what this module exports. A single-precision build
+  # floors short branches at 5e-4 instead of 5e-9; on a measured 2,000-ASV test that
+  # put 44% of branches on the floor and added ~13% to total tree length — and total
+  # tree length IS Faith's PD by definition. Bioconda has compiled with -DUSE_DOUBLE
+  # since 2017 and 2.2.0 makes it the default outright, so this env is safe; the rule
+  # still asserts it at runtime, because distro packages and the author's own
+  # precompiled binaries are single-precision.
+  - fasttree >=2.1.11
+  - python >=3.10   # this env backs a rule whose action is a Snakemake script: (85d_phylo_tree_fasttree.py);
+                    # without python in-env, Snakemake silently falls back to the host interpreter
