@@ -134,6 +134,24 @@ Papers the [Phylogeny](../amplicon/phylogeny.md) page cites for *why* the module
 70. Case, R. J., et al. (2007). Use of 16S rRNA and rpoB genes as molecular markers for microbial ecology studies. *Applied and Environmental Microbiology* 73:278–288. https://doi.org/10.1128/AEM.01177-06 (rpoB saturation at all three codon positions; the rpoB exclusion)
 71. Apprill, A., McNally, S., Parsons, R. & Weber, L. (2015). Minor revision to V4 region SSU rRNA 806R gene primer greatly increases detection of SAR11 bacterioplankton. *Aquatic Microbial Ecology* 75:129–137. https://doi.org/10.3354/ame01753 (806R-B; used with 515F-Y, ref. 27, for the V4 fragments of the full-gene check)
 
+### Downstream analysis in R (the worked example)
+
+Packages and methods the [Phylogeny](../amplicon/phylogeny.md) page's R example uses or
+cites. None is a MetaFlux dependency — they run in your own session.
+
+72. Paradis, E. & Schliep, K. (2019). ape 5.0: an environment for modern phylogenetics and evolutionary analyses in R. *Bioinformatics* 35:526–528. https://doi.org/10.1093/bioinformatics/bty633
+73. Schliep, K. P. (2011). phangorn: phylogenetic analysis in R. *Bioinformatics* 27:592–593. https://doi.org/10.1093/bioinformatics/btq706 (midpoint rooting)
+74. Smith, D. P. & CMMR. rbiom: read/write, transform and visualize microbiome datasets. R package. https://cmmr.github.io/rbiom/ (UniFrac; compiled implementation)
+75. Oksanen, J., et al. vegan: Community Ecology Package. R package. https://cran.r-project.org/package=vegan (PCoA, PERMANOVA, betadisper)
+76. Davis, N. M., Proctor, D. M., Holmes, S. P., Relman, D. A. & Callahan, B. J. (2018). Simple statistical identification and removal of contaminant sequences in marker-gene and metagenomics data. *Microbiome* 6:226. https://doi.org/10.1186/s40168-018-0605-2 (decontam)
+77. Saary, P., Forslund, K., Bork, P. & Hildebrand, F. (2017). RTK: efficient rarefaction analysis of large datasets. *Bioinformatics* 33:2594–2595. https://doi.org/10.1093/bioinformatics/btx206 (multiple rarefaction of non-phylogenetic indices; takes no tree)
+78. Lozupone, C. & Knight, R. (2005). UniFrac: a new phylogenetic method for comparing microbial communities. *Applied and Environmental Microbiology* 71:8228–8235. https://doi.org/10.1128/AEM.71.12.8228-8235.2005 · Lozupone, C., Hamady, M., Kelley, S. T. & Knight, R. (2007). Quantitative and qualitative beta diversity measures lead to different insights. *AEM* 73:1576–1585. https://doi.org/10.1128/AEM.01996-06 (weighted UniFrac)
+79. Hurlbert, S. H. (1971). The nonconcept of species diversity: a critique and alternative parameters. *Ecology* 52:577–586. https://doi.org/10.2307/1934145 (the rarefaction expectation)
+80. Nipperess, D. A. & Matsen, F. A. (2013). The mean and variance of phylogenetic diversity under rarefaction. *Methods in Ecology and Evolution* 4:603–615. https://doi.org/10.1111/2041-210X.12055 (the closed form for expected Faith's PD used in the example)
+81. McMurdie, P. J. & Holmes, S. (2014). Waste not, want not: why rarefying microbiome data is inadmissible. *PLoS Computational Biology* 10:e1003531. https://doi.org/10.1371/journal.pcbi.1003531 (the case against rarefying)
+82. Schloss, P. D. (2024). Rarefaction is currently the best approach to control for uneven sequencing effort in amplicon sequence analyses. *mSphere* 9:e00354-23. https://doi.org/10.1128/msphere.00354-23 · Schloss, P. D. (2024). Waste not, want not: revisiting the analysis that called into question the practice of rarefaction. *mSphere* 9:e00355-23. https://doi.org/10.1128/msphere.00355-23 (the case for rarefaction proper)
+83. Anderson, M. J. (2001). A new method for non-parametric multivariate analysis of variance. *Austral Ecology* 26:32–46. https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x (PERMANOVA) · Anderson, M. J. (2006). Distance-based tests for homogeneity of multivariate dispersions. *Biometrics* 62:245–253. https://doi.org/10.1111/j.1541-0420.2005.00440.x (betadisper)
+
 ## License
 
 MetaFlux is released under the
