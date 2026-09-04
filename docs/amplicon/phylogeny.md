@@ -590,7 +590,7 @@ print(round(faith_pd, 4))
 # r <- rtk(counts, repeats = n_iters, depth = depth, margin = 2)
 # shannon_mean <- sapply(get.diversity(r, div = "shannon"), mean)
 
-# ── 9. Beta diversity: UniFrac, averaged over rarefaction iterations ────────
+# ── 9. Beta diversity: distances averaged over rarefaction iterations ───────
 # Compute the distance matrix on each subsample and average the matrices — not
 # the other way round. Averaging the rarefied tables first would just hand back
 # something close to the original table and defeat the point. Averaging
@@ -603,20 +603,30 @@ print(round(faith_pd, 4))
 # unweighted UniFrac distances differing by up to 0.109, while two independent
 # 100-iteration averages differed by at most 0.016. That factor of ~7 is the
 # whole argument for doing it this way.
-average_unifrac <- function(counts, tree, metric, depth, iters) {
-  total <- NULL
+#
+# All the metrics are computed on the SAME subsample within each iteration, so
+# that any later comparison between them reflects the metrics themselves and not
+# two different draws of the dice.
+average_dists <- function(counts, tree, metrics, depth, iters) {
+  totals <- setNames(vector("list", length(metrics)), metrics)
   for (i in seq_len(iters)) {
     rarefied <- rarefy_once(counts, depth)
-    d <- as.matrix(rbiom::bdiv_distmat(rbiom::as_rbiom(rarefied, tree = tree),
-                                       bdiv = metric))
-    total <- if (is.null(total)) d else total + d
+    biom_i   <- rbiom::as_rbiom(rarefied, tree = tree)
+    for (m in metrics) {
+      d <- as.matrix(rbiom::bdiv_distmat(biom_i, bdiv = m))
+      totals[[m]] <- if (is.null(totals[[m]])) d else totals[[m]] + d
+    }
   }
-  as.dist(total / iters)
+  lapply(totals, function(x) as.dist(x / iters))
 }
 
 set.seed(42)   # the subsampling is random; fix it so the run is repeatable
-uw <- average_unifrac(counts, tree, "unweighted_unifrac", depth, n_iters)
-wt <- average_unifrac(counts, tree, "weighted_unifrac",   depth, n_iters)
+dists <- average_dists(counts, tree,
+                       c("unweighted_unifrac", "weighted_unifrac", "bray"),
+                       depth, n_iters)
+uw <- dists$unweighted_unifrac
+wt <- dists$weighted_unifrac
+bc <- dists$bray          # Bray-Curtis: no tree involved, the non-phylogenetic view
 
 # ── 10. Ordination ──────────────────────────────────────────────────────────
 # PCoA (classical multidimensional scaling) is the standard partner for a
@@ -639,6 +649,38 @@ text(pcoa$points, labels = rownames(pcoa$points), pos = 3, cex = 0.7)
 # group <- factor(c("treated", "treated", "control", "control", "treated", "control"))
 # print(adonis2(uw ~ group, permutations = 999))
 # print(permutest(betadisper(uw, group), permutations = 999))
+
+# ── 12. Is the tree telling you anything Bray-Curtis doesn't? ───────────────
+# The question worth asking before you report a phylogenetic result: does it
+# actually differ from the answer you would have got without a tree? Two ways to
+# ask, and they answer slightly different questions.
+#
+# Mantel compares the DISTANCE MATRICES directly — do the two metrics rank the
+# sample pairs the same way? Procrustes compares the ORDINATIONS — after
+# rotating, scaling and translating one onto the other, how well do the points
+# superimpose? Procrustes is the more relevant test when what you publish is a
+# PCoA plot, because that is exactly the object it compares.
+cat("\n--- Mantel: do the distance matrices agree? ---\n")
+print(mantel(uw, bc, permutations = 999))   # unweighted UniFrac vs Bray-Curtis
+print(mantel(wt, bc, permutations = 999))   # weighted   UniFrac vs Bray-Curtis
+
+cat("\n--- Procrustes: do the ordinations agree? ---\n")
+# Rotate the Bray-Curtis ordination onto each UniFrac ordination. `protest` adds
+# a permutation test; its "Correlation in a symmetric Procrustes rotation" is the
+# number to quote (the `t0` field), and 1 means the two are the same picture.
+pr_uw <- protest(cmdscale(uw, k = 2), cmdscale(bc, k = 2), permutations = 999)
+pr_wt <- protest(cmdscale(wt, k = 2), cmdscale(bc, k = 2), permutations = 999)
+print(pr_uw)
+print(pr_wt)
+
+# Per-sample residuals show WHERE the two views disagree: a large residual means
+# that sample sits in a different place depending on whether the tree was used.
+cat("\nper-sample Procrustes residuals (unweighted UniFrac vs Bray-Curtis):\n")
+print(round(residuals(pr_uw), 3))
+
+# The two ordinations superimposed. Arrows run from the Bray-Curtis position to
+# the UniFrac one, so a long arrow is a sample the tree moved.
+plot(pr_uw, main = "Bray-Curtis -> unweighted UniFrac")
 ```
 
 ### What the checks in it are for
@@ -723,6 +765,47 @@ abundant they are. Unweighted is the sensitive one — it is where a single long
 a contaminant does its damage, and it is the metric the long-branch report exists to
 protect. If the two disagree, the difference lives in the rare taxa, which is where a de
 novo tree from a short marker is least trustworthy.
+
+**Check the tree against Bray–Curtis before you believe it.** The last step of the
+example asks the question that decides whether enabling this module changed anything:
+does the phylogenetic result differ from the one you would have got without a tree?
+Two tests, answering slightly different questions — Mantel compares the distance
+matrices (do the metrics rank sample pairs the same way?), Procrustes compares the
+ordinations after rotating one onto the other (do the *plots* say the same thing?).
+Procrustes is the more relevant of the two when a PCoA is what you publish.
+
+On the 16S test data, with all three metrics computed on the same rarefaction draws:
+
+| Comparison | Mantel *r* | Procrustes correlation | *p* |
+|---|--:|--:|--:|
+| Weighted UniFrac vs Bray–Curtis | 0.911 | 0.862 | 0.003 |
+| Unweighted UniFrac vs Bray–Curtis | 0.031 | 0.238 | 0.98 |
+
+That contrast is the useful part, and it generalises further than this small dataset
+does. **Weighted UniFrac reproduces Bray–Curtis almost exactly**, because both are
+dominated by the abundant taxa — and among abundant, well-sampled lineages the tree
+adds little that abundance did not already say. **Unweighted UniFrac gives a completely
+different picture**, because it is driven by which rare lineages are present, and it is
+their placement that the tree supplies.
+
+So the practical rule: if your conclusion rests on **weighted** UniFrac, the tree is
+largely confirming what Bray–Curtis already told you, and little hangs on the
+phylogeny being right. If it rests on **unweighted** UniFrac, it rests entirely on the
+tree — and specifically on the placement of rare, long-branch tips, which is what a de
+novo tree from a short marker is least able to get right. That is the case where you
+should read `stats/phylogeny/phylogeny_qc.json`'s long-branch report before believing
+the result, and re-run the analysis without the flagged tips to see whether the
+conclusion survives.
+
+The per-sample Procrustes residuals tell you *where* the two views disagree, and
+`plot(pr_uw)` draws the two ordinations superimposed with an arrow per sample: a long
+arrow is a sample the tree moved.
+
+!!! warning "Six samples is an illustration, not a result"
+    The test dataset has six samples, so every *p*-value above is bounded below by
+    1/720 ≈ 0.0014 and none of it is evidence about anything biological. The numbers
+    are there to show the machinery working and the contrast between the two UniFracs;
+    run the same comparison on your own study before drawing conclusions from it.
 
 **PERMANOVA needs replication.** `adonis2` on a handful of samples cannot produce a
 meaningful *p*-value: with two samples per group there are only a few hundred distinct

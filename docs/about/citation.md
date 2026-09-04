@@ -152,6 +152,9 @@ cites. None is a MetaFlux dependency — they run in your own session.
 82. Schloss, P. D. (2024). Rarefaction is currently the best approach to control for uneven sequencing effort in amplicon sequence analyses. *mSphere* 9:e00354-23. https://doi.org/10.1128/msphere.00354-23 · Schloss, P. D. (2024). Waste not, want not: revisiting the analysis that called into question the practice of rarefaction. *mSphere* 9:e00355-23. https://doi.org/10.1128/msphere.00355-23 (the case for rarefaction proper)
 83. Anderson, M. J. (2001). A new method for non-parametric multivariate analysis of variance. *Austral Ecology* 26:32–46. https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x (PERMANOVA) · Anderson, M. J. (2006). Distance-based tests for homogeneity of multivariate dispersions. *Biometrics* 62:245–253. https://doi.org/10.1111/j.1541-0420.2005.00440.x (betadisper)
 
+84. Mantel, N. (1967). The detection of disease clustering and a generalized regression approach. *Cancer Research* 27:209–220. (Mantel test for agreement between distance matrices)
+85. Gower, J. C. (1975). Generalized Procrustes analysis. *Psychometrika* 40:33–51. https://doi.org/10.1007/BF02291478 · Peres-Neto, P. R. & Jackson, D. A. (2001). How well do multivariate data sets match? The advantages of a Procrustean superimposition approach over the Mantel test. *Oecologia* 129:169–178. https://doi.org/10.1007/s004420100720 (Procrustes comparison of ordinations; `vegan::protest`)
+
 ## License
 
 MetaFlux is released under the
