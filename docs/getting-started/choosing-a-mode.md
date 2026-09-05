@@ -29,6 +29,36 @@ Both modes read the same `input` and `output` blocks, honour the same per-rule
 `resources` settings, and finish by writing a MultiQC report and a per-sample
 read-tracking table under `out_dir`.
 
+## What shotgun mode is for — and when to reach for something else
+
+MetaFlux's shotgun path is aimed at **environmental communities** — soil, sediment,
+water, enrichment cultures — where no curated marker set covers the habitat and a k-mer
+classifier against a broad database is the practical way to see anything at all.
+
+For **host-associated and food samples**, a marker-gene profiler such as
+[MetaPhlAn](https://github.com/biobakery/MetaPhlAn) will usually be more precise, and
+MetaFlux does not try to replace it. On the ZymoBIOMICS gut mock, MetaPhlAn 4 called 14
+species with no false positives; tuned MetaFlux scored slightly lower (F1 0.88 against
+0.90). Its database is built for that niche, and that shows.
+
+The trade runs the other way outside it. On four wastewater enrichment cultures,
+MetaPhlAn left 45–76% of reads unclassified, against 4.6% on the gut mock.
+
+Note also which *kind* of error each tool makes. A marker profiler errs by omission: on
+that same gut mock MetaPhlAn missed *Salmonella enterica*, *Clostridium perfringens* and
+*Enterococcus faecalis* — its recall was 0.82 at precision 1.00. A k-mer classifier errs
+by invention, which is what the [confidence and threshold
+tuning](../shotgun/confidence-and-threshold.md) exists to control. For *describing* a
+community, quiet omissions are the safer failure. For *screening* — asking whether a
+particular pathogen is present — they are the dangerous one, and absence from a marker
+profile is not evidence of absence.
+
+Neither tool escapes the underlying limit, and it is worth being blunt about it: if your
+organisms are not in a reference database, no parameter setting will find them. CAMI II's
+rhizosphere set has only ~52% of its true species present in the PlusPF database at all,
+and F1 caps near 0.3 there regardless of tuning. That is the same wall MetaPhlAn hits on
+soil, reached from the other side.
+
 ## The switch
 
 One key, at the top of `config/config.yaml`:

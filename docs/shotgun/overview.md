@@ -5,6 +5,11 @@ primer: every read pair that comes off the sequencer is matched against a k-mer
 database, so what limits the result is sequencing depth and the reference database
 rather than the resolving power of one marker gene.
 
+!!! note "Is shotgun mode the right tool for your samples?"
+    This path targets environmental communities. For host-associated or food
+    samples a marker-gene profiler is usually more precise — see
+    [what shotgun mode is for](../getting-started/choosing-a-mode.md#what-shotgun-mode-is-for-and-when-to-reach-for-something-else).
+
 The pipeline is [Kraken2](https://github.com/DerrickWood/kraken2) for read
 classification and [Bracken](https://github.com/jenniferlu717/Bracken) for abundance
 re-estimation, with decontamination and quality trimming in front of them and a
