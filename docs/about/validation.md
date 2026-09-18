@@ -40,7 +40,8 @@ analysis**: it answers "how much do the outputs move when this choice changes?",
   they share none.
 - *Distances* — Pearson correlation between the two trees' patristic distance matrices
   (the branch-length distance between every pair of tips; the cophenetic correlation of
-  Sokal & Rohlf 1962). This is the quantity UniFrac and Faith's PD actually consume, so
+  Sokal & Rohlf 1962), computed over the full matrix as `ape::cophenetic.phylo()`
+  returns it. This is the quantity UniFrac and Faith's PD actually consume, so
   agreement here matters more than agreement on topology.
 - *Scale* — total tree length, because Faith's PD is by definition a sum of branch
   lengths (Faith 1992): a method that shrinks the tree shrinks every PD value with it.
@@ -121,7 +122,8 @@ available rather than automatic (see the Phylogeny page).
 **Long-branch screen on the default tree.** Pendant edges: median 4.6 × 10⁻³, 75th
 percentile 0.052, longest 0.657. Flagging at 5× the median would mark 81 of 211 tips
 and at 20× still 33, which is why the QC report uses the boxplot fence Q3 + 3×IQR
-(0.208 here): 7 tips flagged, each the only ASV of its lineage in the run.
+(about 0.21 here: 0.208 with R's default quantile definition, 0.216 with the one the QC
+report uses): 7 tips flagged either way, each the only ASV of its lineage in the run.
 
 **What it is not.** It is not an accuracy benchmark: there is no known true tree for
 environmental ASVs, so nothing in it says which tree is *right*. It is one dataset, one

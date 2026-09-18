@@ -28,8 +28,9 @@ spread out.
 
 -gamma AND WHAT IT MEANS DOWNSTREAM
 -----------------------------------
--gamma rescales the tree's branch lengths by a single global factor (typically a
-change of 10% or less) and costs about 5% more runtime. The consequence is worth
+-gamma rescales the tree's branch lengths by a single global factor — on the 16S test
+set total tree length went from 12.15 without it to 15.30 with it, +26% — and costs
+about 5% more runtime. The consequence is worth
 stating plainly, because it lands differently on the two metrics people use this tree
 for: a global scale factor CANCELS in UniFrac, which is a ratio of branch lengths, but
 does NOT cancel in Faith's PD, which is an absolute sum.
@@ -200,7 +201,8 @@ def main() -> int:
         "tool": "FastTree",
         # FastTree has no --version flag; the -help banner IS its version statement, and
         # the double-precision assert above already had to read it.
-        "version": version_banner,
+        # The banner ends in a colon ("FastTree 2.2.0 Double precision:"); drop it.
+        "version": version_banner.rstrip(":").strip(),
         "backend": "fasttree",
         "model_requested": model_requested,
         "model_used": "GTR+gamma" if model == "gtr" else "JC+gamma",

@@ -82,6 +82,8 @@ def clear_stale_prefix_files(prefix: Path, log) -> None:
     if removed:
         log(f"[phylo_tree] Cleared {len(removed)} file(s) from a previous run: "
             f"{', '.join(removed)}")
+    else:
+        log(f"[phylo_tree] No files from a previous run under {prefix.name}.* — nothing to clear")
 
 
 def iqtree_version(log) -> str:

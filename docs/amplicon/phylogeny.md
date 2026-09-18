@@ -127,14 +127,17 @@ the tree's tips and the abundance table you pair it with in R are the same featu
 
 !!! note "The ASV set can shift slightly between runs, for a reason upstream of this module"
     With `taxonomy.method: sintax` on more than one thread, VSEARCH races several threads
-    on one random-number stream, so a few per-rank confidence values land on the other
-    side of the cutoff between runs — MetaFlux documents this under `amplicon.seed`. Two
-    runs of the 16S test set from identical configs differed in the taxonomy string of
-    15–16 of 211 ASVs, with **every read count identical**. The drift is below kingdom
-    level, so the contaminant filter kept the same 211 ASVs and the tree was unaffected;
-    but a drift at the rank your `keep` list tests would change which ASVs reach the tree.
-    Set `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
-    byte-reproducible.
+    on one random-number stream, so per-rank confidence values shift between runs — on the
+    16S test set by up to about 13 percentage points (an order call at 0.72 in one run,
+    0.85 in the next), enough to add or drop up to three trailing ranks of a lineage near
+    the cutoff. Between any two complete runs of that set from identical configs, 10–17 of
+    211 ASVs changed their taxonomy string, with **every read count identical**, and the
+    tree input stayed the same 211 ASVs each time. That is luck, not a guarantee: the
+    `discard` tokens (`o__Chloroplast`, `f__Mitochondria`) sit exactly at the ranks whose
+    confidence drifts, so a mitochondrial ASV called to family in one run and only to order
+    in the next is discarded in the first run and reaches the tree in the second. Set
+    `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
+    reproducible.
 
 !!! warning "The filter has to be doing something"
     If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
@@ -356,11 +359,14 @@ long branches, by two measures:
 The two use different threshold rules because they behave differently, and both rules
 were tuned on data rather than reasoned out:
 
-- Root-to-tip distances share a root and cluster tightly, so **1.5× the median** works
+- Root-to-tip distances share a root and, on a tree with a clear centre, cluster, so **1.5× the median** works
   (roughly the ratio in the published artifact case). But this measure is nearly blind
   to a *single* long branch: on a synthetic test with one planted contaminant, midpoint
   rooting split the offending branch across the root and the contaminant sat at 1.05×
-  the median — invisible — while its pendant edge was 22.7× the median.
+  the median — invisible — while its pendant edge was 22.7× the median. How many tips
+  it flags also depends on the backend and on which optimum the search found: 9 to 58 of
+  the same 211 ASVs across the trees checked for this release, against 6 to 7 by the
+  pendant fence. Read the pendant flags first.
 - Pendant edges cannot use a multiple of the median at all: a real ASV set carries many
   near-identical sequences whose pendant edges are effectively zero, so the median is
   close to zero and even generous multiples of it flag far too much of the tree (measured on
@@ -837,11 +843,16 @@ irrelevant. All of the following was measured on the 211-ASV test set with IQ-TR
 (GTR+F+G4, seed 42):
 
 - **Same alignment file, 1 thread:** two runs gave byte-identical Newick files.
-- **Same alignment file, 4 threads (the shipped default):** three runs reached the same
-  log-likelihood and tree length; one differed from the other two on 12 of 416 splits,
-  every one of them a branch of 2 × 10⁻⁶ or less (near-identical ASVs whose order the
-  data cannot decide). After `ape::di2multi(tree, tol = 1e-5)` the topologies are
-  identical.
+- **Same alignment file, 4 threads (the shipped default): not reproducible.** On one
+  input file, three runs reached the same log-likelihood and tree length and one of
+  them differed from the other two on 12 of 416 splits, every one a branch of
+  2 × 10⁻⁶ or less that `ape::di2multi(tree, tol = 1e-5)` removes. On another input
+  file (the same sequences, two of them in a different order) two runs ended in
+  different optima: log-likelihoods 0.1 apart, tree lengths 18.0 and 18.7, and RF 0.08
+  and 0.12 against the single-threaded tree of the same file (patristic r 0.996 and
+  0.984). A multithreaded search visits candidate trees in an order that depends on
+  thread timing, and can settle in a different local optimum; `di2multi()` does not
+  remove that kind of difference.
 - **Same sequences, two of them in a different order:** a different tree. Three complete
   runs of the pipeline from raw reads, identical configuration, gave identical ASV
   sequences and counts, but in one run two ASVs with the same total abundance (2 reads
@@ -860,7 +871,8 @@ What follows from this: read the topology as *one* of several trees the data sup
 about equally well, not as *the* tree; compare trees by patristic correlation or by
 per-sample PD, never with `diff`, and use `ape::dist.topo()` only after `di2multi()`;
 and to reproduce a tree exactly between runs, the whole path to it must be identical —
-the same ASV numbering (which is not guaranteed between runs; see the note on ASV IDs),
+the same eligible ASV set and the same ASV numbering (neither is guaranteed between runs
+with the shipped defaults; see the two notes above on `sintax` threads and on ASV IDs),
 `resources.threads.phylo_tree: 1` (140 s against 90 s at 4 threads on 211 ASVs, hours
 on thousands) and the same seed. The distances and diversity values you actually use
 are the stable part.

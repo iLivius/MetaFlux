@@ -554,7 +554,12 @@ resources:
                                               # 4 is deliberately modest: IQ-TREE parallelises across
                                               # alignment COLUMNS, and a 16S amplicon alignment is only
                                               # ~250-430 columns wide, so more threads buy little and
-                                              # can even be slower. raxml-ng clamps this further to what
+                                              # can even be slower. IQ-TREE still prints "Number of
+                                              # threads seems too high for short alignments. Use -T AUTO"
+                                              # at 4 threads on a 16S run; expected, and ignored: 4 threads
+                                              # was faster than 1 (90 s vs 140 s on 211 ASVs), and -T AUTO
+                                              # would make the result depend on the machine.
+                                              # raxml-ng clamps this further to what
                                               # its own --parse step recommends (1 on the 211-ASV test
                                               # alignment; it scales with the number of distinct
                                               # alignment patterns), because it terminates when given

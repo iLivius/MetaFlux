@@ -143,10 +143,14 @@ def long_branch_report(tree_path: Path, multiple: float, pendant_fence_iqr: floa
 
     THE TWO THRESHOLD RULES DIFFER, ON PURPOSE
     ------------------------------------------
-    Root-to-tip distances are all measured from the same root, so they cluster
-    tightly and a small multiple of the median separates signal from noise — 1.5x,
-    which is roughly the ratio in the published example (an artificial branch at 1.43
-    against a mean tip-to-root of 0.94).
+    Root-to-tip distances are all measured from the same root, so on a tree with a
+    clear centre they cluster and a small multiple of the median separates signal from
+    noise — 1.5x, which is roughly the ratio in the published example (an artificial
+    branch at 1.43 against a mean tip-to-root of 0.94). How tightly they cluster
+    depends on the backend and on which optimum the search found: on the same 211
+    ASVs the rule flagged 9 tips on one IQ-TREE tree, 17 on another, 18 on FastTree's
+    and 58 on RAxML-NG's, while the pendant fence flagged 6-7 every time. That is why
+    root-to-tip is the secondary measure: read the pendant flags first.
 
     Pendant edges CANNOT use a multiple of the median, and this was learned on real
     data, not reasoned out. A real ASV set contains many near-identical sequences —
@@ -220,6 +224,10 @@ def long_branch_report(tree_path: Path, multiple: float, pendant_fence_iqr: floa
             "flag_rule": rule,
             "flag_threshold": round(threshold, 6) if math.isfinite(threshold) else None,
             "n_flagged": len(flagged),
+            # The list is capped at 50 entries so the report stays readable on a tree
+            # where a rule misfires; n_flagged is always the true count and the flag
+            # below says when the list is shorter than it.
+            "flagged_tips_truncated": len(flagged) > 50,
             "flagged_tips": [
                 {"asv_id": label, key_name: round(value, 6)}
                 for label, value in flagged[:50]
@@ -378,6 +386,11 @@ def main() -> int:
         "alignment": aln_summary,
         "long_branches": branches,
         "reproducibility_note": (
+            "FastTree here is single-threaded with no random component: the same "
+            "alignment file gives a byte-identical tree. The alignment's record order "
+            "still depends on ASV numbering, which can differ between runs for equally "
+            "abundant ASVs; see docs/amplicon/phylogeny.md, Reproducibility."
+            if backend == "fasttree" else
             "Exactly reproducible only for the same input file, the same seed and one "
             "thread. A different thread count, or a different order of the input "
             "sequences (which happens between runs when equally abundant ASVs are "

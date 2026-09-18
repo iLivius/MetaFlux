@@ -389,7 +389,7 @@ amplicon:
 |---|---|---|---|
 | `type` | Selects the marker pack: which databases are used, whether a region extractor runs, how the amplicon length is measured, and which taxonomic ranks the output carries | `16S` | Matched case-insensitively, so `gyrb`, `GYRB` and `gyrB` all resolve to the shipped `gyrB` pack. An unknown value lists the available markers and stops. |
 | `its_region` | Which ITS subregion was amplified | `ITS2` | Only read when `type: ITS`. Selects the UNITE UCHIME probe reference and the ITSx region kept after extraction. |
-| `seed` | Fixes the random number generator for the stochastic steps of the amplicon path | `42` | Passed to `dada_seqtab` and `assign_taxonomy`. |
+| `seed` | Fixes the random number generator for the stochastic steps of the amplicon path | `42` | Passed to `dada_seqtab`, `assign_taxonomy` and, when phylogeny is enabled, `phylo_tree` (all three backends). |
 
 Each marker has its own page with the databases it uses and its quirks:
 [16S](../amplicon/markers/16S.md), [ITS](../amplicon/markers/its.md),
@@ -851,11 +851,14 @@ root placed on the full ASV set stops being valid at the first pruned tip. A lef
 `root:` key from a pre-release draft is rejected at parse time with a pointer to the
 docs rather than silently ignored.
 
-!!! warning "Reproducible at a fixed seed *and* a fixed thread count"
-    Neither IQ-TREE nor MAFFT documents any guarantee of identical results across
-    different thread counts, and this has not been tested empirically for MetaFlux. Pin
-    `resources.threads` as well as the seed if you need to reproduce a tree exactly.
-    Single-threaded FastTree with `support: false` uses no randomness at all.
+!!! warning "Exactly reproducible only for the same input file, the same seed and one thread"
+    Both the thread count and the order of the input sequences move the tree search to a
+    different, about equally good tree: two complete runs of the 16S test set that differed
+    only in the numbering of two equally abundant ASVs gave trees with RF 0.37 and
+    patristic *r* 0.93 between them (per-sample PD *r* 0.999). Details and what to do
+    about it are in the [Reproducibility](../amplicon/phylogeny.md#reproducibility-and-what-is-not-yet-verified)
+    section of the Phylogeny page. Single-threaded FastTree with `support: false` uses no
+    randomness at all.
 
 ---
 
@@ -1074,7 +1077,7 @@ so they are what a cluster executor turns into job requests.
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |
-| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. RAxML-NG clamps this further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
+| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. IQ-TREE still warns at 4 threads that the number "seems too high for short alignments" and suggests `-T AUTO`; the warning is expected and ignored — 4 threads was faster than 1 on the test set (90 s vs 140 s), and `-T AUTO` would make the result depend on the machine. RAxML-NG clamps this further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
 | `phylo_export` | amplicon | 1 | Validates the tree, writes the Newick. |
 | `phylo_qc` | amplicon | 1 | Reads the tree once for the QC report. |
 | `decontam_phix` | shotgun | 6 | BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead. |

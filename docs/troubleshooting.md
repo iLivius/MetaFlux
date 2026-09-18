@@ -210,9 +210,11 @@ of them become fully reproducible:
 - **`--sintax`: not.** VSEARCH runs its bootstrap confidence step across threads
   that share one random-number stream, so which thread consumes which draw still
   depends on scheduling, seed or no seed. Verified the same way: with
-  `amplicon.seed` fixed, 8-threaded `assign_taxonomy` re-runs still shifted a
-  handful of per-rank confidence values (a genus call at 0.99 in one run, 1.00 in
-  the next), while single-threaded re-runs came back identical.
+  `amplicon.seed` fixed, 8-threaded `assign_taxonomy` re-runs still shifted per-rank
+  confidence values — on the 16S test set by up to about 13 percentage points (an
+  order call at 0.72 in one run, 0.85 in the next), which added or dropped up to three
+  trailing ranks for 10–17 of 211 ASVs between any two runs, with every read count
+  identical — while single-threaded re-runs came back identical.
 
 !!! tip "If byte-identical sintax output matters more than speed"
 
@@ -224,8 +226,11 @@ of them become fully reproducible:
         assign_taxonomy: 1
     ```
 
-    Otherwise, treat sub-percent confidence drift near `sintax_cutoff` as normal
-    run-to-run noise — the same behaviour as before the seed was added.
+    Otherwise, treat confidence drift near `sintax_cutoff`, and the trailing ranks
+    that come and go with it, as normal run-to-run noise — the same behaviour as
+    before the seed was added. Note that the contaminant filter reads these very
+    values: its `discard` tokens sit at order and family rank, so in principle the
+    filtered ASV set can differ slightly between multithreaded runs too.
 
 ## Config (YAML) errors
 

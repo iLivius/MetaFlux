@@ -213,6 +213,14 @@ What to check, in order:
 2. The marker itself — is `amplicon.type` what the tokens were written for?
 3. The spelling, against the `taxonomy` column of a run made with `enabled: false`.
 
+!!! note "Run-to-run drift with `sintax` on more than one thread"
+    The confidence values the filter reads are not byte-reproducible when `sintax` runs
+    multithreaded (see [Troubleshooting](../troubleshooting.md)), and the `discard`
+    tokens sit at exactly the ranks where they drift. An ASV called `f__Mitochondria` at
+    0.83 in one run and only to order in the next is removed in the first run and kept
+    in the second. If the filtered ASV set itself must be reproducible, set
+    `resources.threads.assign_taxonomy: 1`.
+
 ## Seeing what the filter did
 
 Both classifier paths log their counts to `logs/assign_taxonomy.log`, three lines that
