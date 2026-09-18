@@ -150,7 +150,7 @@ otherwise. See [Phylogeny](../amplicon/phylogeny.md).
 | `asv_16s.aln.fasta` | The MAFFT alignment the tree was built from. Retained so it can be inspected or reused. | `phylo_tree`, `phylo_export`, `phylo_qc`. |
 | `asv_16s.fasta` | The extracted ASV sequences, bare `ASV_N` headers — the module's input. | `phylo_align`. |
 | `phylogeny.params.json` | Everything resolved at run time: aligner strategy, model, thread counts, tool versions, seed, input checksums, `extra_args`. | `phylo_qc`; and you, when you need to pin a choice. |
-| `input.json` | Eligible ASV count, ID list, per-ASV lengths, input checksums. Also what decides whether a tree is attempted. | `phylo_qc`, `phylo_export`. |
+| `input.json` | Eligible ASV count, per-ASV lengths, input checksums, and two ordered ID lists: `asv_ids` as the taxonomy table lists them, and `fasta_order`, the sequence-sorted order the alignment was actually built in. Also what decides whether a tree is attempted. | `phylo_qc`, `phylo_export`. |
 | `aln_run.json` | Per-step provenance for the alignment, merged into `phylogeny.params.json`. | `phylo_export`. |
 | `<backend>/` | The backend's own files — `iqtree/`, `fasttree/` or `raxml-ng/` — plus `tree_run.json`. Inspection only. | `phylo_export` reads the tree and `tree_run.json`; the rest is for you. |
 

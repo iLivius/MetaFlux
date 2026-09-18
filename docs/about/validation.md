@@ -28,7 +28,9 @@ request.
 ## The sensitivity analysis on the real test run
 
 **Design.** One real dataset — the 16S test set, 211 ASVs after contaminant filtering,
-6 samples, V5–V7 — and the pipeline's own default run as the reference point. Then one
+6 samples, V5–V7 — and the pipeline's default run *as it stood in September 2026*, IQ-TREE
+on 4 threads, as the reference point (v2.4.0 later moved the default to one thread; see the
+note above). Then one
 thing changed at a time, everything else held fixed (same ASV set, seed 42; 4 threads for IQ-TREE, RAxML-NG
 clamped to its own recommendation of 1, FastTree single-threaded as in the pipeline):
 

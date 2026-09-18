@@ -46,7 +46,7 @@ The terms this page leans on, in plain words. Skip it if you build trees for a l
 | **Root / unrooted** | A rooted tree has a designated oldest point; an unrooted one has only the branching pattern and lengths. MetaFlux exports unrooted trees, because the right root depends on which tips you keep. |
 | **Root-to-tip distance** | The sum of branch lengths from a tip up to the root. Needs a root, so the QC report measures it on a temporary midpoint-rooted copy; the exported tree stays unrooted. Good at spotting a whole clade hanging off one long **stem** (the branch leading to a clade), poor at spotting a single long branch. |
 | **Saturation** | So many repeated changes at the same positions that their history is erased — distances stop growing with divergence. The reason rpoB is excluded. |
-| **Seed** | The starting number for the random choices a tree search makes. Same seed, same input file, same settings and one thread → the same tree. Change the thread count, or the order of the input sequences, and the search settles on a different, about equally good tree (see Reproducibility below). `amplicon.seed` is reused here. |
+| **Seed** | The starting number for the random choices a tree search makes. At the shipped defaults (one thread, and an alignment whose row order does not depend on ASV numbering) the same data gives the same tree. Raise the thread count, or feed the same sequences in a different order, and the search settles on a different, about equally good tree (see Reproducibility below). `amplicon.seed` is reused here. |
 | **Site pattern** | A distinct column in the alignment. IQ-TREE's work per step scales with the number of these, which is why a ~440-column 16S alignment is "short". |
 | **Split** | The two groups of tips an internal branch separates. Support values and RF distance are both about splits. |
 | **Support (UFBoot, SH-aLRT)** | Numbers on internal branches saying how sure the data are about that split. UFBoot (ultrafast bootstrap): how often the branch reappears when the alignment columns are resampled, read as trustworthy at ≥ 95. SH-aLRT: a per-branch likelihood test, read at ≥ 80. FastTree's "SH-like" supports are on a 0–1 scale and are not bootstraps. |
@@ -837,11 +837,11 @@ any `extra_args`. That record is what lets you pin an automatic choice explicitl
 
 `amplicon.seed` seeds every backend — there is no separate phylogeny seed.
 
-**Two complete runs of the same data give the same tree, byte for byte.** That is true
-from v2.4.0 onwards, and it took three changes to make it true, because a maximum
-likelihood search is a heuristic: it settles into one of several nearly equally good
-trees, and which one it lands on is steered by things that look as though they should not
-matter.
+**Two complete runs of the same data give the same tree, byte for byte** — with one
+caveat that lives upstream of this module and is spelled out below. That is true from
+v2.4.0 onwards, and it took three changes to make it true, because a maximum likelihood
+search is a heuristic: it settles into one of several nearly equally good trees, and
+which one it lands on is steered by things that look as though they should not matter.
 
 - **The reads have to arrive in the same order.** Bowtie2 removes phiX on several threads
   and used to write the surviving pairs in whatever order the threads finished. DADA2
@@ -957,10 +957,18 @@ these empty.
 
 Threads and memory come from the shared `resources` block, like every other rule:
 `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc`. See
-[Configuration](../reference/configuration.md#threads). The defaults are deliberately
-modest, and `phylo_tree` behaves differently per backend — IQ-TREE parallelises across
-alignment columns and a 16S alignment is short; RAxML-NG clamps to its own recommendation
-because it hard-errors when given too many threads; FastTree is pinned single-threaded.
+[Configuration](../reference/configuration.md#threads).
+
+`phylo_tree` is the one worth a second thought, because it is the only resource setting
+in MetaFlux that changes a **result** rather than a runtime. It defaults to **1**, and
+that is what makes two runs of the same data give the same tree; at 4 threads two runs of
+the identical alignment landed 52 of 416 splits apart. It is also the one key whose
+fallback is not `threads_default`: leave it out of your config and you get 1, not 4.
+Raise it if you have thousands of ASVs and can accept a tree that is not exactly
+reproducible, but do not expect much — IQ-TREE parallelises across alignment columns and
+a 16S alignment is only a few hundred wide, so 211 ASVs took 140 s at one thread against
+90 s at four. The other backends barely care: RAxML-NG clamps whatever you give it to its
+own `--parse` recommendation, and FastTree is pinned single-threaded in the rule.
 
 ## References
 

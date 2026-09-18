@@ -528,7 +528,9 @@ shotgun:
 # ─────────────────────── Resources [shared] ─────────────────────
 # Per-rule threads and mem_mb. Rules read these via threads_for() / mem_mb_for()
 # helpers defined in workflow/rules/shared/00_common.smk. Missing keys fall
-# back to threads_default / mem_mb_default.
+# back to threads_default / mem_mb_default — with ONE exception: delete the
+# phylo_tree line below and the tree search falls back to 1, not threads_default,
+# because there the thread count changes the tree and not just the runtime.
 resources:
   threads_default: 4
   mem_mb_default: 2000

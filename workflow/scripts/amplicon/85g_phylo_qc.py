@@ -386,18 +386,27 @@ def main() -> int:
         "alignment": aln_summary,
         "long_branches": branches,
         "reproducibility_note": (
-            "FastTree here is single-threaded with no random component: the same "
-            "alignment file gives a byte-identical tree. The alignment's record order "
-            "still depends on ASV numbering, which can differ between runs for equally "
-            "abundant ASVs; see docs/amplicon/phylogeny.md, Reproducibility."
-            if backend == "fasttree" else
-            "Exactly reproducible only for the same input file, the same seed and one "
-            "thread. A different thread count, or a different order of the input "
-            "sequences (which happens between runs when equally abundant ASVs are "
-            "numbered differently), sends the search to a different, about equally good "
-            "tree: on the 16S test set RF 0.37 and patristic r 0.93 between two such "
-            "trees, per-sample PD r 0.999. Compare trees by patristic distance or PD, "
-            "never by diff; see docs/amplicon/phylogeny.md, Reproducibility."
+            "At the shipped defaults two complete runs of the same data give the same "
+            "tree, byte for byte: the reads are written in a fixed order (bowtie2 "
+            "--reorder), this alignment is built from a FASTA sorted by sequence rather "
+            "than by ASV numbering, and the search runs on one thread. Raising "
+            "resources.threads.phylo_tree gives that up — two runs of the same alignment "
+            "at 4 threads landed 52 of 416 splits apart on the 16S test set. One thing "
+            "outside this stage can still change the tree: with taxonomy.method sintax "
+            "on more than one thread, confidence values drift and the contaminant filter "
+            "can in principle keep a different set of ASVs; set "
+            "resources.threads.assign_taxonomy to 1 if that matters. Compare trees by "
+            "patristic distance or PD, never by diff. See docs/amplicon/phylogeny.md, "
+            "Reproducibility."
+            if backend != "fasttree" else
+            "FastTree here is single-threaded with no random component, and at the "
+            "shipped defaults the whole path into it is fixed too (bowtie2 --reorder, "
+            "and an alignment built from a FASTA sorted by sequence rather than by ASV "
+            "numbering), so two complete runs of the same data give a byte-identical "
+            "tree. With taxonomy.method sintax on more than one thread the contaminant "
+            "filter can still in principle keep a different set of ASVs; set "
+            "resources.threads.assign_taxonomy to 1 if that matters. See "
+            "docs/amplicon/phylogeny.md, Reproducibility."
         ),
         "downstream_note": (
             "MetaFlux computes no diversity statistics. Prune this tree to your filtered "

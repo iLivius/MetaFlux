@@ -856,14 +856,17 @@ root placed on the full ASV set stops being valid at the first pruned tip. A lef
 `root:` key from a pre-release draft is rejected at parse time with a pointer to the
 docs rather than silently ignored.
 
-!!! warning "Exactly reproducible only for the same input file, the same seed and one thread"
-    Both the thread count and the order of the input sequences move the tree search to a
-    different, about equally good tree: two complete runs of the 16S test set that differed
-    only in the numbering of two equally abundant ASVs gave trees with RF 0.37 and
-    patristic *r* 0.93 between them (per-sample PD *r* 0.999). Details and what to do
-    about it are in the [Reproducibility](../amplicon/phylogeny.md#reproducibility)
-    section of the Phylogeny page. Single-threaded FastTree with `support: false` uses no
-    randomness at all.
+!!! warning "Reproducible at the shipped defaults — and easy to give up"
+    Two complete runs of the same data produce the same tree byte for byte, which took
+    three settings working together: `--reorder` on the phiX step, an alignment built
+    from a sequence-sorted FASTA, and `phylo_tree: 1`. Raise `phylo_tree` and you trade
+    that away — two runs of the *identical* alignment at 4 threads landed 52 of 416
+    splits apart. The one remaining gap is outside this block: with
+    `taxonomy.method: sintax` on more than one thread, confidence values drift and the
+    contaminant filter can in principle keep a different set of ASVs, so set
+    `assign_taxonomy: 1` as well if the ASV set itself must be reproducible. Details in
+    the [Reproducibility](../amplicon/phylogeny.md#reproducibility) section of the
+    Phylogeny page.
 
 ---
 
