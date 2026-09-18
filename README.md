@@ -26,6 +26,7 @@ v2.4.0
 | [Quick start](https://iLivius.github.io/MetaFlux/getting-started/quick-start/) | first run, start to finish |
 | [Amplicon mode](https://iLivius.github.io/MetaFlux/amplicon/overview/) | the DADA2 pipeline, step by step |
 | [Markers](https://iLivius.github.io/MetaFlux/amplicon/markers/) | 16S · ITS · 18S · gyrB · rpoB, one page each |
+| [Phylogeny (16S)](https://iLivius.github.io/MetaFlux/amplicon/phylogeny/) | optional ASV tree, exported unrooted, for Faith's PD and UniFrac in R |
 | [Shotgun mode](https://iLivius.github.io/MetaFlux/shotgun/overview/) | Kraken2 + Bracken profiling |
 | [Configuration reference](https://iLivius.github.io/MetaFlux/reference/configuration/) | every key, default and trade-off |
 | [Output files](https://iLivius.github.io/MetaFlux/reference/output/) | what each run writes, and what reads it |
