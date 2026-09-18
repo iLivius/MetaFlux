@@ -400,10 +400,15 @@ Each marker has its own page with the databases it uses and its quirks:
 
     DADA2's `learnErrors(randomize = TRUE)` and `assignTaxonomy`'s bootstrap
     confidence are fully reproducible with this seed at any thread count —
-    verified by running the same data twice at 8 threads and getting identical
-    output. VSEARCH's `--sintax` is not: it races several threads on one random
-    number stream, so a handful of per-rank confidence values can still drift
-    between runs. For byte-identical `sintax` output, set
+    verified by running the same data twice at 8 threads and getting the same
+    sequences, counts and taxonomy. The seed does not fix everything, though: the
+    reads reach DADA2 in a different order every run (multithreaded bowtie2 phiX
+    removal), so ASVs with exactly equal total abundance can swap IDs, and
+    `seqs.fasta` then differs byte-wise with nothing biological changed. See
+    [Troubleshooting](../troubleshooting.md). VSEARCH's `--sintax` is not
+    reproducible either: it races several threads on one random number stream, so
+    per-rank confidence values can drift between runs. For byte-identical `sintax`
+    output, set
     `resources.threads.assign_taxonomy: 1`, which is slower but single-streamed.
 
 ### PhiX removal

@@ -847,12 +847,12 @@ irrelevant. All of the following was measured on the 211-ASV test set with IQ-TR
   input file, three runs reached the same log-likelihood and tree length and one of
   them differed from the other two on 12 of 416 splits, every one a branch of
   2 × 10⁻⁶ or less that `ape::di2multi(tree, tol = 1e-5)` removes. On another input
-  file (the same sequences, two of them in a different order) two runs ended in
-  different optima: log-likelihoods 0.1 apart, tree lengths 18.0 and 18.7, and RF 0.08
-  and 0.12 against the single-threaded tree of the same file (patristic r 0.996 and
-  0.984). A multithreaded search visits candidate trees in an order that depends on
-  thread timing, and can settle in a different local optimum; `di2multi()` does not
-  remove that kind of difference.
+  file two runs of the identical file ended in different optima: log-likelihoods 0.1
+  apart, tree lengths 17.97 and 18.68, 52 of 416 splits different, and 24 of those
+  still different after `di2multi()`; patristic correlation between them r = 0.988. A
+  multithreaded search visits candidate trees in an order that depends on thread
+  timing, so it can settle in a different local optimum, and collapsing near-zero
+  branches does not hide that.
 - **Same sequences, two of them in a different order:** a different tree. Three complete
   runs of the pipeline from raw reads, identical configuration, gave identical ASV
   sequences and counts, but in one run two ASVs with the same total abundance (2 reads
@@ -876,6 +876,12 @@ with the shipped defaults; see the two notes above on `sintax` threads and on AS
 `resources.threads.phylo_tree: 1` (140 s against 90 s at 4 threads on 211 ASVs, hours
 on thousands) and the same seed. The distances and diversity values you actually use
 are the stable part.
+- **The three backends are not equally sensitive to the row order.** Swapping the same
+  two rows of the alignment and rebuilding with each backend's shipped command: FastTree
+  returned a byte-identical tree, IQ-TREE differed on 154 of 416 splits (patristic
+  r = 0.93) and RAxML-NG on 216 (r = 0.90). If you need the tree to survive a rerun of
+  the whole pipeline, FastTree is the robust choice; if you need IQ-TREE's likelihood,
+  keep the alignment and rebuild from it rather than from the reads.
 - Single-threaded FastTree with `support: false` uses no randomness at all and is fully
   deterministic. Its parallel build, `FastTreeMP`, is documented non-deterministic and is
   **never** used by MetaFlux.
