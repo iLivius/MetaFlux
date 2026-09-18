@@ -270,11 +270,12 @@ if PHYLO_ENABLED:
         #   --search does the actual inference, using that thread count
         #
         # The two steps are not an optimisation — they are how the rule avoids simply
-        # crashing. RAxML-NG requires a minimum number of alignment patterns per
-        # thread and TERMINATES WITH AN ERROR above roughly twice its recommendation.
-        # A 16S alignment of ~430 patterns recommends about 2 threads and hard-fails
-        # somewhere above 4, so handing it a normal Snakemake allocation of 8 or 16
-        # would kill the rule outright. The script therefore uses
+        # crashing. RAxML-NG wants a minimum number of alignment patterns per thread
+        # and enforces it: moderately over-allocated it warns, badly over-allocated it
+        # TERMINATES ("Too few patterns per thread"). Measured on the 211-ASV 16S test
+        # alignment (328 distinct patterns, recommendation 1 thread): 8 threads ran
+        # with a warning, 16 and 32 terminated. A normal Snakemake allocation of 16
+        # would therefore kill the rule outright. The script uses
         # min(allocated, recommended) and records both numbers.
         #
         # --workers is likewise an explicit integer, not `auto`: auto reads the

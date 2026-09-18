@@ -1074,7 +1074,7 @@ so they are what a cluster executor turns into job requests.
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |
-| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. RAxML-NG clamps this further to what its own `--parse` step recommends (often 1–2) because it *hard-errors* when given too many threads for a short alignment. The `fasttree` backend ignores this key — see the note below. |
+| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. RAxML-NG clamps this further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
 | `phylo_export` | amplicon | 1 | Validates the tree, writes the Newick. |
 | `phylo_qc` | amplicon | 1 | Reads the tree once for the QC report. |
 | `decontam_phix` | shotgun | 6 | BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead. |
@@ -1102,6 +1102,7 @@ so they are what a cluster executor turns into job requests.
 | `target_extract` | amplicon | 8000 | |
 | `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count. |
 | `aggregate_read_counts` | shared | 2000 | Present in the config template but not read — the rule declares no `mem_mb`; see the note below. |
+| `phylo_input` | amplicon | 2000 | Two small text tables in, one FASTA out. |
 | `phylo_align` | amplicon | 4000 | |
 | `phylo_tree` | amplicon | 8000 | Sized for the most demanding backend. FastTree is measured at ~181 MB for 10,000 ASVs; RAxML-NG estimates ~3.3 GB at 30,000 ASVs by its own formula and prints its estimate in the `phylo_tree` log; IQ-TREE is not separately measured but its likelihood vectors scale comparably. Raise this if you set `support: true`, which was not part of that sizing. |
 | `phylo_export` | amplicon | 2000 | |

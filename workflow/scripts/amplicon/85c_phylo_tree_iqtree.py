@@ -148,8 +148,10 @@ def main() -> int:
         "-s", str(aln_in),
         "--seqtype", "DNA",
         "-m", model,
-        # Both the thread count and its ceiling are explicit integers: IQ-TREE
-        # otherwise reserves the right to scale up on its own.
+        # -T is the explicit thread count. --threads-max is only consulted by IQ-TREE
+        # under -T AUTO, so next to an explicit -T it changes nothing; it is passed
+        # anyway so that if someone injects -T AUTO through extra_args.iqtree, the
+        # ceiling is still the Snakemake allocation rather than every core on the machine.
         "-T", str(threads),
         "--threads-max", str(threads),
         "--seed", str(seed),

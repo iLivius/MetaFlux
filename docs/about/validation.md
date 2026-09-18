@@ -61,6 +61,68 @@ analysis**: it answers "how much do the outputs move when this choice changes?",
   family of Kimura 1981), +G gamma rates (Yang 1994), +R FreeRate (Yang 1995; Soubrier
   et al. 2012).
 
+**Results.** Every tree is compared with the pipeline default, T01 (FFT-NS-2 alignment,
+IQ-TREE, GTR+F+G4, seed 42). Robinson–Foulds is normalized (0 = same topology). The
+patristic correlation and the per-sample PD correlation are Pearson's *r*.
+
+| Tree | One thing changed | RF vs default | Patristic *r* | Tree length | PD *r* (6 samples) | Genera monophyletic |
+|---|---|---|---|---|---|---|
+| T01 | — (default) | 0 | 1 | 18.61 | 1 | 11 / 19 |
+| T02 | alignment: L-INS-i | 0.457 | 0.954 | 17.58 | 0.997 | 11 / 19 |
+| T03 | mask: trimAl `-automated1` | 0.606 | 0.914 | 13.44 | 0.997 | 10 / 19 |
+| T04 | mask: trimAl `-gappyout` | 0.620 | 0.912 | 13.39 | 0.997 | 10 / 19 |
+| T05 | mask: AliFilter defaults | 0.389 | 0.942 | 17.46 | 0.9995 | 11 / 19 |
+| T06 | model: ModelFinder (picked TPM3u+R5) | 0.125 | 0.998 | 15.02 | 0.9999 | 11 / 19 |
+| T07 | backend: FastTree GTR+Γ | 0.413 | 0.861 | 15.30 | 0.993 | 12 / 19 |
+| T08 | backend: FastTree JC+Γ | 0.389 | 0.851 | 14.66 | 0.989 | 12 / 19 |
+| T09 | backend: RAxML-NG GTR+Γ | 0.577 | 0.885 | 17.06 | 0.999 | 11 / 19 |
+| T10 | backend: RAxML-NG MOOSE (picked GTR+FU+R5) | 0.466 | 0.916 | 15.06 | 0.999 | 10 / 19 |
+
+What the table says, in order of how much each choice moved the output:
+
+- *Masking* is the only choice that changes the scale: both trimAl masks removed 24 % of
+  the columns and with them 28 % of total tree length (18.61 → 13.4), and every
+  per-sample PD value shrank with it. The two trimAl trees are nearly the same tree
+  (RF 0.154, *r* 0.997 between them). AliFilter removed almost nothing and changed
+  almost nothing. No mask improved taxonomic coherence (10 / 19 genera vs 11 / 19).
+- *Backend* moves topology and distances more than any setting within a backend:
+  FastTree's two models give essentially the same tree (RF 0.111, *r* 0.986 between
+  T07 and T08), yet both sit farthest from the IQ-TREE default in patristic distance
+  (*r* 0.85–0.86). RAxML-NG under the same GTR+Γ model differs from IQ-TREE in topology
+  (RF 0.577) but less in distances (*r* 0.885).
+- *Model selection* changes the least: ModelFinder's TPM3u+R5 tree is the closest to
+  the default in topology (RF 0.125) and in distances (*r* 0.998), while its total
+  length is 19 % shorter — the FreeRate model rescales the branches, so absolute PD
+  values are not comparable across models even when the tree is.
+- *Alignment strategy* (T02) moves topology a lot (46 % of internal branches differ)
+  but distances little (*r* 0.954). One tree per setting cannot say how much of that is
+  the tier and how much is ordinary run-to-run variation of the tree search; the
+  full-gene check below, where seeds were replicated, puts numbers on both.
+- *Per-sample PD* barely notices any of it: *r* ≥ 0.989 against the default for every
+  tree, and the ranking of the six samples is preserved by the two IQ-TREE trees
+  (Spearman 1.0) and nearly so by the rest (Spearman 0.83–0.94). With six samples this
+  is a coarse check.
+
+**Support and signal on the default alignment.** The support run (T11: default tree,
+`-B 1000 --alrt 1000`) puts 208 internal branches on the tree; 77 (37 %) reach
+UFBoot ≥ 95, 141 (68 %) reach SH-aLRT ≥ 80, and 67 (32 %) meet both — the documented
+read for a single-gene tree. Likelihood mapping on 5,000 random quartets finds
+77.9 % fully resolved, 9.5 % partly resolved and 12.7 % unresolved. Both numbers say the
+same thing: a ~440-column V5–V7 alignment supports the broad structure of the tree and
+leaves about a third of the fine splits undecided, which is the expected amount for a
+fragment this short.
+
+**Model selection, for the record.** ModelFinder (BIC) chose TPM3u+R5 on the default
+alignment; RAxML-NG's MOOSE chose GTR+FU+R5. Both prefer a five-category FreeRate
+description of among-site rate variation and they disagree only on the substitution
+matrix, which is why the module keeps the pinned GTR+F+G4 default and makes selection
+available rather than automatic (see the Phylogeny page).
+
+**Long-branch screen on the default tree.** Pendant edges: median 4.6 × 10⁻³, 75th
+percentile 0.052, longest 0.657. Flagging at 5× the median would mark 81 of 211 tips
+and at 20× still 33, which is why the QC report uses the boxplot fence Q3 + 3×IQR
+(0.208 here): 7 tips flagged, each the only ASV of its lineage in the run.
+
 **What it is not.** It is not an accuracy benchmark: there is no known true tree for
 environmental ASVs, so nothing in it says which tree is *right*. It is one dataset, one
 amplicon region, one tree per setting (so run-to-run variation of the tree search was not measured),

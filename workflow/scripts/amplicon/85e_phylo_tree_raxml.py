@@ -6,13 +6,14 @@ phylogeny.backend: raxml-ng. Full maximum likelihood, run in two steps.
 
 WHY TWO STEPS — THIS IS NOT AN OPTIMISATION
 -------------------------------------------
-RAxML-NG requires a minimum number of alignment patterns per thread (its own
-rule of thumb is 200-1000) and it ENFORCES that: exceed roughly twice its
-recommendation and it prints "Too few patterns per thread! RAxML-NG will terminate now
-to avoid wasting resources" and stops. A 16S amplicon alignment has only ~430 distinct
-patterns, which works out at about 2 recommended threads and a hard failure somewhere
-above 4. Handing it a normal Snakemake allocation of 8 or 16 threads does not run
-slowly — it crashes the rule outright.
+RAxML-NG wants a minimum number of alignment patterns per thread (its own rule of
+thumb is 200-1000) and it enforces that in two stages: moderately over-allocated it
+warns ("You might be using too many threads"), badly over-allocated it stops
+("Too few patterns per thread! RAxML-NG will terminate now to avoid wasting
+resources"). Measured with RAxML-NG 2.0.2 on the 211-ASV 16S test alignment (443
+columns, 328 distinct patterns, recommendation: 1 thread): 8 threads ran with the
+warning, 16 and 32 terminated. Handing it a normal Snakemake allocation of 16 threads
+therefore does not run slowly — it crashes the rule outright.
 
 So the first step, --parse, is run precisely to ask RAxML-NG how many threads IT thinks
 this alignment supports. It also validates the alignment, reports an expected memory
@@ -111,6 +112,26 @@ def parse_thread_recommendation(parse_output: str, log) -> int | None:
     return None
 
 
+def count_sequences(aln_path: Path) -> tuple[int, int]:
+    """Return (number of sequences, number of distinct sequences) in an aligned FASTA.
+
+    Distinct is judged on the aligned string, gaps included, which is also how RAxML-NG
+    decides what counts as a duplicate.
+    """
+    sequences: list[str] = []
+    current: list[str] = []
+    for line in aln_path.read_text().splitlines():
+        if line.startswith(">"):
+            if current:
+                sequences.append("".join(current))
+            current = []
+        elif line.strip():
+            current.append(line.strip().upper())
+    if current:
+        sequences.append("".join(current))
+    return len(sequences), len(set(sequences))
+
+
 def parse_memory_estimate(parse_output: str) -> str | None:
     """Read RAxML-NG's own memory estimate from --parse, for the run record."""
     match = re.search(r"Estimated memory requirements[^:]*:\s*(.+)", parse_output)
@@ -144,12 +165,34 @@ def main() -> int:
     clear_stale_prefix_files(parse_prefix, log)
     clear_stale_prefix_files(prefix, log)
 
+    # Distinct-sequence guard. The checkpoint's "at least 4 ASVs" test counts ASV IDs;
+    # RAxML-NG collapses identical aligned sequences before it builds anything, and
+    # with fewer than four DISTINCT sequences left, --parse in 2.0.2 dies with a
+    # segmentation fault and no message. DADA2 ASVs are unique sequences, and MAFFT
+    # cannot make two different sequences identical (remove the gaps and you get the
+    # originals back), so on pipeline output this cannot fire; it is here for
+    # hand-edited inputs, so that the failure has a sentence attached.
+    n_seqs, n_distinct = count_sequences(aln_in)
+    if n_distinct < 4:
+        log(f"[phylo_tree] ERROR: RAxML-NG needs at least 4 distinct sequences; this "
+            f"alignment has {n_distinct} distinct among {n_seqs}. IQ-TREE and FastTree "
+            "keep identical sequences as zero-length tips and would build the tree — set "
+            "amplicon.phylogeny.backend to iqtree or fasttree for this dataset.")
+        log_fh.close()
+        return 1
+
     # ── Step 1: --parse ───────────────────────────────────────────────────────
+    # --threads 1 is explicit here too. --parse is a single pass over the alignment
+    # whose outputs (.rba, thread recommendation, memory estimate) do not depend on how
+    # many threads read it — checked: the recommendation is the same at 1 and at
+    # auto — but without a value RAxML-NG auto-detects every core on the machine for
+    # this step, and this module never lets a tool read the machine.
     parse_command = [
         "raxml-ng", "--parse",
         "--msa", str(aln_in),
         "--model", model,
         "--prefix", str(parse_prefix),
+        "--threads", "1",
     ]
     log(f"[phylo_tree] Backend raxml-ng, model {model} (requested: {model_requested}), "
         f"seed {seed}")
@@ -174,9 +217,10 @@ def main() -> int:
         log(f"[phylo_tree] RAxML-NG's own memory estimate: {memory_estimate}")
 
     # Take the smaller of what Snakemake allocated and what RAxML-NG recommends. The
-    # recommendation is the binding constraint: exceeding roughly twice it is a hard
-    # error, not a slowdown. When the recommendation could not be read, fall back to a
-    # deliberately conservative 2 rather than trusting the allocation.
+    # recommendation is the binding constraint: far above it (16 threads on the
+    # 328-pattern test alignment) RAxML-NG terminates, it does not just slow down. When
+    # the recommendation could not be read, fall back to a deliberately conservative 2
+    # rather than trusting the allocation.
     if recommended is None:
         effective_threads = min(allocated_threads, 2)
         log(f"[phylo_tree] Falling back to {effective_threads} thread(s) — RAxML-NG "
@@ -228,6 +272,9 @@ def main() -> int:
 
     log(f"[phylo_tree] Step 2/2 — inference:")
     log(f"[phylo_tree] Running: {' '.join(search_command)}")
+    log("[phylo_tree] Note: RAxML-NG will warn that the command-line --model 'will be "
+        "ignored' because the .rba from --parse already carries it. Expected — it is the "
+        "same model, passed in step 1; nothing was dropped.")
 
     search_run = subprocess.run(search_command, capture_output=True, text=True)
     search_output = (search_run.stdout or "") + (search_run.stderr or "")

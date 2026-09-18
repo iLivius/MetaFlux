@@ -319,9 +319,10 @@ amplicon:
     support: false                              # branch support values. Off by default because neither
                                                 # UniFrac nor Faith's PD uses them, and computing them
                                                 # dominates the runtime.
-                                                #   iqtree   → adds -B 1000 --alrt 1000 (read as
-                                                #              UFBoot >= 95, SH-aLRT >= 80 for a
-                                                #              single-gene tree like this one)
+                                                #   iqtree   → adds -B 1000 --alrt 1000 (ultrafast
+                                                #              bootstrap UFBoot and the SH-aLRT branch
+                                                #              test; read as UFBoot >= 95 and SH-aLRT
+                                                #              >= 80 for a single-gene tree like this one)
                                                 #   fasttree → keeps its SH-like local supports
                                                 #              (0-1 scale, NOT bootstrap)
                                                 #   raxml-ng → not supported; forced off with a warning
@@ -341,7 +342,9 @@ amplicon:
       mafft: ""
       iqtree: ""
       fasttree: ""
-      raxml_ng: ""
+      raxml_ng: ""                              # appended to the --search step only; a --model here is
+                                                # ignored by RAxML-NG (the model is fixed at --parse) —
+                                                # use `model:` above instead.
 
 # ═══════════════════════════════════════════════════════════════
 # Shotgun-only configuration — ignored when mode: amplicon
@@ -552,9 +555,11 @@ resources:
                                               # alignment COLUMNS, and a 16S amplicon alignment is only
                                               # ~250-430 columns wide, so more threads buy little and
                                               # can even be slower. raxml-ng clamps this further to what
-                                              # its own --parse step recommends (usually ~2), because it
-                                              # hard-errors when given too many threads for a short
-                                              # alignment. The fasttree backend ignores this key: it is
+                                              # its own --parse step recommends (1 on the 211-ASV test
+                                              # alignment; it scales with the number of distinct
+                                              # alignment patterns), because it terminates when given
+                                              # far too many threads for a short alignment (16 did, on
+                                              # that alignment). The fasttree backend ignores this key: it is
                                               # pinned single-threaded in the rule, since FastTree's
                                               # parallel binary is documented non-deterministic and the
                                               # serial one is fast enough that there is nothing to gain.
@@ -586,6 +591,7 @@ resources:
     assign_taxonomy: 16000
     aggregate_read_counts: 2000
     # phylogeny (optional, 16S only)
+    phylo_input: 2000                         # two small text tables -> one FASTA
     phylo_align: 4000
     phylo_tree: 8000                          # Sized for the most demanding backend. Measured/estimated:
                                               # FastTree ~181 MB at 10,000 ASVs; raxml-ng ~3.3 GB at

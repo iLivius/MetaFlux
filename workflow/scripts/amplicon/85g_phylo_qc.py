@@ -164,6 +164,13 @@ def long_branch_report(tree_path: Path, multiple: float, pendant_fence_iqr: floa
     threshold. On the synthetic test set the fence still isolates the planted
     contaminant (0.33 against a fence of ~0.05) exactly as the old rule did.
 
+    Small trees are a blind spot of the fence: with six or fewer tips the largest
+    value takes part in the Q3 interpolation itself, so Q3 + 3*IQR always lies above
+    it and nothing can be flagged (checked numerically: one planted value of 10 among
+    values of 1e-6 is not flagged at n <= 6 and is flagged from n = 7). Below 7 tips
+    the log says so instead of reporting "no outliers", and the longest_tips list and
+    the root-to-tip rule carry the diagnosis.
+
     Both rules only decide what gets called out in the log; the five longest tips by
     each measure are always listed in the report either way, so nothing is hidden by
     a threshold being too strict.
@@ -251,6 +258,10 @@ def long_branch_report(tree_path: Path, multiple: float, pendant_fence_iqr: floa
             "lineages with a single representative; an off-target or contaminant the "
             "taxonomy filter missed looks the same. Reported only; nothing has been "
             "removed.")
+    elif len(pendant) < 7:
+        log(f"[phylo_qc] Only {len(pendant)} tips: the pendant-edge fence cannot flag "
+            "anything at this size (see long_branch_report). Read the longest_tips list "
+            "in the report instead.")
     else:
         log(f"[phylo_qc] No pendant edge above the outlier fence "
             f"(Q3 + {pendant_fence_iqr}*IQR = {pendant_fence:.4f}) — no long-branch "
@@ -275,7 +286,8 @@ def long_branch_report(tree_path: Path, multiple: float, pendant_fence_iqr: floa
             "off the unrooted tree. Root-to-tip is measured on a midpoint-rooted copy "
             "made in memory for this report only; the exported tree stays unrooted. "
             "Flagged tips are reported, never removed — removing them here would "
-            "desynchronise the tree from the abundance table."
+            "desynchronise the tree from the abundance table. With fewer than 7 tips "
+            "the pendant-edge fence cannot flag anything; read longest_tips instead."
         ),
     }
 
@@ -366,9 +378,12 @@ def main() -> int:
         "alignment": aln_summary,
         "long_branches": branches,
         "reproducibility_note": (
-            "Reproducible at a fixed seed AND a fixed thread count. Neither IQ-TREE nor "
-            "MAFFT documents a guarantee of identical results across different thread "
-            "counts, so pin resources.threads if you need to reproduce a tree exactly."
+            "Reproducible at a fixed seed AND a fixed thread count, with one measured "
+            "qualification: single-threaded IQ-TREE runs are byte-identical, while "
+            "multithreaded runs at the same seed can arrange zero-length branches among "
+            "near-identical ASVs differently (same likelihood, same tree length). Pin "
+            "resources.threads if you need to reproduce a tree exactly; compare trees by "
+            "patristic distance or after collapsing zero-length branches, never by diff."
         ),
         "downstream_note": (
             "MetaFlux computes no diversity statistics. Prune this tree to your filtered "

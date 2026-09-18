@@ -534,7 +534,17 @@ if MODE == "amplicon":
     PHYLO_ALIGNER_STRATEGY = str(_phylo_cfg.get("aligner_strategy", "auto")).strip().lower()
     PHYLO_MODEL            = str(_phylo_cfg.get("model", "auto")).strip()
     PHYLO_SUPPORT          = bool(_phylo_cfg.get("support", False))
-    PHYLO_EXTRA_ARGS       = dict(_phylo_cfg.get("extra_args", {}) or {})
+    # extra_args must be a mapping (tool -> flag string). A bare string here would
+    # otherwise die inside dict() with a Python traceback instead of a sentence.
+    _phylo_extra_raw = _phylo_cfg.get("extra_args", {}) or {}
+    if not isinstance(_phylo_extra_raw, dict):
+        sys.exit(
+            "[MetaFlux] amplicon.phylogeny.extra_args must be a mapping of tool -> flag "
+            "string, with keys mafft, iqtree, fasttree and/or raxml_ng, e.g.\n"
+            "  extra_args:\n    iqtree: \"--fast\"\n"
+            f"(got: {_phylo_extra_raw!r})"
+        )
+    PHYLO_EXTRA_ARGS       = dict(_phylo_extra_raw)
 
     # There is deliberately NO rooting option. The tree is exported unrooted, full stop:
     # users prune it in R first (decontam against negative controls, abundance
@@ -566,12 +576,12 @@ if MODE == "amplicon":
     # than only on the run where it finally matters.
     if PHYLO_BACKEND not in ("iqtree", "fasttree", "raxml-ng"):
         sys.exit(
-            f"amplicon.phylogeny.backend must be 'iqtree', 'fasttree' or 'raxml-ng' "
+            f"[MetaFlux] amplicon.phylogeny.backend must be 'iqtree', 'fasttree' or 'raxml-ng' "
             f"(got: {PHYLO_BACKEND!r})"
         )
     if PHYLO_ALIGNER_STRATEGY not in ("auto", "linsi", "fftns2"):
         sys.exit(
-            f"amplicon.phylogeny.aligner_strategy must be 'auto', 'linsi' or 'fftns2' "
+            f"[MetaFlux] amplicon.phylogeny.aligner_strategy must be 'auto', 'linsi' or 'fftns2' "
             f"(got: {PHYLO_ALIGNER_STRATEGY!r})"
         )
     # Unknown extra_args keys are a silent no-op otherwise: writing `iqtre: "-x"`

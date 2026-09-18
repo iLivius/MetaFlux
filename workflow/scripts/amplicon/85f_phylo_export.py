@@ -52,6 +52,7 @@ from collections import Counter
 from pathlib import Path
 
 import dendropy
+from dendropy.dataio.newickreader import NewickReader
 
 
 def read_fasta_ids(path: Path) -> list[str]:
@@ -79,6 +80,13 @@ def load_tree(path: Path, log) -> dendropy.Tree:
             schema="newick",
             preserve_underscores=True,
         )
+    except NewickReader.NewickReaderDuplicateTaxonError as exc:
+        # DendroPy refuses a tree with two tips of the same name before check_tips
+        # ever sees it, so report it as what it is — a tip-accounting failure — rather
+        # than as a generic parse error.
+        log(f"[phylo_export] ERROR: the tree in {path} repeats a tip label; no tree with "
+            f"duplicate tips can be matched to the abundance table. {exc}")
+        raise SystemExit(1) from exc
     except Exception as exc:                                    # noqa: BLE001
         log(f"[phylo_export] ERROR: could not parse {path} as Newick: {exc}")
         raise SystemExit(1) from exc
@@ -97,9 +105,9 @@ def check_tips(tree: dendropy.Tree, expected_ids: list[str], source: str, log) -
     found    = set(tip_labels)
 
     if len(tip_labels) != len(found):
-        # Counter rather than a count() per label: on a large ASV set the naive form is
-        # a full rescan for every tip, and this is an error path someone is already
-        # waiting on.
+        # Normally unreachable: DendroPy already rejects duplicate tip labels while
+        # reading the file (load_tree reports that case). Kept as the second line of
+        # defence in case a future reader lets them through.
         duplicates = sorted(
             label for label, count in Counter(tip_labels).items() if count > 1
         )[:10]
@@ -237,8 +245,8 @@ def main() -> int:
     # removed. A file that is only correct until the user does the thing they will
     # certainly do would be a trap, not a convenience.
     write_newick(tree, unrooted_out)
-    log(f"[phylo_export] Wrote the primary output: {unrooted_out.name} (UNROOTED — root "
-        "it in R after you have pruned to your final ASV set)")
+    log(f"[phylo_export] Wrote the tree: {unrooted_out.name} (UNROOTED — the only form "
+        "MetaFlux exports; root it in R after you have pruned to your final ASV set)")
 
     # Switching backend leaves the previous one's directory in
     # place. That is deliberate — it is useful for comparison — but say so, so nobody

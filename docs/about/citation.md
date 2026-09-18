@@ -101,7 +101,7 @@ Supporting the module's design decisions, rather than tools it runs:
 
 50. Tan, G., et al. (2015). Current methods for automated filtering of multiple sequence alignments frequently worsen single-gene phylogenetic inference. *Systematic Biology* 64(5):778–791. https://doi.org/10.1093/sysbio/syv033 (why no alignment masking)
 51. Janssen, S., et al. (2018). Phylogenetic placement of exact amplicon sequences improves associations with clinical information. *mSystems* 3(3):e00021-18. https://doi.org/10.1128/msystems.00021-18 (the long-branch UniFrac artifact the QC report exists to catch)
-52. Mai, U., Sayyari, E. & Mirarab, S. (2017). Minimum variance rooting of phylogenetic trees and implications for species tree reconstruction. *PLoS ONE* 12(8):e0182238. https://doi.org/10.1371/journal.pone.0182238 (midpoint-rooting instability; why the unrooted tree is the primary output)
+52. Mai, U., Sayyari, E. & Mirarab, S. (2017). Minimum variance rooting of phylogenetic trees and implications for species tree reconstruction. *PLoS ONE* 12(8):e0182238. https://doi.org/10.1371/journal.pone.0182238 (midpoint-rooting instability; why the tree is exported unrooted only)
 
 ### Methods behind the phylogeny benchmark
 
@@ -119,7 +119,7 @@ models used to check its defaults.
 61. Kimura, M. (1981). Estimation of evolutionary distances between homologous nucleotide sequences. *PNAS* 78:454–458. https://doi.org/10.1073/pnas.78.1.454 (three-substitution-type models; TPM3u)
 62. Yang, Z. (1994). Maximum likelihood phylogenetic estimation from DNA sequences with variable rates over sites: approximate methods. *Journal of Molecular Evolution* 39:306–314. https://doi.org/10.1007/BF00160154 (discrete gamma rate heterogeneity, +G4)
 63. Yang, Z. (1995). A space-time process model for the evolution of DNA sequences. *Genetics* 139:993–1005. (FreeRate site-rate heterogeneity, +R)
-65. Soubrier, J., et al. (2012). The influence of rate heterogeneity among sites on the time dependence of molecular rates. *Molecular Biology and Evolution* 29:3345–3358. https://doi.org/10.1093/molbev/mss140 (FreeRate heterogeneity, +R)
+64. Soubrier, J., et al. (2012). The influence of rate heterogeneity among sites on the time dependence of molecular rates. *Molecular Biology and Evolution* 29:3345–3358. https://doi.org/10.1093/molbev/mss140 (FreeRate heterogeneity, +R)
 65. Capella-Gutiérrez, S., Silla-Martínez, J. M. & Gabaldón, T. (2009). trimAl: a tool for automated alignment trimming in large-scale phylogenetic analyses. *Bioinformatics* 25:1972–1973. https://doi.org/10.1093/bioinformatics/btp348 (evaluated as an optional mask; not shipped)
 66. Bianchini, G., Zhu, Q., Cicconardi, F. & Moody, E. R. R. (2026). AliFilter. *Molecular Biology and Evolution* 43(4):msag097. https://doi.org/10.1093/molbev/msag097 (evaluated as an optional mask; not shipped — not installable from bioconda)
 
