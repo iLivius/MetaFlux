@@ -372,11 +372,12 @@ were tuned on data rather than reasoned out:
   near-identical sequences whose pendant edges are effectively zero, so the median is
   close to zero and even generous multiples of it flag far too much of the tree (measured on
   the 16S test set: 81 of 211 tips at 5× the median, still 35 at 20×). The rule is instead the standard boxplot outlier fence,
-  **Q3 + 3×IQR**, which flags 7 tips there. Each is the only ASV of its lineage in the
-  run — among them the run's sole Acidobacteriota, its sole Bdellovibrionota and its sole
-  *Hydrotalea* — but two of the seven are a 3-read ASV classified no deeper than phylum
-  and a 5-read ASV that reaches only order, and nothing outside the run was checked, so
-  "divergent singleton" and "artefact" cannot be told apart from the tree alone.
+  **Q3 + 3×IQR**, which flags 7 tips there. Six of the seven are the only ASV of their
+  lineage in the run — among them its sole Acidobacteriota, its sole Bdellovibrionota and
+  its sole *Hydrotalea* — and the seventh is a 3-read ASV classified no deeper than
+  phylum, so nothing can be said about its lineage at all. Nothing outside the run was
+  checked, so "divergent singleton" and "artefact" cannot be told apart from the tree
+  alone.
 
 The five longest tips by each measure are always listed, whether or not they cross a
 threshold.
@@ -847,8 +848,9 @@ which one it lands on is steered by things that look as though they should not m
   and used to write the surviving pairs in whatever order the threads finished. DADA2
   numbers ASVs by decreasing abundance and keeps the input order for ties, so two ASVs
   with the same total count could trade IDs between runs. MetaFlux now passes
-  `--reorder`, which costs about 1 % of that step and makes the output the same as a
-  single-threaded run's.
+  `--reorder`, whose cost came out below measurement noise on the test data (a few MB
+  more memory, no reliable difference in wall time) and which makes the output the same
+  as a single-threaded run's.
 - **The alignment must not depend on the ASV numbering.** The FASTA handed to MAFFT is
   now sorted by the sequence itself rather than by the abundance order of the taxonomy
   table, so the same set of sequences always produces the same file whatever the ASVs
@@ -858,8 +860,9 @@ which one it lands on is steered by things that look as though they should not m
   *identical* alignment at 4 threads ended on different optima, 52 of 416 splits apart,
   tree length 17.97 against 18.68; 24 of those splits survived
   `ape::di2multi(tree, tol = 1e-5)`, so collapsing near-zero branches does not hide it.
-  `resources.threads.phylo_tree` therefore defaults to 1. On 211 ASVs that costs 140 s
-  against 90 s, and it is the one setting to revisit if you have thousands of ASVs.
+  `resources.threads.phylo_tree` therefore defaults to 1. On the 211-ASV test alignment
+  that costs about 91 s against about 60 s at four threads, and it is the one setting to
+  revisit if you have thousands of ASVs.
 
 Verified the way it should be: the 16S test dataset run twice from raw reads to tree, two
 independent runs launched at the same time from the same configuration. Every FASTQ file
@@ -879,22 +882,30 @@ at every stage, the ASV sequences, the per-sample counts, the alignment and
   extracted table were byte-identical — so it is a by-product worth knowing about, not
   something that feeds a result.
 
-**If you are not chasing byte-identity**, the thing worth knowing is how far these choices
-move the tree, because it is further than people expect. Swapping just two rows of the
-alignment and rebuilding gave a tree 154 of 416 splits away with IQ-TREE (patristic
-correlation r = 0.93) and 216 away with RAxML-NG (r = 0.90), while FastTree returned a
-byte-identical tree. Per-sample Faith's PD barely noticed any of it (r = 0.999, sample
-ranking unchanged). So read the topology as *one* of the trees the data support about
-equally well rather than as *the* tree, compare trees by patristic correlation or by
-per-sample diversity rather than with `diff`, and use `ape::dist.topo()` only after
-`di2multi()`.
+**If you are not chasing byte-identity**, the thing worth knowing is how far these
+choices move the tree, because it is further than people expect. Taking the alignment
+this pipeline now produces for the 211-ASV test set, swapping two of its rows and
+rebuilding with each backend's shipped command:
+
+| Backend | Splits changed, of 416 | Patristic *r* | Tree length | Per-sample PD *r* | PD ranking |
+|---|---|---|---|---|---|
+| IQ-TREE | 194 | 0.88 | 16.22 → 17.03 | 0.995 | one pair swaps |
+| RAxML-NG | 102 | 0.85 | 16.24 → 17.30 | 0.991 | two pairs swap |
+| FastTree | 10 | 1.0000 | 14.22 → 14.22 | 1.0000 | unchanged |
+
+Nothing about the data changed; only the order of two rows. Read the topology as *one*
+of the trees the data support about equally well rather than as *the* tree, compare
+trees by patristic correlation or by per-sample diversity rather than with `diff`, and
+use `ape::dist.topo()` only after `di2multi()`. And note the last column: even where the
+topology moves a lot, the per-sample diversity values move very little, which is why the
+reproducibility work above matters more for auditability than for ecology.
 
 - **The three backends are not equally sensitive.** FastTree, single-threaded and with
-  `support: false`, uses no randomness at all and is the most robust to everything above.
-  Its parallel build, `FastTreeMP`, is documented non-deterministic and is **never** used
-  by MetaFlux. IQ-TREE and RAxML-NG both move. If you need the tree to survive a rerun of
-  the whole pipeline and you do not need a likelihood framework, FastTree is the safe
-  choice.
+  `support: false`, uses no randomness at all: give it the same file and it returns the
+  same tree, and the table above shows it barely notices a reordered one either. Its
+  parallel build, `FastTreeMP`, is documented non-deterministic and is **never** used by
+  MetaFlux. IQ-TREE and RAxML-NG both move substantially. If robustness matters more to
+  you than a likelihood framework, FastTree is the safer choice.
 - RAxML-NG's default seed is the wall clock, so MetaFlux always passes `--seed`
   explicitly.
 
@@ -966,8 +977,8 @@ the identical alignment landed 52 of 416 splits apart. It is also the one key wh
 fallback is not `threads_default`: leave it out of your config and you get 1, not 4.
 Raise it if you have thousands of ASVs and can accept a tree that is not exactly
 reproducible, but do not expect much — IQ-TREE parallelises across alignment columns and
-a 16S alignment is only a few hundred wide, so 211 ASVs took 140 s at one thread against
-90 s at four. The other backends barely care: RAxML-NG clamps whatever you give it to its
+a 16S alignment is only a few hundred wide, so the 211-ASV test alignment took about 91 s
+at one thread against about 60 s at four. The other backends barely care: RAxML-NG clamps whatever you give it to its
 own `--parse` recommendation, and FastTree is pinned single-threaded in the rule.
 
 ## References

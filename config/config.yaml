@@ -561,7 +561,8 @@ resources:
                                               # measured on the 211-ASV test set, 52 of 416 splits apart,
                                               # tree length 17.97 vs 18.68. At one thread the two runs
                                               # were byte-identical. The price is real but small at
-                                              # amplicon scale: 140 s against 90 s on 211 ASVs. Raise it
+                                              # amplicon scale: about 91 s against 60 s at four threads,
+                                              # on the 211-ASV test alignment. Raise it
                                               # if you have thousands of ASVs and can live with a tree
                                               # that is not exactly reproducible; IQ-TREE parallelises
                                               # across alignment COLUMNS and a 16S alignment is only

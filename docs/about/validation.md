@@ -135,16 +135,17 @@ available rather than automatic (see the Phylogeny page).
 percentile 0.052, longest 0.657. Flagging at 5× the median would mark 81 of 211 tips
 and at 20× still 33, which is why the QC report uses the boxplot fence Q3 + 3×IQR
 (about 0.21 here: 0.208 with R's default quantile definition, 0.216 with the one the QC
-report uses): 7 tips flagged either way, each the only ASV of its lineage in the run.
+report uses): 7 tips flagged either way, six of them the only ASV of their lineage in the
+run and the seventh classified no deeper than phylum.
 
 **What it is not.** It is not an accuracy benchmark: there is no known true tree for
 environmental ASVs, so nothing in it says which tree is *right*. It is one dataset, one
 amplicon region, one tree per setting, and six samples (so the PD correlations rest on six
 points). Run-to-run variation of the tree search was not part of the design, but it was
 measured afterwards on the same 211 ASVs: two IQ-TREE searches that differed only in the
-order of two input sequences (see *Reproducibility* on the Phylogeny page) gave trees with
-RF 0.37 between them, patristic *r* 0.93, tree lengths 18.0 and 18.6, and per-sample PD
-*r* 0.999. That is the noise floor for the table above. The RF column (0.13–0.62) sits
+order of two input sequences (see *Reproducibility* on the Phylogeny page) gave trees
+0.47 apart by normalized RF, patristic *r* 0.88, tree lengths 16.2 and 17.0, and
+per-sample PD *r* 0.995. That is the noise floor for the table above. The RF column (0.13–0.62) sits
 largely inside it, so topological differences between settings should not be read as
 effects of the settings; the masking effect on tree length (−28 %) and the backend effect
 on distances (*r* 0.85–0.89) lie outside it, and the ModelFinder result (*r* 0.998) lies

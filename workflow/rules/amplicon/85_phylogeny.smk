@@ -179,8 +179,9 @@ if PHYLO_ENABLED:
         # finishes, so two runs of the same alignment at 4 threads can end on different
         # (equally good) trees — measured on the 211-ASV test set: 52 of 416 splits
         # apart, tree length 17.97 against 18.68. At one thread the two runs were
-        # byte-identical. The cost at amplicon scale is small (140 s against 90 s on
-        # 211 ASVs), so the default buys reproducibility cheaply; a user with thousands
+        # byte-identical. The cost at amplicon scale is small (about 91 s against 60 s
+        # at four threads, on the 211-ASV test alignment), so the default buys
+        # reproducibility cheaply; a user with thousands
         # of ASVs can raise resources.threads.phylo_tree and accept a tree that is not
         # exactly reproducible. Note threads_for_or(..., 1) rather than threads_for():
         # the fallback here must be 1, not the config's threads_default.

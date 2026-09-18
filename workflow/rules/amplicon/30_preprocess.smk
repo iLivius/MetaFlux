@@ -124,10 +124,10 @@ rule count_reads_stripped:
 # runs, one swapped pair), and it propagates: a different ASV numbering means a
 # different row order in the phylogeny alignment, and the tree search then settles
 # on a different, equally good tree. --reorder makes bowtie2 emit the pairs in the
-# order they were read, which is what a single-threaded run would produce. Measured
-# cost on one test sample of ~50,000 pairs: about 1% more wall time and ~6 MB more
-# memory, because a thread that finishes early has to hold its output until the
-# reads ahead of it are done.
+# order they were read, which is what a single-threaded run would produce. Measured on
+# one test sample of ~50,000 pairs over six alternating repeats: no reliable difference
+# in wall time (1.62 s either way) and about 4-6 MB more memory, because a thread that
+# finishes early has to hold its output until the reads ahead of it are done.
 rule rm_phix:
     input:
         r1  = lambda wc: raw_fastq(wc.sample, 1),
