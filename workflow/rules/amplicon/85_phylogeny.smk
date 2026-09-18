@@ -174,12 +174,21 @@ if PHYLO_ENABLED:
         # selecting once and then pinning. Users who want the search set model: MFP;
         # the model it picks is written into the .iqtree report and recorded.
         #
-        # Threads are deliberately modest (~4 by default). IQ-TREE parallelises across
-        # alignment columns, so its efficiency depends on alignment LENGTH; at the
-        # ~250-430 bp of a 16S amplicon the benefit collapses quickly and more threads
-        # can be slower. -T AUTO is never used: it benchmarks the machine it happens
-        # to be running on, under whatever load it happens to be under, so the same
-        # input would behave differently on different hardware.
+        # ONE thread by default, and this is about the result, not the speed. IQ-TREE's
+        # search visits candidate trees in an order that depends on when each thread
+        # finishes, so two runs of the same alignment at 4 threads can end on different
+        # (equally good) trees — measured on the 211-ASV test set: 52 of 416 splits
+        # apart, tree length 17.97 against 18.68. At one thread the two runs were
+        # byte-identical. The cost at amplicon scale is small (140 s against 90 s on
+        # 211 ASVs), so the default buys reproducibility cheaply; a user with thousands
+        # of ASVs can raise resources.threads.phylo_tree and accept a tree that is not
+        # exactly reproducible. Note threads_for_or(..., 1) rather than threads_for():
+        # the fallback here must be 1, not the config's threads_default.
+        # Even when raised, the gain is limited: IQ-TREE parallelises across alignment
+        # COLUMNS, and at the ~250-430 bp of a 16S amplicon the benefit collapses fast.
+        # -T AUTO is never used: it benchmarks the machine it happens to be running on,
+        # under whatever load it happens to be under, so the same input would behave
+        # differently on different hardware.
         #
         # Duplicate sequences need no special handling: IQ-TREE removes them, then
         # re-inserts them at the end, so every input label appears in the .treefile.
@@ -210,7 +219,7 @@ if PHYLO_ENABLED:
                 LOGS / "phylo_tree.log",
             conda:
                 "../../envs/iqtree.yaml"
-            threads: lambda wc: threads_for("phylo_tree")
+            threads: lambda wc: threads_for_or("phylo_tree", 1)
             resources:
                 mem_mb = lambda wc: mem_mb_for("phylo_tree"),
             script:
@@ -305,7 +314,7 @@ if PHYLO_ENABLED:
                 LOGS / "phylo_tree.log",
             conda:
                 "../../envs/raxml-ng.yaml"
-            threads: lambda wc: threads_for("phylo_tree")
+            threads: lambda wc: threads_for_or("phylo_tree", 1)
             resources:
                 mem_mb = lambda wc: mem_mb_for("phylo_tree"),
             script:

@@ -113,6 +113,21 @@ rule count_reads_stripped:
 # is true; when it's false, trim_primers reads straight from the raw FASTQs
 # instead (see primer_trim_upstream in 00_common.smk). Output feeds trim_primers
 # and the "nophix" falco QC stage.
+#
+# WHY --reorder, AND WHY IT IS NOT OPTIONAL HERE
+# On several threads bowtie2 writes each pair as soon as the thread handling it
+# finishes, and reads take different amounts of work, so the surviving pairs come
+# out in a different order every run. Nothing is lost or duplicated, but that order
+# reaches DADA2, which numbers ASVs by decreasing abundance and keeps the input
+# order for ties — so two ASVs with exactly the same total count can trade IDs
+# between two runs of the same data. That was measured on the 16S test set (three
+# runs, one swapped pair), and it propagates: a different ASV numbering means a
+# different row order in the phylogeny alignment, and the tree search then settles
+# on a different, equally good tree. --reorder makes bowtie2 emit the pairs in the
+# order they were read, which is what a single-threaded run would produce. Measured
+# cost on one test sample of ~50,000 pairs: about 1% more wall time and ~6 MB more
+# memory, because a thread that finishes early has to hold its output until the
+# reads ahead of it are done.
 rule rm_phix:
     input:
         r1  = lambda wc: raw_fastq(wc.sample, 1),
@@ -143,6 +158,7 @@ rule rm_phix:
         bowtie2 -x {params.prefix} \
                 -1 {input.r1} -2 {input.r2} \
                 --threads {threads} \
+                --reorder \
                 --un-conc-gz ${{tmp}}_R%.fastq.gz \
                 -S /dev/null \
                 > {log} 2>&1

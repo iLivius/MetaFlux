@@ -248,11 +248,23 @@ def main() -> int:
         log_fh.close()
         return 1
 
-    # Write the FASTA in asv_table.txt's own row order (decreasing abundance), so the
-    # file reads naturally and MAFFT's --inputorder keeps that order in the alignment.
+    # Write the FASTA sorted by the SEQUENCE, not in asv_table.txt's row order.
+    #
+    # The obvious choice is the table's own order, which is decreasing abundance and
+    # reads naturally. It was the original choice and it was wrong, for a reason that
+    # only shows up when you run the pipeline twice: ASVs with exactly equal total
+    # abundance can be numbered either way round (see the phiX-removal rule), so the
+    # table order is not the same in two runs of the same data. MAFFT keeps the input
+    # order (--inputorder), and the tree search is sensitive to it, so that would hand
+    # two identical datasets two different trees. Sorting on the sequence itself removes
+    # the dependency on the IDs completely: the same set of sequences always produces
+    # the same file, whatever they happen to be called. Abundance order is still one
+    # column away, in 6.taxonomy/asv_table.txt.
+    write_order = sorted(table_ids, key=lambda asv_id: id_to_seq[asv_id])
+
     seqs_out.parent.mkdir(parents=True, exist_ok=True)
     with seqs_out.open("w") as fh:
-        for asv_id in table_ids:
+        for asv_id in write_order:
             fh.write(f">{asv_id}\n{id_to_seq[asv_id]}\n")
 
     lengths = {asv_id: len(id_to_seq[asv_id]) for asv_id in table_ids}
@@ -274,7 +286,10 @@ def main() -> int:
     record = {
         "n_eligible": n_eligible,
         "min_asvs": min_asvs,
+        # Two orders, both worth recording: the abundance order the taxonomy table
+        # carries, and the sequence-sorted order this FASTA was actually written in.
         "asv_ids": table_ids,
+        "fasta_order": write_order,
         "asv_lengths": lengths,
         "checksums": {
             "taxon_seq_table.txt": sha256_of(taxon_seq_table),

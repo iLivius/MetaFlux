@@ -401,10 +401,10 @@ Each marker has its own page with the databases it uses and its quirks:
     DADA2's `learnErrors(randomize = TRUE)` and `assignTaxonomy`'s bootstrap
     confidence are fully reproducible with this seed at any thread count —
     verified by running the same data twice at 8 threads and getting the same
-    sequences, counts and taxonomy. The seed does not fix everything, though: the
-    reads reach DADA2 in a different order every run (multithreaded bowtie2 phiX
-    removal), so ASVs with exactly equal total abundance can swap IDs, and
-    `seqs.fasta` then differs byte-wise with nothing biological changed. See
+    sequences, counts and taxonomy. Read order used to escape the seed — multithreaded
+    bowtie2 phiX removal emitted the surviving pairs in a run-dependent order, so ASVs
+    with equal total abundance could swap IDs — but bowtie2 now runs with `--reorder`
+    and two complete runs return byte-identical reads and ASVs. See
     [Troubleshooting](../troubleshooting.md). VSEARCH's `--sintax` is not
     reproducible either: it races several threads on one random number stream, so
     per-rank confidence values can drift between runs. For byte-identical `sintax`
@@ -861,7 +861,7 @@ docs rather than silently ignored.
     different, about equally good tree: two complete runs of the 16S test set that differed
     only in the numbering of two equally abundant ASVs gave trees with RF 0.37 and
     patristic *r* 0.93 between them (per-sample PD *r* 0.999). Details and what to do
-    about it are in the [Reproducibility](../amplicon/phylogeny.md#reproducibility-and-what-is-not-yet-verified)
+    about it are in the [Reproducibility](../amplicon/phylogeny.md#reproducibility)
     section of the Phylogeny page. Single-threaded FastTree with `support: false` uses no
     randomness at all.
 
@@ -1082,7 +1082,7 @@ so they are what a cluster executor turns into job requests.
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |
-| `phylo_tree` | amplicon | 4 | Applies to the `iqtree` and `raxml-ng` backends only. Modest on purpose: IQ-TREE parallelises across alignment **columns**, and a 16S alignment is only ~250–430 wide, so more threads buy little and can be slower. IQ-TREE still warns at 4 threads that the number "seems too high for short alignments" and suggests `-T AUTO`; the warning is expected and ignored — 4 threads was faster than 1 on the test set (90 s vs 140 s), and `-T AUTO` would make the result depend on the machine. RAxML-NG clamps this further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
+| `phylo_tree` | amplicon | 1 | Applies to the `iqtree` and `raxml-ng` backends only. **One thread is a reproducibility setting, not a performance one**: IQ-TREE's search depends on when each thread finishes, so two runs of the same alignment at 4 threads ended 52 of 416 splits apart (tree length 17.97 vs 18.68), while two runs at 1 thread were byte-identical. The cost on the 211-ASV test set is 140 s against 90 s. Raise it if you have thousands of ASVs and can accept a tree that is not exactly reproducible; the gain is limited anyway, because IQ-TREE parallelises across alignment **columns** and a 16S alignment is only ~250–430 wide. This is the one key whose fallback is **not** `threads_default` — a rule that does not name it here gets 1, not 4. RAxML-NG clamps it further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
 | `phylo_export` | amplicon | 1 | Validates the tree, writes the Newick. |
 | `phylo_qc` | amplicon | 1 | Reads the tree once for the QC report. |
 | `decontam_phix` | shotgun | 6 | BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead. |
@@ -1137,7 +1137,9 @@ so they are what a cluster executor turns into job requests.
     of the same name. Adding a key for a rule that does not look it up has no
     effect. Conversely, `finalize_otu_table` does look its resources up but has
     no entry in the template, so it runs on `threads_default` and
-    `mem_mb_default`.
+    `mem_mb_default`. One key breaks the other way: `phylo_tree` falls back to
+    **1**, not `threads_default`, because there the thread count changes the tree
+    itself and not just how long it takes.
 
     One more special case: `threads.phylo_tree` is read by the `iqtree` and
     `raxml-ng` backends but **ignored by `fasttree`**, which is pinned to a single

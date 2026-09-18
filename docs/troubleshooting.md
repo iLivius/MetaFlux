@@ -200,19 +200,19 @@ handful of ASVs or taxonomy calls sitting near a decision threshold can flip
 between two runs. This is expected DADA2/VSEARCH behaviour — not a bug, and not
 corrupted data.
 
-One source of run-to-run difference is **not** a random draw at all, and the seed
-does not touch it: the order of the reads. Bowtie2 removes phiX on several threads
-and writes the surviving pairs in whatever order they finish, so every run hands
-DADA2 the same reads in a different sequence (measured on the test set: 70–89 % of
-records in a different position; pairing is never broken, and cutadapt and
-`filterAndTrim` only drop reads, they never reorder). DADA2 numbers ASVs by
-decreasing abundance and keeps the input order for ties, so two ASVs with exactly
-the same total count can swap IDs between runs — which is what makes `seqs.fasta`
-differ byte-wise while the sequences, their counts and the taxonomy are the same.
-On the 16S test set exactly one such pair (2 reads each) swapped between three runs.
-Compare runs by sequence, not by ASV ID. It matters for the optional phylogeny stage,
-because the tree search is sensitive to the order of the alignment rows; see
-[Reproducibility](amplicon/phylogeny.md#reproducibility-and-what-is-not-yet-verified).
+One source of run-to-run difference used to have nothing to do with a random draw, and
+the seed did not touch it: the order of the reads. Bowtie2 removes phiX on several
+threads and wrote the surviving pairs in whatever order they finished, so every run
+handed DADA2 the same reads in a different sequence (measured on the test set before the
+fix: 70–89 % of records in a different position; pairing was never broken, and cutadapt
+and `filterAndTrim` only drop reads, they never reorder). DADA2 numbers ASVs by
+decreasing abundance and keeps the input order for ties, so two ASVs with exactly the
+same total count could swap IDs between runs. **Fixed in v2.4.0**: bowtie2 now runs with
+`--reorder`, and two complete runs of the test set return byte-identical reads, ASV
+sequences and counts. If you are reading output from an earlier version, compare runs by
+sequence rather than by ASV ID. See
+[Reproducibility](amplicon/phylogeny.md#reproducibility) for what this meant for the
+optional phylogeny stage, which is sensitive to the order of the alignment rows.
 
 `amplicon.seed` (42 by default) fixes the generator for all three, but only two
 of them become fully reproducible:

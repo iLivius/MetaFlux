@@ -550,15 +550,20 @@ resources:
     # phylogeny (optional, 16S only — see amplicon.phylogeny)
     phylo_input: 1                            # reads two text tables, writes a FASTA
     phylo_align: 4                            # MAFFT
-    phylo_tree: 4                             # Applies to the iqtree and raxml-ng backends only.
-                                              # 4 is deliberately modest: IQ-TREE parallelises across
-                                              # alignment COLUMNS, and a 16S amplicon alignment is only
-                                              # ~250-430 columns wide, so more threads buy little and
-                                              # can even be slower. IQ-TREE still prints "Number of
-                                              # threads seems too high for short alignments. Use -T AUTO"
-                                              # at 4 threads on a 16S run; expected, and ignored: 4 threads
-                                              # was faster than 1 (90 s vs 140 s on 211 ASVs), and -T AUTO
-                                              # would make the result depend on the machine.
+    phylo_tree: 1                             # Applies to the iqtree and raxml-ng backends only.
+                                              # ONE thread on purpose, and this is a reproducibility
+                                              # setting rather than a performance one. IQ-TREE's search
+                                              # visits candidate trees in an order that depends on when
+                                              # each thread finishes, so two runs of the SAME alignment
+                                              # at 4 threads can end on different (equally good) trees:
+                                              # measured on the 211-ASV test set, 52 of 416 splits apart,
+                                              # tree length 17.97 vs 18.68. At one thread the two runs
+                                              # were byte-identical. The price is real but small at
+                                              # amplicon scale: 140 s against 90 s on 211 ASVs. Raise it
+                                              # if you have thousands of ASVs and can live with a tree
+                                              # that is not exactly reproducible; IQ-TREE parallelises
+                                              # across alignment COLUMNS and a 16S alignment is only
+                                              # ~250-430 wide, so do not expect much above 4.
                                               # raxml-ng clamps this further to what
                                               # its own --parse step recommends (1 on the 211-ASV test
                                               # alignment; it scales with the number of distinct

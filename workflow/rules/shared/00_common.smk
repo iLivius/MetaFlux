@@ -97,6 +97,16 @@ def threads_for(rule_name: str) -> int:
     return int(cfg.get("threads", {}).get(rule_name, cfg.get("threads_default", 1)))
 
 
+# Same lookup, but with a fallback chosen by the rule instead of threads_default.
+# For almost every rule threads_default is the right thing to land on; the tree
+# search is the exception, because there the thread count changes the RESULT and not
+# just the runtime, so its safe value is 1 rather than whatever the machine's default
+# happens to be. A run config that does name phylo_tree still wins.
+def threads_for_or(rule_name: str, fallback: int) -> int:
+    cfg = config.get("resources", {})
+    return int(cfg.get("threads", {}).get(rule_name, fallback))
+
+
 def mem_mb_for(rule_name: str) -> int:
     cfg = config.get("resources", {})
     return int(cfg.get("mem_mb", {}).get(rule_name, cfg.get("mem_mb_default", 1000)))

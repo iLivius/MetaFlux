@@ -15,6 +15,16 @@ request.
     Phylogeny page.
 
 
+!!! note "These experiments predate the v2.4.0 input-order change"
+    Both were run before MetaFlux started sorting the phylogeny input by sequence and
+    building the tree on one thread. The sequences are the same and the comparisons
+    between settings are unaffected, but the alignment rows are in a different order, so
+    a fresh run of today's default does **not** reproduce the "T01" tree below: it finds
+    its own optimum on the same data (total tree length 16.2 rather than 18.6, seven
+    long-branch tips either way, six of them the same). Read the tables as *"changing
+    this setting moved the output by this much"*, which is what they were built to
+    answer, not as a description of the tree your own run will produce.
+
 ## The sensitivity analysis on the real test run
 
 **Design.** One real dataset — the 16S test set, 211 ASVs after contaminant filtering,
