@@ -46,7 +46,7 @@ The terms this page leans on, in plain words. Skip it if you build trees for a l
 | **Root / unrooted** | A rooted tree has a designated oldest point; an unrooted one has only the branching pattern and lengths. MetaFlux exports unrooted trees, because the right root depends on which tips you keep. |
 | **Root-to-tip distance** | The sum of branch lengths from a tip up to the root. Needs a root, so the QC report measures it on a temporary midpoint-rooted copy; the exported tree stays unrooted. Good at spotting a whole clade hanging off one long **stem** (the branch leading to a clade), poor at spotting a single long branch. |
 | **Saturation** | So many repeated changes at the same positions that their history is erased — distances stop growing with divergence. The reason rpoB is excluded. |
-| **Seed** | The starting number for the random choices a tree search makes. Same seed, same data, same settings *and the same thread count* → same likelihood and tree length; with more than one thread the zero-length branches among near-identical ASVs can still be arranged differently (see Reproducibility below). `amplicon.seed` is reused here. |
+| **Seed** | The starting number for the random choices a tree search makes. Same seed, same input file, same settings and one thread → the same tree. Change the thread count, or the order of the input sequences, and the search settles on a different, about equally good tree (see Reproducibility below). `amplicon.seed` is reused here. |
 | **Site pattern** | A distinct column in the alignment. IQ-TREE's work per step scales with the number of these, which is why a ~440-column 16S alignment is "short". |
 | **Split** | The two groups of tips an internal branch separates. Support values and RF distance are both about splits. |
 | **Support (UFBoot, SH-aLRT)** | Numbers on internal branches saying how sure the data are about that split. UFBoot (ultrafast bootstrap): how often the branch reappears when the alignment columns are resampled, read as trustworthy at ≥ 95. SH-aLRT: a per-branch likelihood test, read at ≥ 80. FastTree's "SH-like" supports are on a 0–1 scale and are not bootstraps. |
@@ -310,7 +310,13 @@ Join taxonomy back on in R, keyed on the ASV ID, from `6.taxonomy/asv_table.txt`
 
 !!! note "ASV IDs are stable within a run, not across runs"
     IDs are assigned by decreasing abundance when the sequence table is built. `ASV_7` in
-    two different runs is not the same organism.
+    two different runs is not the same organism. This holds even for two runs of the same
+    reads with the same configuration: ASVs with exactly equal total abundance are numbered
+    in the order they are first met in the reads, and that order is not fixed, because the
+    phiX-removal step (bowtie2, multithreaded) writes its reads in a run-dependent order. In
+    three complete test runs, two ASVs with 2 reads each swapped IDs once. Within a run the
+    table, the taxonomy and the tree always agree with each other; only cross-run
+    comparisons must be keyed on the sequence, never on the ID.
 
 ## Checks, and when no tree is built
 
@@ -824,27 +830,40 @@ any `extra_args`. That record is what lets you pin an automatic choice explicitl
 
 `amplicon.seed` seeds every backend — there is no separate phylogeny seed.
 
-**Reproducible at a fixed seed *and* a fixed thread count.** That qualification is real
-and not boilerplate:
+**Exactly reproducible only for the same input file, the same seed and one thread.**
+Everything else about the tree search is a heuristic that settles into one of several
+nearly equally good trees, and which one it finds depends on things that look
+irrelevant. All of the following was measured on the 211-ASV test set with IQ-TREE 3.1.3
+(GTR+F+G4, seed 42):
 
-- **The thread count changes the tree.** Neither IQ-TREE nor MAFFT promises identical
-  results across thread counts, and on the 211-ASV test set they are not: the tree
-  built with IQ-TREE at 1 thread differs from the trees built at 4 threads (same seed,
-  same alignment). If you need to reproduce a tree, pin `resources.threads` as well as
-  the seed.
-- **At a fixed seed, only a single-threaded IQ-TREE run is exactly reproducible.** Two
-  runs at `phylo_tree: 1` gave byte-identical Newick files. At the shipped default of
-  4 threads, three runs reached the same log-likelihood and the same tree length, but
-  one of the three differed from the other two on 12 of 416 splits (normalized
-  Robinson–Foulds distance 0.03). Every differing split was a branch of length
-  2 × 10⁻⁶ or less — the arrangement of near-identical ASVs whose order the data cannot
-  decide, which a multithreaded search may settle differently. Collapse those with
-  `ape::di2multi(tree, tol = 1e-5)` and the three topologies are identical, and
-  patristic distances are unaffected either way. On the test set the single-threaded
-  run took 140 s against 90 s at 4 threads, so for a few hundred ASVs the byte-
-  reproducible setting costs little; on thousands of ASVs it costs hours. Either way,
-  compare trees with `ape::dist.topo()` after `di2multi()`, or by patristic
-  correlation — never with `diff`.
+- **Same alignment file, 1 thread:** two runs gave byte-identical Newick files.
+- **Same alignment file, 4 threads (the shipped default):** three runs reached the same
+  log-likelihood and tree length; one differed from the other two on 12 of 416 splits,
+  every one of them a branch of 2 × 10⁻⁶ or less (near-identical ASVs whose order the
+  data cannot decide). After `ape::di2multi(tree, tol = 1e-5)` the topologies are
+  identical.
+- **Same sequences, two of them in a different order:** a different tree. Three complete
+  runs of the pipeline from raw reads, identical configuration, gave identical ASV
+  sequences and counts, but in one run two ASVs with the same total abundance (2 reads
+  each) received each other's IDs, because the read order after phiX removal is not
+  fixed between runs (see the note on ASV IDs above). That swapped two records in the
+  alignment input, and IQ-TREE converged to a different local optimum: 154 of 416 splits
+  differ (normalized Robinson–Foulds 0.37), patristic correlation r = 0.93, total tree
+  length 18.0 against 18.6 — and a *better* log-likelihood (−15 485 against −15 509). At
+  1 thread the same reordering gave the same picture (RF 0.35, r = 0.94). Per-sample
+  Faith's PD hardly noticed: r = 0.999 between the two trees, sample ranking identical.
+- **Thread count alone:** the reordered input at 1 and at 4 threads differed on 34 splits
+  (RF 0.08, r = 0.996), so the thread count also moves the search, but less than the
+  input order does.
+
+What follows from this: read the topology as *one* of several trees the data support
+about equally well, not as *the* tree; compare trees by patristic correlation or by
+per-sample PD, never with `diff`, and use `ape::dist.topo()` only after `di2multi()`;
+and to reproduce a tree exactly between runs, the whole path to it must be identical —
+the same ASV numbering (which is not guaranteed between runs; see the note on ASV IDs),
+`resources.threads.phylo_tree: 1` (140 s against 90 s at 4 threads on 211 ASVs, hours
+on thousands) and the same seed. The distances and diversity values you actually use
+are the stable part.
 - Single-threaded FastTree with `support: false` uses no randomness at all and is fully
   deterministic. Its parallel build, `FastTreeMP`, is documented non-deterministic and is
   **never** used by MetaFlux.

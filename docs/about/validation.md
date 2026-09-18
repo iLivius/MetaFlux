@@ -125,8 +125,16 @@ and at 20× still 33, which is why the QC report uses the boxplot fence Q3 + 3×
 
 **What it is not.** It is not an accuracy benchmark: there is no known true tree for
 environmental ASVs, so nothing in it says which tree is *right*. It is one dataset, one
-amplicon region, one tree per setting (so run-to-run variation of the tree search was not measured),
-and six samples (so the PD correlations rest on six points). The masks were produced with the same
+amplicon region, one tree per setting, and six samples (so the PD correlations rest on six
+points). Run-to-run variation of the tree search was not part of the design, but it was
+measured afterwards on the same 211 ASVs: two IQ-TREE searches that differed only in the
+order of two input sequences (see *Reproducibility* on the Phylogeny page) gave trees with
+RF 0.37 between them, patristic *r* 0.93, tree lengths 18.0 and 18.6, and per-sample PD
+*r* 0.999. That is the noise floor for the table above. The RF column (0.13–0.62) sits
+largely inside it, so topological differences between settings should not be read as
+effects of the settings; the masking effect on tree length (−28 %) and the backend effect
+on distances (*r* 0.85–0.89) lie outside it, and the ModelFinder result (*r* 0.998) lies
+well within it. The masks were produced with the same
 binaries and flags the pipeline would use, but outside the pipeline. Read its numbers as
 *"this choice moved the output by this much on this data"*. The question it cannot answer
 — how far any fragment tree is from the best tree the same organisms' whole genes can

@@ -378,12 +378,13 @@ def main() -> int:
         "alignment": aln_summary,
         "long_branches": branches,
         "reproducibility_note": (
-            "Reproducible at a fixed seed AND a fixed thread count, with one measured "
-            "qualification: single-threaded IQ-TREE runs are byte-identical, while "
-            "multithreaded runs at the same seed can arrange zero-length branches among "
-            "near-identical ASVs differently (same likelihood, same tree length). Pin "
-            "resources.threads if you need to reproduce a tree exactly; compare trees by "
-            "patristic distance or after collapsing zero-length branches, never by diff."
+            "Exactly reproducible only for the same input file, the same seed and one "
+            "thread. A different thread count, or a different order of the input "
+            "sequences (which happens between runs when equally abundant ASVs are "
+            "numbered differently), sends the search to a different, about equally good "
+            "tree: on the 16S test set RF 0.37 and patristic r 0.93 between two such "
+            "trees, per-sample PD r 0.999. Compare trees by patristic distance or PD, "
+            "never by diff; see docs/amplicon/phylogeny.md, Reproducibility."
         ),
         "downstream_note": (
             "MetaFlux computes no diversity statistics. Prune this tree to your filtered "
