@@ -1,0 +1,2105 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../test-datasets/">
+      
+      
+        <link rel="next" href="../citation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Phylogeny validation - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#validation-of-the-phylogeny-defaults" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phylogeny validation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-sensitivity-analysis-on-the-real-test-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The sensitivity analysis on the real test run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-full-gene-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The full-gene check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-sensitivity-analysis-on-the-real-test-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The sensitivity analysis on the real test run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-full-gene-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The full-gene check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/about/validation.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="validation-of-the-phylogeny-defaults">Validation of the phylogeny defaults<a class="headerlink" href="#validation-of-the-phylogeny-defaults" title="Permanent link">&para;</a></h1>
+<p>The <a href="../../amplicon/phylogeny/">Phylogeny</a> page quotes measured figures for how much the
+module's choices matter and for how much a short amplicon fragment can and cannot
+recover. This page is where those figures come from. Two experiments produced them —
+a <strong>sensitivity analysis on the real 16S test run</strong> and a <strong>full-gene check</strong> against
+reference sequences — and they are different kinds of evidence, so each is described
+with what it can and cannot support. The trees, alignments and analysis scripts behind
+every number are kept with the project's benchmark material and are available on
+request.</p>
+<div class="admonition note">
+<p class="admonition-title">Terms</p>
+<p>Patristic distance, Robinson–Foulds distance, UFBoot, likelihood mapping and the
+rest are defined in the <a href="../../amplicon/phylogeny/#glossary">glossary</a> on the
+Phylogeny page.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">These experiments predate the v2.4.0 input-order change</p>
+<p>Both were run before MetaFlux started sorting the phylogeny input by sequence and
+building the tree on one thread. The sequences are the same and the comparisons
+between settings are unaffected, but the alignment rows are in a different order, so
+a fresh run of today's default does <strong>not</strong> reproduce the "T01" tree below: it finds
+its own optimum on the same data (total tree length 16.2 rather than 18.6, seven
+long-branch tips either way, six of them the same). Read the tables as <em>"changing
+this setting moved the output by this much"</em>, which is what they were built to
+answer, not as a description of the tree your own run will produce.</p>
+</div>
+<h2 id="the-sensitivity-analysis-on-the-real-test-run">The sensitivity analysis on the real test run<a class="headerlink" href="#the-sensitivity-analysis-on-the-real-test-run" title="Permanent link">&para;</a></h2>
+<p><strong>Design.</strong> One real dataset — the 16S test set, 211 ASVs after contaminant filtering,
+6 samples, V5–V7 — and the pipeline's default run <em>as it stood in September 2026</em>, IQ-TREE
+on 4 threads, as the reference point (v2.4.0 later moved the default to one thread; see the
+note above). Then one
+thing changed at a time, everything else held fixed (same ASV set, seed 42; 4 threads for IQ-TREE, RAxML-NG
+clamped to its own recommendation of 1, FastTree single-threaded as in the pipeline):</p>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>Variants compared to the default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alignment strategy</td>
+<td>L-INS-i instead of FFT-NS-2</td>
+</tr>
+<tr>
+<td>Alignment masking</td>
+<td>trimAl <code>-automated1</code>, trimAl <code>-gappyout</code>, AliFilter defaults — applied offline to the pipeline's alignment, tree rebuilt with the identical IQ-TREE command</td>
+</tr>
+<tr>
+<td>Backend and model</td>
+<td>IQ-TREE with ModelFinder; FastTree GTR+Γ; FastTree JC (the model QIIME 2 and ampliseq actually end up using); RAxML-NG GTR+Γ; RAxML-NG with MOOSE</td>
+</tr>
+</tbody>
+</table>
+<p>Ten trees in total, plus one IQ-TREE run with support values and one likelihood-mapping
+run on the default alignment. In statistics this is a one-factor-at-a-time <strong>sensitivity
+analysis</strong>: it answers "how much do the outputs move when this choice changes?", not
+"which choice is correct".</p>
+<p><strong>What was measured, and why that measure.</strong></p>
+<ul>
+<li><em>Topology</em> — normalized Robinson–Foulds distance, RF for short (Robinson &amp; Foulds 1981): the share
+  of internal branches two trees do not have in common, 0 for identical trees, 1 when
+  they share none.</li>
+<li><em>Distances</em> — Pearson correlation between the two trees' patristic distance matrices
+  (the branch-length distance between every pair of tips; the cophenetic correlation of
+  Sokal &amp; Rohlf 1962), computed over the full matrix as <code>ape::cophenetic.phylo()</code>
+  returns it. This is the quantity UniFrac and Faith's PD actually consume, so
+  agreement here matters more than agreement on topology.</li>
+<li><em>Scale</em> — total tree length, because Faith's PD is by definition a sum of branch
+  lengths (Faith 1992): a method that shrinks the tree shrinks every PD value with it.</li>
+<li><em>Downstream stability</em> — a per-sample PD proxy (total branch length of the subtree
+  spanning the ASVs present in that sample), correlated between trees across the six
+  samples.</li>
+<li><em>Taxonomic coherence</em> — the fraction of SINTAX genera with at least two ASVs that form
+  a single clade, under the same rooting for every tree. The only external check
+  available without a reference phylogeny, and a rough one: it inherits classifier
+  errors, and some genera are genuinely not monophyletic in 16S.</li>
+<li><em>Support</em> — ultrafast bootstrap (Hoang et al. 2018) and SH-aLRT (Guindon et al. 2010),
+  read at IQ-TREE's documented single-gene thresholds.</li>
+<li><em>Signal</em> — likelihood mapping (Strimmer &amp; von Haeseler 1997): draw 5,000 random
+  four-taxon subsets and ask, for each, whether the data clearly favour one of the three
+  possible arrangements.</li>
+<li><em>Model selection</em> — ModelFinder (Kalyaanamoorthy et al. 2017) by BIC (Schwarz 1978).
+  The models named here: GTR (Tavaré 1986), TPM3u (the three-substitution-type
+  family of Kimura 1981), +G gamma rates (Yang 1994), +R FreeRate (Yang 1995; Soubrier
+  et al. 2012).</li>
+</ul>
+<p><strong>Results.</strong> Every tree is compared with the pipeline default, T01 (FFT-NS-2 alignment,
+IQ-TREE, GTR+F+G4, seed 42). Robinson–Foulds is normalized (0 = same topology). The
+patristic correlation and the per-sample PD correlation are Pearson's <em>r</em>.</p>
+<table>
+<thead>
+<tr>
+<th>Tree</th>
+<th>One thing changed</th>
+<th>RF vs default</th>
+<th>Patristic <em>r</em></th>
+<th>Tree length</th>
+<th>PD <em>r</em> (6 samples)</th>
+<th>Genera monophyletic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T01</td>
+<td>— (default)</td>
+<td>0</td>
+<td>1</td>
+<td>18.61</td>
+<td>1</td>
+<td>11 / 19</td>
+</tr>
+<tr>
+<td>T02</td>
+<td>alignment: L-INS-i</td>
+<td>0.457</td>
+<td>0.954</td>
+<td>17.58</td>
+<td>0.997</td>
+<td>11 / 19</td>
+</tr>
+<tr>
+<td>T03</td>
+<td>mask: trimAl <code>-automated1</code></td>
+<td>0.606</td>
+<td>0.914</td>
+<td>13.44</td>
+<td>0.997</td>
+<td>10 / 19</td>
+</tr>
+<tr>
+<td>T04</td>
+<td>mask: trimAl <code>-gappyout</code></td>
+<td>0.620</td>
+<td>0.912</td>
+<td>13.39</td>
+<td>0.997</td>
+<td>10 / 19</td>
+</tr>
+<tr>
+<td>T05</td>
+<td>mask: AliFilter defaults</td>
+<td>0.389</td>
+<td>0.942</td>
+<td>17.46</td>
+<td>0.9995</td>
+<td>11 / 19</td>
+</tr>
+<tr>
+<td>T06</td>
+<td>model: ModelFinder (picked TPM3u+R5)</td>
+<td>0.125</td>
+<td>0.998</td>
+<td>15.02</td>
+<td>0.9999</td>
+<td>11 / 19</td>
+</tr>
+<tr>
+<td>T07</td>
+<td>backend: FastTree GTR+Γ</td>
+<td>0.413</td>
+<td>0.861</td>
+<td>15.30</td>
+<td>0.993</td>
+<td>12 / 19</td>
+</tr>
+<tr>
+<td>T08</td>
+<td>backend: FastTree JC+Γ</td>
+<td>0.389</td>
+<td>0.851</td>
+<td>14.66</td>
+<td>0.989</td>
+<td>12 / 19</td>
+</tr>
+<tr>
+<td>T09</td>
+<td>backend: RAxML-NG GTR+Γ</td>
+<td>0.577</td>
+<td>0.885</td>
+<td>17.06</td>
+<td>0.999</td>
+<td>11 / 19</td>
+</tr>
+<tr>
+<td>T10</td>
+<td>backend: RAxML-NG MOOSE (picked GTR+FU+R5)</td>
+<td>0.466</td>
+<td>0.916</td>
+<td>15.06</td>
+<td>0.999</td>
+<td>10 / 19</td>
+</tr>
+</tbody>
+</table>
+<p>What the table says, in order of how much each choice moved the output:</p>
+<ul>
+<li><em>Masking</em> is the only choice that changes the scale: both trimAl masks removed 24 % of
+  the columns and with them 28 % of total tree length (18.61 → 13.4), and every
+  per-sample PD value shrank with it. The two trimAl trees are nearly the same tree
+  (RF 0.154, <em>r</em> 0.997 between them). AliFilter removed almost nothing and changed
+  almost nothing. No mask improved taxonomic coherence (10 / 19 genera vs 11 / 19).</li>
+<li><em>Backend</em> moves topology and distances more than any setting within a backend:
+  FastTree's two models give essentially the same tree (RF 0.111, <em>r</em> 0.986 between
+  T07 and T08), yet both sit farthest from the IQ-TREE default in patristic distance
+  (<em>r</em> 0.85–0.86). RAxML-NG under the same GTR+Γ model differs from IQ-TREE in topology
+  (RF 0.577) but less in distances (<em>r</em> 0.885).</li>
+<li><em>Model selection</em> changes the least: ModelFinder's TPM3u+R5 tree is the closest to
+  the default in topology (RF 0.125) and in distances (<em>r</em> 0.998), while its total
+  length is 19 % shorter — the FreeRate model rescales the branches, so absolute PD
+  values are not comparable across models even when the tree is.</li>
+<li><em>Alignment strategy</em> (T02) moves topology a lot (46 % of internal branches differ)
+  but distances little (<em>r</em> 0.954). One tree per setting cannot say how much of that is
+  the tier and how much is ordinary run-to-run variation of the tree search; the
+  full-gene check below, where seeds were replicated, puts numbers on both.</li>
+<li><em>Per-sample PD</em> barely notices any of it: <em>r</em> ≥ 0.989 against the default for every
+  tree, and the ranking of the six samples is preserved by the two IQ-TREE trees
+  (Spearman 1.0) and nearly so by the rest (Spearman 0.83–0.94). With six samples this
+  is a coarse check.</li>
+</ul>
+<p><strong>Support and signal on the default alignment.</strong> The support run (T11: default tree,
+<code>-B 1000 --alrt 1000</code>) puts 208 internal branches on the tree; 77 (37 %) reach
+UFBoot ≥ 95, 141 (68 %) reach SH-aLRT ≥ 80, and 67 (32 %) meet both — the documented
+read for a single-gene tree. Likelihood mapping on 5,000 random quartets finds
+77.9 % fully resolved, 9.5 % partly resolved and 12.7 % unresolved. Both numbers say the
+same thing: a ~440-column V5–V7 alignment supports the broad structure of the tree and
+leaves about a third of the fine splits undecided, which is the expected amount for a
+fragment this short.</p>
+<p><strong>Model selection, for the record.</strong> ModelFinder (BIC) chose TPM3u+R5 on the default
+alignment; RAxML-NG's MOOSE chose GTR+FU+R5. Both prefer a five-category FreeRate
+description of among-site rate variation and they disagree only on the substitution
+matrix, which is why the module keeps the pinned GTR+F+G4 default and makes selection
+available rather than automatic (see the Phylogeny page).</p>
+<p><strong>Long-branch screen on the default tree.</strong> Pendant edges: median 4.6 × 10⁻³, 75th
+percentile 0.052, longest 0.657. Flagging at 5× the median would mark 81 of 211 tips
+and at 20× still 33, which is why the QC report uses the boxplot fence Q3 + 3×IQR
+(about 0.21 here: 0.208 with R's default quantile definition, 0.216 with the one the QC
+report uses): 7 tips flagged either way, six of them the only ASV of their lineage in the
+run and the seventh classified no deeper than phylum.</p>
+<p><strong>What it is not.</strong> It is not an accuracy benchmark: there is no known true tree for
+environmental ASVs, so nothing in it says which tree is <em>right</em>. It is one dataset, one
+amplicon region, one tree per setting, and six samples (so the PD correlations rest on six
+points). Run-to-run variation of the tree search was not part of the design, but it was
+measured afterwards on the same 211 ASVs: two IQ-TREE searches that differed only in the
+order of two input sequences (see <em>Reproducibility</em> on the Phylogeny page) gave trees
+0.47 apart by normalized RF, patristic <em>r</em> 0.88, tree lengths 16.2 and 17.0, and
+per-sample PD <em>r</em> 0.995. That is the noise floor for the table above. The RF column (0.13–0.62) sits
+largely inside it, so topological differences between settings should not be read as
+effects of the settings; the masking effect on tree length (−28 %) and the backend effect
+on distances (<em>r</em> 0.85–0.89) lie outside it, and the ModelFinder result (<em>r</em> 0.998) lies
+well within it. The masks were produced with the same
+binaries and flags the pipeline would use, but outside the pipeline. Read its numbers as
+<em>"this choice moved the output by this much on this data"</em>. The question it cannot answer
+— how far any fragment tree is from the best tree the same organisms' whole genes can
+give — is what the next experiment is for.</p>
+<h2 id="the-full-gene-check">The full-gene check<a class="headerlink" href="#the-full-gene-check" title="Permanent link">&para;</a></h2>
+<p><strong>The idea.</strong> There is no true tree for environmental ASVs, but there is the standard
+substitute used by Janssen et al. (2018): take organisms whose <em>whole</em> 16S gene is known,
+cut the amplicon out of each gene <em>in silico</em>, build a tree from the fragments exactly as
+the pipeline would, and ask how well it recovers the tree built from the whole genes. The
+full-gene tree is not "the truth" either — it is a maximum-likelihood estimate from a
+1.4 kb gene — but it is the best-informed tree those organisms can give, and it is the
+right yardstick for the question "what does a 376 bp fragment lose?".</p>
+<p><strong>Design.</strong></p>
+<ul>
+<li><strong>Reference genes:</strong> 250 full-length sequences from SILVA 138.2 (median 1,444 bp;
+  19 phyla, 18 bacterial and 1 archaeal), chosen to mirror the test run: up to 3 sequences for each of the 55 genera
+  SINTAX found there, 1 per family for ASVs that only reached family (171 taxon-matched),
+  the rest random SILVA prokaryotes (79: 78 bacteria, one archaeon). Every tree in the experiment has exactly these 250 tips.</li>
+<li><strong>Fragments:</strong> cut out with MetaFlux's own in-silico PCR (two-pass cutadapt, 20% primer
+  mismatch allowed) — <strong>V5–V7</strong> with the test run's primers 799F/1175R (median 376 bp,
+  the same length the pipeline's probe reports for this pair) and, as a second region,
+  <strong>V4</strong> with the EMP primers 515F-Y/806R-B (median 253 bp).</li>
+<li><strong>Reference tree:</strong> full genes, MAFFT L-INS-i (2,623 columns), IQ-TREE GTR+F+G4,
+  seed 42. Rebuilt with seeds 43 and 44 to measure its own search noise, plus one
+  ModelFinder run and one support run on the full genes.</li>
+<li><strong>Fragment grid, V5–V7:</strong> the same axes as the sensitivity analysis, now with <strong>three
+  seeds</strong> for each backend whose search starts from random choices — IQ-TREE GTR+F+G4, IQ-TREE ModelFinder, RAxML-NG GTR+Γ
+  (3 seeds each), FastTree GTR+Γ and JC (deterministic, 1 each), the L-INS-i alignment
+  and the trimAl-masked alignment (3 seeds each) — and V4 at pipeline defaults (3 seeds).</li>
+<li><strong>Scored against the reference:</strong> normalized Robinson–Foulds (RF) distance (topology), patristic correlation
+  (distances), tree-length ratio (branch-length compression), and genus/family monophyly
+  — this time against SILVA's own taxonomy, a genuine external check rather than SINTAX
+  calls on ASVs.</li>
+</ul>
+<p><strong>Results</strong> (mean over seeds; reference = full gene, GTR+F+G4, seed 42):</p>
+<table>
+<thead>
+<tr>
+<th>Tree</th>
+<th style="text-align: right;">Robinson–Foulds (RF) distance to reference</th>
+<th style="text-align: right;">Patristic r</th>
+<th style="text-align: right;">Tree length ÷ reference</th>
+<th style="text-align: right;">Genus monophyletic</th>
+<th style="text-align: right;">Family monophyletic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reference rebuilt, seeds 43/44 <em>(seed-to-seed variation — the noise floor)</em></td>
+<td style="text-align: right;">0.02–0.04</td>
+<td style="text-align: right;">0.999–1.000</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">84%</td>
+<td style="text-align: right;">89%</td>
+</tr>
+<tr>
+<td>Reference, ModelFinder (→ GTR+F+R7)</td>
+<td style="text-align: right;">0.06</td>
+<td style="text-align: right;">0.999</td>
+<td style="text-align: right;"><strong>0.75</strong></td>
+<td style="text-align: right;">84%</td>
+<td style="text-align: right;">89%</td>
+</tr>
+<tr>
+<td><strong>V5–V7, pipeline default</strong> (FFT-NS-2, IQ-TREE GTR+F+G4)</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.856</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">56%</td>
+<td style="text-align: right;">67%</td>
+</tr>
+<tr>
+<td>V5–V7, pipeline default with support (<code>-B 1000 --alrt 1000</code>)</td>
+<td style="text-align: right;">0.56</td>
+<td style="text-align: right;">0.863</td>
+<td style="text-align: right;">1.02</td>
+<td style="text-align: right;">59%</td>
+<td style="text-align: right;">68%</td>
+</tr>
+<tr>
+<td>V5–V7, IQ-TREE ModelFinder (→ GTR+F+I+R5)</td>
+<td style="text-align: right;">0.59</td>
+<td style="text-align: right;">0.862</td>
+<td style="text-align: right;"><strong>0.67</strong></td>
+<td style="text-align: right;">55%</td>
+<td style="text-align: right;">67%</td>
+</tr>
+<tr>
+<td>V5–V7, RAxML-NG GTR+Γ</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.831</td>
+<td style="text-align: right;">1.02</td>
+<td style="text-align: right;">57%</td>
+<td style="text-align: right;">64%</td>
+</tr>
+<tr>
+<td>V5–V7, FastTree GTR+Γ</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">0.864</td>
+<td style="text-align: right;"><strong>0.65</strong></td>
+<td style="text-align: right;">56%</td>
+<td style="text-align: right;">64%</td>
+</tr>
+<tr>
+<td>V5–V7, FastTree JC</td>
+<td style="text-align: right;">0.59</td>
+<td style="text-align: right;">0.868</td>
+<td style="text-align: right;"><strong>0.62</strong></td>
+<td style="text-align: right;">56%</td>
+<td style="text-align: right;">64%</td>
+</tr>
+<tr>
+<td>V5–V7, L-INS-i alignment</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: right;">0.878</td>
+<td style="text-align: right;">1.11</td>
+<td style="text-align: right;">55%</td>
+<td style="text-align: right;">64%</td>
+</tr>
+<tr>
+<td>V5–V7, trimAl <code>-gappyout</code></td>
+<td style="text-align: right;">0.59</td>
+<td style="text-align: right;">0.872</td>
+<td style="text-align: right;">0.96</td>
+<td style="text-align: right;">56%</td>
+<td style="text-align: right;">61%</td>
+</tr>
+<tr>
+<td>V4, pipeline default</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: right;">0.867</td>
+<td style="text-align: right;">0.75</td>
+<td style="text-align: right;">59%</td>
+<td style="text-align: right;">72%</td>
+</tr>
+</tbody>
+</table>
+<p>Support (UFBoot ≥ 95 <em>and</em> SH-aLRT ≥ 80): <strong>64%</strong> of internal branches on the full gene,
+<strong>38%</strong> on the V5–V7 fragment.</p>
+<p><strong>Reading it.</strong></p>
+<ul>
+<li><strong>The fragment loses most of the topology and keeps a fair amount of the distances.</strong>
+  Every V5–V7 tree sits in one band — about 58% of internal branches differ from the
+  full-gene tree (Robinson–Foulds distance 0.56–0.60), while patristic distances correlate at 0.83–0.88. For
+  scale: the full-gene reference rebuilt with another seed differs from itself by 0.02–0.06, and the same <em>fragment</em> alignment rebuilt with another seed by 0.22–0.28 —
+  so roughly a third of the fragment's disagreement is the tree search wandering, and
+  the rest is information the fragment does not have. That band <em>is</em> the framing paragraph at the top of
+  the <a href="../../amplicon/phylogeny/">Phylogeny</a> page, measured.</li>
+<li><strong>None of the settings tested escapes the band.</strong> Aligner, mask, backend, model: a
+  spread of 0.04 in RF and 0.05 in patristic r — smaller than the seed-to-seed variation
+  of a single setting — against a gap of ~0.55 to the full gene. The pipeline's choices
+  are not where the distance to the full-gene tree is decided; the fragment is. The
+  defaults stand.</li>
+<li><strong>V4 is not a better region than V5–V7</strong> on this measure (RF 0.60, r 0.87).</li>
+<li><strong>Roughly a third of the taxonomic coherence is lost with the fragment</strong> (a fifth to
+  two fifths, depending on the measure): genera monophyletic 84% → 55–59%, families
+  89% → 61–72%; well-supported branches 64% → 38%.</li>
+<li><strong>Branch-length scale depends on the rate model and on the region — and neither
+  tells you the true scale.</strong> V5–V7 fragment trees under GTR+F+G4 come out the same
+  total length as the full-gene GTR+F+G4 tree (ratio ≈ 1.0); the V4 fragment under the
+  same model does not (0.75). FreeRate models and FastTree make the V5–V7 tree 33–38%
+  shorter — and the 1.4 kb <em>reference itself</em> loses 25% when ModelFinder picks GTR+F+R7
+  for it, so on this data the shrinkage is a rate-model effect, not a fragment effect.
+  (Medlar et al. 2014 describe a separate short-fragment underestimation; the V4 row is
+  the only place this grid shows something like it.) Either way: absolute PD must never
+  be compared between runs built under different models or from different regions.</li>
+<li><strong>Model selection at 250 references</strong> lands in the GTR family (GTR+F+R7 on the full
+  gene, GTR+F+I+R5 on the fragment), with FreeRate preferred over gamma both times — the
+  same rate-model preference the sensitivity analysis found on the real ASVs.</li>
+</ul>
+<p><strong>Limits.</strong> One gene set of 250, one taxonomic mix (built to resemble one plant-associated
+community), one region pair; the reference is itself an estimate (only 64% of its
+branches are well supported, so some of the "disagreement" is the reference's own
+uncertainty); and the fragments are cut from clean full-length references, so they carry
+no sequencing error — a real ASV set adds sequencing error on top of the
+fragment's own information loss, so there is no reason to expect it to do better. What this experiment
+does establish, and the sensitivity analysis could not, is the <em>size</em> of the gap between every fragment tree in this grid and the full-gene
+tree, and that it dwarfs every pipeline choice tested.</p>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<p>The papers behind every measure and model named here — Robinson &amp; Foulds 1981, Sokal &amp;
+Rohlf 1962, Faith 1992, Strimmer &amp; von Haeseler 1997, Hoang et al. 2018, Guindon et al.
+2010, Schwarz 1978, Tavaré 1986, Kimura 1981, Yang 1994 and 1995, Soubrier et al. 2012,
+Kalyaanamoorthy et al. 2017, Janssen et al. 2018, Medlar et al. 2014, Apprill et al. 2015
+— are listed on the <a href="../citation/">Citation</a> page.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
