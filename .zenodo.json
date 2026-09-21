@@ -1,0 +1,41 @@
+{
+  "title": "MetaFlux: a unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Antonielli, Livio",
+      "affiliation": "AIT Austrian Institute of Technology"
+    }
+  ],
+  "keywords": [
+    "metagenomics",
+    "amplicon sequencing",
+    "16S rRNA",
+    "ITS",
+    "18S rRNA",
+    "gyrB",
+    "rpoB",
+    "DADA2",
+    "Snakemake",
+    "taxonomic profiling",
+    "shotgun metagenomics",
+    "Kraken2",
+    "phylogenetics",
+    "bioinformatics workflow",
+    "reproducibility"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/iLivius/MetaFlux",
+      "relation": "isSupplementTo",
+      "scheme": "url",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://iLivius.github.io/MetaFlux/",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ]
+}

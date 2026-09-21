@@ -2,11 +2,15 @@
 
 ## Citing MetaFlux
 
-Publications that use MetaFlux should cite this repository. A formal release with
-a Zenodo DOI is forthcoming:
+Publications that use MetaFlux should cite the Zenodo record:
 
 > Antonielli, L. (2026). *MetaFlux: a unified short-read multi-marker amplicon and
-> shotgun taxonomic profiling workflow.* Zenodo. DOI: pending release.
+> shotgun taxonomic profiling workflow.* Zenodo. https://doi.org/10.5281/zenodo.22876451
+
+That DOI always resolves to the newest release. To cite the exact version you ran, use
+its own DOI instead — v2.4.0 is
+[10.5281/zenodo.22876452](https://doi.org/10.5281/zenodo.22876452) — and give the version
+number in the reference, because results can depend on it.
 
 MetaFlux is a wrapper around published tools and reference databases, and those
 do the actual work. Cite them too — the list below covers the tools and

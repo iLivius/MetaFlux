@@ -14,7 +14,7 @@ v2.4.0
 
 ![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A59.0-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![DOI](https://img.shields.io/badge/DOI-pending%20release-lightgrey.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22876451.svg)](https://doi.org/10.5281/zenodo.22876451)
 
 ## 📖 Documentation
 
@@ -139,11 +139,15 @@ Choosing and downloading a Kraken2 index, and the memory it needs, are covered i
 
 ## Citation
 
-Publications that use MetaFlux should cite this repository. A formal release with a
-Zenodo DOI is forthcoming:
+Publications that use MetaFlux should cite the Zenodo record:
 
 > Antonielli, L. (2026). *MetaFlux: a unified short-read multi-marker amplicon and
-> shotgun taxonomic profiling workflow.* Zenodo. DOI: pending release.
+> shotgun taxonomic profiling workflow.* Zenodo. https://doi.org/10.5281/zenodo.22876451
+
+That DOI always resolves to the newest release. To cite the exact version you ran, use
+its own DOI instead — v2.4.0 is
+[10.5281/zenodo.22876452](https://doi.org/10.5281/zenodo.22876452) — and give the version
+number in the reference, because results can depend on it.
 
 MetaFlux is a wrapper around published tools and reference databases, and those do the
 actual work — cite them too. The full reference list is on the
