@@ -18,7 +18,8 @@
 #                the species-level redistribution.
 # kraken_biom        : assemble per-sample Bracken reports into one raw OTU table
 #                (BIOM HDF5, the standard Biological Observation Matrix
-#                container most microbiome tools read/write).
+#                container most microbiome tools read/write), one row per taxon
+#                at the rank Bracken re-estimated at (shotgun.bracken.tax_lev).
 # finalize_otu_table : normalise the taxonomy strings (unify to ';'-no-space and
 #                a Genus+species binomial, matching the amplicon tables), strip
 #                the "_report" suffix kraken-biom puts on sample names, and apply
@@ -133,6 +134,23 @@ rule bracken:
 # conventions; finalize_otu_table (below) is what cleans those up into the
 # form the rest of MetaFlux (and its users) expect. Marked temp() because
 # only the finalized table is meant to be read further.
+#
+# WHICH ROWS END UP IN THE TABLE. kraken-biom keeps only taxa whose rank lies
+# between --max and --min. At the --min rank it takes the clade count (report
+# column 2: reads on the taxon plus everything below it); above --min it takes
+# only the reads placed directly on the taxon (column 3). Both flags are set to
+# the Bracken rank, so the table holds exactly the taxa Bracken re-estimated,
+# each with Bracken's estimate: the same numbers as {sample}_output.txt.
+#
+# kraken-biom's defaults (--max O --min S) assume a species report. At S they
+# are harmless: Bracken writes 0 direct reads on every row above species, so the
+# extra ranks add nothing (otu_table.tsv is byte-identical either way). At any
+# other rank they failed without an error (MetaFlux v2.4.0 and earlier):
+#   G, F, O - the Bracken rank falls in the "direct reads" branch, and Bracken
+#             3.1 writes 0 there for every taxon with child rows in the Kraken2
+#             report (upstream Bracken issue #315): empty or near-empty table;
+#   C, P, D - above --max O, so nothing was kept. Raising only --min would stop
+#             kraken-biom with "Max and Min ranks are out of order", hence both.
 rule kraken_biom:
     input:
         reports = expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES),
@@ -141,6 +159,10 @@ rule kraken_biom:
         # "_report" suffix and taxonomy is kraken-biom's "; "-joined form.
         # finalize_otu_table cleans both. Marked temp — only the final table ships.
         raw_biom = temp(OUT / "03.abundance" / "otu_table.raw.biom"),
+    params:
+        # The same rank rule bracken was given (shotgun.bracken.tax_lev, one
+        # capital letter, checked when the workflow is parsed in 00_common.smk).
+        tax_lev = TAX_LEV,
     threads: lambda wc: threads_for("kraken_biom")
     resources:
         mem_mb = lambda wc: mem_mb_for("kraken_biom"),
@@ -150,8 +172,10 @@ rule kraken_biom:
         LOGS / "kraken_biom.log"
     priority: 1
     shell:
+        # Kept on one line: in this plain (not r"...") string Python would remove a
+        # backslash line break before the shell ever saw it.
         """
-        kraken-biom {input.reports} --fmt hdf5 -o {output.raw_biom} > {log} 2>&1
+        kraken-biom {input.reports} --max {params.tax_lev} --min {params.tax_lev} --fmt hdf5 -o {output.raw_biom} > {log} 2>&1
         """
 
 

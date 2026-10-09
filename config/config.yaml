@@ -397,7 +397,9 @@ shotgun:
     threads: null                             # null = use resources.threads.kraken2; or pin (e.g. 12)
 
   # Bracken redistributes abundance from Kraken2 reports.
-  # Target rank: D | P | C | O | F | G | S. Drop to G for a shallow DB.
+  # Target rank: D | P | C | O | F | G | S (one capital letter). Drop to G for a
+  # shallow DB. The OTU table then has one row per taxon at exactly this rank;
+  # the lineage below it is left empty (e.g. ...;g__Bacteroides;s__).
   bracken:
     tax_lev: S
 

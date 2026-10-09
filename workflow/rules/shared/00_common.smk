@@ -719,6 +719,17 @@ else:  # MODE == "shotgun"
     KRAKEN2_THREADS  = sht_cfg["kraken"].get("threads") or threads_for("kraken2")
     TAX_LEV          = sht_cfg["bracken"]["tax_lev"]
 
+    # The rank Bracken re-estimates at (rule bracken), and the rank rule kraken_biom
+    # builds the OTU table at (both in 45_abundance.smk). Only these seven letters
+    # work end to end: Bracken matches the value against the rank codes in the
+    # Kraken2 report, and kraken-biom knows no others. Without this check a wrong
+    # value failed late or not at all: a lowercase letter crashed Bracken, but only
+    # after Kraken2 had finished, and "K" went through Bracken and then gave an
+    # empty table. Stop here instead, before anything runs.
+    if TAX_LEV not in ("D", "P", "C", "O", "F", "G", "S"):
+        sys.exit(f"[MetaFlux] shotgun.bracken.tax_lev must be one of D, P, C, O, F, G, S "
+                 f"(a single capital letter), got {TAX_LEV!r}")
+
     # Bracken's minimum-read threshold. Either a fixed integer, or the string "auto",
     # in which case the rule works it out per sample from that sample's own classified
     # read count (see the config comment, and the shell block in 45_abundance.smk).
