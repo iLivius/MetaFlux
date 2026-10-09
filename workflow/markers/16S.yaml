@@ -12,6 +12,13 @@ probe_mode:          pcr              # pcr | direct — see 40a_amplicon_probe.
 probe_ref:           silva_train
 probe_stat_key:      16S              # which amplicon.probe_length_stat.<key> the pcr path reads
 # probe_ref_tag is release-specific — see `releases` below.
+# Reference lineages the probe leaves out of its length statistics. Chloroplast and
+# mitochondrial SSU (and the few eukaryote outgroup sequences) are amplified in
+# silico by bacterial primers too, often with long insertions; they are not what a
+# 16S survey measures, and the taxonomy filter removes them from the results anyway.
+# With SILVA 144 they move p95 for 799F/1175R from 386 to 397 bp; with 138.2 the
+# value is 384 bp either way.
+probe_exclude_taxa:  [Chloroplast, Mitochondria, Eukaryota]
 
 taxonomy_refdb:      silva_train      # rdp path
 taxonomy_species_db: silva_species    # addSpecies (16S only)

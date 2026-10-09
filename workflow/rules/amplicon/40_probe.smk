@@ -38,6 +38,8 @@ rule amplicon_probe:
         amp_type    = AMPLICON_TYPE,
         primer_hash = PRIMER_HASH,
         ref_tag     = PROBE_REF_TAG,
+        # lineages left out of the length statistics (pack field probe_exclude_taxa)
+        exclude_taxa = PROBE_EXCLUDE_TAXA,
     log:
         LOGS / "amplicon_probe.log",
     conda:

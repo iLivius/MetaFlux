@@ -469,6 +469,14 @@ if MODE == "amplicon":
         )
     PROBE_REF_FASTA   = REF_PATHS[PROFILE["probe_ref"].format(region=ITS_REGION)]
     PROBE_REF_TAG     = PROFILE["probe_ref_tag"].format(region=ITS_REGION)
+    # Reference lineages the probe leaves out of its length statistics (16S:
+    # Chloroplast, Mitochondria, Eukaryota — see 40a_amplicon_probe.py). The list
+    # changes the result, so it is written into the cache file name as well: a
+    # probe computed with a different list (or none, as before v2.5.0) is never
+    # picked up by mistake. Markers without the field keep their old cache names.
+    PROBE_EXCLUDE_TAXA = list(PROFILE.get("probe_exclude_taxa") or [])
+    if PROBE_EXCLUDE_TAXA:
+        PROBE_REF_TAG += "_excl-" + "-".join(sorted(t.lower() for t in PROBE_EXCLUDE_TAXA))
     # Every marker except ITS can reach resolve_expected_length() in pick_trunclen.py
     # (ITS returns early and never resolves a stat) — so gate this validation on
     # amp_type, not probe_mode. A direct-mode marker like gyrB still needs a valid

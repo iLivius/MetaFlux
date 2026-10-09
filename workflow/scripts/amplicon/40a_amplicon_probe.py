@@ -79,6 +79,14 @@ amp_type    = str(p.amp_type)
 # reuse the cached probe instead of redoing the cutadapt passes.
 primer_hash = str(p.primer_hash)
 ref_tag     = str(p.ref_tag)
+# Reference lineages left out of the length statistics (marker pack field
+# probe_exclude_taxa; empty for most markers). For 16S this is Chloroplast,
+# Mitochondria and Eukaryota: organelle and eukaryote SSU amplified in silico by
+# bacterial primers are often much longer (insertions), and SILVA 144 carries
+# about eight times more of them than 138.2 — enough to move p95 from 386 to 397 bp
+# for 799F/1175R, and with it truncLen, although these are exactly the sequences
+# the taxonomy filter removes later. The amplicons FASTA still contains them.
+exclude_taxa = {str(t) for t in (p.exclude_taxa or [])}
 
 threads = int(sm.threads)
 log_path = Path(sm.log[0])
@@ -97,21 +105,48 @@ def run(cmd: list[str], step: str) -> None:
         sys.exit(res.returncode)
 
 
-# ── Read the lengths of all sequences in a FASTA file ───────────
-def iter_fasta_lengths(path: Path):
-    """Yield sequence lengths from a (gzipped) FASTA file."""
+# ── Read header + length of every sequence in a FASTA file ─────
+def iter_fasta_records(path: Path):
+    """Yield (header, sequence length) for each record of a (gzipped) FASTA file."""
     opener = gzip.open if str(path).endswith(".gz") else open
-    seq_len = 0
+    header, seq_len = None, 0
     with opener(path, "rt") as fh:
         for line in fh:
             if line.startswith(">"):
-                if seq_len:
-                    yield seq_len
-                seq_len = 0
+                if header is not None and seq_len:
+                    yield header, seq_len
+                header, seq_len = line[1:].rstrip("\n"), 0
             else:
                 seq_len += len(line.strip())
-        if seq_len:
-            yield seq_len
+        if header is not None and seq_len:
+            yield header, seq_len
+
+
+def is_excluded(header: str) -> bool:
+    """True if any ';'-separated rank of the header is one of exclude_taxa.
+
+    The SILVA DADA2 headers ARE the lineage (">Bacteria;...;Mitochondria;"), and
+    cutadapt keeps them on the amplicons. A SILVA 144 "--other" suffix is ignored,
+    as in the taxonomy filter.
+    """
+    for rank in header.split(";"):
+        rank = rank.strip()
+        if rank.endswith("--other"):
+            rank = rank[: -len("--other")]
+        if rank in exclude_taxa:
+            return True
+    return False
+
+
+def lengths_for_stats(path: Path) -> tuple[list[int], int]:
+    """Lengths of the records that count for the statistics, and how many were left out."""
+    kept, n_excluded = [], 0
+    for header, length in iter_fasta_records(path):
+        if exclude_taxa and is_excluded(header):
+            n_excluded += 1
+        else:
+            kept.append(length)
+    return kept, n_excluded
 
 
 # ── Compute a percentile from a sorted list of lengths ──────────
@@ -175,7 +210,7 @@ if probe_mode == "pcr":
             str(pass1),
         ], "pass2 (3' rev_rc)")
 
-    lengths = list(iter_fasta_lengths(out_amplicons))
+    lengths, n_excluded = lengths_for_stats(out_amplicons)
 
     if not lengths:
         log.write(
@@ -195,7 +230,7 @@ else:
     )
     log.flush()
 
-    lengths = list(iter_fasta_lengths(ref_fasta))
+    lengths, n_excluded = lengths_for_stats(ref_fasta)
 
     if not lengths:
         log.write(
@@ -237,11 +272,18 @@ result = {
 if probe_mode == "pcr":
     result["cutadapt_max_error_rate"] = max_err
     result["cutadapt_min_length"] = pcr_min_len
+# Which reference lineages were left out of the statistics above (none for most
+# markers), and how many amplicons that removed.
+result["excluded_taxa"] = sorted(exclude_taxa)
+result["n_excluded"] = n_excluded
 
 # ── Write results and close log ──────────────────────────────────
 out_json.parent.mkdir(parents=True, exist_ok=True)
 out_json.write_text(json.dumps(result, indent=2) + "\n")
 
+if exclude_taxa:
+    log.write(f"\n[amplicon_probe] left out of the statistics: {n_excluded} sequences "
+              f"from {', '.join(sorted(exclude_taxa))}\n")
 log.write(
     f"\n[amplicon_probe] DONE. n={len(lengths)} sequences; "
     f"median={result['median']} p95={result['p95']} q1={result['q1']} q3={result['q3']}\n"
