@@ -125,26 +125,20 @@ was built properly.
 Consuming the filtered set removes that problem outright, and it guarantees
 the tree's tips and the abundance table you pair it with in R are the same feature set.
 
-!!! note "The ASV set can shift slightly between runs, for a reason upstream of this module"
-    With `taxonomy.method: sintax` on more than one thread, VSEARCH races several threads
-    on one random-number stream, so per-rank confidence values shift between runs — on the
-    16S test set by up to about 13 percentage points (an order call at 0.72 in one run,
-    0.85 in the next), enough to add or drop up to three trailing ranks of a lineage near
-    the cutoff. Between any two complete runs of that set from identical configs, 10–17 of
-    211 ASVs changed their taxonomy string, with **every read count identical**, and the
-    tree input stayed the same 211 ASVs each time. That is luck, not a guarantee: the
-    `discard` tokens (`o__Chloroplast`, `f__Mitochondria`) sit exactly at the ranks whose
-    confidence drifts, so a mitochondrial ASV called to family in one run and only to order
-    in the next is discarded in the first run and reaches the tree in the second. Since
-    v2.5.0 the filter also checks the best hit below the cutoff
-    (`filter.discard_min_support`, see [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support)),
-    which also removes such an ASV in the run where its family call falls below the
-    cutoff, as long as its best hit there is still *Mitochondria* with at least 50%
-    support. The organelle filter (`filter.organelles`, on by default for 16S) goes
-    further for the ASVs Metaxa2 calls mitochondria or chloroplast: it removes them
-    whatever the classifier said, so those cannot drift into the tree. Set
-    `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
-    reproducible.
+!!! note "The ASV set is only as reproducible as the taxonomy step"
+    The tree's tips are the ASVs the taxon filter kept. With a fixed `amplicon.seed` the
+    taxonomy step gives the same result at any thread count: with
+    `taxonomy.method: sintax`, the default, from v2.5.0 on, and with `rdp` apart from
+    DADA2's random tie-breaking, which can move a bootstrap value by a point between
+    identical runs (see [Troubleshooting](../troubleshooting.md)). The `discard` tokens
+    (`o__Chloroplast`, `f__Mitochondria`) sit at order and family, so a call right at the
+    cutoff decides whether such an ASV is removed, and two further checks keep that call
+    from deciding alone. The best-hit check (`filter.discard_min_support`, see
+    [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support))
+    also removes an ASV whose family call falls below the cutoff, as long as its best hit
+    there is still *Mitochondria* with at least 50% support. The organelle filter
+    (`filter.organelles`, on by default for 16S) removes the ASVs Metaxa2 calls
+    mitochondria or chloroplast, whatever the classifier said.
 
 !!! warning "The filter has to be doing something"
     If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
@@ -878,14 +872,12 @@ at every stage, the ASV sequences, the per-sample counts, the alignment and
 
 **What is still not reproducible.**
 
-- **Taxonomy strings, with `sintax` on more than one thread.** VSEARCH races its threads
-  on one random-number stream, so confidence values near the cutoff move and a lineage
-  gains or loses trailing ranks: 16 of 211 ASVs between the two runs above, with every
-  read count identical and the same 211 ASVs reaching the tree. It can in principle
-  change which ASVs reach the tree, because the `discard` tokens sit at the ranks that
-  drift. `resources.threads.assign_taxonomy: 1` removes it.
+- **Taxonomy with `rdp`, at the margin.** DADA2's `assignTaxonomy` breaks exact ties
+  between equally good reference genera at random, outside the seed, so a few bootstrap
+  values can differ between identical runs. `sintax`, the default, is reproducible at any
+  thread count from v2.5.0 on.
 - **Metaxa2's own taxonomy file** (`5.dada2/metaxa2/seqs.taxonomy.txt`) shifts between
-  runs for the same reason. MetaFlux never reads it — the extracted sequences and the
+  runs too. MetaFlux never reads it — the extracted sequences and the
   extracted table were byte-identical — so it is a by-product worth knowing about, not
   something that feeds a result. The organelle filter reads Metaxa2's per-origin FASTA
   files instead, and those did not move: every ASV had the same origin in all 16

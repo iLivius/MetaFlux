@@ -239,12 +239,14 @@ tabbedout = out_asv.parent / "_sintax_raw.tsv"
 
 # The SINTAX DB (SILVA for 16S, PR2/UTAX for 18S, UNITE for ITS) is .gz; VSEARCH
 # reads gzipped FASTA natively.
-# --randseed: vsearch's sintax bootstrap confidence defaults to seed 0, i.e.
-# "use a random data source". Pinning it removes that as a source of drift,
-# but does NOT make multithreaded --sintax fully reproducible: vsearch races
-# threads on one RNG stream, so per-rank confidence near sintax_cutoff can
-# still shift a little between runs at threads > 1 (verified empirically).
-# Full byte-reproducibility requires threads == 1 — see README Troubleshooting.
+# --randseed: without it vsearch uses seed 0, which means "take the seed from a
+# random source", and the bootstrap confidence changes from run to run. With a
+# fixed seed, VSEARCH 2.32 and later (pinned in envs/vsearch.yaml) give every ASV
+# its own random stream, worked out from the seed and the ASV's place in the input
+# FASTA, so the result is the same at any --threads value. Older releases shared
+# one stream between all threads and were only reproducible on one thread. A seed
+# of 0 in amplicon.seed would therefore switch reproducibility off for this step.
+# See docs/troubleshooting.md for the reproducibility of the whole amplicon path.
 cmd = [
     "vsearch", "--sintax", str(seqs_path),
     "--db",            str(refdb_path),
@@ -268,6 +270,10 @@ if res.returncode != 0:
 # different shape means something upstream changed (a vsearch version with a
 # different --tabbedout format, a corrupted file, ...), not a case to guess
 # through silently, so it fails here with the line itself in the message.
+# vsearch writes each ASV's line as soon as a thread has finished it, so above one
+# thread the LINE ORDER of _sintax_raw.tsv changes from run to run (the lines
+# themselves do not). Everything below is looked up by ASV id and written in the
+# FASTA order (shared_ids), so the output tables do not depend on that order.
 sintax_result: dict[str, dict[str, str]] = {}
 sintax_best:   dict[str, dict[str, tuple[str, float]]] = {}
 with tabbedout.open() as fh:

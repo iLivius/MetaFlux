@@ -234,56 +234,33 @@ corrupted data.
 One source of run-to-run difference used to have nothing to do with a random draw, and
 the seed did not touch it: the order of the reads. Bowtie2 removes phiX on several
 threads and wrote the surviving pairs in whatever order they finished, so every run
-handed DADA2 the same reads in a different sequence (measured on the test set before the
-fix: 70–89 % of records in a different position; pairing was never broken, and cutadapt
-and `filterAndTrim` only drop reads, they never reorder). DADA2 numbers ASVs by
+handed DADA2 the same reads in a different sequence (pairing was never broken, and
+cutadapt and `filterAndTrim` only drop reads, they never reorder). DADA2 numbers ASVs by
 decreasing abundance and keeps the input order for ties, so two ASVs with exactly the
 same total count could swap IDs between runs. **Fixed in v2.4.0**: bowtie2 now runs with
-`--reorder`, and two complete runs of the test set return byte-identical reads, ASV
-sequences and counts. If you are reading output from an earlier version, compare runs by
-sequence rather than by ASV ID. See
+`--reorder`, so every run hands DADA2 the reads in the same order and gets the same ASV
+sequences and counts back. If you are reading output from an earlier version, compare
+runs by sequence rather than by ASV ID. See
 [Reproducibility](amplicon/phylogeny.md#reproducibility) for what this meant for the
 optional phylogeny stage, which is sensitive to the order of the alignment rows.
 
-`amplicon.seed` (42 by default) fixes the generator for all three, but only two
-of them become fully reproducible:
+`amplicon.seed` (42 by default) fixes the generator for all three, and the thread count
+then no longer changes the result:
 
-- **`learnErrors` and `assignTaxonomy` (rdp): reproducible at any thread count,
-  with one small exception.** Verified by running the amplicon test set twice at 8
-  threads with the same seed — the ASV sequences, their per-sample counts and the
-  rdp-path taxonomy came back identical. The exception is inside `assignTaxonomy`:
-  when two reference genera fit a bootstrap sample exactly equally well, DADA2 picks
-  one with a random number it does not draw from R's seed. Exact ties are rare, so
-  this moves a bootstrap value by a point here and there; between two identical runs
-  on the 16S test set, 1 of 229 sequences differed on SILVA 138.2, 2 on SILVA 144
-  with `silva_other: strip`, and 10 with `verbatim` (where an `X` and an `X--other`
-  reference are often the same sequence). The reported lineage changes only when such
-  a value sits right at `min_boot`; across the repeated runs made for v2.5.0 that
-  happened to one genus call, once.
-- **`--sintax`: not.** VSEARCH runs its bootstrap confidence step across threads
-  that share one random-number stream, so which thread consumes which draw still
-  depends on scheduling, seed or no seed. Verified the same way: with
-  `amplicon.seed` fixed, 8-threaded `assign_taxonomy` re-runs still shifted per-rank
-  confidence values — on the 16S test set by up to about 13 percentage points (an
-  order call at 0.72 in one run, 0.85 in the next), which added or dropped up to three
-  trailing ranks for 10–17 of 211 ASVs between any two runs, with every read count
-  identical — while single-threaded re-runs came back identical.
-
-!!! tip "If byte-identical sintax output matters more than speed"
-
-    Set the taxonomy step to one thread:
-
-    ```yaml
-    resources:
-      threads:
-        assign_taxonomy: 1
-    ```
-
-    Otherwise, treat confidence drift near `sintax_cutoff`, and the trailing ranks
-    that come and go with it, as normal run-to-run noise — the same behaviour as
-    before the seed was added. Note that the contaminant filter reads these very
-    values: its `discard` tokens sit at order and family rank, so in principle the
-    filtered ASV set can differ slightly between multithreaded runs too.
+- **`learnErrors`: reproducible at any thread count.**
+- **`--sintax`: reproducible at any thread count, from v2.5.0 on.** MetaFlux v2.5.0 runs
+  VSEARCH 2.32, which gives every ASV its own random stream. Older VSEARCH releases
+  shared one stream between all threads, so up to v2.4.0 the `sintax` results were
+  identical only on one thread (`resources.threads.assign_taxonomy: 1`). A new VSEARCH
+  release can also draw differently, as 2.32 did, so compared with a run made with an
+  older MetaFlux version many confidence values move slightly, and a lineage near the
+  cutoff can gain or lose a trailing rank, even with the same seed. The raw
+  `_sintax_raw.tsv` lists the ASVs in the order the threads finish them, so sort it
+  before comparing two runs; the tables built from it do not depend on that order.
+- **`assignTaxonomy` (rdp): reproducible at any thread count, with one exception.**
+  DADA2's `assignTaxonomy` breaks exact ties between equally good reference genera at
+  random, outside the seed, so a few bootstrap values can differ between identical runs;
+  `sintax`, the default, is not affected.
 
 ## Config (YAML) errors
 

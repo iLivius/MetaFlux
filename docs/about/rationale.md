@@ -183,5 +183,6 @@ infrastructure around them is about being able to get the same answer again.
   Committing that file alongside the results records exactly what was run — the
   mode, the marker, the primers, the reference databases, the thresholds.
 - **Fixed random seed.** `amplicon.seed` pins the random-number generator for the
-  stochastic steps in the amplicon path. One caveat applies to multithreaded
-  sintax; it is written up in [Troubleshooting](../troubleshooting.md).
+  stochastic steps in the amplicon path. One caveat applies to the `rdp`
+  classifier, which breaks exact ties at random; it is written up in
+  [Troubleshooting](../troubleshooting.md).

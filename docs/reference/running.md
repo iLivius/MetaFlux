@@ -178,9 +178,12 @@ consequences:
     new best-hit check and its organelle filter (`filter.organelles`, which removes the
     ASVs Metaxa2 calls mitochondria or chloroplast) can remove more organelle ASVs; on
     the 16S test set with `sintax` they removed 2 and 10 more. `target_extract` and `assign_taxonomy`
-    run again in any case, since both now write one more file. In a shotgun folder the
-    Bracken environment is now pinned to 3.1p1, so `bracken` and the steps after it run
-    again; the species-level numbers do not change.
+    run again in any case, since both now write one more file. With `sintax`, that step
+    now runs on VSEARCH 2.32, which draws its random numbers differently from earlier
+    releases, so many confidence values move slightly against the v2.4.0 output, and a
+    lineage near the cutoff can gain or lose a trailing rank, even with the same seed. In
+    a shotgun folder the Bracken environment is now pinned to 3.1p1, so `bracken` and the
+    steps after it run again; the species-level numbers do not change.
 
 Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under

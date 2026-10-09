@@ -415,20 +415,15 @@ Each marker has its own page with the databases it uses and its quirks:
 
 !!! note "How far the seed goes"
 
-    DADA2's `learnErrors(randomize = TRUE)` and `assignTaxonomy`'s bootstrap
-    confidence are reproducible with this seed at any thread count —
-    verified by running the same data twice at 8 threads and getting the same
-    sequences, counts and taxonomy — except that `assignTaxonomy` breaks exact ties
-    between reference genera with its own random number, which can move a bootstrap
-    value by a point (see [Troubleshooting](../troubleshooting.md)). Read order used to escape the seed — multithreaded
-    bowtie2 phiX removal emitted the surviving pairs in a run-dependent order, so ASVs
-    with equal total abundance could swap IDs — but bowtie2 now runs with `--reorder`
-    and two complete runs return byte-identical reads and ASVs. See
-    [Troubleshooting](../troubleshooting.md). VSEARCH's `--sintax` is not
-    reproducible either: it races several threads on one random number stream, so
-    per-rank confidence values can drift between runs. For byte-identical `sintax`
-    output, set
-    `resources.threads.assign_taxonomy: 1`, which is slower but single-streamed.
+    DADA2's `learnErrors(randomize = TRUE)` and the bootstrap confidence of both
+    taxonomy methods are reproducible with this seed at any thread count (for `sintax`
+    from v2.5.0 on, which runs VSEARCH 2.32), except that `assignTaxonomy` breaks exact
+    ties between reference genera with its own random number, which can move a bootstrap
+    value by a point. Read order used to escape the seed — multithreaded bowtie2 phiX
+    removal emitted the surviving pairs in a run-dependent order, so ASVs with equal
+    total abundance could swap IDs — but bowtie2 now runs with `--reorder`, so the reads
+    and ASVs come out the same in every run. See
+    [Troubleshooting](../troubleshooting.md).
 
 ### PhiX removal
 
@@ -886,11 +881,11 @@ docs rather than silently ignored.
     three settings working together: `--reorder` on the phiX step, an alignment built
     from a sequence-sorted FASTA, and `phylo_tree: 1`. Raise `phylo_tree` and you trade
     that away — two runs of the *identical* alignment at 4 threads landed 52 of 416
-    splits apart. The one remaining gap is outside this block: with
-    `taxonomy.method: sintax` on more than one thread, confidence values drift and the
-    contaminant filter can in principle keep a different set of ASVs, so set
-    `assign_taxonomy: 1` as well if the ASV set itself must be reproducible. Details in
-    the [Reproducibility](../amplicon/phylogeny.md#reproducibility) section of the
+    splits apart. The taxonomy step that decides which ASVs reach the tree needs no
+    such setting: with a fixed `amplicon.seed` it gives the same result at any thread
+    count (`sintax` from v2.5.0 on; `rdp` apart from DADA2's rare random tie-breaks, see
+    the seed note above). Details in the
+    [Reproducibility](../amplicon/phylogeny.md#reproducibility) section of the
     Phylogeny page.
 
 ---
@@ -1106,7 +1101,7 @@ so they are what a cluster executor turns into job requests.
 | `dada_seqtab` | amplicon | 8 | |
 | `dada_length_filter` | amplicon | 2 | |
 | `target_extract` | amplicon | 8 | Metaxa2 or ITSx. |
-| `assign_taxonomy` | amplicon | 8 | Set to 1 for byte-reproducible `sintax` output. |
+| `assign_taxonomy` | amplicon | 8 | With a fixed `amplicon.seed` the result does not depend on this value (for `sintax` from v2.5.0 on). |
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |

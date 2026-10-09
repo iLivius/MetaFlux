@@ -85,15 +85,13 @@ amplicon:
   its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
 
   # Fixes the RNG for every stochastic step in the amplicon path: DADA2
-  # learnErrors(randomize=TRUE) and DADA2 assignTaxonomy's bootstrap
-  # confidence (rdp) are FULLY reproducible with this seed, at any thread
-  # count — verified empirically (identical output at 8 threads, two runs).
-  # VSEARCH --sintax's bootstrap confidence (sintax) is NOT: vsearch races
-  # multiple threads on one RNG stream during sintax, so a handful of
-  # per-rank confidence values can still drift between runs even with this
-  # seed fixed — verified empirically (8 threads: differs; 1 thread:
-  # identical). For byte-reproducible sintax output, set
-  # resources.threads.assign_taxonomy: 1 (slower). See README Troubleshooting.
+  # learnErrors(randomize=TRUE) and the bootstrap confidence of the taxonomy
+  # step, VSEARCH --sintax (sintax) or DADA2 assignTaxonomy (rdp). With it these
+  # steps give the same result at any thread count, with one exception:
+  # assignTaxonomy breaks exact ties between equally good reference genera at
+  # random, outside this seed, so with rdp a few bootstrap values can differ
+  # between identical runs. Keep it a positive number: VSEARCH reads 0 as
+  # "pick a random seed". See docs/troubleshooting.md.
   seed: 42
 
   decontamination:

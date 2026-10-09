@@ -3,6 +3,14 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - vsearch >=2.28
+  # One exact release, on purpose: the random draws behind the --sintax bootstrap
+  # confidence depend on the VSEARCH version. From 2.32 on, every ASV gets its own
+  # random stream, set by --randseed and the ASV's place in the input FASTA, so the
+  # confidence values no longer depend on how many threads run. Before 2.32 all
+  # threads shared one stream, and above one thread a few values moved from run to
+  # run even with a fixed seed. A new release can also draw differently (2.32 did),
+  # which shifts a few confidence values for the same seed, so changing this version
+  # should be a deliberate step rather than something a fresh install does quietly.
+  - vsearch=2.32.0
   - python >=3.10   # this env backs a rule whose action is a Snakemake script: (80c_parse_sintax.py);
                     # without python in-env, Snakemake silently falls back to the host interpreter
