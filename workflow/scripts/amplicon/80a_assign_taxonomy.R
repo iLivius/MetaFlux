@@ -57,6 +57,9 @@ prefix_style    <- snakemake@params[["prefix_style"]]             # "bare" | "em
 filter_enabled  <- as.logical(snakemake@params[["filter_enabled"]])
 filter_keep     <- unlist(snakemake@params[["filter_keep"]])      # rank-token keep list
 filter_discard  <- unlist(snakemake@params[["filter_discard"]])   # rank-token discard list
+# Best-hit check of the discard filter (see "Discard filter, best-hit check" below):
+# minimum bootstrap support, 0-100, at the token's rank; NULL = check switched off.
+discard_min_support <- snakemake@params[["discard_min_support"]]
 threads         <- as.integer(snakemake@threads)
 seed            <- as.integer(snakemake@params[["seed"]])
 
@@ -119,12 +122,37 @@ message("[assign_taxonomy] Classifying ", length(unique_seqs),
 # names that were declared slide onto the wrong ranks (PR2's Family would be labelled
 # Species). make_tax_string below looks values up by name, so that misnaming is the
 # damaging half, not the unnamed tail.
-taxa_unique <- assignTaxonomy(unique_seqs, refdb_path,
-                              minBoot = min_boot,
-                              multithread = threads,
-                              tryRC = try_rc,
-                              taxLevels = tax_levels,
-                              verbose = TRUE)
+#
+# assignTaxonomy is called with minBoot = 0 and outputBootstraps = TRUE, so it hands
+# back the classifier's best-hit lineage at EVERY rank together with the bootstrap
+# support of each rank. min_boot is then applied here, by apply_min_boot() below,
+# with exactly the rule DADA2 itself uses, so the reported taxonomy is the same as
+# a call with minBoot = min_boot (the bootstrap draws do not depend on minBoot).
+# Keeping the unfiltered best hit is what lets the discard filter look one step
+# further than the reported lineage (see "Discard filter, best-hit check" below).
+classified <- assignTaxonomy(unique_seqs, refdb_path,
+                             minBoot = 0,
+                             outputBootstraps = TRUE,
+                             multithread = threads,
+                             tryRC = try_rc,
+                             taxLevels = tax_levels,
+                             verbose = TRUE)
+best_hit  <- classified$tax     # best-hit name at every rank, whatever its support
+best_boot <- classified$boot    # bootstrap support (0-100) of each of those names
+
+# DADA2's own minBoot rule (dada2::assignTaxonomy, taxonomy.R): for each sequence,
+# keep the ranks whose support reaches min_boot and write them from the first
+# column onwards. Support can only fall from domain to genus, so in practice this
+# keeps the lineage down to the last well-supported rank and blanks the rest.
+apply_min_boot <- function(tax, boot, min_boot) {
+  out <- matrix(NA_character_, nrow = nrow(tax), ncol = ncol(tax), dimnames = dimnames(tax))
+  for (i in seq_len(nrow(tax))) {
+    kept <- tax[i, boot[i, ] >= min_boot]
+    if (length(kept) > 0L) out[i, seq_along(kept)] <- kept
+  }
+  out
+}
+taxa_unique <- apply_min_boot(best_hit, best_boot, min_boot)
 
 # ── Reference depth check ─────────────────────────────────────────────────────
 # assignTaxonomy returns one column per rank of the DEEPEST lineage in the
@@ -280,6 +308,56 @@ if (isTRUE(filter_enabled)) {
     asv_table <- asv_table[!drop, , drop = FALSE]
     message("[assign_taxonomy] Discard filter (", paste(filter_discard, collapse = ","), "): ",
             sum(drop), " ASV(s) removed")
+  }
+
+  # ── Discard filter, best-hit check ─────────────────────────────────────────
+  # The reported taxonomy stops at the last rank whose bootstrap support reaches
+  # min_boot (80 by default). An ASV can therefore have Mitochondria as its best
+  # hit at family level with, say, 62% support, be reported only as
+  # k__Bacteria;p__Pseudomonadota, and slip past f__Mitochondria. Organelle 16S
+  # is the typical case: plant and algal mitochondria are diverse, and with
+  # SILVA 144 the RDP classifier often stays below 80% at order and family for
+  # them although the best hit is clearly mitochondrial. Such ASVs then end up in
+  # the abundance table and, as very long branches, in the tree.
+  # So, for every ASV still in the table, each discard token is also compared with
+  # the best-hit name at the token's own rank (o__ = Order, f__ = Family, ...), and
+  # the ASV is removed when the names match and the support at that rank is at
+  # least amplicon.taxonomy.filter.discard_min_support (default 50). The keep list
+  # is not affected, and a token at a rank without bootstrap support (s__, filled
+  # by addSpecies) is only ever matched against the reported taxonomy.
+  if (length(filter_discard) > 0L && !is.null(discard_min_support) && nrow(asv_table) > 0L) {
+    asv_seqs <- unname(seqs_sub[rownames(asv_table)])
+    weak_hits <- character(0)
+    for (j in seq_along(asv_seqs)) {
+      for (tok in filter_discard) {
+        # The rank prefix this token starts with (longest match, so "sg__" is not
+        # read as "s__"), and the rank column it stands for.
+        hits <- rank_prefixes[nchar(rank_prefixes) > 0L & startsWith(tok, rank_prefixes)]
+        if (length(hits) == 0L) next
+        pfx   <- hits[which.max(nchar(hits))]
+        level <- tax_levels[match(pfx, rank_prefixes)]
+        if (!(level %in% colnames(best_hit))) next
+        name    <- best_hit[asv_seqs[j], level]
+        support <- best_boot[asv_seqs[j], level]
+        if (is.na(name) || is.na(support) || support < discard_min_support) next
+        # Under "embedded" style (UNITE) the reference value already carries its
+        # prefix (o__...), so compare the whole token; otherwise only the name.
+        wanted <- if (identical(prefix_style, "embedded")) tok else substring(tok, nchar(pfx) + 1L)
+        if (drop_other(name) == drop_other(wanted)) {
+          weak_hits[rownames(asv_table)[j]] <- paste0(tok, " at ", support, "% support")
+          break
+        }
+      }
+    }
+    if (length(weak_hits) > 0L) {
+      for (id in names(weak_hits)) {
+        message("[assign_taxonomy]   ", id, ": best hit ", weak_hits[[id]],
+                " (reported as ", asv_table[id, "taxonomy"], ")")
+      }
+      asv_table <- asv_table[!(rownames(asv_table) %in% names(weak_hits)), , drop = FALSE]
+    }
+    message("[assign_taxonomy] Discard filter, best-hit check (support >= ",
+            discard_min_support, "%): ", length(weak_hits), " more ASV(s) removed")
   }
 }
 message("[assign_taxonomy] Final ASV count: ", nrow(asv_table))

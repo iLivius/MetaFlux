@@ -603,6 +603,26 @@ if MODE == "amplicon":
     FILTER_KEEP      = _as_taxon_list(_filter_cfg.get("keep"))
     FILTER_DISCARD   = _as_taxon_list(_filter_cfg.get("discard"))
 
+    # Best-hit check of the discard filter: an ASV is also removed when its
+    # classifier best hit carries a discard token at the token's rank with at least
+    # this much support (percent, 0-100; rdp bootstrap, or SINTAX confidence x 100),
+    # even if that rank is below min_boot / sintax_cutoff and so missing from the
+    # reported taxonomy. It exists for organelle 16S (see 80a/80c). null or false
+    # switches it off, which gives the filter of MetaFlux v2.4.0 and earlier.
+    _dms = _filter_cfg.get("discard_min_support", 50)
+    if _dms is None or _dms is False:
+        FILTER_DISCARD_MIN_SUPPORT = None
+    else:
+        try:
+            FILTER_DISCARD_MIN_SUPPORT = float(_dms)
+        except (TypeError, ValueError):
+            FILTER_DISCARD_MIN_SUPPORT = -1.0
+        if not 0 <= FILTER_DISCARD_MIN_SUPPORT <= 100:
+            sys.exit(
+                f"[MetaFlux] amplicon.taxonomy.filter.discard_min_support must be a number "
+                f"from 0 to 100, or null to switch the best-hit check off (got: {_dms!r})"
+            )
+
     # Taxonomy method — validated at parse time
     TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
     if TAXONOMY_METHOD not in ("rdp", "sintax"):

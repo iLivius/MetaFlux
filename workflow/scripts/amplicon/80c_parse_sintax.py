@@ -78,6 +78,11 @@ RANK_PREFIX  = tuple(sm.params.rank_prefixes)
 # Contaminant keep/discard: rank-token lists from config, no per-marker default.
 filter_keep    = list(sm.params.filter_keep) or []
 filter_discard = list(sm.params.filter_discard) or []
+# Best-hit check of the discard filter (see "Discard filter, best-hit check" below):
+# minimum support at the token's rank, as a percentage (0-100) like min_boot, or
+# None when the check is switched off. SINTAX reports confidences as 0-1, so the
+# value is divided by 100 when it is compared.
+discard_min_support = sm.params.discard_min_support
 
 log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,6 +126,34 @@ def parse_sintax_column(field: str) -> dict[str, str]:
         value  = _strip_existing_prefix(value.strip().strip('"'))
         if value:
             result[letter] = value
+    return result
+
+
+def parse_sintax_full(field: str) -> dict[str, tuple[str, float]]:
+    """Parse VSEARCH tabbedout column 2 (the best hit's full lineage).
+
+    Format: 'd:Bacteria(1.00),p:Pseudomonadota(0.97),...,g:Pseudomonas(0.41)' —
+    every rank of the top-scoring reference, each with its bootstrap confidence,
+    including ranks below sintax_cutoff. Returns {rank_letter: (value, confidence)}.
+    The confidence is the last "(...)" of each token, because some SILVA names
+    contain brackets themselves (e.g. "Marinimicrobia (SAR406 clade)").
+    """
+    result: dict[str, tuple[str, float]] = {}
+    if not field or field in ("*", ""):
+        return result
+    for token in field.split(","):
+        token = token.strip()
+        if ":" not in token or not token.endswith(")") or "(" not in token:
+            continue
+        letter, rest = token.split(":", 1)
+        value, conf = rest.rsplit("(", 1)
+        try:
+            confidence = float(conf[:-1])
+        except ValueError:
+            continue
+        value = _strip_existing_prefix(value.strip().strip('"'))
+        if value:
+            result[letter.strip()] = (value, confidence)
     return result
 
 
@@ -215,6 +248,7 @@ if res.returncode != 0:
 # different --tabbedout format, a corrupted file, ...), not a case to guess
 # through silently, so it fails here with the line itself in the message.
 sintax_result: dict[str, dict[str, str]] = {}
+sintax_best:   dict[str, dict[str, tuple[str, float]]] = {}
 with tabbedout.open() as fh:
     for lineno, line in enumerate(fh, start=1):
         parts = line.rstrip("\n").split("\t")
@@ -223,8 +257,9 @@ with tabbedout.open() as fh:
                 f"[assign_taxonomy] {tabbedout}:{lineno}: expected 4 tab-separated "
                 f"columns from vsearch --tabbedout, got {len(parts)}: {line!r}"
             )
-        query_id, accepted_col = parts[0], parts[3]
+        query_id, full_col, accepted_col = parts[0], parts[1], parts[3]
         sintax_result[query_id] = parse_sintax_column(accepted_col)
+        sintax_best[query_id]   = parse_sintax_full(full_col)
 
 logmsg(f"SINTAX: {len(sintax_result)} query results parsed")
 
@@ -274,6 +309,40 @@ if filter_enabled:
         filtered_ids = [aid for aid in filtered_ids
                         if not _seg_match(tax_strings[aid], filter_discard)]
         logmsg(f"Discard filter ({','.join(filter_discard)}): {n_pre_excl - len(filtered_ids)} ASV(s) removed")
+
+    # ── Discard filter, best-hit check ──
+    # The accepted taxonomy stops at the last rank whose confidence reaches
+    # sintax_cutoff. An ASV whose best hit is Mitochondria at family level, but
+    # with a confidence below the cutoff there, is reported only down to class
+    # and would slip past f__Mitochondria. So each discard token is also compared
+    # with the best hit's name at the token's own rank (column 2 of the vsearch
+    # output), and the ASV is removed when the names match and the confidence at
+    # that rank is at least discard_min_support / 100. Same rule as the rdp path
+    # (80a_assign_taxonomy.R); the keep list is not affected.
+    if filter_discard and discard_min_support is not None:
+        prefix_to_letter = dict(zip(RANK_PREFIX, RANK_LETTERS))
+        weak_hits: dict[str, str] = {}
+        for aid in filtered_ids:
+            best = sintax_best.get(aid, {})
+            for tok in filter_discard:
+                # longest matching prefix, so "sg__" is not read as "s__"
+                matches = [p for p in RANK_PREFIX if p and tok.startswith(p)]
+                if not matches:
+                    continue
+                pfx = max(matches, key=len)
+                letter = prefix_to_letter[pfx]
+                if letter not in best:
+                    continue
+                name, confidence = best[letter]
+                if (_drop_other(name) == _drop_other(tok[len(pfx):])
+                        and confidence * 100 >= float(discard_min_support)):
+                    weak_hits[aid] = f"{tok} at {confidence:.2f} confidence"
+                    break
+        for aid, why in weak_hits.items():
+            logmsg(f"  {aid}: best hit {why} (reported as {tax_strings[aid]})")
+        filtered_ids = [aid for aid in filtered_ids if aid not in weak_hits]
+        logmsg(f"Discard filter, best-hit check (support >= {discard_min_support}%): "
+               f"{len(weak_hits)} more ASV(s) removed")
 
 logmsg(f"Final ASV count: {len(filtered_ids)}")
 

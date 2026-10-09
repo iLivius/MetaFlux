@@ -39,6 +39,7 @@ if TAXONOMY_METHOD == "rdp":
             filter_enabled  = FILTER_ENABLED,
             filter_keep     = FILTER_KEEP,
             filter_discard  = FILTER_DISCARD,
+            discard_min_support = FILTER_DISCARD_MIN_SUPPORT,   # best-hit check; None = off
             seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",
@@ -78,6 +79,7 @@ else:  # sintax
             filter_enabled  = FILTER_ENABLED,
             filter_keep     = FILTER_KEEP,
             filter_discard  = FILTER_DISCARD,
+            discard_min_support = FILTER_DISCARD_MIN_SUPPORT,   # best-hit check; None = off
             seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",

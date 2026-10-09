@@ -217,6 +217,13 @@ amplicon:
       # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
       keep:    #[k__Bacteria, k__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
+      # Best-hit check for discard. The reported taxonomy stops at the last rank that
+      # reaches min_boot / sintax_cutoff, so an ASV whose best hit is Mitochondria with
+      # only 60% support at family level is reported as "p__Pseudomonadota" and would
+      # escape f__Mitochondria. With this set, an ASV is also discarded when its best
+      # hit carries a discard token at the token's rank with at least this support
+      # (percent; SINTAX confidence x 100). null switches the check off.
+      discard_min_support: 50
 
   dada2:
     pool: false                               # false | "pseudo" | true
