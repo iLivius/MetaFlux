@@ -80,18 +80,14 @@ rule bracken:
         r"""
         # mean read length (R1+R2)/2 after filtering, from fastp json
         mean=$(jq -r '(.summary.after_filtering.read1_mean_length + .summary.after_filtering.read2_mean_length) / 2 | floor' {input.json})
-        # closest available bracken k-mer length by squared distance.
-        # Plain awk (not bc): bc is not declared in envs/bracken.yaml or anywhere in
-        # the repo, so it only ever worked by accident of the host system having it.
-        closest=$(awk -v mean="$mean" 'BEGIN {{
-            split("50 75 100 150 200 250 300", kmers, " ")
-            best_k = kmers[1]; best_d = (mean - kmers[1])^2
-            for (i = 2; i <= length(kmers); i++) {{
-                d = (mean - kmers[i])^2
-                if (d < best_d) {{ best_d = d; best_k = kmers[i] }}
-            }}
-            print best_k
-        }}')
+        # Closest available Bracken read-length database (the kmer_distrib files are
+        # built for these read lengths) by squared distance to the mean read length.
+        # Computed with jq, which the bracken env provides, rather than with the
+        # host's awk (or bc), so the result never depends on what the machine happens
+        # to have installed. min_by keeps the FIRST of two equally distant lengths
+        # (mean 125 -> 100), exactly as the earlier awk loop did.
+        closest=$(jq -n --argjson mean "$mean" \
+            '[50, 75, 100, 150, 200, 250, 300] | min_by((. - $mean) * (. - $mean))')
         echo "{wildcards.sample}: mean=$mean kmer=$closest" > {log}
 
         # Minimum-read threshold. With a fixed number in the config it is used as given.
@@ -103,18 +99,25 @@ rule bracken:
         # Columns are counted from the RIGHT so this works on both report layouts: the
         # standard 6-column one and the 8-column one produced by
         # --report-minimizer-data. From the end, the fields are always
-        # ... rank_code, taxid, name, so taxid is $(NF-1) and the clade total is $2.
+        # ... rank_code, taxid, name, so the taxid is the second-to-last field, and
+        # the clade total is the second field in both layouts.
         thresh="{params.thresh}"
         if [ "$thresh" = "auto" ]; then
-            classified=$(awk -F'\t' '$(NF-1) == "1" {{ print $2; exit }}' {input.report})
+            # jq reads the report as raw text lines (-R), splits each on tabs and
+            # prints column 2 of the first line whose taxid column is exactly "1".
+            classified=$(jq -nrR \
+                'first(inputs | split("\t") | select(.[-2] == "1") | .[1]) // empty' \
+                {input.report})
             if [ -z "$classified" ] || [ "$classified" -le 0 ] 2>/dev/null; then
                 echo "[bracken] WARNING: could not read a classified-read count from" \
                      "{input.report}; falling back to the floor {params.min_t}" >> {log}
                 thresh={params.min_t}
             else
-                # threshold = max(min_t, alpha * classified), rounded to a whole read.
-                thresh=$(awk -v c="$classified" -v a={params.alpha} -v m={params.min_t} \
-                    'BEGIN {{ t = int(a * c + 0.5); if (t < m) t = m; print t }}')
+                # threshold = max(min_t, alpha * classified), rounded to a whole read
+                # (x.5 rounds up). jq, from the bracken env, does the arithmetic in
+                # the same double precision the earlier host-awk call used.
+                thresh=$(jq -n --argjson c "$classified" --argjson a {params.alpha} \
+                    --argjson m {params.min_t} '[($a * $c + 0.5 | floor), $m] | max')
                 echo "[bracken] auto threshold: {params.alpha} x $classified classified" \
                      "read pairs -> -t $thresh" >> {log}
             fi

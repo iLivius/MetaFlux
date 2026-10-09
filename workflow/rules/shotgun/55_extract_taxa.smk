@@ -38,11 +38,22 @@ rule extract_taxon_reads:
     shell:
         r"""
         target="{params.target}"
-        # Find the NCBI taxid for the requested taxon name in the bracken report.
-        # index(), not a ~ regex match: a taxon name containing regex metacharacters
-        # (e.g. "Bacteroides sp.") would otherwise be interpreted as a pattern instead
-        # of matched literally.
-        taxid=$(awk -v t="$target" -F '\t' 'index($6, t) > 0 {{print $5; exit}}' {input.report})
+        # Find the NCBI taxid for the requested taxon name in the bracken report:
+        # the taxid (column 5) of the first line whose name (column 6) contains the
+        # target as plain text. A substring test, not a pattern match, so a name with
+        # regex characters in it (e.g. "Bacteroides sp.") is matched literally.
+        # Done with the Python that the krakentools env already contains (KrakenTools
+        # is a set of Python scripts), not with the host's awk, so the lookup does not
+        # depend on the machine. Same rule as the awk one-liner it replaces.
+        taxid=$(python -c '
+import sys
+target, report = sys.argv[1], sys.argv[2]
+for line in open(report):
+    fields = line.rstrip("\n").split("\t")
+    if len(fields) >= 6 and target in fields[5]:
+        print(fields[4])
+        break
+' "$target" {input.report})
         echo "{wildcards.sample}: taxon='$target' taxid=$taxid" > {log}
         if [ -n "$taxid" ]; then
             extract_kraken_reads.py -k {input.kraken} \
