@@ -60,5 +60,10 @@ rule pick_trunclen:
     threads: lambda wc: threads_for("pick_trunclen")
     resources:
         mem_mb = lambda wc: mem_mb_for("pick_trunclen"),
+    # The script needs only the Python standard library, but without a conda env
+    # Snakemake would run it with whatever Python the host provides; the small
+    # python_utils env pins the interpreter like every other step.
+    conda:
+        "../../envs/python_utils.yaml"
     script:
         "../../scripts/amplicon/50a_pick_trunclen.py"

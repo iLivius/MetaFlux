@@ -151,5 +151,8 @@ rule aggregate_read_counts:
         samples            = SAMPLES,
     log:
         LOGS / "aggregate_read_counts.log",
+    # Standard library only; the env pins the interpreter instead of using the host's.
+    conda:
+        "../../envs/python_utils.yaml"
     script:
         "../../scripts/amplicon/80b_aggregate_read_counts.py"
