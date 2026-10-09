@@ -126,6 +126,28 @@ taxa_unique <- assignTaxonomy(unique_seqs, refdb_path,
                               taxLevels = tax_levels,
                               verbose = TRUE)
 
+# ── Reference depth check ─────────────────────────────────────────────────────
+# assignTaxonomy returns one column per rank of the DEEPEST lineage in the
+# reference file, and simply names them from taxLevels in order — it never checks
+# that the reference's ranks are the ones the names describe. A reference one rank
+# deeper than the marker pack expects therefore comes back with every name shifted
+# one slot (SILVA 144's own file, with its extra Kingdom rank, would put each
+# family in the Genus column and each genus in Species), and nothing errors.
+# So compare the column count with the pack's rank model here, before anything is
+# built from it. For 16S the last slot (Species) is filled later by addSpecies, so
+# the training set itself must stop one rank short of the full model; every other
+# marker's reference covers all of its ranks.
+species_db_list <- snakemake@input[["species_db"]]
+expected_ranks  <- length(tax_levels) - if (length(species_db_list) > 0L) 1L else 0L
+if (ncol(taxa_unique) != expected_ranks) {
+  stop("[assign_taxonomy] the reference ", refdb_path, " has ", ncol(taxa_unique),
+       " ranks, but the marker pack's rank model (", paste(tax_levels, collapse = ","),
+       ") expects ", expected_ranks, " in this file",
+       if (length(species_db_list) > 0L) " (the Species slot comes from addSpecies)" else "",
+       ". The names would land on the wrong ranks. For SILVA 144 use the 6-rank file ",
+       "written by convert_silva_train, not the download itself.")
+}
+
 # addSpecies for 16S only; species_db is an empty list for every other marker
 # (ITS, 18S, gyrB, rpoB — see 80_taxonomy.smk), so this block just does
 # nothing for them. addSpecies works completely differently from
