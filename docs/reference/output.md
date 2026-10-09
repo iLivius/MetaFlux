@@ -183,12 +183,7 @@ for 18S.
     `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
     extra arguments, `NA` as a missing value. `taxonomy_lineage_full.tsv` is a plain
     tab-separated file instead: its first column is named `asv_id`, nothing is quoted,
-    and a missing rank is an empty cell. pandas reads it with the call above. In R add
-    `quote = ""`, as in
-    `read.table(..., sep = "\t", header = TRUE, row.names = 1, quote = "")`: the
-    `kingdom_note` of a eukaryotic ASV contains an apostrophe, which `read.table`
-    otherwise takes as the start of a quoted value, and the table is then cut short at
-    that row with only a warning.
+    and a missing rank is an empty cell. The same R and pandas calls read it.
 
 The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
 check and, for 16S, the organelle filter) has already been applied when these tables

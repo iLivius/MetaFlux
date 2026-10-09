@@ -190,9 +190,11 @@ consequences:
     `sintax`, the taxonomy step now runs on VSEARCH 2.32, which draws its random numbers
     differently from earlier releases, so many confidence values move slightly against
     the v2.4.0 output, even with the same seed. A lineage near the cutoff can then gain or
-    lose a trailing rank, so the few ASVs whose call at the rank of a filter token (for
-    example `o__Chloroplast`) sits right at the cutoff can be kept by one version and
-    removed by the other. In a shotgun folder the Bracken environment is now pinned to
+    lose a trailing rank, so the few ASVs whose call at the rank of a `keep` token (for
+    example `k__Bacteria`) sits right at the cutoff can be kept by one version and
+    removed by the other. A `discard` token is affected only when the best-hit check is
+    switched off: with it on, an ASV whose best hit carries the token with at least
+    `discard_min_support` support is removed whichever side of the cutoff its call falls. In a shotgun folder the Bracken environment is now pinned to
     3.1p1, so `bracken` and the steps after it run again (Kraken2 does not).
     Species-level numbers do not change; at any other `tax_lev` the OTU table is now
     built correctly, see

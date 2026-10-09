@@ -260,7 +260,7 @@ then no longer changes the result:
   All of this needs a positive `amplicon.seed`: VSEARCH reads `0` as "pick a random
   seed".
 - **`assignTaxonomy` (rdp): reproducible at any thread count, with one exception.**
-  DADA2's `assignTaxonomy` breaks exact ties between equally good reference genera at
+  DADA2's `assignTaxonomy` breaks exact ties between equally good reference lineages at
   random, outside the seed, so a few bootstrap values can differ between identical runs;
   `sintax`, the default, is not affected.
 

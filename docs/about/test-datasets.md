@@ -9,9 +9,9 @@ All five sets are public and reachable from the accessions below, so any result 
 page can be reproduced from scratch with the primers and references listed in the table.
 Exact counts of ASVs and of reads in the final table also depend on the reference release
 and the taxon-filter settings, and both have changed between MetaFlux versions, so treat
-the counts on this page as indicative: a re-run can differ somewhat. Each comparison
-below was made with both arms on the same settings, so it measures only the parameter it
-names.
+the counts on this page as indicative: a re-run can differ somewhat. Within each comparison
+below, both runs used the same reference and taxon-filter settings, so the difference
+between them holds even where the absolute counts have since moved.
 
 | Marker | Dataset | Samples | Primers | Reference |
 |---|---|--:|---|---|

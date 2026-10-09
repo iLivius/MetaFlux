@@ -426,8 +426,8 @@ Each marker has its own page with the databases it uses and its quirks:
     DADA2's `learnErrors(randomize = TRUE)` and the bootstrap confidence of both
     taxonomy methods are reproducible with this seed at any thread count (for `sintax`
     from v2.5.0 on, which runs VSEARCH 2.32), except that `assignTaxonomy` breaks exact
-    ties between reference genera with its own random number, which can move a bootstrap
-    value by a point. Read order used to escape the seed — multithreaded bowtie2 phiX
+    ties between equally good reference lineages with its own random number, which can
+    move a bootstrap value by a point. Read order used to escape the seed — multithreaded bowtie2 phiX
     removal emitted the surviving pairs in a run-dependent order, so ASVs with equal
     total abundance could swap IDs — but bowtie2 now runs with `--reorder`, so the reads
     and ASVs come out the same in every run. See

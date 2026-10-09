@@ -133,12 +133,15 @@ with out_path.open("w") as fo:
         phylum = values[phylum_col]
 
         # ── Decide the kingdom (see WHEN THE KINGDOM IS LEFT EMPTY above) ──
+        # The notes below must never contain a quote character (' or "): this file is
+        # written unquoted, and R's read.table() would take a stray apostrophe as the
+        # start of a quoted value and silently merge or drop rows.
         kingdom = ""
         note    = ""
         if not domain:
             note = "not classified to domain"
         elif domain == "Eukaryota":
-            note = "SILVA 144's DADA2 file gives eukaryotes the domain only, no kingdom"
+            note = "the SILVA 144 DADA2 file gives eukaryotes the domain only, no kingdom"
         elif not phylum:
             note = ("classified to domain only: the kingdom is read off the phylum, "
                     "so none can be given")
