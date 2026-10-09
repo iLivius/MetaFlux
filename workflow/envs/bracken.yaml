@@ -1,6 +1,12 @@
 name: bracken
 channels: [conda-forge, bioconda]
 dependencies:
-  - bracken>=3.0
-  - jq  # used by the bracken rule to read fastp's mean post-trim read length from its
-       # JSON report, to pick the closest Bracken k-mer read-length database
+  # 3.1p1 is bioconda's build of Bracken 3.1 with the fix for upstream issue #315:
+  # plain 3.1 writes 0 reads "assigned directly" (column 3 of the -w report) for
+  # almost every taxon above species. MetaFlux reads only the clade count (column 2),
+  # which is the same in both, so the abundance numbers do not change; the report
+  # itself is correct again.
+  - bracken=3.1p1
+  - jq  # used by the bracken rule for all of its small calculations: the mean
+       # post-trim read length (from fastp's JSON report), the closest Bracken
+       # read-length database, and the "auto" minimum-read threshold
