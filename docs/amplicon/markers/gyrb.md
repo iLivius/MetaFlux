@@ -171,7 +171,9 @@ trainset, with `taxonomy.min_boot` as the bootstrap confidence minimum and
 no separate `addSpecies` step: unlike 16S, where species come from a second SILVA file,
 the gyrB trainset is itself labelled to species, so the classifier reaches the species rank
 directly. `amplicon.seed` fixes the bootstrap RNG, so RDP results are reproducible run to
-run.
+run, apart from DADA2's random tie-breaking between equally good reference genera,
+which can move a bootstrap value between identical runs (see
+[Troubleshooting](../../troubleshooting.md)).
 
 The classifier writes seven rank columns, taken from the marker pack:
 
@@ -212,8 +214,8 @@ tokens (`k__Bacteria`, `o__Chloroplast`) used for the rRNA markers. See
 
 `discard: [other]` drops the paralogs, and `keep: [gyrB]` is not an equivalent way of
 writing it. An ASV the classifier could not tag at all has an empty taxonomy string, so it
-carries no segment for either list to match: `discard` leaves it in, `keep` throws it out.
-In the shipped gyrB test run that is 5 of 256 ASVs — 2% lost silently by the `keep` form.
+carries no segment for either list to match: `discard` leaves it in, `keep` throws it out,
+silently.
 
 !!! tip "Leave the filter empty on the first run"
 
@@ -272,7 +274,7 @@ runs either way, so off-target amplicons of the wrong size are still removed.
 
 ## What the output looks like
 
-The final tables are the same three files as for every other marker, under
+The final tables are the same four files as for every other marker, under
 `6.taxonomy/` in the output directory:
 
 | File | Rows | Notes |
@@ -280,6 +282,7 @@ The final tables are the same three files as for every other marker, under
 | `asv_table.txt` | ASV IDs | per-sample counts plus one `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table keyed by sequence instead of ID |
 | `taxon_seq_table.txt` | ASV IDs | one column per rank (`Gene` … `Species`) plus the sequence |
+| `asv_table_unfiltered.txt` | ASV IDs, every ASV that reached the filter | the counts and `taxonomy` before the taxon filter, plus `metaxa2_origin` (`NA` for gyrB) and `filter_status`; the paralogs that `discard: [other]` removes can still be counted here |
 
 A gyrB taxonomy string keeps the gene tag in front of the GTDB lineage:
 

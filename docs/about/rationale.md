@@ -87,8 +87,8 @@ distribution itself, keeping ASVs inside
 moves the overlap constraint, not the ASV window.
 
 The probe result is cached under `refdb/cache/`. The filename encodes the marker
-type, the reference, and a hash of both primer sequences, so the probe re-runs
-only when one of those three actually changes.
+type, the reference (for 16S also the lineages left out of the statistics), and a hash
+of both primer sequences, so the probe re-runs only when one of those actually changes.
 
 !!! note "Automatic is not always right"
 
@@ -170,12 +170,13 @@ infrastructure around them is about being able to get the same answer again.
   (software deployment method) has Snakemake build those environments on first
   run and reuse them afterwards. Steps do not share one large environment, so
   the dependencies of one tool cannot force a change in another's. Where a
-  specific version matters it is pinned in the file — `r-rcppparallel=5.1.9` in
-  the DADA2 environments, for instance, because newer builds break DADA2 at load
-  time. A few rules have no environment of their own and run in Snakemake's: those
-  that only link files, count reads, fetch or concatenate references, or crunch
-  numbers in Python, using standard system utilities whose version does not change
-  the result.
+  specific version matters it is pinned in the file: `r-rcppparallel=5.1.9` in the
+  DADA2 environments, because newer builds break DADA2 at load time; `vsearch=2.32.0`,
+  because the random draws behind the `sintax` confidence values change between
+  releases; and `bracken=3.1p1`, for its corrected report. A few rules have no
+  environment of their own and run in Snakemake's: those that only link files, count
+  reads, write the sample list, or fetch and join host references, using Snakemake's
+  own Python or standard system utilities whose version does not change the result.
 - **Resumable.** Snakemake tracks which outputs already exist and are current, so
   an interrupted run continues rather than restarting; `--rerun-incomplete`
   re-does any job that was cut off mid-write.

@@ -52,15 +52,17 @@ references:
   # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS) are
   # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
   # DB filenames and download URLs, and MetaFlux fetches them on first use into
-  # refdb_root. An entry here is only needed to RELOCATE one, e.g.
-  #     silva: {train: /shared/dbs/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz}
+  # refdb_root. An entry here is needed only to RELOCATE one or, for 16S, to pick
+  # the SILVA release (see below), e.g.
+  #     silva: {species: /shared/dbs/silva_v144_assignSpecies.fa.gz}
   #
   # 16S ships two SILVA releases: 144 (the default) and 138.2. To run on 138.2, put
   #     silva: {release: "138.2"}
   # in your run config. Each release keeps its own file names under refdb_root, so
-  # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank
-  # that MetaFlux removes before classifying and restores afterwards in
-  # 6.taxonomy/taxonomy_lineage_full.tsv; see silva_other under amplicon.taxonomy.)
+  # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank,
+  # which MetaFlux removes before classifying and restores afterwards in
+  # 6.taxonomy/taxonomy_lineage_full.tsv. Its "--other" names are a separate
+  # matter, set by amplicon.taxonomy.silva_other.)
   refdb_root: refdb            # where fetched databases are cached
 
   phix: # [shared] — used by both modes; amplicon also builds a bowtie2 index
@@ -84,10 +86,11 @@ amplicon:
                                               # (18S: keep [d__Eukaryota]).
   its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
 
-  # Fixes the RNG for every stochastic step in the amplicon path: DADA2
-  # learnErrors(randomize=TRUE) and the bootstrap confidence of the taxonomy
-  # step, VSEARCH --sintax (sintax) or DADA2 assignTaxonomy (rdp). With it these
-  # steps give the same result at any thread count, with one exception:
+  # Fixes the RNG for the stochastic steps in the amplicon path: DADA2
+  # learnErrors(randomize=TRUE), the bootstrap confidence of the taxonomy step,
+  # VSEARCH --sintax (sintax) or DADA2 assignTaxonomy (rdp), and, with phylogeny
+  # on, the tree search (see amplicon.phylogeny). With it the first two give the
+  # same result at any thread count, with one exception:
   # assignTaxonomy breaks exact ties between equally good reference genera at
   # random, outside this seed, so with rdp a few bootstrap values can differ
   # between identical runs. Keep it a positive number: VSEARCH reads 0 as
@@ -105,6 +108,8 @@ amplicon:
 
   expected_length: auto                       # int | [min,max] | "auto"
                                               # 16S auto: in-silico PCR against SILVA; uses probe_length_stat.16S.
+                                              #   Chloroplast, mitochondrial and eukaryote references
+                                              #   are left out of the length statistics.
                                               # ITS auto: length distribution of UNITE UCHIME ITS1/ITS2 sequences.
                                               # 18S auto: in-silico PCR against SILVA-Euk; uses probe_length_stat.18S.
                                               #   V4 primers (TAReuk/Bass/Parfrey/Hadziavdic, 515Y-926R) work with
@@ -153,8 +158,8 @@ amplicon:
                                               # and discards more short reads. Do NOT set 100 --
                                               # it demands that every read reach the cut, so the
                                               # ceiling collapses to the single shortest read in
-                                              # the file (79 bp on the 18S test set). There is no
-                                              # value that switches the guard off.
+                                              # the file. There is no value that switches the
+                                              # guard off.
     # 16S, 18S, gyrB and rpoB all use the same Q-based picker + overlap constraint.
     # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
     # no hard cut is applied; quality is controlled by maxEE and min_len only.
@@ -168,7 +173,10 @@ amplicon:
     range: null                               # [min, max] — overrides auto when set; required when mode=manual
 
   extraction:
-    enabled: true                             # Metaxa2 (16S) or ITSx (ITS); set false to skip
+    enabled: true                             # Metaxa2 (16S) or ITSx (ITS); set false to skip.
+                                              # 16S: false also leaves the organelle filter
+                                              # (taxonomy.filter.organelles) without Metaxa2's
+                                              # call, so it removes nothing.
                                               # 18S/gyrB/rpoB have NO region extractor — set false
                                               # for these (left true is auto-forced off with a warning)
 
@@ -199,8 +207,9 @@ amplicon:
       # base layer beneath your --configfile, so a concrete value here would silently
       # apply to any run that does not set its own (e.g. 16S taxon strings leaking into
       # an 18S run, which would discard every eukaryotic ASV). Left unset they resolve
-      # to [] = no filtering, which fails safe. Copy the line for your marker into YOUR
-      # run config and uncomment it there.
+      # to [] = no token filtering, which fails safe (on 16S the organelle filter below
+      # still removes Metaxa2's mitochondria/chloroplast calls). Copy the line for your
+      # marker into YOUR run config and uncomment it there.
       #
       # Recommended starting points:
       #   16S  : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
@@ -208,7 +217,7 @@ amplicon:
       #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
       #                                                        # use k__Eukaryota with SILVA-Euk
       #   gyrB : no recommended default — the DD7RZ8 paralog tag (discard: [other])
-      #          is a separate, structural filter; see README "Running gyrB"
+      #          is a separate, structural filter; see docs/amplicon/markers/gyrb.md
       #   rpoB : no recommended default — FROGS RefSeq has no non-rpoB contamination
       #          equivalent to filter; leave empty unless your own run shows otherwise
       # To drop lab/kit contaminants a blank control revealed, add them to discard,
@@ -220,7 +229,8 @@ amplicon:
       # only 60% support at family level is reported as "p__Pseudomonadota" and would
       # escape f__Mitochondria. With this set, an ASV is also discarded when its best
       # hit carries a discard token at the token's rank with at least this support
-      # (percent; SINTAX confidence x 100). null switches the check off.
+      # (percent, 0-100; SINTAX confidence x 100). It does nothing while discard is
+      # empty; null switches it off.
       discard_min_support: 50
       # Organelle filter, 16S only: metaxa2 | off. Metaxa2, which already runs as the
       # 16S region extractor, sorts every ASV into one origin (bacteria, archaea,
@@ -399,7 +409,7 @@ shotgun:
     # Because it is ~900 MB, download it once to a local path rather than
     # re-fetching the URL on every fresh run.
     host_genomes: []                          # e.g. [/path/to/human_virus_masked.fasta.gz]; [] = skip
-    #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz     # masked human (889 MB) — see README
+    #   - https://zenodo.org/records/4116107/files/human_virus_masked.fasta.gz     # masked human (889 MB) — see docs/shotgun/decontamination.md
     #   - /path/to/human_virus_masked.fasta.gz                                                # local alternative (recommended for repeat runs)
     host_min_id: 0.95                         # BBMap minid — approximate minimum alignment identity for host removal
 
@@ -463,11 +473,9 @@ shotgun:
     # a sharp peak. Leaving the threshold at a flat 10 costs up to 0.34 F1. Roughly:
     # 2M pairs -> 100, 5M -> 250, 15M -> 750.
     #
-    # Confirmed on a second, independent pass: refitting from scratch across all 41
-    # CAMI II marine/rhizosphere/strain-madness samples (not just the 5 used for the
-    # first fit) and a Kraken2 PlusPF build eight months newer put the true median
-    # optimum at 6.0e-05 -- a 1.2x shift on 8x more, fully independent data. No change
-    # made; see docs/shotgun/confidence-and-threshold.md for the full comparison.
+    # A fit on all 41 CAMI II marine, rhizosphere and strain-madness samples, with a
+    # newer PlusPF build, puts the median optimum at 6.0e-05, well inside that plateau.
+    # See docs/shotgun/confidence-and-threshold.md for the full comparison.
     #
     # Optional refinement if you know your community, though rarely worth the trouble:
     #   3e-05  defined mixtures / low diversity (tens of species)
@@ -503,8 +511,8 @@ shotgun:
     # handed back to its parent for Bracken to redistribute among the relatives
     # that passed, rather than deleted. That preserves nearly all of them but not
     # quite all: if EVERY species under a genus fails, Bracken has nowhere at the
-    # target rank to send that genus's reads and drops them (measured: -0.16% of
-    # reads on the four test samples). Check the per-sample logs for your own data.
+    # target rank to send that genus's reads and drops them, usually a small fraction
+    # of the sample. Check the per-sample logs for your own data.
     #
     # UNITS — the easy mistake. Published thresholds are in unique K-MERS:
     #   KrakenUniq (Breitwieser & Salzberg 2018): ~2,000 per million reads, or
@@ -534,9 +542,9 @@ shotgun:
     # 0.01 = 1%. Note the denominator is Kraken2's clade reads over all classified
     # reads — NOT the taxon's share of the final Bracken table, which is usually much
     # larger. So this is a backstop against a pathological case, not a routine
-    # override: on the four test samples it never fired. That is deliberate. A rail
-    # keyed on post-Bracken abundance would have rescued the clearest false positive
-    # in the test data, which is precisely the taxon the gate exists to remove.
+    # override, and it rarely fires. That is deliberate: a rail keyed on post-Bracken
+    # abundance would rescue exactly the thinly evidenced taxa that Bracken inflates,
+    # which are what the gate exists to remove.
     never_prune_above_fraction: 0.01
 
   # OTU-table taxon filter — the shotgun counterpart of amplicon.taxonomy.filter.
@@ -589,22 +597,19 @@ resources:
                                               # setting rather than a performance one. IQ-TREE's search
                                               # visits candidate trees in an order that depends on when
                                               # each thread finishes, so two runs of the SAME alignment
-                                              # at 4 threads can end on different (equally good) trees:
-                                              # measured on the 211-ASV test set, 52 of 416 splits apart,
-                                              # tree length 17.97 vs 18.68. At one thread the two runs
-                                              # were byte-identical. The price is real but small at
-                                              # amplicon scale: about 91 s against 60 s at four threads,
-                                              # on the 211-ASV test alignment. Raise it
-                                              # if you have thousands of ASVs and can live with a tree
-                                              # that is not exactly reproducible; IQ-TREE parallelises
-                                              # across alignment COLUMNS and a 16S alignment is only
-                                              # ~250-430 wide, so do not expect much above 4.
-                                              # raxml-ng clamps this further to what
-                                              # its own --parse step recommends (1 on the 211-ASV test
-                                              # alignment; it scales with the number of distinct
-                                              # alignment patterns), because it terminates when given
-                                              # far too many threads for a short alignment (16 did, on
-                                              # that alignment). The fasttree backend ignores this key: it is
+                                              # on several threads can end on different (equally good)
+                                              # trees, while on one thread they give the same tree. The
+                                              # price is small at amplicon scale: a minute or two for a
+                                              # few hundred ASVs. Raise it if you have thousands of ASVs
+                                              # and can live with a tree that is not exactly
+                                              # reproducible; IQ-TREE parallelises across alignment
+                                              # COLUMNS and a 16S alignment is only a few hundred wide,
+                                              # so do not expect much above 4. raxml-ng clamps this
+                                              # further to what its own --parse step recommends
+                                              # (usually 1 for an amplicon alignment; it scales with the
+                                              # number of distinct alignment patterns), because it
+                                              # terminates when given far too many threads for a short
+                                              # alignment. The fasttree backend ignores this key: it is
                                               # pinned single-threaded in the rule, since FastTree's
                                               # parallel binary is documented non-deterministic and the
                                               # serial one is fast enough that there is nothing to gain.

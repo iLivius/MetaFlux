@@ -27,7 +27,9 @@ snakemake --sdm conda --cores 16 --configfile config/config.local.yaml --dry-run
     `amplicon.taxonomy.filter.keep`: a 16S `keep: [k__Bacteria, k__Archaea]`
     leaking into an 18S run would discard every eukaryotic ASV. The `keep` and
     `discard` lines are therefore commented out in the template, so unset they
-    resolve to `[]` — no filtering, which fails safe.
+    resolve to `[]` and match nothing, which fails safe. (`filter.organelles` ships
+    set: it needs no tokens and acts on 16S only, where it removes what Metaxa2 calls
+    mitochondria or chloroplast.)
 
 Paths may be absolute or relative. **Relative paths resolve against the directory
 snakemake is invoked from**, not against the location of the config file. Absolute
@@ -148,7 +150,7 @@ must declare everything the pack needs, not just the part you wanted to change.
 
 Two directions, and they are not symmetrical.
 
-**A config entry overriding a pack** happens in exactly one place: database locations.
+**A config entry overriding a pack** happens in one place: database locations.
 Every pack declares a default filename and download URL for each database it owns, and
 the run config only has to name one when you want to **relocate** it — to point at a
 copy already on a shared filesystem rather than let MetaFlux download its own:
@@ -164,13 +166,18 @@ is truthiness, so an entry left `null` or blank counts as absent and falls back 
 pack silently rather than erroring. The key that relocates each database is listed in
 [Markers](../amplicon/markers/index.md).
 
+Two 16S settings do not override the pack but choose between variants it declares:
+`references.silva.release` picks the SILVA release (`144` or `138.2`), and
+`amplicon.taxonomy.silva_other` picks which build of the SILVA 144 files is used
+(`other-verbatim` or `other-stripped` in their names).
+
 **A pack overriding the config** is the other direction, and it is the one case where
 the workflow does not do what your config literally said. It is worth knowing about,
 because if you copy a config between markers you will meet it.
 
 It happens when a setting asks for something that does not exist *for the marker you
-chose* — not something unwise, something genuinely unavailable. Two cases ship today,
-and they behave differently on purpose:
+chose* — not something unwise, something genuinely unavailable. There are two such
+cases, and they behave differently on purpose:
 
 | You asked for | On these markers | What happens |
 |---|---|---|
@@ -337,7 +344,8 @@ neither the download nor the index is needed there.
 SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8 and FROGS are **not** listed in the
 config. Each marker pack (`workflow/markers/<type>.yaml`) declares its own database
 filenames and download URLs, and MetaFlux fetches (and where needed converts) them
-on first use into `refdb_root`. An entry under `references` is only needed to
+on first use into `refdb_root`. An entry under `references` is needed only to
+choose the SILVA release for 16S (see [SILVA release](#silva-release-16s) below) or to
 **relocate** a database — for instance to point at a copy already on a shared
 filesystem:
 
@@ -383,7 +391,7 @@ references:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `6.taxonomy/taxonomy_lineage_full.tsv`; 138.2 has neither. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
+| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `6.taxonomy/taxonomy_lineage_full.tsv`. SILVA 138.2 has no Kingdom rank, so nothing is removed and that file is not written. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
 
 ---
 
@@ -406,7 +414,7 @@ amplicon:
 |---|---|---|---|
 | `type` | Selects the marker pack: which databases are used, whether a region extractor runs, how the amplicon length is measured, and which taxonomic ranks the output carries | `16S` | Matched case-insensitively, so `gyrb`, `GYRB` and `gyrB` all resolve to the shipped `gyrB` pack. An unknown value lists the available markers and stops. |
 | `its_region` | Which ITS subregion was amplified | `ITS2` | Only read when `type: ITS`. Selects the UNITE UCHIME probe reference and the ITSx region kept after extraction. |
-| `seed` | Fixes the random number generator for the stochastic steps of the amplicon path | `42` | Passed to `dada_seqtab`, `assign_taxonomy` and, when phylogeny is enabled, `phylo_tree` (all three backends). |
+| `seed` | Fixes the random number generator for the stochastic steps of the amplicon path | `42` | Passed to `dada_seqtab`, `assign_taxonomy` and, when phylogeny is enabled, `phylo_tree` (all three backends). Keep it a positive number: VSEARCH reads `0` as "pick a random seed", and `sintax` results would then change from run to run. |
 
 Each marker has its own page with the databases it uses and its quirks:
 [16S](../amplicon/markers/16S.md), [ITS](../amplicon/markers/its.md),
@@ -657,7 +665,7 @@ empty table.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `enabled` | Runs the marker's region extractor over the ASVs, trimming each to the target region and dropping ASVs the extractor cannot place | `true` | Metaxa2 for 16S, ITSx for ITS. 18S, gyrB and rpoB have no extractor. |
+| `enabled` | Runs the marker's region extractor over the ASVs, trimming each to the target region and dropping ASVs the extractor cannot place | `true` | Metaxa2 for 16S, ITSx for ITS. 18S, gyrB and rpoB have no extractor. For 16S the organelle filter (`taxonomy.filter.organelles`) works from Metaxa2's call, so with `false` it does nothing and `metaxa2_origin` in `asv_table_unfiltered.txt` is `NA`. |
 
 Markers with no extractor (`18S`, `gyrB`, `rpoB`) should be run with
 `enabled: false`. Left `true`, MetaFlux prints a warning and forces it off rather
@@ -706,7 +714,7 @@ still runs either way.
 | `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists, and switches `organelles` off too. |
 | `keep` | Tokens defining what survives | unset → `[]` | An ASV is kept only if one of its ranks matches a token. An empty list does nothing. |
 | `discard` | Tokens pruning what `keep` left | unset → `[]` | An ASV is removed if any of its ranks matches a token. Runs after `keep`. |
-| `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. `null` switches it off (the v2.4.0 behaviour). See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
+| `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. A number from 0 to 100; `null` switches it off (the v2.4.0 behaviour), and any other value stops the run at start-up. It does nothing while `discard` is empty. See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
 | `organelles` | Also removes the ASVs that Metaxa2 calls mitochondria or chloroplast | `metaxa2` | 16S only, and only with `extraction.enabled: true`, since Metaxa2 has to have run; for every other marker it is inactive and the run prints one info line. Runs after `keep`, `discard` and the best-hit check, and catches plant mitochondria the classifier reports as bacteria (e.g. *Enterobacterales*), which no token can match. Metaxa2's other calls (domains, eukaryota, uncertain) remove nothing. `off` (or `null`) switches it off; any other value stops the run at start-up. Every ASV, organelles included, is still listed in `6.taxonomy/asv_table_unfiltered.txt`. See [the organelle filter](../amplicon/taxon-filter.md#the-organelle-filter-organelles). |
 
 Each token is matched against a whole segment of the taxonomy string
@@ -800,32 +808,21 @@ The full treatment is on
 
 !!! note "What these two cost in practice"
 
-    Both were previously set looser than DADA2 ships them (10 and 2). Moving them to
-    the package defaults was measured by running each of the five
-    [test datasets](../about/test-datasets.md) twice, once with each pair of values:
-
-    | Marker | Reads merged | ASVs |
-    |---|---|---|
-    | 16S | −1.4% | 273 → 211 |
-    | ITS | **−33.5%** | 29 → 12 |
-    | 18S | −0.6% | 1,508 → 1,268 |
-    | gyrB | −2.7% | 256 → 241 |
-    | rpoB | −0.3% | 48 → 44 |
-
-    Read counts through filtering and denoising were identical in every case; the whole
-    difference appears at the merge step. ASV counts drop much further than reads
-    because pairs that merge only with mismatches tolerated tend to yield distinct,
-    low-abundance sequences — so the loss is concentrated in rare ASVs. Loosening
-    them again recovers those ASVs, at the cost of accepting overlap disagreements
-    that DADA2 treats as evidence against merging.
+    Looser values, such as 10 and 2, merge more pairs, but the extra pairs mostly turn
+    into distinct, low-abundance ASVs, so the stricter defaults cost far more rare ASVs
+    than reads. Filtering and denoising are not affected; the whole difference appears
+    at the merge step. The measured cost for each marker is on the
+    [Test datasets](../about/test-datasets.md#effect-of-moving-the-merge-parameters-to-dada2s-defaults)
+    page. Loosening them recovers those ASVs, at the cost of accepting overlap
+    disagreements that DADA2 treats as evidence against merging.
 
     **ITS is the exception worth knowing about.** ITS2 length varies widely between
     fungi, so with 2×300 reads the longer amplicons overlap by only a little — exactly
     the pairs a 10 → 12 bp requirement drops, and their short overlap sits in the
-    low-quality 3′ tails where `max_mismatch: 0` then removes more. A third of the
-    merged reads were lost to these two settings. On the mock that cost no genera, but
-    for ITS on a more variable community `min_overlap: 10` with `max_mismatch: 2` is a
-    defensible setting.
+    low-quality 3′ tails where `max_mismatch: 0` then removes more. On an ITS run the
+    two settings together can cost a large share of the merged reads, so for ITS on a
+    variable community `min_overlap: 10` with `max_mismatch: 2` is a defensible
+    setting.
 | `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so `length_filter.mode: auto` is no longer sizing a meaningful window — switch to `manual` with an explicit `range` sized for the concatenated length. |
 | `merge.trim_overhang` | Trims bases that read past the far end of the amplicon | `true` | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
 | `chimera.method` | `removeBimeraDenovo` method | `consensus` | Chimeras are called per sample and the verdicts pooled. |
@@ -841,9 +838,9 @@ The full treatment is on
     changing it, since the right value depends on the marker and on how samples were
     pooled:
 
-    - [dada2 #2030 — Questions about chimera filtering](https://github.com/benjjneb/dada2/issues/2030)
-    - [dada2 #1715 — High loss of reads following chimera removal](https://github.com/benjjneb/dada2/issues/1715)
-    - [dada2 #1368 — Remove chimeras, consensus vs. pooled](https://github.com/benjjneb/dada2/issues/1368)
+    - [DADA2 issue: Questions about chimera filtering](https://github.com/benjjneb/dada2/issues/2030)
+    - [DADA2 issue: High loss of reads following chimera removal](https://github.com/benjjneb/dada2/issues/1715)
+    - [DADA2 issue: Remove chimeras, consensus vs. pooled](https://github.com/benjjneb/dada2/issues/1368)
 
     A large chimeric fraction is more often a symptom than a parameter problem: check
     that primers were fully removed first, since residual primer sequence is a common
@@ -872,16 +869,15 @@ separate phylogeny seed.
 
 There is deliberately **no rooting option**: the tree is exported unrooted, only. You
 will prune it in R (decontam, abundance filtering) before computing any metric, and a
-root placed on the full ASV set stops being valid at the first pruned tip. A leftover
-`root:` key from a pre-release draft is rejected at parse time with a pointer to the
-docs rather than silently ignored.
+root placed on the full ASV set stops being valid at the first pruned tip. A `root:` key
+is rejected at parse time with a pointer to the docs rather than silently ignored.
 
 !!! warning "Reproducible at the shipped defaults — and easy to give up"
     Two complete runs of the same data produce the same tree byte for byte, which took
     three settings working together: `--reorder` on the phiX step, an alignment built
     from a sequence-sorted FASTA, and `phylo_tree: 1`. Raise `phylo_tree` and you trade
-    that away — two runs of the *identical* alignment at 4 threads landed 52 of 416
-    splits apart. The taxonomy step that decides which ASVs reach the tree needs no
+    that away: on several threads, two runs of the *identical* alignment can end on
+    different, equally good trees. The taxonomy step that decides which ASVs reach the tree needs no
     such setting: with a fixed `amplicon.seed` it gives the same result at any thread
     count (`sintax` from v2.5.0 on; `rdp` apart from DADA2's rare random tie-breaks, see
     the seed note above). Details in the
@@ -1105,7 +1101,7 @@ so they are what a cluster executor turns into job requests.
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |
-| `phylo_tree` | amplicon | 1 | Applies to the `iqtree` and `raxml-ng` backends only. **One thread is a reproducibility setting, not a performance one**: IQ-TREE's search depends on when each thread finishes, so two runs of the same alignment at 4 threads ended 52 of 416 splits apart (tree length 17.97 vs 18.68), while two runs at 1 thread were byte-identical. The cost on the 211-ASV test alignment is about 91 s against about 60 s at four threads. Raise it if you have thousands of ASVs and can accept a tree that is not exactly reproducible; the gain is limited anyway, because IQ-TREE parallelises across alignment **columns** and a 16S alignment is only ~250–430 wide. This is the one key whose fallback is **not** `threads_default` — a rule that does not name it here gets 1, not 4. RAxML-NG clamps it further to what its own `--parse` step recommends (1 on the 211-ASV test alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment — 16 threads did, on that alignment. The `fasttree` backend ignores this key — see the note below. |
+| `phylo_tree` | amplicon | 1 | Applies to the `iqtree` and `raxml-ng` backends only. **One thread is a reproducibility setting, not a performance one**: IQ-TREE's search depends on when each thread finishes, so two runs of the same alignment on several threads can end on different, about equally good trees, while two runs on one thread give the same tree. At amplicon scale one thread costs little: a minute or two for a few hundred ASVs. Raise it if you have thousands of ASVs and can accept a tree that is not exactly reproducible; the gain is limited anyway, because IQ-TREE parallelises across alignment **columns** and a 16S alignment is only a few hundred wide. This is the one key whose fallback is **not** `threads_default` — a rule that does not name it here gets 1, not 4. RAxML-NG clamps it further to what its own `--parse` step recommends (usually 1 for an amplicon alignment; it scales with the number of distinct alignment patterns) because it *terminates* when given far too many threads for a short alignment. The `fasttree` backend ignores this key — see the note below. |
 | `phylo_export` | amplicon | 1 | Validates the tree, writes the Newick. |
 | `phylo_qc` | amplicon | 1 | Reads the tree once for the QC report. |
 | `decontam_phix` | shotgun | 6 | BBDuk scales poorly past 4–6 worker threads on a 5 kb reference; run more samples in parallel instead. |
@@ -1155,8 +1151,8 @@ so they are what a cluster executor turns into job requests.
     the `trim_adapters` rule — there is no rule called `fastp`, and a
     `trim_adapters` key here is ignored. Rules that declare no `threads` or
     `mem_mb` at all — `link_reads`, `count_reads_*`, `revcomp_primers`, the
-    `fetch_*` and `convert_*` reference rules, `samples_manifest` and
-    `aggregate_read_counts` — take Snakemake's own defaults and ignore any entry
+    `fetch_*` and `convert_*` reference rules, `restore_kingdom`, `samples_manifest`
+    and `aggregate_read_counts` — take Snakemake's own defaults and ignore any entry
     of the same name. Adding a key for a rule that does not look it up has no
     effect. Conversely, `finalize_otu_table` does look its resources up but has
     no entry in the template, so it runs on `threads_default` and

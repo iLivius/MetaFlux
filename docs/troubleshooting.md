@@ -1,10 +1,11 @@
 # Troubleshooting
 
-Four situations come up often enough to be worth writing down: an automatic
+Six situations come up often enough to be worth writing down: an automatic
 truncation length that throws away every read, a PhiX-removal step that stops on
-mis-paired FASTQs, small differences between two runs on the same data, and
-YAML mistakes in the config. Each entry gives the symptom, the reason behind it,
-and what to change.
+mis-paired FASTQs, a shotgun OTU table that comes out empty at a rank other than
+species, small differences between two runs on the same data, a reference download
+that fails its md5 check, and YAML mistakes in the config. Each entry gives the
+symptom, the reason behind it, and what to change.
 
 ## Amplicon: automatic `truncLen` can drop all reads on very clean runs
 
@@ -43,20 +44,20 @@ full read length, and DADA2's `filterAndTrim` **discards any read shorter than
 `truncLen`** rather than padding it. So a cut placed at the very end of the read
 removes almost everything, and DADA2 has nothing left to work with.
 
-!!! example "What it looked like on a real library, before the guard existed"
+!!! example "What it looks like on a real library without the guard"
 
-    The 18S set in [test datasets](about/test-datasets.md) is where this was found.
-    Its R1 quality never falls below Q20, so `auto` put the R1 cut on the ceiling and
-    returned `truncLen = 288 / 239`. After primer trimming the reads themselves were:
+    The 18S set in [test datasets](about/test-datasets.md) shows it. Its R1 quality
+    never falls below Q20, so without the guard `auto` puts the R1 cut on the ceiling
+    and returns `truncLen = 288 / 239`. After primer trimming the reads themselves are:
 
     | | min | p05 | median | max |
     |---|--:|--:|--:|--:|
     | R1 | 78 | 271 | 281 | 289 |
     | R2 | 54 | 282 | 282 | 298 |
 
-    The ceiling came out at 288 because one sample contained R1 reads that long. Half
+    The ceiling comes out at 288 because one sample contains R1 reads that long. Half
     the reads stop at 281. Since `filterAndTrim` discards anything shorter than
-    `truncLen`, the cut kept 9 of 908,768 pairs and DADA2 finished with 3 ASVs.
+    `truncLen`, the cut keeps 9 of 908,768 pairs and DADA2 finishes with 3 ASVs.
 
     Retention against the R1 cut, measured on this library:
 
@@ -67,10 +68,9 @@ removes almost everything, and DADA2 has nothing left to work with.
     Eighteen base pairs separate "loses everything" from "loses nothing".
 
     With the 95% read-coverage cap the R1 ceiling comes in at 271 instead of 288, and
-    `auto` now returns 271 / 239 on this library with no manual intervention. It carries
-    90.9% of its raw reads through to the final table: 828,018 reads, against 828,170
-    for the 270 / 239 that previously had to be worked out by hand — a difference of
-    0.02%.
+    `auto` returns 271 / 239 on this library with no manual intervention. It carries
+    90.9% of the raw reads through to the final table, practically the same as a
+    hand-picked 270 / 239.
 
 **Why it can still happen with the guard on.** Two cases:
 
@@ -194,22 +194,22 @@ More on host references and masking is in
 
 **Cause.** Fixed in v2.5.0. Up to v2.4.0, rule `kraken_biom` ran kraken-biom with its
 default settings, which assume a species-level report: it takes the clade count for
-species, and for every coarser rank only the reads placed directly on the taxon.
-Bracken 3.1 writes 0 in that column for almost every taxon above species (an upstream
-bug, [Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315)), so those
-taxa dropped out. A genus survived only when Kraken2 had placed no reads on any of its
-species, and at class, phylum or domain level nothing survived at all. On the
-benchmark data the genus tables kept between 0.06 % and 9 % of the reads: 2 to 114
-genera, where Bracken had found 117 to 687. Bracken's `{sample}_output.txt` files were
-never affected, and neither were species-level runs.
+species, and from genus up to order only the reads placed directly on the taxon.
+Plain Bracken 3.1 writes 0 in that column for almost every taxon above species (a bug
+in Bracken itself, fixed in the 3.1p1 build that MetaFlux pins from v2.5.0 on), so
+those taxa dropped out. A genus survived only when Kraken2 had placed no reads on any
+of its species, and at class, phylum or domain level, which lie outside that range,
+nothing survived at all. Bracken's `{sample}_output.txt` files were never affected, and
+neither were species-level runs.
 
 **Fix.** Update to v2.5.0 and run the same command again, from the same MetaFlux
-folder. Snakemake keeps a record of how each output was made (in `.snakemake/`), sees
-that rule `kraken_biom` has changed, and rebuilds the table from the Bracken files
-already in the output directory: only `kraken_biom` and `finalize_otu_table` run,
-Kraken2 and Bracken do not. A dry run (`-n`) shows those two jobs before anything
-runs. If they do not appear, for example because the run used
-`--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force them:
+folder. Snakemake keeps a record of how each output was made (in `.snakemake/`) and
+sees that rule `kraken_biom`, rule `bracken` and the Bracken environment have changed.
+It runs `bracken` again for each sample, on the Kraken2 reports already in the output
+directory, then `kraken_biom`, `finalize_otu_table` and MultiQC (and per-taxon read
+extraction, when it is on). Kraken2 does not run again. A dry run (`-n`) lists these
+jobs before anything runs. If `kraken_biom` is not among them, for example because the
+run used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force it:
 
 ```bash
 snakemake --sdm conda --cores 4 --configfile <your config> -R kraken_biom
@@ -257,10 +257,32 @@ then no longer changes the result:
   cutoff can gain or lose a trailing rank, even with the same seed. The raw
   `_sintax_raw.tsv` lists the ASVs in the order the threads finish them, so sort it
   before comparing two runs; the tables built from it do not depend on that order.
+  All of this needs a positive `amplicon.seed`: VSEARCH reads `0` as "pick a random
+  seed".
 - **`assignTaxonomy` (rdp): reproducible at any thread count, with one exception.**
   DADA2's `assignTaxonomy` breaks exact ties between equally good reference genera at
   random, outside the seed, so a few bootstrap values can differ between identical runs;
   `sintax`, the default, is not affected.
+
+## Amplicon: a reference download stops with "md5 mismatch"
+
+!!! warning "Symptom"
+
+    A `fetch_*` rule fails, and its log (`logs/refdb/fetch_<name>.log` in the output
+    directory) ends with:
+
+    ```text
+    md5 mismatch for <file>: expected …, got …
+    ```
+
+**Cause.** The downloaded file is not the one the marker pack expects: the download was
+cut off, a proxy returned an error page, or the file behind the address has changed.
+MetaFlux deletes the file, so it is never used.
+
+**Fix.** Run the same command again; a broken download usually works the second time.
+If the same checksum comes back every time, the file on the server has changed. Report
+it as an [issue on GitHub](https://github.com/iLivius/MetaFlux/issues) rather than
+editing the md5 in the marker pack.
 
 ## Config (YAML) errors
 

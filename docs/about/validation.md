@@ -6,8 +6,7 @@ recover. This page is where those figures come from. Two experiments produced th
 a **sensitivity analysis on the real 16S test run** and a **full-gene check** against
 reference sequences — and they are different kinds of evidence, so each is described
 with what it can and cannot support. The trees, alignments and analysis scripts behind
-every number are kept with the project's benchmark material and are available on
-request.
+every number are available on request.
 
 !!! note "Terms"
     Patristic distance, Robinson–Foulds distance, UFBoot, likelihood mapping and the
@@ -15,22 +14,21 @@ request.
     Phylogeny page.
 
 
-!!! note "These experiments predate the v2.4.0 input-order change"
-    Both were run before MetaFlux started sorting the phylogeny input by sequence and
-    building the tree on one thread. The sequences are the same and the comparisons
-    between settings are unaffected, but the alignment rows are in a different order, so
-    a fresh run of today's default does **not** reproduce the "T01" tree below: it finds
-    its own optimum on the same data (total tree length 16.2 rather than 18.6, seven
-    long-branch tips either way, six of them the same). Read the tables as *"changing
-    this setting moved the output by this much"*, which is what they were built to
-    answer, not as a description of the tree your own run will produce.
+!!! note "These experiments were run on earlier versions"
+    Both were run before v2.4.0 started sorting the phylogeny input by sequence and
+    building the tree on one thread, and before v2.5.0 moved 16S to SILVA 144 and added
+    the best-hit check and the organelle filter, which change the set of ASVs the test
+    data gives. A fresh run with the defaults of v2.4.0 or later therefore does **not**
+    reproduce the "T01" tree below. The comparisons between settings are unaffected:
+    read the tables as *"changing this setting moved the output by this much"*, which is
+    what they were built to answer, not as a description of the tree your own run will
+    produce.
 
 ## The sensitivity analysis on the real test run
 
 **Design.** One real dataset — the 16S test set, 211 ASVs after contaminant filtering,
-6 samples, V5–V7 — and the pipeline's default run *as it stood in September 2026*, IQ-TREE
-on 4 threads, as the reference point (v2.4.0 later moved the default to one thread; see the
-note above). Then one
+6 samples, V5–V7 — and the pipeline's default before v2.4.0, IQ-TREE on 4 threads, as the
+reference point (v2.4.0 moved the default to one thread; see the note above). Then one
 thing changed at a time, everything else held fixed (same ASV set, seed 42; 4 threads for IQ-TREE, RAxML-NG
 clamped to its own recommendation of 1, FastTree single-threaded as in the pipeline):
 

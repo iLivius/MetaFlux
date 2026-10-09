@@ -122,7 +122,9 @@ config never mentions primers. It can be ignored, or silenced by setting both to
   whose reference is a full-length gene — the same pair is run in silico against that
   reference to work out how long the amplicon should be.
 - `amplicon.taxonomy.filter` — the keep/discard lists appropriate to the marker.
-  There is no built-in default, so an unset filter keeps everything.
+  The lists have no built-in default, so unset lists remove nothing. For 16S the
+  organelle filter is on by default and still removes what Metaxa2 calls
+  mitochondria or chloroplast.
 
 Reference databases come down automatically on first use; nothing else to install.
 Per-marker detail is in the [markers section](../amplicon/markers/index.md).

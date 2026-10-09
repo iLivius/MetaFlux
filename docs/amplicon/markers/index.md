@@ -20,13 +20,14 @@ into `config`, so no key has two homes.
     gives each reference. A database that arrives as an archive, or whose headers have
     to be reshaped before a classifier will read them, still needs a rule of its own in
     `workflow/rules/amplicon/10_refdb.smk`. That is how UNITE, the UNITE UCHIME
-    subregions and the FROGS rpoB build are handled.
+    subregions, the SILVA 144 training set (whose Kingdom rank is removed), the SILVA
+    SINTAX builds and the FROGS rpoB build are handled.
 
 ## The five markers side by side
 
 | Marker | What it is, what it resolves | `probe_mode` | Why that mode | Taxonomy reference | SINTAX build? | Extractor | Ranks |
 |---|---|---|---|---|---|---|---|
-| **16S** | Bacterial/archaeal SSU rRNA; the standard prokaryote survey marker, genus-level for most taxa | `pcr` | SILVA ships full-length SSU genes, so the amplicon window has to be cut out with the primers | SILVA v138.2 toGenus trainset (`silva_train`), plus SILVA species assignment (`silva_species`) for DADA2 `addSpecies` | Yes — `silva_sintax`, derived from the trainset by `convert_silva_sintax`. `rdp` and `sintax` both available | Metaxa2 | 7 |
+| **16S** | Bacterial/archaeal SSU rRNA; the standard prokaryote survey marker, genus-level for most taxa | `pcr` | SILVA ships full-length SSU genes, so the amplicon window has to be cut out with the primers | SILVA 144 toGenus trainset with the Kingdom rank removed (`silva_train`, built from `silva_train_raw`; SILVA 138.2 selectable), plus SILVA species assignment (`silva_species`) for DADA2 `addSpecies` | Yes — `silva_sintax`, derived from the trainset by `convert_silva_sintax`. `rdp` and `sintax` both available | Metaxa2 | 7 |
 | **ITS** | Fungal internal transcribed spacer, ITS1 or ITS2 (`amplicon.its_region`); the fungal barcode, species-level for well-represented lineages | `direct` | The UNITE UCHIME release is already the ITS1/ITS2 subregion plus a 15 bp anchor of flanking rRNA at each end, so lengths are read straight off it | UNITE general release `sh_general_release_dynamic_s_all_19.02.2025` (`unite_fasta`) | Yes — UNITE UTAX release (`unite_sintax`). `rdp` and `sintax` both available | ITSx | 7 |
 | **18S** | Eukaryotic SSU rRNA; protists and other micro-eukaryotes | `pcr` | The probe substrate (SILVA-Euk v132) is full-length SSU | PR2 v5.1.1 SSU DADA2 file (`pr2_dada2`) | Yes — PR2 v5.1.1 UTAX file (`pr2_utax`). `rdp` and `sintax` both available | none | 9 under `rdp`, 8 under `sintax` |
 | **gyrB** | DNA gyrase subunit B; protein-coding, single-copy, higher intra-genus resolution than 16S | `direct` | The DD7RZ8 v6 trainset is already primer-trimmed in-silico amplicons (~247 bp), not whole genes | DD7RZ8 v6 trainset, GTDB r226 (`gyrb_dada2`) — the same file is the probe substrate | **No.** `rdp` only | none | 7 (first rank is a paralog tag, not a taxon) |
@@ -59,7 +60,7 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 |---|---|---|---|---|
 | 16S | `silva_train_raw` | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` | SILVA 144 training set as published (seven ranks) | `silva.train_raw` |
 | 16S | `silva_train` | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` | probe substrate + `rdp` trainset — *converted* from `silva_train_raw` (Kingdom rank removed) | `silva.train` |
-| 16S | `silva_kingdom_map` | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` | phylum → kingdom table for the sidecar — *converted* with `silva_train` | `silva.kingdom_map` |
+| 16S | `silva_kingdom_map` | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` | phylum → kingdom table, used to put the Kingdom back in `taxonomy_lineage_full.tsv` — *converted* with `silva_train` | `silva.kingdom_map` |
 | 16S | `silva_species` | `silva/silva_v144_assignSpecies.fa.gz` | DADA2 `addSpecies` (16S only) | `silva.species` |
 | 16S | `silva_sintax` | `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | `sintax` database — *converted* from `silva_train` | `silva.sintax` |
 | ITS | `unite_fasta` | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta` | `rdp` trainset — *extracted* from a `.tgz` | `unite.fasta` |
@@ -79,9 +80,10 @@ The 16S rows are those of the default release, SILVA 144; `other-verbatim` becom
 and `silva/silva_nr99_v138.2_sintax.fa.gz`, and there is no `silva_train_raw` or
 `silva_kingdom_map`. See [16S rRNA](16S.md#reference-databases).
 
-Everything here is fetched on first use and cached, so a second run reuses it. The only
-reason to put a `references:` entry in the run config is to point MetaFlux at a copy that
-already exists somewhere else, for example a shared directory on a cluster.
+Everything here is fetched on first use and cached, so a second run reuses it. Apart from
+`references.silva.release`, which picks the SILVA release for 16S, the only reason to put
+a `references:` entry in the run config is to point MetaFlux at a copy that already
+exists somewhere else, for example a shared directory on a cluster.
 
 ## What `probe_mode` means
 
@@ -114,12 +116,13 @@ the flanking rRNA genes, and those binding sites are not part of a UNITE sequenc
 UCHIME references keep only a 15 bp anchor of flanking rRNA at each end).
 
 Both modes end at the same place: one JSON of length statistics
-(`n_amplicons`, `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean`, `stdev`) cached
+(`n_amplicons`, `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean`, `stdev`, plus
+`excluded_taxa` and `n_excluded`) cached
 in the pipeline's own `refdb/cache/`, next to the workflow. That directory is fixed at
 the repository root and does not follow `references.refdb_root`, so the cache stays put
 across runs and output directories even when the databases themselves live on a shared
-path. The file is keyed by marker, reference tag and a hash of the two primer
-sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
+path. The file is keyed by marker, reference tag (for 16S including the lineages left
+out of the statistics) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
 single statistic becomes `expected_length` comes from `amplicon.probe_length_stat` — see
 [amplicon length and truncation](../length-and-truncation.md).
 
@@ -147,8 +150,7 @@ the setting is overridden at parse time and the reason is printed:
 
 Nothing else changes. The ASV length filter still runs, and it is what keeps ASVs inside
 the window derived from the probe distribution. Setting `extraction.enabled: false`
-explicitly for these three markers has exactly the same effect and avoids the warning,
-which is what the 18S, gyrB and rpoB production run configs do.
+explicitly for these three markers has exactly the same effect and avoids the warning.
 
 ## Taxonomy methods per marker
 

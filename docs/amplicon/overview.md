@@ -173,14 +173,17 @@ modes, fixed by the marker pack:
 | `direct` | ITS, gyrB | The reference is already cut to amplicon length — UNITE's pre-extracted UCHIME ITS1/ITS2 subregions, or DD7RZ8's pre-trimmed gyrB amplicons — so lengths are read straight off it. In-silico PCR would fail here: there are no primer sites left to cut against. |
 
 Either way, the step writes a JSON holding the length distribution: `n_amplicons`, `min`,
-`q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean` and `stdev`. Which single statistic
+`q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean` and `stdev`. For 16S, chloroplast,
+mitochondrial and eukaryote references are left out of these statistics, because their
+in-silico products are often longer and the taxon filter removes them later anyway; the
+JSON records what was left out (`excluded_taxa`, `n_excluded`). Which single statistic
 feeds the truncation constraint is set by `amplicon.probe_length_stat.<key>` (the shipped
 config uses `p95` for 16S, 18S and rpoB).
 
 The result is cached in the repository under `refdb/cache/`, not under `out_dir`, and the
-filename encodes the marker, the reference, and a short hash of both primer FASTAs. Same
-marker, same reference, same primers means the cached probe is reused — across reruns and
-across different output directories. Change a primer and the hash changes, so the probe is
+filename encodes the marker, the reference (for 16S including the lineages left out), and
+a short hash of both primer FASTAs. Same marker, same reference, same primers means the
+cached probe is reused — across reruns and across different output directories. Change a primer and the hash changes, so the probe is
 recomputed automatically.
 
 Details, including which statistic to pick and when `auto` is the wrong choice, are on the
@@ -316,7 +319,9 @@ extractor:
 Both extractors write `seqs_extracted.fasta` and `seqtab_extracted_head_names.txt` into
 `5.dada2/`, alongside the extractor's own report (`metaxa2_extraction.results.txt` or
 `itsx_extraction.summary.txt`) and its full raw output directory, kept for inspection.
-ASVs the extractor could not resolve are dropped at this point.
+Metaxa2 also writes `metaxa2_origin.tsv`, its origin call for each ASV, which the
+taxonomy filter reads in step 9. ASVs the extractor could not resolve are dropped at
+this point.
 
 ITSx has one extra behaviour worth knowing: distinct ASVs whose extracted subregions come
 out identical — they differed only in the flanks that were just removed — are collapsed
@@ -404,8 +409,11 @@ rather than a kingdom, so a gyrB lineage carries no `k__` segment at all. See th
 [gyrB page](markers/gyrb.md).
 
 The last thing the step does is apply the keep/discard contaminant filter
-(`amplicon.taxonomy.filter`), which matches whole rank segments of each ASV's lineage. It
-has no built-in default: left unset, both lists resolve to `[]` and nothing is filtered.
+(`amplicon.taxonomy.filter`), which matches whole rank segments of each ASV's lineage.
+`discard` also checks the classifier's best hit below the reported ranks, so an ASV whose
+order or family call fell under the cutoff can still be removed
+(`filter.discard_min_support`). The filter has no built-in default for the lists: left
+unset, both resolve to `[]` and match nothing.
 The lists have to match the marker being run — a 16S keep list applied to an 18S run would
 discard every ASV. For 16S the filter also removes, by default, the ASVs that Metaxa2
 called mitochondria or chloroplast in step 7 (`filter.organelles`), whatever the lists say;

@@ -104,7 +104,7 @@ does not pull UNITE or PR2.
 
 | Marker | Files created under `refdb_root` | Where they come from |
 |--------|----------------------------------|----------------------|
-| 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz`, `silva/silva_v144_assignSpecies.fa.gz`, plus three built files: `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz`, `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv`, `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | SILVA's `release_144` DADA2 folder, md5-checked; the six-rank trainset and kingdom table are built by `convert_silva_train`, the SINTAX file by `convert_silva_sintax`. With `references.silva.release: "138.2"`: `silva_nr99_v138.2_*` files from Zenodo, as before |
+| 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz`, `silva/silva_v144_assignSpecies.fa.gz`, plus three built files: `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz`, `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv`, `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | SILVA's `release_144` DADA2 folder, md5-checked; the six-rank trainset and kingdom table are built by `convert_silva_train`, the SINTAX file by `convert_silva_sintax`. With `references.silva.release: "138.2"`: `silva_nr99_v138.2_toGenus_trainset.fa.gz` and `silva_v138.2_assignSpecies.fa.gz` from Zenodo (md5-checked), and `silva_nr99_v138.2_sintax.fa.gz` built from the trainset. With either release the species file is fetched only for `method: rdp`, and the SINTAX file is built only for `method: sintax` |
 | ITS | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta`, `unite/utax_reference_dataset_all_19.02.2025.fasta.gz`, `unite/uchime_its1.fasta`, `unite/uchime_its2.fasta` | PlutoF; the general release arrives as a `.tgz` and the UCHIME subregions as a `.zip`, both unpacked by `fetch_unite` / `fetch_uchime` |
 | 18S | `silva_euk/silva_132.18s.dada2.fa.gz`, `pr2/pr2_SSU_dada2.fasta.gz`, `pr2/pr2_SSU_UTAX.fasta.gz` | Zenodo (SILVA-Euk v132) and the PR2 v5.1.1 GitHub release |
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
@@ -119,15 +119,16 @@ references:
 
 Point it somewhere else — a shared filesystem, say — and every marker database
 follows. The `references` block lists no marker databases at all, because the marker
-files already know their own paths. An entry here is only needed to **relocate** a
-single database, for example when a copy already exists on the machine:
+files already know their own paths. An entry here is needed only to choose the SILVA
+release for 16S (`silva: {release: "138.2"}`) or to **relocate** a single database, for
+example when a copy already exists on the machine:
 
 ```yaml
 references:
   silva: {species: /shared/dbs/silva_v144_assignSpecies.fa.gz}
 ```
 
-Every file that has an md5 in its marker pack (the SILVA files, for now) is checked
+Every download whose marker pack lists an md5, such as the SILVA files, is checked
 after download; a mismatch deletes the file and stops the run, so a broken download is
 never used.
 
@@ -141,8 +142,9 @@ starts classifying immediately.
     inside the repository, whatever `refdb_root` is set to. For 16S, 18S and rpoB the
     probe is an in-silico PCR of the primers against a full-length reference; for ITS
     and gyrB it is a direct length measurement of a reference that is already
-    amplicon-length. Its filenames carry the marker, the reference version and a
-    12-character fingerprint of the two primer FASTA files, so a change of primers
+    amplicon-length. Its filenames carry the marker, the reference version (for 16S
+    also the lineages left out of the statistics) and a 12-character fingerprint of the
+    two primer FASTA files, so a change of primers
     produces a different name and the probe is recomputed rather than silently
     reused. See [amplicon length and truncation](../amplicon/length-and-truncation.md).
 

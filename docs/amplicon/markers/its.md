@@ -310,7 +310,8 @@ error: that usually means the amplicon does not cover the subregion named in
 `amplicon.taxonomy.method` selects the classifier. Both paths read the
 length-filtered ASVs (`5.dada2/seqs_lenfilt.fasta` and the matching
 `seqtab_lenfilt_head_names.txt`), apply the same taxon filter, and write the same
-three tables into `6.taxonomy/`.
+four tables into `6.taxonomy/`: the three filtered tables and `asv_table_unfiltered.txt`,
+whose `metaxa2_origin` column is `NA` for ITS.
 
 | | `rdp` | `sintax` |
 |---|---|---|
@@ -400,6 +401,7 @@ The final tables are in `6.taxonomy/`:
 | `asv_table.txt` | `ASV_#` IDs | per-sample counts plus a `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table, keyed by sequence |
 | `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank (Kingdom…Species) plus the sequence |
+| `asv_table_unfiltered.txt` | `ASV_#` IDs, every ASV that reached the filter | the same counts and `taxonomy`, plus `metaxa2_origin` (`NA` for ITS) and `filter_status`: `kept`, or the filter step that removed the ASV |
 
 Two diagnostics are worth opening on every ITS run.
 `stats/dada2/asv_length_hist.png` plots ASV lengths before extraction, after

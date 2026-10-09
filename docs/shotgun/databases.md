@@ -190,13 +190,13 @@ Bracken uses the same database directory. Its two settings:
 | Key | Default | What it does |
 |---|---|---|
 | `shotgun.bracken.tax_lev` | `S` | rank the abundances are re-estimated at — `D`, `P`, `C`, `O`, `F`, `G` or `S` |
-| `shotgun.bracken.threshold` | `10` | minimum number of reads Kraken2 must already have put in a taxon's clade for it to enter the re-estimation |
+| `shotgun.bracken.threshold` | `auto` | minimum number of reads Kraken2 must already have put in a taxon's clade for it to enter the re-estimation; `auto` works it out from each sample's depth, an integer fixes it |
 
 `tax_lev: S` is the usual choice and gives a species-level table. Drop it to `G` when
 the index is shallow, or when species-level assignments are not credible for the
 group in question. The table then has one row per genus.
 
-`threshold: 10` is applied to Kraken2's own clade read count for a taxon at the target
+The threshold is applied to Kraken2's own clade read count for a taxon at the target
 rank, before Bracken re-estimates anything. Taxa below it are dropped from the model
 altogether and their reads are discarded rather than redistributed — Bracken prints
 them in its log as "Total reads discarded".

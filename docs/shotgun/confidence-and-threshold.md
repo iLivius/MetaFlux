@@ -2,7 +2,8 @@
 
 Shotgun mode has two Kraken2/Bracken settings that decide how much of the final table is
 real. One of them barely matters. The other is the single biggest accuracy lever in the
-whole shotgun path, and MetaFlux's own default for it was wrong until this was measured.
+whole shotgun path, and a fixed value for it, Bracken's own default included, gets worse
+the deeper a sample is sequenced.
 
 - `shotgun.kraken.confidence` — **leave it at 0.15.**
 - `shotgun.bracken.threshold` — **the one that matters.** Set it to `auto`.
@@ -89,7 +90,7 @@ raw input reads as the denominator would be a different, wrong number.
 ```yaml
 shotgun:
   bracken:
-    threshold: auto            # was: a fixed integer
+    threshold: auto            # or a fixed integer
     threshold_alpha: 5.0e-05
     threshold_min: 10
 ```
@@ -117,7 +118,7 @@ you having to think about it:
   confirmation that "scale with depth" really does mean direct proportionality, not
   something looser
 - a coefficient, **alpha = 5×10⁻⁵**, fitted across every benchmarked community and
-  confirmed stable across **two Kraken2 database builds eight months apart**
+  stable across **two PlusPF database builds**
 - the `auto` computation itself, run per sample inside the `bracken` rule
 
 None of this is standard terminology. "Alpha" is simply the name given here to the
@@ -133,9 +134,8 @@ Bracken threshold with a benchmark-fitted coefficient, not as a published Bracke
 | CAMI II marine | 256–478 | 5.2–2.1×10⁻⁴ (10 samples) |
 | CAMI II rhizosphere | 73–307 | 1.5×10⁻⁵–2.6×10⁻⁴ (21 samples) |
 
-Pooling every sample from every community and refitting from scratch gives a median
-optimal alpha of **6.0×10⁻⁵** — a 1.2× shift from the value shipped, on an independent,
-8× larger set of samples. The reason one fixed constant still works despite that spread
+Pooling every sample from every community gives a median optimal alpha of
+**6.0×10⁻⁵**, 1.2× the default. The reason one fixed constant still works despite that spread
 is that the optimum is a **broad plateau, not a sharp peak**: across 41 CAMI II samples,
 using 5×10⁻⁵ everywhere costs a mean of **0.023 F1** against tuning each sample to its own
 individual best (median cost 0.014), while leaving the threshold at the historic default
@@ -176,9 +176,8 @@ is species counts, richness, or presence/absence, expect a large one.
 **It cannot rescue a database that does not cover your community.** CAMI II's
 rhizosphere (soil-associated) set has only ~52% of its true species present in the
 PlusPF database used here **at all** — no parameter setting recovers them, and F1 caps
-near 0.3 regardless of tuning. This was checked against two PlusPF builds eight months
-apart (2025-10 and 2026-06): the newer, larger database did not move the ceiling
-(0.521 → 0.518). Environmental coverage gaps are a reference-database problem, not
+near 0.3 regardless of tuning. A newer, larger PlusPF build does not move that ceiling.
+Environmental coverage gaps are a reference-database problem, not
 a parameter problem, and a database refresh alone should not be expected to close them.
 
 ## The benchmark behind these numbers

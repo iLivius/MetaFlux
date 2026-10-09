@@ -135,15 +135,19 @@ the tree's tips and the abundance table you pair it with in R are the same featu
     cutoff decides whether such an ASV is removed, and two further checks keep that call
     from deciding alone. The best-hit check (`filter.discard_min_support`, see
     [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support))
-    also removes an ASV whose family call falls below the cutoff, as long as its best hit
-    there is still *Mitochondria* with at least 50% support. The organelle filter
+    also removes an ASV whose order or family call falls below the cutoff, as long as its
+    best hit there still carries the token with at least `discard_min_support` support
+    (50% by default). The organelle filter
     (`filter.organelles`, on by default for 16S) removes the ASVs Metaxa2 calls
     mitochondria or chloroplast, whatever the classifier said.
 
 !!! warning "The filter has to be doing something"
-    If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
-    the tree is built from an unfiltered ASV set and the protection above does not apply.
-    MetaFlux warns, before anything runs, when you enable phylogeny in that state. Check the
+    If `amplicon.taxonomy.filter` is disabled, the tree is built from an unfiltered ASV
+    set and the protection above does not apply. With the filter on but empty
+    `keep`/`discard` lists, only the organelle filter can act (16S with extraction on, the
+    default): it removes the ASVs Metaxa2 calls mitochondria or chloroplast, but
+    eukaryotic, unclassified and other off-target ASVs still reach the tree. MetaFlux
+    warns, before anything runs, when you enable phylogeny in either state. Check the
     long-branch report either way.
 
 ## Choosing a backend
@@ -315,11 +319,11 @@ Join taxonomy back on in R, keyed on the ASV ID, from `6.taxonomy/asv_table.txt`
 !!! note "ASV IDs mean nothing outside their own dataset"
     IDs are assigned by decreasing abundance when the sequence table is built, so `ASV_7`
     in one dataset and `ASV_7` in another are unrelated. Two runs of the *same* reads with
-    the same configuration do now produce the same numbering — that was not true before
-    v2.4.0, because ASVs with equal total abundance were numbered in whatever order the
-    multithreaded phiX-removal step happened to emit the reads, and two of them traded IDs
-    in one test run out of three. Bowtie2 now runs with `--reorder`, and the phylogeny
-    stage no longer depends on the numbering at all: its FASTA is sorted by sequence.
+    the same configuration produce the same numbering from v2.4.0 on. Before that, ASVs
+    with equal total abundance could trade IDs between runs, because the multithreaded
+    phiX-removal step emitted the reads in a run-dependent order. Bowtie2 now runs with
+    `--reorder`, and the phylogeny stage does not depend on the numbering at all: its
+    FASTA is sorted by sequence.
     Across *different* datasets, or against a published table, always match on the
     sequence.
 
@@ -366,19 +370,15 @@ were tuned on data rather than reasoned out:
   to a *single* long branch: on a synthetic test with one planted contaminant, midpoint
   rooting split the offending branch across the root and the contaminant sat at 1.05×
   the median — invisible — while its pendant edge was 22.7× the median. How many tips
-  it flags also depends on the backend and on which optimum the search found: 9 to 58 of
-  the same 211 ASVs across the trees checked for this release, against 6 to 7 by the
-  pendant fence. Read the pendant flags first.
+  it flags also depends on the backend and on which optimum the search found, and it is
+  usually many more than the pendant fence flags. Read the pendant flags first.
 - Pendant edges cannot use a multiple of the median at all: a real ASV set carries many
   near-identical sequences whose pendant edges are effectively zero, so the median is
-  close to zero and even generous multiples of it flag far too much of the tree (measured on
-  the 16S test set: 81 of 211 tips at 5× the median, still 35 at 20×). The rule is instead the standard boxplot outlier fence,
-  **Q3 + 3×IQR**, which flags 7 tips there. Six of the seven are the only ASV of their
-  lineage in the run — among them its sole Acidobacteriota, its sole Bdellovibrionota and
-  its sole *Hydrotalea* — and the seventh is a 3-read ASV classified no deeper than
-  phylum, so nothing can be said about its lineage at all. Nothing outside the run was
-  checked, so "divergent singleton" and "artefact" cannot be told apart from the tree
-  alone.
+  close to zero and even generous multiples of it flag a large part of the tree. The rule
+  is instead the standard boxplot outlier fence, **Q3 + 3×IQR**. The tips it flags tend
+  to be the only ASV of their lineage in the run, or ASVs classified no deeper than
+  phylum, and the tree alone cannot tell a divergent singleton from an artefact. The
+  measured figures are on the [validation](../about/validation.md) page.
 
 The five longest tips by each measure are always listed, whether or not they cross a
 threshold.
@@ -574,9 +574,8 @@ rarefy_once <- function(m, depth) {
 # with k_b the reads below branch b — Hurlbert's rarefaction argument applied to
 # branches instead of species (Nipperess & Matsen 2013). This returns the exact
 # value that averaging infinitely many rarefaction iterations would converge to:
-# no seed, no iteration count, no Monte Carlo noise. Verified against a
-# 400-iteration simulation on MetaFlux's test data, and it uses the same
-# root-inclusive convention as rbiom's `faith`.
+# no seed, no iteration count, no Monte Carlo noise. It matches a long rarefaction
+# simulation and uses the same root-inclusive convention as rbiom's `faith`.
 expected_faith_pd <- function(tree, x, depth) {
   total_reads <- sum(x)
   if (total_reads < depth) return(NA_real_)          # too shallow to rarefy to `depth`
@@ -614,10 +613,9 @@ print(round(faith_pd, 4))
 # distance matrices is still symmetric, still zero on the diagonal, and still
 # satisfies the triangle inequality.
 #
-# Measured on MetaFlux's 16S test data: two single rarefactions produced
-# unweighted UniFrac distances differing by up to 0.109, while two independent
-# 100-iteration averages differed by at most 0.016. That factor of ~7 is the
-# whole argument for doing it this way.
+# Two single rarefactions of the same table can give unweighted UniFrac
+# distances that differ several times more than two independent 100-iteration
+# averages do. That is the whole argument for doing it this way.
 #
 # All the metrics are computed on the SAME subsample within each iteration, so
 # that any later comparison between them reflects the metrics themselves and not
@@ -707,8 +705,8 @@ output; the check exists because *you* are about to subset both, and that is whe
 drift apart.
 
 **Prune, don't rebuild.** Dropping a tip removes it and merges the two branches that met
-at its parent, so patristic distances among the remaining tips are unchanged — verified
-on this module's own output. UniFrac or Faith's PD on the pruned tree therefore equals
+at its parent, so patristic distances among the remaining tips are unchanged. UniFrac
+or Faith's PD on the pruned tree therefore equals
 what you would get from the full tree restricted to those features. A tree re-inferred
 from only the survivors would differ, and having been estimated from fewer sequences,
 would generally have *worse*-informed branch lengths. Rebuild only if you removed a very
@@ -745,11 +743,10 @@ averaging the rarefied tables first would hand back something close to the origi
 table. This is what mothur's `dist.shared(..., subsample=T, iters=)` does for
 Bray–Curtis, and nothing about UniFrac forbids the same treatment: an average of
 distance matrices is still symmetric, still zero on the diagonal, and still satisfies
-the triangle inequality. Measured on the 16S test data: two single rarefactions gave
-unweighted UniFrac distances differing by up to **0.109**, while two independent
-100-iteration averages differed by at most **0.016** — a sevenfold reduction, which is
-the whole argument for doing it this way. Weighted UniFrac is far less affected
-(0.0098 → 0.0008), as expected for an abundance-weighted metric.
+the triangle inequality. Two single rarefactions of the same table can give unweighted
+UniFrac distances that differ several times more than two independent 100-iteration
+averages do, and that is the whole argument for doing it this way. Weighted UniFrac is
+far less affected, as expected for an abundance-weighted metric.
 
 **For Faith's PD, do not iterate at all — there is a closed form.** A branch is missing
 from a subsample only if none of the reads below it were drawn, and for *m* reads drawn
@@ -765,9 +762,9 @@ E[PD] = sum over branches b of  L_b * ( 1 - C(N - k_b, m) / C(N, m) )
 — Hurlbert's rarefaction argument
 applied to branches instead of species (Nipperess & Matsen 2013). This is the exact
 value that averaging infinitely many iterations converges to: no seed, no iteration
-count, no Monte Carlo noise. The example implements it in eight lines. It was checked
-against a 400-iteration simulation on the test data (agreement to within simulation
-error) and uses the same root-inclusive convention as `rbiom`'s `faith`.
+count, no Monte Carlo noise. The example implements it in eight lines. It matches a
+long rarefaction simulation to within simulation error and uses the same root-inclusive
+convention as `rbiom`'s `faith`.
 
 !!! note "rtk does not do Faith's PD"
     `rtk` is the efficient choice for *multiple rarefaction of non-phylogenetic indices*
@@ -846,29 +843,25 @@ search is a heuristic: it settles into one of several nearly equally good trees,
 which one it lands on is steered by things that look as though they should not matter.
 
 - **The reads have to arrive in the same order.** Bowtie2 removes phiX on several threads
-  and used to write the surviving pairs in whatever order the threads finished. DADA2
-  numbers ASVs by decreasing abundance and keeps the input order for ties, so two ASVs
-  with the same total count could trade IDs between runs. MetaFlux now passes
-  `--reorder`, whose cost came out below measurement noise on the test data (a few MB
-  more memory, no reliable difference in wall time) and which makes the output the same
-  as a single-threaded run's.
+  and, left to itself, writes the surviving pairs in whatever order the threads finish.
+  DADA2 numbers ASVs by decreasing abundance and keeps the input order for ties, so two
+  ASVs with the same total count could trade IDs between runs. MetaFlux passes
+  `--reorder`, which costs almost nothing (a few MB of memory) and makes the output the
+  same as a single-threaded run's.
 - **The alignment must not depend on the ASV numbering.** The FASTA handed to MAFFT is
   now sorted by the sequence itself rather than by the abundance order of the taxonomy
   table, so the same set of sequences always produces the same file whatever the ASVs
   happen to be called.
 - **The search has to run on one thread.** A multithreaded search visits candidate trees
-  in an order that depends on when each thread finishes. On the test set, two runs of the
-  *identical* alignment at 4 threads ended on different optima, 52 of 416 splits apart,
-  tree length 17.97 against 18.68; 24 of those splits survived
-  `ape::di2multi(tree, tol = 1e-5)`, so collapsing near-zero branches does not hide it.
-  `resources.threads.phylo_tree` therefore defaults to 1. On the 211-ASV test alignment
-  that costs about 91 s against about 60 s at four threads, and it is the one setting to
-  revisit if you have thousands of ASVs.
+  in an order that depends on when each thread finishes, so two runs of the *identical*
+  alignment can end on different optima, and collapsing near-zero branches with
+  `ape::di2multi()` does not hide the difference. `resources.threads.phylo_tree`
+  therefore defaults to 1. For a few hundred ASVs the tree still takes only a minute or
+  two on one thread, and it is the one setting to revisit if you have thousands of ASVs.
 
-Verified the way it should be: the 16S test dataset run twice from raw reads to tree, two
-independent runs launched at the same time from the same configuration. Every FASTQ file
-at every stage, the ASV sequences, the per-sample counts, the alignment and
-`asv_16s.unrooted.nwk` itself came back byte-identical.
+With these three in place, two runs of the same data and configuration give
+byte-identical files at every stage: the reads, the ASV sequences and per-sample counts,
+the alignment and `asv_16s.unrooted.nwk` itself.
 
 **What is still not reproducible.**
 
@@ -876,16 +869,16 @@ at every stage, the ASV sequences, the per-sample counts, the alignment and
   between equally good reference genera at random, outside the seed, so a few bootstrap
   values can differ between identical runs. `sintax`, the default, is reproducible at any
   thread count from v2.5.0 on.
-- **Metaxa2's own taxonomy file** (`5.dada2/metaxa2/seqs.taxonomy.txt`) shifts between
-  runs too. MetaFlux never reads it — the extracted sequences and the
-  extracted table were byte-identical — so it is a by-product worth knowing about, not
-  something that feeds a result. The organelle filter reads Metaxa2's per-origin FASTA
-  files instead, and those did not move: every ASV had the same origin in all 16
-  Metaxa2 runs of the test set.
+- **Metaxa2's own taxonomy file** (`5.dada2/metaxa2/seqs.taxonomy.txt`) can shift
+  slightly between runs. MetaFlux never reads it, and the extracted sequences and table
+  do not change, so it is a by-product worth knowing about, not something that feeds a
+  result. The organelle filter reads Metaxa2's final origin call instead (collected
+  from the per-origin FASTA files into `5.dada2/metaxa2_origin.tsv`), and that call is
+  stable from run to run.
 
 **If you are not chasing byte-identity**, the thing worth knowing is how far these
 choices move the tree, because it is further than people expect. Taking the alignment
-this pipeline now produces for the 211-ASV test set, swapping two of its rows and
+the v2.4.0 pipeline produced for the 16S test set, swapping two of its rows and
 rebuilding with each backend's shipped command:
 
 | Backend | Splits changed, of 416 | Patristic *r* | Tree length | Per-sample PD *r* | PD ranking |
@@ -910,9 +903,8 @@ reproducibility work above matters more for auditability than for ecology.
 - RAxML-NG's default seed is the wall clock, so MetaFlux always passes `--seed`
   explicitly.
 
-Two questions that used to sit here as "not yet verified" now have measured answers,
-from the benchmark on the 211-ASV test set described on the
-[Phylogeny validation](../about/validation.md) page:
+Two further questions are answered by the benchmark on the 211-ASV test set described
+on the [Phylogeny validation](../about/validation.md) page:
 
 - **The L-INS-i / FFT-NS-2 tier boundary does change the tree.** Same data, same
   backend and model, different tier: 46% of internal branches differ. Part of that is the tree search
@@ -973,13 +965,13 @@ Threads and memory come from the shared `resources` block, like every other rule
 
 `phylo_tree` is the one worth a second thought, because it is the only resource setting
 in MetaFlux that changes a **result** rather than a runtime. It defaults to **1**, and
-that is what makes two runs of the same data give the same tree; at 4 threads two runs of
-the identical alignment landed 52 of 416 splits apart. It is also the one key whose
+that is what makes two runs of the same data give the same tree; on several threads, two
+runs of the identical alignment can end on different trees. It is also the one key whose
 fallback is not `threads_default`: leave it out of your config and you get 1, not 4.
 Raise it if you have thousands of ASVs and can accept a tree that is not exactly
 reproducible, but do not expect much — IQ-TREE parallelises across alignment columns and
-a 16S alignment is only a few hundred wide, so the 211-ASV test alignment took about 91 s
-at one thread against about 60 s at four. The other backends barely care: RAxML-NG clamps whatever you give it to its
+a 16S alignment is only a few hundred wide, so for a few hundred ASVs the time saved is
+small. The other backends barely care: RAxML-NG clamps whatever you give it to its
 own `--parse` recommendation, and FastTree is pinned single-threaded in the rule.
 
 ## References

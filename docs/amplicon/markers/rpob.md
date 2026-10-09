@@ -226,7 +226,10 @@ parse time rather than failing later inside the classifier.
 whether reverse-complemented sequences are also tried. There is no separate `addSpecies`
 step: unlike 16S, where species come from a second SILVA file, the converted rpoB trainset
 is already labelled to species, so the classifier reaches the species rank directly.
-`amplicon.seed` fixes the bootstrap RNG, so RDP results are reproducible run to run.
+`amplicon.seed` fixes the bootstrap RNG, so RDP results are reproducible run to run,
+apart from DADA2's random tie-breaking between equally good reference genera, which can
+move a bootstrap value between identical runs (see
+[Troubleshooting](../../troubleshooting.md)).
 
 The classifier writes seven rank columns, taken from the marker pack. The reference
 already carries `k__`/`p__`/… prefixes, so the pack sets `prefix_style: embedded` and
@@ -306,7 +309,7 @@ runs either way, so off-target amplicons of the wrong size are still removed.
 
 ## What the output looks like
 
-The final tables are the same three files as for every other marker, under
+The final tables are the same four files as for every other marker, under
 `6.taxonomy/` in the output directory:
 
 | File | Rows | Notes |
@@ -314,6 +317,7 @@ The final tables are the same three files as for every other marker, under
 | `asv_table.txt` | ASV IDs | per-sample counts plus one `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table keyed by sequence instead of ID |
 | `taxon_seq_table.txt` | ASV IDs | one column per rank (`Kingdom` … `Species`) plus the sequence |
+| `asv_table_unfiltered.txt` | ASV IDs, every ASV that reached the filter | the counts and `taxonomy` before the taxon filter, plus `metaxa2_origin` (`NA` for rpoB) and `filter_status` |
 
 An rpoB taxonomy string reads like a 16S one, with NCBI names:
 

@@ -56,10 +56,9 @@ counts.
 
 !!! note "The flag itself changes no classification"
 
-    `--report-minimizer-data` is purely additive reporting. Verified directly: the same
-    5,000 read pairs against the same database twice, identical settings, differing only
-    in this flag, gave a byte-for-byte identical per-read output and identical values in
-    every shared report column.
+    `--report-minimizer-data` is purely additive reporting: with or without it, Kraken2
+    writes a byte-for-byte identical per-read output and the same values in every shared
+    report column.
 
 ## Reading the numbers
 
@@ -137,22 +136,19 @@ innocent neighbour. So when a taxon fails, everything indented beneath it goes t
 **The reads go back to the parent, not in the bin.** A pruned taxon's whole clade total
 is added to its parent's own-node count, so Bracken redistributes those reads among the
 siblings that passed. The parent's clade total is untouched, so the report's arithmetic
-still balances: for every node, `clade == direct + sum(children clade)`. Verified on the
-test data — zero violations, zero indentation gaps, and no column other than a parent's
-direct count ever changes.
+still balances: for every node, `clade == direct + sum(children clade)`, and no column
+other than a parent's direct count ever changes.
 
 !!! warning "Two things this does not guarantee"
 
     **Not all reads land on close relatives.** The rationale for crediting the parent is
     that a spurious call usually borrows evidence from a neighbour. That holds for most
-    of the traffic, not all: on four test samples **70%** of the reads gained by
-    surviving taxa can be matched to a loss inside the same genus; the other **30%**
-    crosses genus or family boundaries.
+    of the reads that move, not all: part of them cross genus or family boundaries.
 
     **Some reads are still lost.** If *every* species under a genus fails, Bracken has
-    nothing left at the target rank to redistribute to, and drops those reads. Measured:
-    **−0.16%** of reads, with 27–38 genera per sample emptied completely. Crediting the
-    parent is much better than deleting rows outright, but it is not conservation.
+    nothing left at the target rank to redistribute to, and drops those reads, usually a
+    small fraction of the sample. Crediting the parent is much better than deleting rows
+    outright, but it is not conservation.
 
 ## Choosing a threshold
 
@@ -256,13 +252,9 @@ untuned pipeline, not a second independent filter.**
 
 !!! note "Which database build those two numbers come from"
 
-    Both figures are from gate-on/gate-off pairs measured on the **2025-10 PlusPF**
-    build (15 sample-depth combinations at the scaled threshold, 11 at the fixed one).
-    The later 41-sample re-run on the 2026-06 build was executed with the gate on
-    throughout and had no gate-off arm, so it did not re-measure this contrast. The
-    mechanism does not depend on the database and coverage barely moved between the two
-    builds (see [the threshold page](confidence-and-threshold.md)), so these are not
-    expected to shift — but they have not been re-confirmed on the newer index.
+    Both figures come from gate-on/gate-off comparisons on one PlusPF build. The
+    mechanism does not depend on the database, so they are not expected to shift much
+    with a newer one.
 
 ### But "no change in F1" is not "no change in the table"
 
@@ -302,16 +294,14 @@ What the gate was tested against, and what those tests could and could not show.
 
 ### What has been checked
 
-The original single-mock validation below (Zymo D6331) still stands and is kept for the
-worked detail. It has since been extended to [CAMI
-II](https://www.nature.com/articles/s41592-022-01431-4)'s marine, rhizosphere, and
-strain-madness gold-standard sets — 41 samples, two Kraken2 database builds eight months
-apart, scored against OPAL — which is where the size and depth questions raised at the
-end of this section were actually answered. The full methodology and the numbers that
-matter for choosing a threshold live on the [confidence and
-threshold](confidence-and-threshold.md) page; the finding specific to *this* gate is that
-it contributes essentially nothing (≤0.002 F1) once the Bracken threshold is scaled
-correctly, but still catches the JS425-style case above that a read-count floor cannot.
+The gate was checked on one real mock community (Zymo D6331, below, kept for the worked
+detail) and on [CAMI II](https://www.nature.com/articles/s41592-022-01431-4)'s marine,
+rhizosphere and strain-madness gold-standard sets — 41 samples, two PlusPF builds,
+scored with OPAL. The full methodology and the numbers that matter for choosing a
+threshold live on the [confidence and threshold](confidence-and-threshold.md) page; the
+finding specific to *this* gate is that it contributes essentially nothing (≤0.002 F1)
+once the Bracken threshold is scaled correctly, but still catches the JS425-style case
+above that a read-count floor cannot.
 
 One real mock community: the [ZymoBIOMICS Gut Microbiome
 Standard (D6331)](https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf),
@@ -400,21 +390,19 @@ to **+12%** of the true value.
     Every organism in D6331 has a species-level entry in the database used. When that is
     true, classification is already close to correct, false positives are a thin tail of
     near-zero-read taxa, and there is little for an evidence filter to repair — which is
-    exactly what the CAMI II follow-up found: with the Bracken threshold scaled to depth,
+    exactly what the CAMI II benchmark found: with the Bracken threshold scaled to depth,
     this gate adds at most 0.002 F1 across marine, rhizosphere and strain-madness samples.
 
     The JS425 case above is the one place it still earns its keep: a taxon whose *read
     count* looks unremarkable but whose *distinct sequence support* does not. A read-count
     floor, however well scaled, cannot see that distinction by construction.
 
-The four gaps originally listed here — larger and more even communities, several samples
-at several depths, communities containing genomes absent from the reference, and sample
-types beyond gut and wastewater — have since been closed by the CAMI II benchmark
-described on the [confidence and threshold](confidence-and-threshold.md) page: 41 samples,
-marine (256–478 species/sample) and rhizosphere (52% of gold species absent from the
-database — the exact "genomes absent from the reference" case), across a depth range and
-two database builds. The result did not overturn the D6331 finding, it confirmed the
-gate's role is narrower than that finding alone suggested: safe, rarely decisive.
+The CAMI II benchmark described on the [confidence and threshold](confidence-and-threshold.md)
+page covers what one mock cannot: larger and more even communities (marine, 256–478
+species per sample), several samples at several depths, communities with genomes absent
+from the reference (rhizosphere, where 52% of gold species are missing from the
+database), and sample types beyond gut and wastewater. It confirms the D6331 result and
+narrows the gate's role: safe, rarely decisive.
 
 What genuinely remains open: everything above used short-read Illumina data. Long-read
 or hybrid assemblies, and sample types with even sparser reference coverage than

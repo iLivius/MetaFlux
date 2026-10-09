@@ -47,7 +47,10 @@ out_dir/
 Three files carry the result of an amplicon run: `6.taxonomy/asv_table.txt`
 (ASV × sample counts plus a taxonomy string), `5.dada2/seqs_lenfilt.fasta` (the
 sequences those ASV IDs refer to), and `stats/read_tracking.txt` (how many reads
-survived each stage, per sample). Everything else is intermediate data or QC.
+survived each stage, per sample). Next to them, `6.taxonomy/asv_table_unfiltered.txt`
+is the same table before the taxon filter, with the step that removed each ASV, and a
+16S run on SILVA 144 adds `6.taxonomy/taxonomy_lineage_full.tsv` with the Kingdom rank.
+Everything else is intermediate data or QC.
 
 ### Reads: `1.reads/` → `4.filtered/`
 
@@ -76,9 +79,11 @@ ASV sequence; the counts are identical, only the labels differ.
 The rules behind the columns are `dada_seqtab`, `target_extract` and
 `dada_length_filter`, in that order.
 
-The last populated column is the final result. `assign_taxonomy` reads exactly two
-of these files: the length-filtered FASTA `seqs_lenfilt.fasta` and the
-`ASV_#`-keyed `seqtab_lenfilt_head_names.txt`. (The read-tracking step also opens
+The last populated column is the final result. `assign_taxonomy` reads two of these
+files: the length-filtered FASTA `seqs_lenfilt.fasta` and the `ASV_#`-keyed
+`seqtab_lenfilt_head_names.txt`. For 16S with extraction on it also reads Metaxa2's
+call for each ASV, `metaxa2_origin.tsv` (see the extraction trail below), for the
+organelle filter. (The read-tracking step also opens
 `read.counts` and the `head_names` seqtabs, but only to count reads per stage.)
 The sequence-keyed tables — `seqtab_head_seqs.txt` and
 `seqtab_lenfilt_head_seqs.txt` — are terminal deliverables: the same counts
@@ -116,7 +121,9 @@ reached the filter, the removed ones included (see below).
 
 With `taxonomy.method: sintax` — the shipped default — the directory also holds
 `_sintax_raw.tsv`, the raw VSEARCH `--tabbedout` result the parser was fed. It is
-kept for troubleshooting and no rule reads it.
+kept for troubleshooting and no rule reads it. Above one thread its lines come in the
+order VSEARCH finishes them, so sort it before comparing two runs; the tables built from
+it do not depend on that order.
 
 | File | Rows | Columns |
 |---|---|---|
@@ -138,8 +145,8 @@ compare how many organelle reads two primer pairs pick up — see
 [keeping and discarding taxa](../amplicon/taxon-filter.md#the-table-with-everything-asv_table_unfilteredtxt).
 Nothing in the pipeline reads it; the tree and every other table use the filtered set.
 
-For 16S on SILVA 144 there is a fourth file, `taxonomy_lineage_full.tsv`, written
-by `restore_kingdom` after the three tables (which it does not change). SILVA 144
+For 16S on SILVA 144 there is one more file, `taxonomy_lineage_full.tsv`, written
+by `restore_kingdom` after the three filtered tables (which it does not change). SILVA 144
 added a Kingdom rank between Domain and Phylum; MetaFlux removes it before
 classifying, so the three tables keep their usual shape with `k__` holding the domain,
 and puts it back here, looked up from each ASV's phylum in a table built from the same
@@ -149,7 +156,7 @@ reference. One row per ASV, same ASVs as `asv_table.txt`:
 |---|---|
 | `asv_id` | `ASV_#`, as in the other tables |
 | `Domain` | what the other tables call `Kingdom` (Bacteria, Archaea) |
-| `Kingdom` | SILVA 144's kingdom (*Bacillati*, *Pseudomonadati*, …), or empty |
+| `Kingdom` | SILVA 144's kingdom (*Bacillati*, *Pseudomonadati*, …); `Incertae Sedis` for the few phyla SILVA places in no named kingdom; or empty (see below) |
 | `Phylum` … `Genus`, `Species` | copied from `taxon_seq_table.txt` |
 | `lineage` | the SILVA-style path, `Bacteria;Pseudomonadati;Pseudomonadota;…;Genus;`, down to the deepest assigned rank; a rank left empty in the middle keeps an empty slot (`;;`) |
 | `kingdom_note` | why the kingdom is empty, or a remark about it |
@@ -167,13 +174,16 @@ for 18S.
 
 !!! note "File format"
 
-    These follow R's `write.table(col.names = NA)` conventions, on both the rdp
-    and the sintax path: tab-separated, the header line starts with an empty cell
-    for the row-name column, and text values (row names, taxonomy strings, rank
-    names) are wrapped in double quotes; a missing `metaxa2_origin` is an unquoted
-    `NA`, as R writes it. `read.table(..., sep = "\t", header = TRUE,
-    row.names = 1)` in R and `pd.read_csv(..., sep = "\t", index_col = 0)` in
-    pandas both read them without extra arguments, `NA` as a missing value.
+    The four tables written by `assign_taxonomy` follow R's
+    `write.table(col.names = NA)` conventions, on both the rdp and the sintax path:
+    tab-separated, the header line starts with an empty cell for the row-name column,
+    and text values (row names, taxonomy strings, rank names) are wrapped in double
+    quotes; a missing `metaxa2_origin` is an unquoted `NA`, as R writes it.
+    `read.table(..., sep = "\t", header = TRUE, row.names = 1)` in R and
+    `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
+    extra arguments, `NA` as a missing value. `taxonomy_lineage_full.tsv` is a plain
+    tab-separated file instead: its first column is named `asv_id`, nothing is quoted,
+    and a missing rank is an empty cell. The same R and pandas calls read it.
 
 The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
 check and, for 16S, the organelle filter) has already been applied when these tables
@@ -238,7 +248,9 @@ raw → [nophix] → stripped → filtered → denoised → merged → non_chime
 `nophix` appears only when PhiX removal ran, `post_extraction` only when the
 extraction step ran. The last column counts reads still present after the
 contaminant filter, so the drop between `post_length_filter` and
-`post_taxonomy_filter` is exactly what the keep/discard lists removed. A sample
+`post_taxonomy_filter` is exactly what the taxon filter removed: the keep/discard
+lists, the best-hit check and, for 16S, the organelle filter.
+`6.taxonomy/asv_table_unfiltered.txt` shows which of them removed each ASV. A sample
 that collapses at one particular column points straight at the step to inspect.
 
 **`asv_length_stats.json`** and the matching histogram record ASV lengths at
@@ -284,8 +296,8 @@ refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.json
 refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.amplicons.fa.gz
 ```
 
-The filename carries the marker, the reference it was probed against, and a hash
-of both primer sequences, so the probe is skipped on every later run with the same
+The filename carries the marker, the reference it was probed against (for 16S also
+the lineages left out of the statistics), and a hash of both primer sequences, so the probe is skipped on every later run with the same
 marker and primers — including runs writing to a different `out_dir`. Changing a
 primer changes the hash and the probe runs again.
 
@@ -356,7 +368,7 @@ at higher ranks.
 
 | File | Contents |
 |---|---|
-| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. Since v2.5.0 MetaFlux uses Bracken 3.1p1, bioconda's build of 3.1 with the fix for [Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315): plain 3.1, used up to v2.4.0, writes `0` in the third column (reads assigned directly to the taxon) on almost every row at any `tax_lev` other than `S`. The second column, the clade count, is correct in both, and it is the only count MetaFlux uses. |
+| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. Since v2.5.0 MetaFlux uses Bracken 3.1p1, bioconda's build of 3.1 with a fix for the report: plain 3.1 writes `0` in the third column (reads assigned directly to the taxon) on almost every row when `tax_lev` is not `S`. The second column, the clade count, is correct in both, and it is the only count MetaFlux uses. |
 | `{sample}_output.txt` | Bracken's own per-taxon table for that sample. |
 | `otu_table.biom` | Cross-sample abundance table in BIOM (HDF5) format. |
 | `otu_table.tsv` | The same table as tab-separated text. |
@@ -413,6 +425,11 @@ classifier could not resolve are simply left out, so a string can end early.
 Shotgun tables are the exception: kraken-biom always writes all seven slots, and
 leaves empty any rank it has no name for and every rank below
 `shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level table).
+
+With SILVA 144 and `silva_other: verbatim` (the default) a 16S rank name can end in
+`--other` (`g__Bradyrhizobium--other`); the species slot is still written with the plain
+genus (`g__Lactobacillus--other;s__Lactobacillus iners`). See
+[16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other).
 
 The exact form of the species slot follows the reference database, not the
 pipeline:

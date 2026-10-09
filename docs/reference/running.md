@@ -42,6 +42,15 @@ The same parse step prints a banner line to stderr:
 [MetaFlux v2.5.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
 ```
 
+Before it, an amplicon run prints a line saying whether the organelle filter is on, and
+a 16S run one more naming the SILVA release in use — the quickest check that
+`references.silva.release` and `amplicon.taxonomy.silva_other` were picked up:
+
+```text
+[MetaFlux] organelle filter: on — ASVs that Metaxa2 calls mitochondria or chloroplast are removed
+[MetaFlux] 16S reference: SILVA 144 (silva_other: verbatim; trainset silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz)
+```
+
 Checking that the sample count is the expected one costs nothing and catches a
 mistyped `fastq_dir` or a mate-naming mismatch before a long run starts.
 
@@ -171,25 +180,27 @@ consequences:
 
     The same rules apply to a MetaFlux upgrade, and v2.5.0 changes several steps on
     purpose. In an amplicon folder, `pick_trunclen` and `aggregate_read_counts` now run
-    in the `python_utils` environment and the length probe has a new cache name, so a
-    plain re-run redoes the denoising and everything after it; a 16S folder also moves
-    to SILVA 144, the new default. With `references: {silva: {release: "138.2"}}` the
-    denoised ASVs and counts come out the same as before, and only the taxon filter's
-    new best-hit check and its organelle filter (`filter.organelles`, which removes the
-    ASVs Metaxa2 calls mitochondria or chloroplast) can remove more organelle ASVs; on
-    the 16S test set with `sintax` they removed 2 and 10 more. `target_extract` and `assign_taxonomy`
-    run again in any case, since both now write one more file. With `sintax`, that step
-    now runs on VSEARCH 2.32, which draws its random numbers differently from earlier
-    releases, so many confidence values move slightly against the v2.4.0 output, and a
-    lineage near the cutoff can gain or lose a trailing rank, even with the same seed. In
-    a shotgun folder the Bracken environment is now pinned to 3.1p1, so `bracken` and the
-    steps after it run again; the species-level numbers do not change.
+    in the `python_utils` environment (and, for 16S, the length probe has a new cache
+    name), so a plain re-run redoes the denoising and everything after it; a 16S folder
+    also moves to SILVA 144, the new default. With `references: {silva: {release: "138.2"}}`
+    the denoised ASVs and counts come out the same as with v2.4.0, and only the taxon
+    filter's new best-hit check and its organelle filter (`filter.organelles`, which
+    removes the ASVs Metaxa2 calls mitochondria or chloroplast) can remove more organelle
+    ASVs. With `sintax`, the taxonomy step now runs on VSEARCH 2.32, which draws its
+    random numbers differently from earlier releases, so many confidence values move
+    slightly against the v2.4.0 output, and a lineage near the cutoff can gain or lose a
+    trailing rank, even with the same seed. In a shotgun folder the Bracken environment
+    is now pinned to 3.1p1, so `bracken` and the steps after it run again (Kraken2 does
+    not). Species-level numbers do not change; at any other `tax_lev` the OTU table is
+    now built correctly, see
+    [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s).
 
 Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under
 `refdb/cache/` inside the MetaFlux checkout — that second path is fixed and does
 not follow `references.refdb_root`. The probe's filename encodes the marker, its
-reference, and a hash of both primer sequences, so it is reused whenever those
+reference (for 16S including the lineages left out of the statistics), and a hash of
+both primer sequences, so it is reused whenever those
 are unchanged and recomputed when a primer changes. See
 [output files](output.md) for what a run writes where.
 

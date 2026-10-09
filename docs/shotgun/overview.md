@@ -234,7 +234,7 @@ distributions, giving abundances at a chosen rank.
 shotgun:
   bracken:
     tax_lev: S            # D | P | C | O | F | G | S
-    threshold: 10         # minimum read count per taxon
+    threshold: auto       # auto = scaled to each sample's depth; or a fixed read count
 ```
 
 Bracken's estimates depend on read length, and the database ships pre-computed
@@ -244,14 +244,12 @@ closest available distribution automatically — using a 150 bp distribution on 
 reads would bias the redistribution. With `threshold: auto` the minimum read count is
 computed from the sample's classified read pairs in the same step. All three small
 calculations (mean length, closest distribution, threshold) are done with `jq` from the
-Bracken environment, so they give the same answer on any machine; up to v2.4.0 they
-used whatever `awk` the host had, with identical results on every benchmark sample.
+Bracken environment, so they give the same answer on any machine.
 
-MetaFlux pins Bracken 3.1p1, bioconda's build of 3.1 with the fix for upstream issue
-[#315](https://github.com/jenniferlu717/Bracken/issues/315): plain 3.1 reports 0 reads
-assigned directly to a taxon (third column of `{sample}_report.txt`) for almost every
-taxon above species. The abundances MetaFlux reports come from the clade counts and are
-the same with either build.
+MetaFlux pins Bracken 3.1p1, bioconda's build of 3.1 with a fix for the report: with
+`tax_lev` other than `S`, plain 3.1 writes 0 reads assigned directly to a taxon (third
+column of `{sample}_report.txt`) on almost every row. The abundances MetaFlux reports
+come from the clade counts and are the same with either build.
 
 Input: the Kraken2 report plus the fastp JSON. Output, in `03.abundance/`:
 `{sample}_report.txt` (Bracken's re-estimated report) and `{sample}_output.txt`

@@ -6,8 +6,7 @@ amplicon path can be re-run in minutes after a change and the output compared ag
 the previous result.
 
 All five sets are public and reachable from the accessions below, so any result on this
-page can be reproduced from scratch. The run configs live in `config/` and are not
-tracked by git, since they carry local paths.
+page can be reproduced from scratch with the primers and references listed in the table.
 
 | Marker | Dataset | Samples | Primers | Reference |
 |---|---|--:|---|---|
@@ -64,9 +63,9 @@ go wrong with public sequencing data.
 
 ## Effect of moving the merge parameters to DADA2's defaults
 
-`dada2.merge.min_overlap` and `max_mismatch` were moved to DADA2's own defaults
-(12 and 0, from 10 and 2). Every marker was then run twice on the set above, once with
-each pair of values and nothing else changed, to measure what that costs. Read counts
+MetaFlux uses DADA2's own defaults for `dada2.merge.min_overlap` and `max_mismatch`
+(12 and 0). To measure what they cost against the looser 10 and 2, every marker was run
+on its set with each pair of values and nothing else changed. Read counts
 are summed across the samples of each set; ASV counts are rows of the final
 `6.taxonomy/asv_table.txt`.
 
@@ -120,24 +119,21 @@ first, and `min_overlap: 10` with `max_mismatch: 2` is a defensible choice for I
 Between them the 16S and 18S sets exercise both ways `trunc_len.mode: auto` can end up,
 which is the main reason they are kept as they are.
 
-### 18S: the set that produced the read-coverage cap
+### 18S: the set that needs the read-coverage cap
 
 The 18S library is clean enough on R1 that its aggregated lower quartile never falls
 below `q_threshold`, so the picker has no quality signal to cut on and takes the ceiling
-instead. That ceiling used to come from the longest read present — 288 bp, from the one
-sample holding R1 reads that long, while half the reads stop at 281. Since
-`filterAndTrim` discards anything shorter than `truncLen`, the cut kept 9 of 908,768
-pairs and the run came out with 3 ASVs.
+instead. Without the read-coverage cap that ceiling comes from the longest read present
+— 288 bp, from the one sample holding R1 reads that long, while half the reads stop at
+281 — and since `filterAndTrim` discards anything shorter than `truncLen`, the cut keeps
+9 of 908,768 pairs and the run comes out with 3 ASVs. A hand-picked `mode: manual` at
+270 / 239 avoids that; `amplicon.trunc_len.min_read_coverage_pct` makes it unnecessary
+by capping each sample at the length 95% of its reads still reach before quality is
+consulted. On this library it brings the R1 ceiling to 271, and `auto` returns
+**271 / 239** unaided, carrying 90.9% of raw reads through to the final table — 828,018
+reads against 828,170 for the hand-picked 270 / 239, a difference of 0.02%.
 
-The working fix at the time was `mode: manual` at 270 / 239, worked out by measuring the
-read-length distribution by hand. That this was necessary at all was the argument for
-`amplicon.trunc_len.min_read_coverage_pct`, which now caps each sample at the length 95%
-of its reads still reach before quality is consulted. On this library it brings the R1
-ceiling to 271, and `auto` returns **271 / 239** unaided, carrying 90.9% of raw reads
-through to the final table — 828,018 reads against 828,170 for the hand-picked
-270 / 239, a difference of 0.02%.
-
-The config is therefore back on `mode: auto`, deliberately: it is the working test that
+The 18S test run therefore uses `mode: auto`, deliberately: it is the working test that
 the guard does its job. Note also that only R1 was ever the problem. R2's quality did
 degrade, the picker found an honest cut at 239, and that number is unchanged throughout —
 a reminder to treat the two directions separately rather than overriding both.

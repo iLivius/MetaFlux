@@ -56,8 +56,7 @@ dropped below `shotgun.bracken.threshold` are missing for the same reason.
 At `tax_lev: G` or any coarser rank the loss is much larger, because the report then
 has no species rows at all. A species name is not found, so the sample gets empty
 files. A genus name pulls only the reads Kraken2 placed on the genus itself, not
-those placed on its species: on the D6331 mock, *Escherichia* would give 10,821 of
-the 38,441 read pairs in its clade.
+those placed on its species, so it can miss most of the reads in the genus's clade.
 
 Where those reads matter, run `extract_kraken_reads.py` by hand against
 `02.classification/{sample}_report.txt`, which keeps the full tree. KrakenTools reads

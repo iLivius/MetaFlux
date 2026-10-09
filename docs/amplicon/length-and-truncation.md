@@ -135,8 +135,8 @@ file. Fact three then deletes everything shorter.
     Read from the quality tables alone, the run-wide ceiling came out at **288 bp** —
     set by a different sample, since this one's own table runs to 289. Either way, only
     **three reads here are 288 bp or longer**, so a cut there discards 211,971 of
-    211,974. That is not hypothetical: before this gate existed the four-sample 18S run
-    kept 9 read pairs out of 908,768 and finished with 3 ASVs.
+    211,974. That is not hypothetical: without this gate the four-sample 18S run keeps 9
+    read pairs out of 908,768 and finishes with 3 ASVs.
 
 **What the gate does instead.** Before quality is consulted at all, each sample is asked
 one question: *what is the longest position that at least `min_read_coverage_pct` of my
@@ -405,7 +405,7 @@ gyrB amplicons rather than full genes, with the same consequence.
 
 | Marker | `probe_mode` | Probe substrate | Reference tag in the cache filename | `probe_length_stat` key read |
 |---|---|---|---|---|
-| 16S | `pcr` | SILVA trainset, without chloroplast, mitochondrial and eukaryote sequences | `silva_v144_toGenus_excl-chloroplast-eukaryota-mitochondria` (`silva_v138.2_…` with release 138.2) | `16S` |
+| 16S | `pcr` | SILVA trainset (chloroplast, mitochondrial and eukaryote products left out of the statistics) | `silva_v144_toGenus_excl-chloroplast-eukaryota-mitochondria` (`silva_v138.2_…` with release 138.2) | `16S` |
 | ITS | `direct` | UNITE UCHIME, pre-extracted ITS1 or ITS2 | `unite_uchime_ITS1` / `unite_uchime_ITS2` | none — ITS never resolves a stat |
 | 18S | `pcr` | SILVA-Eukaryotic 18S v132 | `silva_euk_18s_v132` | `18S` |
 | gyrB | `direct` | DD7RZ8 v6 | `gyrb_dd7rz8_v6` | `16S` (gyrB reuses that key) |
@@ -416,9 +416,9 @@ are left out of the statistics (marker pack field `probe_exclude_taxa`, written 
 cache filename). Organelle SSU is often much longer than bacterial 16S between the same
 primers, and SILVA 144 holds eight times more of it than 138.2: for 799F/1175R the
 p95 would be 397 bp with it and is 386 bp without (384 bp with 138.2 either way).
-Since `expected_length` feeds the overlap constraint, those extra 11 bp would raise
-truncLen and cost reads at the quality-poor 3' end, for amplicons the taxon filter
-removes later anyway.
+Since `expected_length` feeds the overlap constraint, those extra 11 bp can push
+truncLen further into the quality-poor 3' end, where it costs reads, for amplicons the
+taxon filter removes later anyway.
 
 For 18S the probe substrate and the taxonomy reference are deliberately different
 databases: SILVA-Eukaryotic is probed, PR2 classifies. See
@@ -430,10 +430,15 @@ Both modes compute the same statistics and write the same JSON:
 
 ```text
 amplicon_type, probe_mode, primer_hash, reference_tag, reference_fasta,
-n_amplicons, min, q1, median, q3, p95, p99, max, mean, stdev
+n_amplicons, min, q1, median, q3, p95, p99, max, mean, stdev,
+excluded_taxa, n_excluded
 ```
 
-`pcr` mode adds `cutadapt_max_error_rate` and `cutadapt_min_length`.
+`pcr` mode adds `cutadapt_max_error_rate` and `cutadapt_min_length`. `excluded_taxa`
+names the reference lineages left out of the statistics (the pack's
+`probe_exclude_taxa`: Chloroplast, Eukaryota and Mitochondria for 16S, none for the
+other markers) and `n_excluded` how many sequences that left out; `n_amplicons` and the
+statistics count the rest.
 
 `amplicon.probe_length_stat.<key>` selects which one of these becomes
 `expected_length`. Accepted values are `min`, `q1`, `median`, `q3`, `p95`, `p99` and
