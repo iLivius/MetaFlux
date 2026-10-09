@@ -86,14 +86,15 @@ amplicon:
                                               # (18S: keep [d__Eukaryota]).
   its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
 
-  # Fixes the RNG for the stochastic steps in the amplicon path: DADA2
-  # learnErrors(randomize=TRUE), the bootstrap confidence of the taxonomy step,
-  # VSEARCH --sintax (sintax) or DADA2 assignTaxonomy (rdp), and, with phylogeny
-  # on, the tree search (see amplicon.phylogeny). With it the first two give the
-  # same result at any thread count, with one exception:
-  # assignTaxonomy breaks exact ties between equally good reference genera at
-  # random, outside this seed, so with rdp a few bootstrap values can differ
-  # between identical runs. Keep it a positive number: VSEARCH reads 0 as
+  # Fixes the random number generator for the three amplicon steps that use one:
+  #   1. DADA2 learnErrors(randomize=TRUE);
+  #   2. the bootstrap confidence of the taxonomy step (VSEARCH --sintax, or
+  #      DADA2 assignTaxonomy with method rdp);
+  #   3. the tree search, with phylogeny on (see amplicon.phylogeny).
+  # With it, steps 1 and 2 give the same result at any thread count, with one
+  # exception: assignTaxonomy breaks exact ties between equally good references
+  # at random, outside this seed, so with rdp a few bootstrap values can differ
+  # between identical runs. Keep it a positive integer: VSEARCH reads 0 as
   # "pick a random seed". See docs/troubleshooting.md.
   seed: 42
 

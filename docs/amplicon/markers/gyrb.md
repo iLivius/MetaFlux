@@ -171,7 +171,7 @@ trainset, with `taxonomy.min_boot` as the bootstrap confidence minimum and
 no separate `addSpecies` step: unlike 16S, where species come from a second SILVA file,
 the gyrB trainset is itself labelled to species, so the classifier reaches the species rank
 directly. `amplicon.seed` fixes the bootstrap RNG, so RDP results are reproducible run to
-run, apart from DADA2's random tie-breaking between equally good reference genera,
+run, apart from DADA2's random tie-breaking between equally good reference lineages,
 which can move a bootstrap value between identical runs (see
 [Troubleshooting](../../troubleshooting.md)).
 

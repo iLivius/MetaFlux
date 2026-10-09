@@ -227,7 +227,7 @@ whether reverse-complemented sequences are also tried. There is no separate `add
 step: unlike 16S, where species come from a second SILVA file, the converted rpoB trainset
 is already labelled to species, so the classifier reaches the species rank directly.
 `amplicon.seed` fixes the bootstrap RNG, so RDP results are reproducible run to run,
-apart from DADA2's random tie-breaking between equally good reference genera, which can
+apart from DADA2's random tie-breaking between equally good reference lineages, which can
 move a bootstrap value between identical runs (see
 [Troubleshooting](../../troubleshooting.md)).
 

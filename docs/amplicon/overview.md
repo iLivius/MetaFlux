@@ -37,7 +37,10 @@ in pipeline order under `out_dir`, so the directory listing reads like the workf
 | 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `7.phylogeny/`, `stats/phylogeny/` |
 
 Two more rules close the run: `aggregate_read_counts` builds `stats/read_tracking.txt`,
-and `multiqc` builds `multiqc/multiqc_report.html`.
+and `multiqc` builds `multiqc/multiqc_report.html`. A 16S run on SILVA 144 (the default
+reference) adds a third, `restore_kingdom`, which writes
+`6.taxonomy/taxonomy_lineage_full.tsv`, the lineage with SILVA's kingdom rank put back
+(see [16S rRNA](markers/16S.md)).
 
 Stage 10 is off by default and runs only for 16S. It takes the contaminant-filtered ASVs
 from `6.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity

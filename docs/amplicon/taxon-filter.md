@@ -170,7 +170,8 @@ this way gets its own log line:
 [assign_taxonomy] Discard filter, best-hit check (support >= 50%): 5 more ASV(s) removed
 ```
 
-The default of 50 means the best hit has to be the majority answer at that rank. Set it
+The default of 50 means the best hit needs at least half the support at that rank (50
+of 100 bootstrap draws, or a SINTAX confidence of 0.5). Set it
 higher to be more conservative, or to `null` to get the filter of MetaFlux v2.4.0 and
 earlier.
 

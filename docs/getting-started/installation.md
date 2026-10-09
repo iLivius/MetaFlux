@@ -83,7 +83,7 @@ by hand.
 | Database                           | Mode               | Provisioning                                                           |
 |------------------------------------|--------------------|------------------------------------------------------------------------|
 | PhiX                               | both               | **Auto-fetched** (NCBI) for amplicon; BBDuk's bundled copy for shotgun |
-| SILVA 144 (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched + converted** — toGenus and species from SILVA (md5-checked), Kingdom rank removed and SINTAX built locally; SILVA 138.2 from Zenodo on request |
+| SILVA 144 (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched + converted** — toGenus and species from SILVA (md5-checked), Kingdom rank removed and SINTAX built locally; SILVA 138.2 (from Zenodo) when the run config sets `references.silva.release: "138.2"` |
 | UNITE (general + UCHIME + SINTAX)  | amplicon (ITS)     | **Auto-fetched** from PlutoF on first run                              |
 | PR2 (DADA2 + UTAX) + SILVA-Euk     | amplicon (18S)     | **Auto-fetched** from GitHub/Zenodo on first run                       |
 | DD7RZ8 (DADA2 trainset)            | amplicon (gyrB)    | **Auto-fetched** from Recherche Data Gouv                              |

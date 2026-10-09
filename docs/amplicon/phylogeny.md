@@ -126,14 +126,15 @@ Consuming the filtered set removes that problem outright, and it guarantees
 the tree's tips and the abundance table you pair it with in R are the same feature set.
 
 !!! note "The ASV set is only as reproducible as the taxonomy step"
-    The tree's tips are the ASVs the taxon filter kept. With a fixed `amplicon.seed` the
-    taxonomy step gives the same result at any thread count: with
-    `taxonomy.method: sintax`, the default, from v2.5.0 on, and with `rdp` apart from
-    DADA2's random tie-breaking, which can move a bootstrap value by a point between
-    identical runs (see [Troubleshooting](../troubleshooting.md)). The `discard` tokens
-    (`o__Chloroplast`, `f__Mitochondria`) sit at order and family, so a call right at the
-    cutoff decides whether such an ASV is removed, and two further checks keep that call
-    from deciding alone. The best-hit check (`filter.discard_min_support`, see
+    The tree's tips are the ASVs the taxon filter kept. With a fixed `amplicon.seed`,
+    `taxonomy.method: sintax` (the default) gives the same taxonomy at any thread count
+    from v2.5.0 on. `rdp` does too, except that DADA2 breaks exact ties between equally
+    good references at random, so a few bootstrap values can differ between runs (see
+    [Troubleshooting](../troubleshooting.md)). The suggested 16S `discard` tokens
+    (`o__Chloroplast`, `f__Mitochondria`) sit at order and family, so whether an
+    organelle ASV is removed can hang on one call right at the cutoff. Two further checks
+    keep that call from deciding alone. The best-hit check
+    (`filter.discard_min_support`, see
     [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support))
     also removes an ASV whose order or family call falls below the cutoff, as long as its
     best hit there still carries the token with at least `discard_min_support` support
@@ -861,7 +862,10 @@ which one it lands on is steered by things that look as though they should not m
 
 With these three in place, two runs of the same data and configuration give
 byte-identical files at every stage: the reads, the ASV sequences and per-sample counts,
-the alignment and `asv_16s.unrooted.nwk` itself.
+the alignment and `asv_16s.unrooted.nwk` itself. The raw SINTAX output
+(`6.taxonomy/_sintax_raw.tsv`) lists the ASVs in the order VSEARCH's threads finish
+them, so sort it before comparing two runs. The tables built from it are
+byte-identical.
 
 **What is still not reproducible.**
 
