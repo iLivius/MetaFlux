@@ -164,10 +164,23 @@ if (ncol(taxa_unique) != expected_ranks) {
 # because assignTaxonomy tried its reverse complement could reach addSpecies
 # and silently fail to match anything, for no reason a user could see from
 # the config.
-species_db_list <- snakemake@input[["species_db"]]
+#
+# SILVA 144 "--other" genera (see silva_other in config.yaml): assignTaxonomy may
+# call an ASV "Pseudomonas--other" — a Pseudomonas clade that does not contain the
+# type strain — while the species reference only ever writes "Pseudomonas
+# fluorescens". addSpecies' genus check is an exact string comparison, so it would
+# reject every species match for such an ASV. The check is therefore run on a COPY
+# of the table whose Genus column has the suffix removed, and only the resulting
+# Species column is taken back; the genus itself stays exactly as SILVA wrote it.
+# When silva_other is "strip" (or under SILVA 138.2) no name carries the suffix and
+# the copy is identical to the original.
 if (length(species_db_list) > 0L) {
   message("[assign_taxonomy] addSpecies against ", species_db_list[[1]])
-  taxa_unique <- addSpecies(taxa_unique, species_db_list[[1]], tryRC = try_rc)
+  genus_col <- tax_levels[length(tax_levels) - 1L]
+  taxa_for_species <- taxa_unique
+  taxa_for_species[, genus_col] <- sub("--other$", "", taxa_for_species[, genus_col])
+  with_species <- addSpecies(taxa_for_species, species_db_list[[1]], tryRC = try_rc)
+  taxa_unique <- cbind(taxa_unique, Species = with_species[, "Species"])
 }
 
 # Expand back: index by each ASV's sequence so identical-sequence ASVs share rows
@@ -203,6 +216,10 @@ make_tax_string <- function(row) {
       # species slot → binomial; requires the genus (level n-1) to be present
       gval <- row[[tax_levels[n - 1L]]]
       if (is.na(gval) || gval == "") next
+      # A species name is a binomial, so it is written with the plain genus even
+      # when the genus slot reads "Genus--other" (SILVA 144, silva_other:
+      # verbatim): g__Pseudomonas--other;s__Pseudomonas fluorescens.
+      gval <- sub("--other$", "", gval)
       # Glue the genus on only for a bare, lowercase epithet. A value that
       # already starts uppercase, or already begins with the genus (PR2 uses
       # both "Genus_species" binomials and, for ~18 unresolved environmental
@@ -236,9 +253,17 @@ asv_table <- cbind(count_t, taxonomy = tax_strings)
 # genus named exactly that — never a substring elsewhere. keep runs first
 # (defines the universe), then discard prunes. An empty list = that direction
 # is a no-op. There is NO per-marker code default: the lists come from config.
+#
+# SILVA 144 "--other" names (silva_other: verbatim) count as the plain name here:
+# the suffix is removed from both the segments and the tokens before comparing, so
+# g__Bradyrhizobium removes "g__Bradyrhizobium--other" too. A filter token is meant
+# to name a taxon, and SILVA considers the "--other" clade part of that taxon. With
+# silva_other: strip, or SILVA 138.2, no name carries the suffix and this changes
+# nothing.
+drop_other <- function(x) sub("--other$", "", x)
 seg_match <- function(tax_string, tokens) {
-  segs <- trimws(strsplit(tax_string, ";", fixed = TRUE)[[1]])
-  any(tokens %in% segs)
+  segs <- drop_other(trimws(strsplit(tax_string, ";", fixed = TRUE)[[1]]))
+  any(drop_other(tokens) %in% segs)
 }
 n_before_filter <- nrow(asv_table)
 if (isTRUE(filter_enabled)) {

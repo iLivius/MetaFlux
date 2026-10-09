@@ -245,9 +245,20 @@ for asv_id in shared_ids:
 # segments of the taxonomy string — so g__Bacillus hits only a genus named
 # exactly that, never a substring elsewhere. keep runs first (defines the
 # universe), then discard prunes. Empty list = that direction is a no-op.
+#
+# SILVA 144 "--other" names (amplicon.taxonomy.silva_other: verbatim) count as the
+# plain name: the suffix is removed from both the segments and the tokens before
+# comparing, so g__Bradyrhizobium also removes "g__Bradyrhizobium--other". A filter
+# token is meant to name a taxon, and SILVA considers the "--other" clade part of
+# that taxon. With silva_other: strip, or SILVA 138.2, no name carries the suffix
+# and this changes nothing. Same rule as seg_match in 80a_assign_taxonomy.R.
+def _drop_other(name: str) -> str:
+    return name[: -len("--other")] if name.endswith("--other") else name
+
+
 def _seg_match(tax_string: str, tokens: list[str]) -> bool:
-    segs = {s.strip() for s in tax_string.split(";")}
-    return any(tok in segs for tok in tokens)
+    segs = {_drop_other(s.strip()) for s in tax_string.split(";")}
+    return any(_drop_other(tok) in segs for tok in tokens)
 
 
 filtered_ids = list(shared_ids)
