@@ -631,6 +631,73 @@ if MODE == "amplicon":
                 f"from 0 to 100, or null to switch the best-hit check off (got: {_dms!r})"
             )
 
+    # ── Organelle filter (16S: Metaxa2's own origin call) ──
+    # Metaxa2 (rule target_extract, 70_extract.smk) sorts every ASV it extracts into
+    # one origin: bacteria, archaea, eukaryota, chloroplast, mitochondria or uncertain.
+    # With organelles: metaxa2 (the default) the taxonomy filter also removes every ASV
+    # Metaxa2 called mitochondria or chloroplast, after keep/discard and the best-hit
+    # check. It catches plant mitochondria that no token can reach, because the
+    # classifier's best hit for them is a bacterium: on the 16S test set, 8 ASVs whose
+    # nearest SILVA reference is a mitochondrion (97-99 % identity) are classified as
+    # bacteria, mostly Enterobacterales (best hit Pantoea / Erwiniaceae), with SINTAX on
+    # SILVA 138.2 and with rdp on either release, and Metaxa2 calls all 8 mitochondrial.
+    # Only the organelle call is used. Metaxa2's other calls (eukaryota, uncertain, the
+    # domains) remove nothing; the keep tokens still decide domains.
+    #
+    # The filter can only act when Metaxa2 actually ran: the marker's extractor is
+    # metaxa2 (only 16S) and extraction is enabled. config/config.yaml sets the key for
+    # every run, because it is the base layer under every --configfile, so for the other
+    # markers, or with extraction off, the setting is simply inactive. That gets one
+    # info line below, never an error.
+    #
+    # YAML reads a bare `off` (also no / false) as the boolean False, so False means
+    # off here, and so does null, as for discard_min_support. A missing key means the
+    # default, metaxa2. `on` / `yes` / `true` arrive as True and are refused: the value
+    # names where the organelle call comes from, and today that can only be metaxa2.
+    _organelles_cfg = _filter_cfg.get("organelles", "metaxa2")
+    if _organelles_cfg is None or _organelles_cfg is False:
+        ORGANELLE_SOURCE = "off"
+    else:
+        ORGANELLE_SOURCE = str(_organelles_cfg).strip().lower()
+    if ORGANELLE_SOURCE not in ("metaxa2", "off"):
+        # A bare on / yes / true reaches us as True; say so, or "(got: True)" puzzles.
+        _yaml_hint = ""
+        if _organelles_cfg is True:
+            _yaml_hint = " — YAML reads on / yes / true as True; write metaxa2"
+        sys.exit(
+            f"[MetaFlux] amplicon.taxonomy.filter.organelles must be 'metaxa2' (remove the "
+            f"ASVs Metaxa2 calls mitochondria or chloroplast) or 'off' "
+            f"(got: {_organelles_cfg!r}{_yaml_hint})"
+        )
+
+    # Metaxa2 runs in this run, and so writes its per-ASV origin table
+    # (5.dada2/metaxa2_origin.tsv), only for a metaxa2 marker with extraction on.
+    # Whenever it does, rule assign_taxonomy reads the table, also with organelles: off,
+    # so that the metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt is filled
+    # in either case. For every other marker the rule's inputs stay as they were.
+    METAXA2_RUNS = MARKER_EXTRACTOR == "metaxa2" and EXTRACTION_ENABLED
+    METAXA2_ORIGIN_TSV = OUT / "5.dada2" / "metaxa2_origin.tsv"
+
+    # Whether ASVs are actually removed on Metaxa2's organelle call. filter.enabled is
+    # the master switch of the whole taxonomy filter, so false switches this off too.
+    ORGANELLE_FILTER = ORGANELLE_SOURCE == "metaxa2" and METAXA2_RUNS and FILTER_ENABLED
+
+    # One line on every amplicon run, saying what the organelle filter does and why.
+    if ORGANELLE_FILTER:
+        _organelle_note = ("on — ASVs that Metaxa2 calls mitochondria or chloroplast "
+                           "are removed")
+    elif ORGANELLE_SOURCE == "off":
+        _organelle_note = "off (amplicon.taxonomy.filter.organelles: off)"
+    elif MARKER_EXTRACTOR != "metaxa2":
+        _organelle_note = (f"inactive — marker {AMPLICON_TYPE} does not run Metaxa2, "
+                           "so there is no organelle call to use")
+    elif not EXTRACTION_ENABLED:
+        _organelle_note = ("inactive — amplicon.extraction.enabled is false, so Metaxa2 "
+                           "does not run")
+    else:
+        _organelle_note = "inactive — amplicon.taxonomy.filter.enabled is false"
+    sys.stderr.write(f"[MetaFlux] organelle filter: {_organelle_note}\n")
+
     # Taxonomy method — validated at parse time
     TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
     if TAXONOMY_METHOD not in ("rdp", "sintax"):
@@ -1174,6 +1241,9 @@ def _amplicon_targets():
         OUT / "6.taxonomy" / "asv_table.txt",
         OUT / "6.taxonomy" / "asv_table_seqs.txt",
         OUT / "6.taxonomy" / "taxon_seq_table.txt",
+        # Every ASV that reached the taxonomy filter, removed ones included (same rule
+        # as the three tables above, so it adds no job).
+        OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
         # Kingdom sidecar (SILVA 144 only): one extra file next to the three tables
         # above, which themselves stay exactly as they are.
         *([OUT / "6.taxonomy" / "taxonomy_lineage_full.tsv"] if KINGDOM_SIDECAR else []),

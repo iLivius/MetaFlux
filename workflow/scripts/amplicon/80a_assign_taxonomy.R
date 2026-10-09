@@ -22,7 +22,10 @@
 # dada_length_filter (60d_dada_length_filter.py) — the FASTA after any
 # Metaxa2/ITSx region extraction and the post-extraction ASV length window,
 # i.e. this run's final ASV set. Also reads the marker's reference database
-# (refdb) and, for 16S only, the addSpecies reference (species_db).
+# (refdb) and, for 16S only, the addSpecies reference (species_db) and
+# Metaxa2's own origin call per ASV (metaxa2_origin, 5.dada2/metaxa2_origin.tsv
+# from target_extract — present only when Metaxa2 ran), which the organelle
+# filter uses (see "Organelle filter" below).
 #
 # Output: three views of the same classification — asv_table.txt (rows =
 # ASV_N ids, one taxonomy string per ASV), asv_table_seqs.txt (same, but rows
@@ -30,11 +33,14 @@
 # (rows = ASV_N ids, one column per rank instead of a single semicolon-joined
 # string, plus the sequence). All three have the optional keep/discard
 # contaminant filter already applied (see further down this file). Of the
-# three, only asv_table.txt is read again inside this pipeline: rule
+# three, asv_table.txt is read again inside this pipeline: rule
 # aggregate_read_counts (80b_aggregate_read_counts.py) sums each sample's
 # column as the final "taxonomy" stage of the pipeline-wide read-tracking
-# table (read_tracking.txt). The other two are terminal outputs for whatever
-# analysis comes after this pipeline.
+# table (read_tracking.txt), and the phylogeny (85a_phylo_input.py) reads it
+# together with taxon_seq_table.txt. A fourth table, asv_table_unfiltered.txt,
+# holds EVERY ASV that reached the filter, with two extra columns
+# (metaxa2_origin, filter_status) — for the user's own analyses, e.g. how many
+# organelle reads two primer sets pick up; nothing in the pipeline reads it.
 
 if (!requireNamespace("pacman", quietly = TRUE))
   install.packages("pacman", repos = "https://cloud.r-project.org/")
@@ -60,6 +66,13 @@ filter_discard  <- unlist(snakemake@params[["filter_discard"]])   # rank-token d
 # Best-hit check of the discard filter (see "Discard filter, best-hit check" below):
 # minimum bootstrap support, 0-100, at the token's rank; NULL = check switched off.
 discard_min_support <- snakemake@params[["discard_min_support"]]
+# Organelle filter (see "Organelle filter" below): TRUE when the ASVs Metaxa2 calls
+# mitochondria or chloroplast are to be removed. Decided in 00_common.smk: only ever
+# TRUE for 16S with extraction on, filter.enabled true and filter.organelles: metaxa2.
+organelle_filter <- isTRUE(as.logical(snakemake@params[["organelle_filter"]]))
+# Metaxa2's per-ASV origin table: a path when Metaxa2 ran in this run (16S with
+# extraction on), NULL for every other marker — see rule assign_taxonomy.
+origin_path     <- snakemake@input[["metaxa2_origin"]]
 threads         <- as.integer(snakemake@threads)
 seed            <- as.integer(snakemake@params[["seed"]])
 
@@ -293,11 +306,50 @@ seg_match <- function(tax_string, tokens) {
   segs <- drop_other(trimws(strsplit(tax_string, ";", fixed = TRUE)[[1]]))
   any(drop_other(tokens) %in% segs)
 }
+
+# Every ASV that reaches the filter, kept aside before anything is removed: this
+# is what asv_table_unfiltered.txt is written from (Output (d) below).
+asv_table_all <- asv_table
+
+# ── Metaxa2 origin per ASV (16S only; empty otherwise) ──
+# metaxa2_origin.tsv has one row per ASV Metaxa2 extracted: asv_id, origin
+# (mitochondria, chloroplast, bacteria, archaea, eukaryota, uncertain, or NA for
+# no call; read.delim turns the text NA into a missing value). Used by the
+# organelle filter below and written, for every ASV, to the metaxa2_origin column
+# of asv_table_unfiltered.txt. Looking up an ASV that has no entry gives NA.
+metaxa2_origin <- setNames(character(0), character(0))
+if (!is.null(origin_path)) {
+  origin_tbl     <- read.delim(origin_path, colClasses = "character")
+  metaxa2_origin <- setNames(origin_tbl$origin, origin_tbl$asv_id)
+  message("[assign_taxonomy] Metaxa2 origin calls read for ", sum(!is.na(metaxa2_origin)),
+          " ASVs from ", origin_path)
+}
+# The rule only switches the filter on when Metaxa2 ran, so the table is always
+# there when it is needed; this guards against the two drifting apart.
+if (organelle_filter && is.null(origin_path)) {
+  stop("[assign_taxonomy] the organelle filter is on but no Metaxa2 origin table was ",
+       "given (input metaxa2_origin of rule assign_taxonomy)")
+}
+
+# Total reads, over all samples, of the given ASVs (seqtab_sub: rows = samples,
+# columns = ASV ids), as text for the log lines; format() keeps a round number such
+# as 200000 from being printed as 2e+05.
+reads_of <- function(ids) format(sum(seqtab_sub[, ids, drop = FALSE]), scientific = FALSE)
+
+# What the filter did to each ASV, for the filter_status column of
+# asv_table_unfiltered.txt. The steps below run in a fixed order — keep, discard,
+# best-hit check, organelle filter — and each one only looks at the ASVs the
+# earlier steps kept. So a removed ASV is labelled with the FIRST step that
+# removed it: removed_keep, removed_discard, removed_best_hit or
+# removed_organelle. removed_organelle therefore means "only Metaxa2 caught it".
+filter_status <- setNames(rep("kept", nrow(asv_table)), rownames(asv_table))
+
 n_before_filter <- nrow(asv_table)
 if (isTRUE(filter_enabled)) {
   if (length(filter_keep) > 0L) {
     keep <- vapply(asv_table$taxonomy, seg_match, logical(1L),
                    tokens = filter_keep, USE.NAMES = FALSE)
+    filter_status[rownames(asv_table)[!keep]] <- "removed_keep"
     asv_table <- asv_table[keep, , drop = FALSE]
     message("[assign_taxonomy] Keep filter (", paste(filter_keep, collapse = ","), "): ",
             sum(keep), " / ", n_before_filter, " ASVs retained")
@@ -305,6 +357,7 @@ if (isTRUE(filter_enabled)) {
   if (length(filter_discard) > 0L) {
     drop <- vapply(asv_table$taxonomy, seg_match, logical(1L),
                    tokens = filter_discard, USE.NAMES = FALSE)
+    filter_status[rownames(asv_table)[drop]] <- "removed_discard"
     asv_table <- asv_table[!drop, , drop = FALSE]
     message("[assign_taxonomy] Discard filter (", paste(filter_discard, collapse = ","), "): ",
             sum(drop), " ASV(s) removed")
@@ -354,10 +407,58 @@ if (isTRUE(filter_enabled)) {
         message("[assign_taxonomy]   ", id, ": best hit ", weak_hits[[id]],
                 " (reported as ", asv_table[id, "taxonomy"], ")")
       }
+      filter_status[names(weak_hits)] <- "removed_best_hit"
       asv_table <- asv_table[!(rownames(asv_table) %in% names(weak_hits)), , drop = FALSE]
     }
     message("[assign_taxonomy] Discard filter, best-hit check (support >= ",
             discard_min_support, "%): ", length(weak_hits), " more ASV(s) removed")
+  }
+
+  # ── Organelle filter (Metaxa2's own origin call; 16S) ──────────────────────
+  # Removes every ASV that Metaxa2 placed in its mitochondria or chloroplast FASTA
+  # (amplicon.taxonomy.filter.organelles: metaxa2, the default). It runs last, so
+  # it only removes what keep, discard and the best-hit check let through. That is
+  # exactly the case it is for: plant mitochondria whose classifier best hit is a
+  # bacterium, so no token can see them. On the 16S test set, 8 ASVs with a
+  # mitochondrion as nearest SILVA reference (97-99 % identity) were reported as
+  # Enterobacterales by the RDP classifier on both SILVA releases and passed every
+  # token, while Metaxa2 called all 8 mitochondrial.
+  # Metaxa2's other calls (eukaryota, uncertain, the domains) remove nothing; the
+  # keep tokens decide domains. The log reports how many organelle ASVs and reads
+  # Metaxa2 found, how many of them the earlier steps had already removed, and
+  # lists each ASV that only Metaxa2 caught.
+  if (organelle_filter) {
+    all_ids       <- rownames(asv_table_all)
+    origin_all    <- unname(metaxa2_origin[all_ids])          # NA where no call
+    organelle_ids <- all_ids[origin_all %in% c("mitochondria", "chloroplast")]
+    n_mito        <- sum(metaxa2_origin[organelle_ids] == "mitochondria")
+    n_chloro      <- length(organelle_ids) - n_mito
+    # Organelle ASVs the earlier steps had already removed, per step.
+    status_now    <- unname(filter_status[organelle_ids])
+    already_keep  <- organelle_ids[status_now == "removed_keep"]
+    already_disc  <- organelle_ids[status_now == "removed_discard"]
+    already_best  <- organelle_ids[status_now == "removed_best_hit"]
+    already_ids   <- c(already_keep, already_disc, already_best)
+    # Organelle ASVs still in the table: only Metaxa2 caught these.
+    only_metaxa2  <- organelle_ids[status_now == "kept"]
+    filter_status[only_metaxa2] <- "removed_organelle"
+    asv_table <- asv_table[!(rownames(asv_table) %in% only_metaxa2), , drop = FALSE]
+
+    message("[assign_taxonomy] Organelle filter (Metaxa2 origin): ", length(organelle_ids),
+            " ASV(s), ", reads_of(organelle_ids), " reads, called mitochondria (", n_mito,
+            ") or chloroplast (", n_chloro, ")")
+    message("[assign_taxonomy]   already removed above by the tokens or the best-hit check: ",
+            length(already_ids), " ASV(s), ", reads_of(already_ids), " reads (keep ",
+            length(already_keep), ", discard ", length(already_disc), ", best-hit check ",
+            length(already_best), ")")
+    message("[assign_taxonomy]   removed only by the organelle filter: ", length(only_metaxa2),
+            " ASV(s), ", reads_of(only_metaxa2), " reads")
+    for (id in only_metaxa2) {
+      reported <- asv_table_all[id, "taxonomy"]
+      if (is.na(reported) || reported == "") reported <- "unclassified"
+      message("[assign_taxonomy]     ", id, ": ", metaxa2_origin[[id]], " by Metaxa2, ",
+              reads_of(id), " reads (reported as ", reported, ")")
+    }
   }
 }
 message("[assign_taxonomy] Final ASV count: ", nrow(asv_table))
@@ -365,10 +466,18 @@ message("[assign_taxonomy] Final ASV count: ", nrow(asv_table))
 # Fail loud rather than write a header-only table: a filter that removes 100% of
 # ASVs is almost always a marker/config mismatch (e.g. 16S keep tokens on an ITS run).
 if (isTRUE(filter_enabled) && n_before_filter > 0L && nrow(asv_table) == 0L) {
+  # If the organelle filter took part, say how much, because then the lists may
+  # well be right and the sample simply holds little but organelle 16S.
+  n_organelle_only <- sum(filter_status == "removed_organelle")
+  organelle_note <- if (n_organelle_only > 0L) {
+    paste0(" ", n_organelle_only, " of them were removed only because Metaxa2 called them ",
+           "mitochondria or chloroplast; amplicon.taxonomy.filter.organelles: off keeps those.")
+  } else ""
   stop("[assign_taxonomy] the keep/discard filter removed ALL ", n_before_filter,
        " ASVs (amp_type=", amp_type, "). The keep/discard lists likely do not match this ",
        "marker: for ITS use keep: [k__Fungi]; for 16S use keep: [k__Bacteria, k__Archaea]. ",
-       "Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.")
+       "Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.",
+       organelle_note)
 }
 
 # ── Output (a): asv_table.txt — rows=ASV_IDs ─────────────────────────────────
@@ -394,6 +503,21 @@ write.table(asv_table_seqs, file = snakemake@output[["asv_table_seqs"]], col.nam
 taxon_table <- taxa_df[rownames(asv_table), , drop = FALSE]
 taxon_table$sequence <- seqs_sub[rownames(asv_table)]
 write.table(taxon_table, file = snakemake@output[["taxon_seq_table"]], col.names = NA, sep = "\t")
+
+# ── Output (d): asv_table_unfiltered.txt — every ASV that reached the filter ──
+# The layout of (a), but for EVERY ASV that entered the filter (organelles and the
+# other removed ASVs included), in the same order, plus two columns:
+#   metaxa2_origin — Metaxa2's call (mitochondria, chloroplast, bacteria, archaea,
+#                    eukaryota, uncertain), NA when Metaxa2 made none or did not run
+#   filter_status  — kept, or the first step that removed the ASV (see above)
+# So the "kept" rows are exactly asv_table.txt. Meant for analyses that need the
+# removed ASVs back, e.g. how many organelle reads each primer set amplifies;
+# nothing in the pipeline reads it.
+asv_table_unfiltered <- asv_table_all
+asv_table_unfiltered$metaxa2_origin <- unname(metaxa2_origin[rownames(asv_table_all)])
+asv_table_unfiltered$filter_status  <- unname(filter_status[rownames(asv_table_all)])
+write.table(asv_table_unfiltered, file = snakemake@output[["asv_table_unfiltered"]],
+            col.names = NA, sep = "\t")
 
 message("[assign_taxonomy] DONE. Outputs written to ", dirname(snakemake@output[["asv_table"]]))
 

@@ -9,9 +9,12 @@
 # a rule it doesn't get. The two branches below stay exhaustive for the same
 # reason: a "none" marker takes neither.
 #
-# Metaxa2 : -t all (all domains). All extracted sequences pass through; domain-
-#           level filtering happens post-taxonomy via the contaminant filter
-#           in assign_taxonomy.R.
+# Metaxa2 : -t all (all domains). All extracted sequences pass through here. Metaxa2's
+#           own origin call per ASV (bacteria, archaea, eukaryota, chloroplast,
+#           mitochondria, uncertain) is written to metaxa2_origin.tsv; the taxonomy
+#           filter (80a/80c) uses its organelle calls to remove mitochondria and
+#           chloroplasts (amplicon.taxonomy.filter.organelles), while the keep/discard
+#           tokens on the classified lineage still decide everything else.
 # ITSx    : -t all, --only_full F (mandatory for single-region ITS1/ITS2 amplicons).
 #           The region file matching amplicon.its_region is kept.
 
@@ -23,12 +26,21 @@ if MARKER_EXTRACTOR == "metaxa2":
     # acts as a filter, dropping ASVs it cannot recognise as SSU rRNA at all
     # (off-target amplification). That is why -t all (every domain Metaxa2
     # recognises, not just bacteria/archaea) keeps every extracted sequence
-    # regardless of domain: domain-level pruning (e.g. dropping a plant
-    # chloroplast hit) is left to assign_taxonomy.R's contaminant filter later,
-    # not done here. Writes the extracted FASTA and a seqtab subset to the
-    # ASVs Metaxa2 could resolve, both consumed next by dada_length_filter
-    # (60_dada2.smk). `results` is Metaxa2's own summary report — useful for
-    # inspection, but not read by any other rule.
+    # regardless of domain: nothing is pruned here. Writes the extracted FASTA
+    # and a seqtab subset to the ASVs Metaxa2 could resolve, both consumed next
+    # by dada_length_filter (60_dada2.smk). `results` is Metaxa2's own summary
+    # report — useful for inspection, but not read by any other rule.
+    #
+    # `origin` is Metaxa2's own origin call for every extracted ASV, one row per
+    # ASV, collected from its per-origin FASTAs (seqs.mitochondria.fasta, ...).
+    # Rule assign_taxonomy reads it: with amplicon.taxonomy.filter.organelles:
+    # metaxa2 (the default) the ASVs called mitochondria or chloroplast are
+    # removed there, next to the keep/discard tokens, and every ASV's call is
+    # written to the metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt.
+    # Removing them on the classified lineage alone is not enough: on the 16S test
+    # set, plant mitochondria whose nearest SILVA reference is a mitochondrion at
+    # 97-99 % identity were reported as bacteria (mostly Enterobacterales) and
+    # escaped every token.
     rule target_extract:
         input:
             seqs         = OUT / "5.dada2" / "seqs.fasta",
@@ -37,6 +49,7 @@ if MARKER_EXTRACTOR == "metaxa2":
             seqs         = OUT / "5.dada2" / "seqs_extracted.fasta",
             seqtab_names = OUT / "5.dada2" / "seqtab_extracted_head_names.txt",
             results      = OUT / "5.dada2" / "metaxa2_extraction.results.txt",
+            origin       = METAXA2_ORIGIN_TSV,       # 5.dada2/metaxa2_origin.tsv
         params:
             # All raw Metaxa2 outputs (seqs.*) are persisted under this dir for
             # downstream QC / inspection; see 70a_metaxa2_extract.py.

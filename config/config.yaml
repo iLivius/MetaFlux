@@ -224,6 +224,16 @@ amplicon:
       # hit carries a discard token at the token's rank with at least this support
       # (percent; SINTAX confidence x 100). null switches the check off.
       discard_min_support: 50
+      # Organelle filter, 16S only: metaxa2 | off. Metaxa2, which already runs as the
+      # 16S region extractor, sorts every ASV into one origin (bacteria, archaea,
+      # eukaryota, chloroplast, mitochondria, uncertain). With metaxa2, the ASVs it
+      # calls mitochondria or chloroplast are removed as well, after keep/discard. This
+      # catches plant mitochondria that the classifier reports as bacteria (e.g.
+      # Enterobacterales), which no token can reach. Safe to leave set for every
+      # marker: it only acts on 16S with extraction enabled, and does nothing (one
+      # info line) otherwise. 6.taxonomy/asv_table_unfiltered.txt keeps every ASV,
+      # organelles included, whatever this is set to.
+      organelles: metaxa2
 
   dada2:
     pool: false                               # false | "pseudo" | true

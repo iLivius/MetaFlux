@@ -35,14 +35,25 @@ VSEARCH --tabbedout columns:
   4  accepted taxonomy (ranks meeting --sintax_cutoff): d:Bacteria,p:Proteobacteria,...
      Empty when unclassified.
 
+For 16S, metaxa2_origin is also read: Metaxa2's own origin call per ASV
+(5.dada2/metaxa2_origin.tsv, from target_extract — present only when Metaxa2
+ran). With organelles on (params.organelle_filter, from
+amplicon.taxonomy.filter.organelles) the ASVs it calls mitochondria or
+chloroplast are removed together with keep/discard (see "Organelle filter").
+
 Output files (identical structure to the RDP path):
-  asv_table.txt       — rows=ASV_IDs,   cols=[samples..., taxonomy]
-  asv_table_seqs.txt  — rows=sequences, cols=[samples..., taxonomy]
-  taxon_seq_table.txt — rows=ASV_IDs,   cols=[Kingdom..Species, sequence]
-These three files are final pipeline deliverables (requested by `rule all`);
-the only thing that reads one of them back in is aggregate_read_counts.py,
-which sums asv_table.txt's sample columns to report the post-taxonomy-filter
-read count per sample.
+  asv_table.txt            — rows=ASV_IDs,   cols=[samples..., taxonomy]
+  asv_table_seqs.txt       — rows=sequences, cols=[samples..., taxonomy]
+  taxon_seq_table.txt      — rows=ASV_IDs,   cols=[Kingdom..Species, sequence]
+  asv_table_unfiltered.txt — rows=ASV_IDs, every ASV that reached the filter,
+                             cols=[samples..., taxonomy, metaxa2_origin, filter_status]
+The first three hold only the ASVs the filter kept. All four are final pipeline
+deliverables (requested by `rule all`); aggregate_read_counts.py sums
+asv_table.txt's sample columns to report the post-taxonomy-filter read count
+per sample, and the phylogeny (85a_phylo_input.py) reads asv_table.txt and
+taxon_seq_table.txt. Nothing reads asv_table_unfiltered.txt back in: it is for
+the user's own analyses, e.g. comparing how many organelle reads two primer
+sets pick up.
 
 All outputs use R write.table quoting conventions (character values double-quoted,
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
@@ -61,6 +72,11 @@ refdb_path    = Path(sm.input.refdb)
 out_asv       = Path(sm.output.asv_table)
 out_seqs      = Path(sm.output.asv_table_seqs)
 out_taxon     = Path(sm.output.taxon_seq_table)
+out_unfilt    = Path(sm.output.asv_table_unfiltered)
+# Metaxa2's per-ASV origin table: a path when Metaxa2 ran in this run (16S with
+# extraction on), absent (None) for every other marker — see rule assign_taxonomy.
+origin_input  = sm.input.get("metaxa2_origin")
+origin_path   = Path(origin_input) if origin_input else None
 
 amp_type        = sm.params.amp_type
 sintax_cutoff   = float(sm.params.sintax_cutoff)
@@ -83,6 +99,11 @@ filter_discard = list(sm.params.filter_discard) or []
 # None when the check is switched off. SINTAX reports confidences as 0-1, so the
 # value is divided by 100 when it is compared.
 discard_min_support = sm.params.discard_min_support
+# Organelle filter (see "Organelle filter" below): True when the ASVs Metaxa2 calls
+# mitochondria or chloroplast are to be removed. Decided in 00_common.smk: it is
+# only ever True for 16S with extraction on, filter.enabled true and
+# filter.organelles: metaxa2.
+organelle_filter = bool(sm.params.organelle_filter)
 
 log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -296,18 +317,59 @@ def _seg_match(tax_string: str, tokens: list[str]) -> bool:
     return any(_drop_other(tok) in segs for tok in tokens)
 
 
+# ── Metaxa2 origin per ASV (16S only; empty otherwise) ──
+# metaxa2_origin.tsv has one row per ASV Metaxa2 extracted: asv_id, origin
+# (mitochondria, chloroplast, bacteria, archaea, eukaryota, uncertain, or NA for
+# no call). Used by the organelle filter below and written, for every ASV, to the
+# metaxa2_origin column of asv_table_unfiltered.txt. An ASV with no entry (or for
+# a marker where Metaxa2 does not run) has no origin, written as NA.
+metaxa2_origin: dict[str, str] = {}
+if origin_path is not None:
+    with origin_path.open() as fh:
+        fh.readline()                                   # header: asv_id, origin
+        for line in fh:
+            asv_id, origin = line.rstrip("\n").split("\t")
+            if origin != "NA":
+                metaxa2_origin[asv_id] = origin
+    logmsg(f"Metaxa2 origin calls read for {len(metaxa2_origin)} ASVs from {origin_path}")
+# The rule only switches the filter on when Metaxa2 ran, so the table is always
+# there when it is needed; this guards against the two drifting apart.
+if organelle_filter and origin_path is None:
+    logmsg("ERROR: the organelle filter is on but no Metaxa2 origin table was given")
+    log.close()
+    sys.exit("[assign_taxonomy/sintax] the organelle filter is on but no Metaxa2 origin "
+             "table was given (input metaxa2_origin of rule assign_taxonomy)")
+
+
+def reads_of(asv_ids: list[str]) -> int:
+    """Total reads, over all samples, of the given ASVs (from the seqtab counts)."""
+    return sum(int(c) for aid in asv_ids for c in counts[aid])
+
+
 filtered_ids = list(shared_ids)
 n_before = len(filtered_ids)
 
+# What the filter did to each ASV, for the filter_status column of
+# asv_table_unfiltered.txt. The steps below run in a fixed order — keep, discard,
+# best-hit check, organelle filter — and each one only looks at the ASVs the
+# earlier steps kept. So a removed ASV is labelled with the FIRST step that
+# removed it: removed_keep, removed_discard, removed_best_hit or
+# removed_organelle. removed_organelle therefore means "only Metaxa2 caught it".
+filter_status: dict[str, str] = {aid: "kept" for aid in shared_ids}
+
 if filter_enabled:
     if filter_keep:
-        filtered_ids = [aid for aid in filtered_ids
-                        if _seg_match(tax_strings[aid], filter_keep)]
+        for aid in filtered_ids:
+            if not _seg_match(tax_strings[aid], filter_keep):
+                filter_status[aid] = "removed_keep"
+        filtered_ids = [aid for aid in filtered_ids if filter_status[aid] == "kept"]
         logmsg(f"Keep filter ({','.join(filter_keep)}): {len(filtered_ids)} / {n_before} ASVs retained")
     if filter_discard:
         n_pre_excl   = len(filtered_ids)
-        filtered_ids = [aid for aid in filtered_ids
-                        if not _seg_match(tax_strings[aid], filter_discard)]
+        for aid in filtered_ids:
+            if _seg_match(tax_strings[aid], filter_discard):
+                filter_status[aid] = "removed_discard"
+        filtered_ids = [aid for aid in filtered_ids if filter_status[aid] == "kept"]
         logmsg(f"Discard filter ({','.join(filter_discard)}): {n_pre_excl - len(filtered_ids)} ASV(s) removed")
 
     # ── Discard filter, best-hit check ──
@@ -340,9 +402,52 @@ if filter_enabled:
                     break
         for aid, why in weak_hits.items():
             logmsg(f"  {aid}: best hit {why} (reported as {tax_strings[aid]})")
+            filter_status[aid] = "removed_best_hit"
         filtered_ids = [aid for aid in filtered_ids if aid not in weak_hits]
         logmsg(f"Discard filter, best-hit check (support >= {discard_min_support}%): "
                f"{len(weak_hits)} more ASV(s) removed")
+
+    # ── Organelle filter (Metaxa2's own origin call; 16S) ──
+    # Removes every ASV that Metaxa2 placed in its mitochondria or chloroplast FASTA
+    # (amplicon.taxonomy.filter.organelles: metaxa2, the default). It runs last, so it
+    # only removes what keep, discard and the best-hit check let through. That is
+    # exactly the case it is for: plant mitochondria whose classifier best hit is a
+    # bacterium, so no token can see them. On the 16S test set, 8 ASVs with a
+    # mitochondrion as nearest SILVA reference (97-99 % identity) were classified as
+    # bacteria with SINTAX on SILVA 138.2 (best hit Enterobacterales / Pantoea) and
+    # passed every token, while Metaxa2 called all 8 mitochondrial.
+    # Metaxa2's other calls (eukaryota, uncertain, the domains) remove nothing; the
+    # keep tokens decide domains. The log reports how many organelle ASVs and reads
+    # Metaxa2 found, how many of them the earlier steps had already removed, and lists
+    # each ASV that only Metaxa2 caught.
+    if organelle_filter:
+        organelle_ids = [aid for aid in shared_ids
+                         if metaxa2_origin.get(aid) in ("mitochondria", "chloroplast")]
+        n_mito = sum(1 for aid in organelle_ids if metaxa2_origin[aid] == "mitochondria")
+        n_chloro = len(organelle_ids) - n_mito
+        # Organelle ASVs the earlier steps had already removed, per step.
+        already = {step: [aid for aid in organelle_ids if filter_status[aid] == step]
+                   for step in ("removed_keep", "removed_discard", "removed_best_hit")}
+        already_ids = [aid for ids in already.values() for aid in ids]
+        # Organelle ASVs still in the table: only Metaxa2 caught these.
+        only_metaxa2 = [aid for aid in organelle_ids if filter_status[aid] == "kept"]
+        for aid in only_metaxa2:
+            filter_status[aid] = "removed_organelle"
+        filtered_ids = [aid for aid in filtered_ids if filter_status[aid] == "kept"]
+
+        logmsg(f"Organelle filter (Metaxa2 origin): {len(organelle_ids)} ASV(s), "
+               f"{reads_of(organelle_ids)} reads, called mitochondria ({n_mito}) or "
+               f"chloroplast ({n_chloro})")
+        logmsg(f"  already removed above by the tokens or the best-hit check: "
+               f"{len(already_ids)} ASV(s), {reads_of(already_ids)} reads "
+               f"(keep {len(already['removed_keep'])}, discard {len(already['removed_discard'])}, "
+               f"best-hit check {len(already['removed_best_hit'])})")
+        logmsg(f"  removed only by the organelle filter: {len(only_metaxa2)} ASV(s), "
+               f"{reads_of(only_metaxa2)} reads")
+        for aid in only_metaxa2:
+            reported = tax_strings[aid] or "unclassified"
+            logmsg(f"    {aid}: {metaxa2_origin[aid]} by Metaxa2, {reads_of([aid])} reads "
+                   f"(reported as {reported})")
 
 logmsg(f"Final ASV count: {len(filtered_ids)}")
 
@@ -353,6 +458,12 @@ if filter_enabled and n_before > 0 and len(filtered_ids) == 0:
            "The keep/discard lists likely do not match this marker: for ITS use keep: [k__Fungi]; "
            "for 16S use keep: [k__Bacteria, k__Archaea]. Fix amplicon.taxonomy.filter, "
            "or set amplicon.taxonomy.filter.enabled: false.")
+    # If the organelle filter took part, say how much, because then the lists may
+    # well be right and the sample simply holds little but organelle 16S.
+    n_organelle_only = sum(1 for s in filter_status.values() if s == "removed_organelle")
+    if n_organelle_only > 0:
+        msg += (f" {n_organelle_only} of them were removed only because Metaxa2 called them "
+                "mitochondria or chloroplast; amplicon.taxonomy.filter.organelles: off keeps those.")
     logmsg("ERROR: " + msg)
     log.close()
     sys.exit(f"[assign_taxonomy/sintax] {msg}")
@@ -393,6 +504,29 @@ write_count_table(out_seqs, filtered_ids, seq_row_names)
 
 # ── Output (c): taxon_seq_table.txt ───────────────────────────────────────
 write_taxon_table(out_taxon, filtered_ids)
+
+
+def write_unfiltered_table(path: Path, row_ids: list[str]) -> None:
+    """Write asv_table_unfiltered.txt: the layout of asv_table.txt for EVERY ASV
+    that reached the filter (organelles and other removed ASVs included), plus two
+    columns: metaxa2_origin (Metaxa2's call, or NA) and filter_status (kept, or
+    the step that removed the ASV). NA is written unquoted, as R's write.table
+    writes a missing value, so read.table and pandas both read it as missing."""
+    with path.open("w") as fh:
+        fh.write("\t".join([""] + [q(s) for s in samples]
+                           + [q("taxonomy"), q("metaxa2_origin"), q("filter_status")]) + "\n")
+        for asv_id in row_ids:
+            vals = counts.get(asv_id, ["0"] * len(samples))
+            origin = metaxa2_origin.get(asv_id)
+            origin_cell = q(origin) if origin else "NA"
+            fh.write("\t".join([q(asv_id)] + vals
+                               + [q(tax_strings[asv_id]), origin_cell, q(filter_status[asv_id])]) + "\n")
+
+
+# ── Output (d): asv_table_unfiltered.txt ──────────────────────────────────
+# Every ASV that entered the filter, in the same order as asv_table.txt, so the
+# kept rows of this table are asv_table.txt itself plus the two extra columns.
+write_unfiltered_table(out_unfilt, shared_ids)
 
 logmsg(f"DONE. Outputs written to {out_asv.parent}")
 log.close()

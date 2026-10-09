@@ -5,7 +5,10 @@
 #                           rdp    — DADA2 assignTaxonomy (RDP classifier) + addSpecies (16S only)
 #                           sintax — vsearch --sintax (memory-efficient; ~2–3 GB regardless of ASV count)
 #                         Both paths apply the same contaminant filter and write
-#                         the same three output tables.
+#                         the same four output tables: the three filtered ones,
+#                         and asv_table_unfiltered.txt with every ASV that reached
+#                         the filter (organelles included), its Metaxa2 origin and
+#                         what the filter did to it.
 # aggregate_read_counts : joins all per-stage read-count sources into one wide
 #                         TSV (one row per sample, one column per stage).
 
@@ -25,10 +28,16 @@ if TAXONOMY_METHOD == "rdp":
             seqtab_names = _seqtab_for_taxonomy,
             refdb        = TAXONOMY_REFDB,
             species_db   = TAXONOMY_SPECIES_DB,    # addSpecies for 16S only; empty list for all other markers (ITS, 18S, gyrB, rpoB)
+            # Metaxa2's origin call per ASV (target_extract), for the organelle filter
+            # and the metaxa2_origin column. Only when Metaxa2 runs (16S with extraction
+            # on); for every other marker the rule's inputs are unchanged.
+            **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
         output:
             asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
             asv_table_seqs  = OUT / "6.taxonomy" / "asv_table_seqs.txt",
             taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
+            # Every ASV that reached the filter, with metaxa2_origin and filter_status.
+            asv_table_unfiltered = OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
         params:
             amp_type        = AMPLICON_TYPE,
             min_boot        = _tax_cfg["min_boot"],
@@ -40,6 +49,7 @@ if TAXONOMY_METHOD == "rdp":
             filter_keep     = FILTER_KEEP,
             filter_discard  = FILTER_DISCARD,
             discard_min_support = FILTER_DISCARD_MIN_SUPPORT,   # best-hit check; None = off
+            organelle_filter = ORGANELLE_FILTER,   # remove Metaxa2's mitochondria/chloroplast calls
             seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",
@@ -64,10 +74,14 @@ else:  # sintax
             seqs         = _seqs_for_taxonomy,
             seqtab_names = _seqtab_for_taxonomy,
             refdb        = TAXONOMY_SINTAX_DB,
+            # Metaxa2's origin call per ASV — same as the rdp rule above.
+            **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
         output:
             asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
             asv_table_seqs  = OUT / "6.taxonomy" / "asv_table_seqs.txt",
             taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
+            # Every ASV that reached the filter, with metaxa2_origin and filter_status.
+            asv_table_unfiltered = OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
         params:
             amp_type        = AMPLICON_TYPE,
             sintax_cutoff   = _tax_cfg["sintax_cutoff"],
@@ -80,6 +94,7 @@ else:  # sintax
             filter_keep     = FILTER_KEEP,
             filter_discard  = FILTER_DISCARD,
             discard_min_support = FILTER_DISCARD_MIN_SUPPORT,   # best-hit check; None = off
+            organelle_filter = ORGANELLE_FILTER,   # remove Metaxa2's mitochondria/chloroplast calls
             seed            = config["amplicon"]["seed"],
         log:
             LOGS / "assign_taxonomy.log",
@@ -129,9 +144,12 @@ if KINGDOM_SIDECAR:
 # seqtab, and the final asv_table) into one wide table: one row per sample, one
 # column per stage, in pipeline order (raw → ... → post_taxonomy_filter — see
 # 80b_aggregate_read_counts.py for the exact column list, which varies with
-# remove_phix / extraction_enabled). This is the run's end-of-line diagnostic:
-# read_tracking.txt is requested directly by rule all and meant for a human to
-# scan for where a sample lost most of its reads; no other rule reads it back.
+# remove_phix / extraction_enabled). post_taxonomy_filter is summed from the
+# filtered asv_table.txt, so it counts every removal of the taxonomy filter: keep,
+# discard, the best-hit check and the organelle filter. This is the run's
+# end-of-line diagnostic: read_tracking.txt is requested directly by rule all and
+# meant for a human to scan for where a sample lost most of its reads; no other
+# rule reads it back.
 rule aggregate_read_counts:
     input:
         raw_counts       = OUT / "stats" / "1.raw_reads.counts",

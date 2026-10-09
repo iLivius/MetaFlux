@@ -16,19 +16,25 @@ into a flanking region), trims it back to just that region.
 Input: seqs.fasta and seqtab_head_names.txt, straight from dada_seqtab.R — the
 full, pre-length-filter ASV set (see rule target_extract in 70_extract.smk).
 
-Run with -t all (all domains); every sequence Metaxa2 successfully classifies
-to ANY domain is kept, none are dropped here for being non-bacterial. Domain-
-based decisions (e.g. discarding chloroplast/mitochondrial SSU as contaminants)
-are deferred to the keep/discard contaminant filter that runs after taxonomy
-assignment (80a_assign_taxonomy.R for the rdp path, 80c_parse_sintax.py for the
-sintax path) — that filter works off the assigned lineage, which is a more
-reliable signal than Metaxa2's domain call alone.
+Run with -t all (all domains); every sequence Metaxa2 extracts is kept here,
+whatever its origin — nothing is dropped for being non-bacterial. What is
+removed is decided after taxonomy assignment, by the taxonomy filter
+(80a_assign_taxonomy.R for the rdp path, 80c_parse_sintax.py for the sintax
+path). For domains that filter goes by the classified lineage (the keep
+tokens). For organelles it also uses Metaxa2's own origin call, which this
+script writes to metaxa2_origin.tsv (amplicon.taxonomy.filter.organelles,
+default metaxa2): on the 16S test set, 8 plant-mitochondrial ASVs whose
+nearest SILVA reference is a mitochondrion at 97-99 % identity were
+classified as bacteria (mostly Enterobacterales) and passed every token, while
+Metaxa2 called all 8 mitochondrial.
 
 Output: seqs_extracted.fasta (cleaned, trimmed sequences) and
 seqtab_extracted_head_names.txt (the matching read-count table, subset to the
 ASVs Metaxa2 could extract) are read next by dada_length_filter
-(60d_dada_length_filter.py), which applies the ASV length window. Metaxa2's
-own raw output files are kept under the working prefix directory for QC.
+(60d_dada_length_filter.py), which applies the ASV length window.
+metaxa2_origin.tsv (one row per extracted ASV: asv_id, origin) is read by
+assign_taxonomy (see above). Metaxa2's own raw output files are kept under the
+working prefix directory for QC.
 """
 import subprocess
 import sys
@@ -67,6 +73,7 @@ seqtab_names_in  = Path(sm.input.seqtab_names)
 output_fasta     = Path(sm.output.seqs)
 seqtab_names_out = Path(sm.output.seqtab_names)
 results_out      = Path(sm.output.results)
+origin_out       = Path(sm.output.origin)        # metaxa2_origin.tsv, see the end of this script
 prefix           = str(sm.params.prefix)
 threads          = int(sm.threads)
 
@@ -110,6 +117,7 @@ if not extraction_fasta.exists():
 # isolates the plain ASV ID — this is what has to match the seqtab column
 # headers for the subset below.
 kept_ids: set[str] = set()
+kept_order: list[str] = []      # the same IDs in file order, for metaxa2_origin.tsv
 output_fasta.parent.mkdir(parents=True, exist_ok=True)
 with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
     current_seq: list[str] = []
@@ -119,6 +127,8 @@ with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
             if current_id is not None:
                 fo.write(f">{current_id}\n{''.join(current_seq)}\n")
             current_id = line[1:].split()[0].split("|")[0]
+            if current_id not in kept_ids:
+                kept_order.append(current_id)
             kept_ids.add(current_id)
             current_seq = []
         else:
@@ -153,12 +163,88 @@ else:
 # Subset seqtab
 subset_seqtab_by_ids(seqtab_names_in, kept_ids, seqtab_names_out, log)
 
+# ── Metaxa2's origin call per ASV → metaxa2_origin.tsv ──────────────────────
+# After extracting, Metaxa2 aligns every extracted region against its own
+# reference database (a BLAST step) and writes each sequence into one per-origin
+# FASTA: <prefix>.mitochondria.fasta, .chloroplast.fasta, .bacteria.fasta,
+# .archaea.fasta, .eukaryota.fasta, .uncertain.fasta. That second, alignment-
+# based call is the one used here. The single letter in the extraction headers
+# above ("ASV_1|M ...") is only Metaxa2's preliminary HMM guess, which calls far
+# too many sequences mitochondrial (see "Metaxa2 reports origin twice" in
+# docs/amplicon/markers/16S.md), so it is not used.
+#
+# The per-origin headers look like ">ASV_101 Mitochondrial SSU rRNA"; the first
+# word is the ASV ID. The two organelle files are read first: if Metaxa2 ever
+# listed an ASV in two files, the first call is kept (with a warning in the log),
+# so an ASV listed as an organelle anywhere counts as an organelle.
+#
+# Output: one row per extracted ASV, in the order of Metaxa2's extraction FASTA
+# (a lookup table: nothing depends on the row order), columns asv_id and origin
+# (mitochondria, chloroplast, bacteria, archaea, eukaryota, uncertain; NA when
+# Metaxa2 extracted the sequence but listed it in none of the files). Read by
+# rule assign_taxonomy: the organelle filter (amplicon.taxonomy.filter.organelles)
+# removes the mitochondria and chloroplast ASVs, and every ASV's call goes into the
+# metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt.
+ORIGINS = ["mitochondria", "chloroplast", "bacteria", "archaea", "eukaryota", "uncertain"]
+origin_of: dict[str, str] = {}
+for origin in ORIGINS:
+    origin_fasta = Path(f"{prefix}.{origin}.fasta")
+    # Metaxa2 writes all six files on every -t all run, empty ones included. A
+    # missing file means its output is not what this script expects, and an origin
+    # table written without it could let organelles through unnoticed, so stop.
+    if not origin_fasta.exists():
+        log.write(
+            f"[metaxa2_extract] ERROR: {origin_fasta} not found. Metaxa2 writes one FASTA "
+            "per origin; without it the organelle filter cannot be built.\n"
+        )
+        log.close()
+        sys.exit(1)
+    with origin_fasta.open() as fh:
+        for line in fh:
+            if not line.startswith(">"):
+                continue
+            asv_id = line[1:].split()[0].split("|")[0]
+            if asv_id in origin_of:
+                log.write(
+                    f"[metaxa2_extract] WARNING: {asv_id} is listed as {origin_of[asv_id]} "
+                    f"and as {origin}; keeping {origin_of[asv_id]}\n"
+                )
+                continue
+            origin_of[asv_id] = origin
+
+# An ID in an origin file that is not in the extraction FASTA should not happen
+# (the files are built from the same extraction); say so if it ever does. Such an
+# ID is not written, since that ASV was dropped above and never reaches taxonomy.
+not_extracted = sorted(set(origin_of) - kept_ids)
+if not_extracted:
+    log.write(
+        f"[metaxa2_extract] WARNING: {len(not_extracted)} ASV(s) have an origin call but "
+        f"are not in {extraction_fasta.name} (first few: {not_extracted[:5]})\n"
+    )
+
+origin_out.parent.mkdir(parents=True, exist_ok=True)
+n_per_origin = {origin: 0 for origin in ORIGINS}
+n_no_call = 0
+with origin_out.open("w") as fh:
+    fh.write("asv_id\torigin\n")
+    for asv_id in kept_order:
+        origin = origin_of.get(asv_id, "NA")
+        if origin == "NA":
+            n_no_call += 1
+        else:
+            n_per_origin[origin] += 1
+        fh.write(f"{asv_id}\t{origin}\n")
+summary = ", ".join(f"{origin} {n}" for origin, n in n_per_origin.items())
+log.write(f"[metaxa2_extract] origin calls of the {len(kept_order)} extracted ASV(s): "
+          f"{summary}, no call {n_no_call} -> {origin_out.name}\n")
+
 # Keep all Metaxa2 raw outputs (seqs.summary.txt, seqs.hmmer.table, seqs.graph,
 # seqs.extraction.fasta, seqs.extraction.fasta.1, seqs.extraction.results) under
 # the prefix dir for QC / downstream inspection. Final dir layout:
 #   <prefix_dir>/seqs.*  ← raw Metaxa2 working files (persisted)
 #   5.dada2/seqs_extracted.fasta             ← promoted, cleaned headers
 #   5.dada2/metaxa2_extraction.results.txt   ← promoted .extraction.results
+#   5.dada2/metaxa2_origin.tsv               ← origin call per ASV, from seqs.<origin>.fasta
 log.write(f"[metaxa2_extract] Keeping raw outputs under: {Path(prefix).parent}\n")
 log.write(f"[metaxa2_extract] DONE.\n")
 log.close()
