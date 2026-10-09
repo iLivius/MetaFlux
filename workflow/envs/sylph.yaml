@@ -1,0 +1,20 @@
+name: sylph
+channels: [conda-forge, bioconda]
+dependencies:
+  # The two tools of the sylph profiler (38_sylph.smk): sylph makes the sketches and
+  # the profile, sylph-tax adds each genome's lineage. Both are bioconda packages.
+  #
+  # Exact versions on purpose:
+  #   - sylph 1.0.0 changed its defaults (-M 50 -> 10) and its output order, and rule
+  #     sylph_profile reads the wording of 1.0.0's log lines to check every sample.
+  #   - sylph-tax 1.9.2 knows GTDB_r232 and fixes GlobDB_r232, and 00_common.smk
+  #     copies its list of built-in taxonomy names (SYLPH_TAX_FILES).
+  #
+  # Snakemake identifies this software environment by the full text of this file,
+  # comments included. ANY edit, even to a comment, therefore counts as new software:
+  # every finished sylph run sketches its samples again, which needs the trimmed reads
+  # again (they are temporary), so fastp runs again too; and in a profiler: both
+  # folder, Kraken2 and everything after it then run again as well, with no warning.
+  # Change this file only at a release.
+  - sylph=1.0.0
+  - sylph-tax=1.9.2

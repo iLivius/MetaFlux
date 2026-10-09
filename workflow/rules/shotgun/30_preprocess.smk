@@ -1,5 +1,6 @@
 # Shotgun preprocessing: turns raw paired-end reads into the trimmed FASTQs that
-# 35_kraken2.smk classifies. Five things happen here, in order:
+# 35_kraken2.smk classifies and/or 38_sylph.smk sketches (shotgun.profiler). Five
+# things happen here, in order:
 #   1. download_sra     — only in BioProject mode: fetch FASTQs from SRA instead
 #                          of expecting them already in fastq_dir.
 #   2. samples_manifest  — write a small TSV recording where each sample's reads
@@ -10,9 +11,9 @@
 #                          with BBMap. Optional.
 #   5. trim_adapters     — adapter and quality trimming (fastp). Always runs,
 #                          and its output is what 35_kraken2.smk actually
-#                          classifies — every earlier step here exists only to
-#                          clean reads up before that point, not to change what
-#                          gets classified.
+#                          classifies and/or 38_sylph.smk sketches — every
+#                          earlier step here exists only to clean reads up
+#                          before that point, not to change what gets profiled.
 #
 # Stage chain (each of steps 3-4 is switched on/off by shotgun.decontamination
 # in the config): raw → (phix) → (host) → fastp. The fastp_upstream() /
@@ -22,8 +23,8 @@
 # was skipped.
 #
 # priority: the values in this file count down from 10 (download_sra) to 4
-# (trim_adapters), continuing on through 35_kraken2.smk and 45_abundance.smk
-# (3, 2, 1) — roughly in pipeline order. When several samples have jobs ready
+# (trim_adapters), continuing on through 35_kraken2.smk and 45_abundance.smk,
+# or 38_sylph.smk (3, 2, 1) — roughly in pipeline order. When several samples have jobs ready
 # to run at once and there are not enough cores for all of them, Snakemake
 # uses priority to break the tie, preferring the higher number — so an
 # earlier-stage job tends to run before a later-stage one, and the batch of
@@ -309,7 +310,9 @@ rule decontam_host:
 # raw / PhiX-removed / host-removed reads is the last stage that actually ran
 # for this config, so this rule doesn't repeat that REMOVE_PHIX/HOST_GENOMES
 # logic itself. Its _trim_R1/_trim_R2 output is what kraken2 (35_kraken2.smk)
-# actually classifies.
+# actually classifies and/or sylph_sketch (38_sylph.smk) sketches; with
+# shotgun.profiler: both, Snakemake keeps these temporary files until both have
+# read them.
 #
 # --cut_front / --cut_right is sliding-window quality trimming from both ends
 # of each read; --length_required (min_len, from

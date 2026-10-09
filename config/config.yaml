@@ -48,7 +48,8 @@ output:
 # PhiX is used in both modes but consumed differently:
 #   amplicon → bowtie2 index built from the fetched FASTA
 #   shotgun  → BBDuk's bundled phix174_ill.ref.fa.gz (no download/index needed)
-# kraken_db is shotgun-only and must be supplied separately.
+# kraken_db (shotgun.profiler kraken2 | both) and sylph_databases + sylph_taxonomy_dir
+# (shotgun.profiler sylph | both) are shotgun-only and must be supplied separately.
 references:
   # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS) are
   # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
@@ -70,7 +71,35 @@ references:
     fasta: refdb/phix/phix.fna
     fetch_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz
 
-  kraken_db: /path/to/kraken2_db # [shotgun] — user-supplied (e.g. a PlusPF index)
+  kraken_db: /path/to/kraken2_db # [shotgun, profiler kraken2 | both] — user-supplied (e.g. a PlusPF index)
+
+  # [shotgun, profiler sylph | both] — user-supplied, like kraken_db: MetaFlux never
+  # downloads these. One entry per sylph database file, each with the sylph-tax
+  # taxonomy that names its genomes (or the path of your own accession<TAB>lineage
+  # table, .tsv or .tsv.gz):
+  #   gtdb-r232-c200-dbv1.syldb                ->  GTDB_r232
+  #   gtdb-r226-c200-dbv1.syldb                ->  GTDB_r226
+  #   fungi-refseq-2025-10-11-c200-dbv1.syldb  ->  FungiRefSeq-latest
+  # All databases are profiled in ONE sylph run, so an organism present in two of them
+  # is counted once, by its closer genome. Use builds made at c 200 (best for thin
+  # communities) or c 1000 (about 5x less memory). A c 100 build cannot be used:
+  # MetaFlux sketches the reads at c 200. .syldb and two-stage .syl2db files both work.
+  # Memory: sylph holds the files in memory; measured peak 1.01-1.11 x their size on
+  # disk (GTDB r232 c200 + fungi: 26.66 GB of files, peak 26.9-29.7 GB).
+  # Downloads: https://sylph-docs.github.io/ (page 'Pre-built databases')
+  sylph_databases: []
+  #  - path: /path/to/gtdb-r232-c200-dbv1.syldb
+  #    taxonomy: GTDB_r232
+  #  - path: /path/to/fungi-refseq-2025-10-11-c200-dbv1.syldb
+  #    taxonomy: FungiRefSeq-latest
+
+  # [shotgun, profiler sylph | both] — folder of sylph-tax lineage tables (~80 MB),
+  # filled once with sylph-tax 1.9.2 (the version in workflow/envs/sylph.yaml):
+  #   sylph-tax --no-config --taxonomy-dir /path/to/sylph_taxonomy download
+  # MetaFlux hands this folder to sylph-tax itself (--no-config --taxonomy-dir), so
+  # nothing is read from or written to ~/.config/sylph-tax. Needed whenever a
+  # `taxonomy` above is a sylph-tax name rather than a file path.
+  sylph_taxonomy_dir: null
 
 # ═══════════════════════════════════════════════════════════════
 # Amplicon-only configuration — ignored when mode: shotgun
@@ -584,9 +613,10 @@ shotgun:
 # ─────────────────────── Resources [shared] ─────────────────────
 # Per-rule threads and mem_mb. Rules read these via threads_for() / mem_mb_for()
 # helpers defined in workflow/rules/shared/00_common.smk. Missing keys fall
-# back to threads_default / mem_mb_default — with ONE exception: delete the
-# phylo_tree line below and the tree search falls back to 1, not threads_default,
-# because there the thread count changes the tree and not just the runtime.
+# back to threads_default / mem_mb_default — with TWO exceptions: delete the
+# phylo_tree or the sylph_sketch line below and that rule falls back to 1, not
+# threads_default, because there the thread count changes the result and not just
+# the runtime.
 resources:
   threads_default: 4
   mem_mb_default: 2000
@@ -643,6 +673,19 @@ resources:
     extract_taxon_reads: 4
     compress_extracted: 6                     # pigz parallelism for extract_taxa outputs
     download_sra: 6                           # fasterq-dump parallelism; past ~8 the bottleneck is I/O, not CPU
+    # sylph (shotgun.profiler sylph | both)
+    sylph_sketch: 1                           # ONE thread on purpose, like phylo_tree. With 2 or more
+                                              # threads sylph removes duplicate k-mers in parallel and the
+                                              # sketch differs from run to run (Zymo at 8 threads:
+                                              # 4,395,232 vs 4,395,237 k-mer counts; abundances moved in
+                                              # the 4th decimal). At 1 thread the sketch is byte-identical
+                                              # and still fast (~6 s for 4.7 M read pairs); Snakemake
+                                              # sketches several samples at once. Delete this line and it
+                                              # still falls back to 1.
+    sylph_profile: 16                         # one job for ALL samples; no number depends on it
+    sylph_taxprof: 1                          # sylph-tax is single-threaded
+    sylph_tables: 1
+    sylph_read_tracking: 1                    # profiler: sylph only
   mem_mb:
     # ── shared ──
     multiqc: 2000
@@ -681,3 +724,13 @@ resources:
     bracken: 4000
     kraken_biom: 2000
     extract_taxon_reads: 2000
+    # sylph (shotgun.profiler sylph | both)
+    sylph_sketch: 4000                        # measured 54-64 MB for 4.7 M read pairs; deep soil
+                                              # (0.4-0.5 GB sketches) not measured, hence the headroom
+    sylph_profile: null                       # null = worked out at parse time from the database files:
+                                              # 1.2 x their size + 4096 MB (GTDB r232 c200 + fungi ->
+                                              # 34,601 MB; measured peak 26.9-29.7 GB). Set a number to
+                                              # override it, e.g. on a cluster.
+    sylph_taxprof: 2000                       # measured 135 MB
+    sylph_tables: 2000
+    sylph_read_tracking: 2000

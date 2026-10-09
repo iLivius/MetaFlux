@@ -18,8 +18,10 @@
 #     profile of facts (PROFILE, loaded from workflow/markers/<type>.yaml — see the
 #     "Marker registry" section below), and every resolved reference-database path
 #   - for shotgun mode: which profiler turns the cleaned reads into taxon tables
-#     (shotgun.profiler: kraken2, sylph or both), the Kraken2/Bracken settings and the
-#     PhiX/host decontamination toggles
+#     (shotgun.profiler: kraken2, sylph or both), the Kraken2/Bracken settings, the
+#     sylph databases and lineage tables, and the PhiX/host decontamination toggles
+#   - for sylph: sample names it cannot use, and out_dirs that already hold another
+#     profiler's results (both checked right after sample discovery)
 #   - which rule files the Snakefile leaves out of this run (SKIP_RULE_FILES)
 #   - which samples exist and how their FASTQ files are named (SAMPLES, EXTN,
 #     FASTQ_NAMING), discovered once here rather than re-globbed by every rule
@@ -32,6 +34,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -949,7 +952,9 @@ if MODE == "amplicon":
 # It then validates the user-supplied Kraken2 database (only when Kraken2 runs),
 # resolves the decontamination and classification settings rules/shotgun/*.smk read
 # directly, and works out how much memory to give the Kraken2 rule from the database's
-# own size on disk (see _kraken_hash_size_mb below) rather than a fixed guess.
+# own size on disk (see _kraken_hash_size_mb below) rather than a fixed guess. Last, it
+# checks the sylph databases and lineage tables (only when sylph runs) and works out
+# sylph_profile's memory the same way, from the database files' size.
 else:  # MODE == "shotgun"
     sht_cfg = config["shotgun"]
 
@@ -975,15 +980,6 @@ else:  # MODE == "shotgun"
         )
     RUN_KRAKEN2 = PROFILER in ("kraken2", "both")
     RUN_SYLPH   = PROFILER in ("sylph", "both")
-
-    # The switch above is in place before the sylph rules themselves exist. Until they
-    # are added, stop sylph and both here with a plain message, instead of letting
-    # them fail later with a confusing "missing rule" error from Snakemake.
-    if RUN_SYLPH:
-        sys.exit(
-            f"[MetaFlux] shotgun.profiler: {PROFILER} is available once the sylph rules are "
-            f"added; this version of the workflow runs shotgun.profiler: kraken2 only."
-        )
 
     # Whole rule files belong to one profiler, and the Snakefile skips the files of a
     # profiler that does not run (see SKIP_RULE_FILES at the top of this file).
@@ -1174,6 +1170,309 @@ else:  # MODE == "shotgun"
     BIOPROJECT     = _inp.get("bioproject") or None
     ACCESSION_LIST = _inp.get("accession_list") or None
 
+    # ── sylph databases and lineage tables (profiler sylph | both; user-supplied) ──
+    # Everything the sylph rules (38_sylph.smk) need is resolved and checked here,
+    # before any job starts. That matters more for sylph than for Kraken2, because
+    # sylph and sylph-tax accept most mistakes with exit code 0 and carry on:
+    #   - a database file with an unexpected suffix is skipped with only a warning;
+    #   - a database sketched more densely (c 100) than MetaFlux sketches the reads
+    #     makes sylph skip every sample;
+    #   - a lineage table from another release silently gives genomes wrong names.
+    # What can only be seen at run time is checked in the rules themselves.
+    # The values built here (left empty under profiler: kraken2):
+    #   SYLPH_DB_PATHS        the database files, in config order (sylph_profile inputs)
+    #   SYLPH_TAXONOMY_ARGS   what sylph-tax -t receives: built-in names or table paths,
+    #                         each once (sylph_taxprof)
+    #   SYLPH_TAXONOMY_FILES  the lineage tables behind them (sylph_taxprof inputs)
+    #   SYLPH_DB_LABELS       'file (taxonomy)' per database: start-up line, table line 1
+    #   SYLPH_TAXONOMY_DIR    references.sylph_taxonomy_dir as a full path, or None
+    #   SYLPH_PROFILE_MEM_MB  memory for the one sylph_profile job
+
+    # How densely sylph_sketch samples the reads: 1 k-mer in 200. Fixed by design. A
+    # sketch can be compared with databases built at the same or a coarser c, so the
+    # prebuilt c 200 and c 1000 databases both work, and c 200 finds low-coverage
+    # genomes best.
+    SYLPH_SKETCH_C = 200
+
+    # sylph-tax 1.9.2's built-in taxonomy names, and the lineage table each one reads
+    # from references.sylph_taxonomy_dir. Copied from sylph-tax 1.9.2
+    # (sylph_tax/metadata_files.py); update together with the pin in
+    # workflow/envs/sylph.yaml. Used here only to check, before anything runs, that
+    # the table a run needs is really in the folder.
+    SYLPH_TAX_FILES = {
+        "FungiRefSeq-latest":     "fungi_refseq_2025-10-11_metadata.tsv.gz",
+        "FungiRefSeq-2024-07-25": "fungi_refseq_2024-07-25_metadata.tsv.gz",
+        "GTDB_r214":              "gtdb_r214_metadata.tsv.gz",
+        "GTDB_r220":              "gtdb_r220_metadata.tsv.gz",
+        "GTDB_r226":              "gtdb_r226_metadata.tsv.gz",
+        "GTDB_r232":              "gtdb_r232_metadata.tsv.gz",
+        "GlobDB_r226":            "globdb_r226_sylph_tax.tsv.gz",
+        "GlobDB_r232":            "globdb_r232_taxonomy.tsv.gz",
+        "OceanDNA":               "ocean_dna_metadata.tsv.gz",
+        "SoilSMAG":               "soil_smag_metadata.tsv.gz",
+        "TaraEukaryoticSMAG":     "tara_SMAGs_metadata.tsv.gz",
+    }
+    # sylph-tax also knows three viral taxonomies. Their ranks (realm, viral kingdom,
+    # vFAM, ...) do not fit the seven k__..s__ slots of MetaFlux tables, so they are
+    # refused instead of producing a table phyloseq would read wrongly.
+    SYLPH_TAX_VIRAL = {"IMGVR_4.1", "UHGV_default", "UHGV_ictv"}
+    # Pieces of the prebuilt database file names (as on sylph's download server and
+    # the files used to test MetaFlux) -> the built-in taxonomy that names their
+    # genomes. A built-in taxonomy paired with the wrong release would rename genomes
+    # without any warning, so the pair is checked. A custom lineage table (a file path)
+    # skips this check.
+    SYLPH_DB_NAME_HINTS = [
+        ("gtdb-r232", "GTDB_r232"),
+        ("gtdb-r226", "GTDB_r226"),
+        ("gtdb-r220", "GTDB_r220"),
+        ("gtdb-r214", "GTDB_r214"),
+        ("fungi-refseq-2025-10-11", "FungiRefSeq-latest"),
+        ("fungi-refseq-2024-07-25", "FungiRefSeq-2024-07-25"),
+        ("globdb_r232", "GlobDB_r232"),
+        ("globdb_r226", "GlobDB_r226"),
+        ("smag-c", "SoilSMAG"),
+        ("oceandna-c", "OceanDNA"),
+        ("tara-eukmags", "TaraEukaryoticSMAG"),
+    ]
+
+    def _sylph_family(taxonomy):
+        """The database family of a built-in taxonomy name: GTDB_r232 -> GTDB,
+        GlobDB_r226 -> GlobDB, FungiRefSeq-latest -> FungiRefSeq. Every other name is
+        its own family. Two releases of one family share genomes and accessions."""
+        if taxonomy.startswith("GTDB_"):
+            return "GTDB"
+        if taxonomy.startswith("GlobDB_"):
+            return "GlobDB"
+        if taxonomy.startswith("FungiRefSeq-"):
+            return "FungiRefSeq"
+        return taxonomy
+
+    def _sylph_c_in_name(file_name):
+        """The sketch density written in a database file name, or None.
+        'gtdb-r232-c200-dbv1.syldb' -> 200, 'uhgv_c100_dbv1.syldb' -> 100. The 'c' and
+        its number must stand between separators (- _ .) or at either end of the name,
+        so a custom name such as 'soil_c50k.syldb' is not misread as c 50."""
+        match = re.search(r"(^|[-_.])c(\d+)([-_.]|$)", file_name.lower())
+        if match is None:
+            return None
+        return int(match.group(2))
+
+    def _sylph_prebuilt_name(file_name):
+        """True when a database file name looks like one of sylph's prebuilt databases:
+        it contains a known name piece (SYLPH_DB_NAME_HINTS) or sylph's own
+        database-version tag ('-dbv1', '_dbv1', 'v0.3'). Such names say truthfully what
+        the file is; a name you chose yourself may not."""
+        name = file_name.lower()
+        for name_piece, _taxonomy in SYLPH_DB_NAME_HINTS:
+            if name_piece in name:
+                return True
+        if re.search(r"[-_]dbv\d", name):
+            return True
+        if "v0.3" in name:
+            return True
+        return False
+
+    # Shown with the messages below: what a working entry looks like, and how to fill
+    # the lineage-table folder.
+    _SYLPH_EXAMPLE = (
+        "  references:\n"
+        "    sylph_databases:\n"
+        "      - path: /path/to/gtdb-r232-c200-dbv1.syldb\n"
+        "        taxonomy: GTDB_r232\n"
+        "      - path: /path/to/fungi-refseq-2025-10-11-c200-dbv1.syldb\n"
+        "        taxonomy: FungiRefSeq-latest\n"
+        "    sylph_taxonomy_dir: /path/to/sylph_taxonomy\n"
+        "Databases: https://sylph-docs.github.io/ (page 'Pre-built databases')"
+    )
+    _SYLPH_DOWNLOAD = (
+        "Fill the folder once (about 80 MB) with sylph-tax 1.9.2 (bioconda):\n"
+        "  sylph-tax --no-config --taxonomy-dir /path/to/sylph_taxonomy download\n"
+        "or download only the tables you need; see docs/shotgun/sylph.md"
+    )
+
+    _refs = config.get("references") or {}
+    _syl_dbs_cfg = _refs.get("sylph_databases") or []
+    _syl_dir_cfg = _refs.get("sylph_taxonomy_dir")
+    if _syl_dir_cfg:
+        SYLPH_TAXONOMY_DIR = Path(str(_syl_dir_cfg)).resolve()
+    else:
+        SYLPH_TAXONOMY_DIR = None
+    SYLPH_DB_PATHS       = []
+    SYLPH_TAXONOMY_ARGS  = []
+    SYLPH_TAXONOMY_FILES = []
+    SYLPH_DB_LABELS      = []
+    _syl_builtin = []       # the built-in taxonomy name of each entry (family checks)
+
+    if RUN_SYLPH:
+        # Why: MetaFlux never downloads sylph databases, and sylph needs at least one.
+        if not isinstance(_syl_dbs_cfg, list) or not _syl_dbs_cfg:
+            sys.exit(f"[MetaFlux] shotgun.profiler: {PROFILER} needs at least one sylph database in "
+                     f"references.sylph_databases (MetaFlux does not download them), e.g.\n"
+                     + _SYLPH_EXAMPLE)
+        # Why: a mistyped folder would otherwise surface only as a sylph-tax error at the end.
+        if SYLPH_TAXONOMY_DIR is not None and not SYLPH_TAXONOMY_DIR.is_dir():
+            sys.exit(f"[MetaFlux] references.sylph_taxonomy_dir not found: {SYLPH_TAXONOMY_DIR}\n"
+                     + _SYLPH_DOWNLOAD)
+
+        for _i, _entry in enumerate(_syl_dbs_cfg, 1):
+            _where = f"references.sylph_databases entry {_i}"
+
+            # Why: each entry must pair a database file with the taxonomy naming its genomes.
+            if not isinstance(_entry, dict):
+                sys.exit(f"[MetaFlux] {_where} must have a 'path' and a 'taxonomy' (got: {_entry!r}), e.g.\n"
+                         + _SYLPH_EXAMPLE)
+            # Why: a misspelt key (taxonmy) would otherwise read as a missing taxonomy.
+            _unknown_keys = []
+            for _key in _entry:
+                if _key not in ("path", "taxonomy"):
+                    _unknown_keys.append(str(_key))
+            if _unknown_keys:
+                sys.exit(f"[MetaFlux] {_where} has unknown key(s) {sorted(_unknown_keys)}; "
+                         f"the allowed keys are path and taxonomy")
+            # Why: there is no database to profile against without a path.
+            if not _entry.get("path"):
+                sys.exit(f"[MetaFlux] {_where} has no 'path'")
+            _db = Path(str(_entry["path"])).resolve()
+
+            # Why: sylph decides what a file is from its name and silently skips anything
+            # else. Checked before the file's existence, so that a Kraken2 index FOLDER
+            # given here by mistake gets this message.
+            if _db.suffix not in (".syldb", ".syl2db"):
+                sys.exit(f"[MetaFlux] {_where}: {_db.name} must end in .syldb or .syl2db. sylph decides "
+                         f"what a file is from its name and silently skips anything else (a Kraken2 index "
+                         f"folder does not work here)")
+            # Why: a missing file would only fail inside sylph, after every sample is sketched.
+            if not _db.is_file():
+                sys.exit(f"[MetaFlux] {_where}: sylph database not found: {_db}")
+            # Why: the same genomes loaded twice make sylph's output change from run to run.
+            if _db in SYLPH_DB_PATHS:
+                sys.exit(f"[MetaFlux] {_where}: {_db.name} is listed twice")
+
+            # Why: a database denser than the sketches (c below 200) makes sylph skip every
+            # sample with exit code 0. A prebuilt file name is trusted, so it stops here; a
+            # name you chose may use 'c' for something else, so it only warns (rule
+            # sylph_profile still stops on sylph's own error if the file really is c 100).
+            _db_c = _sylph_c_in_name(_db.name)
+            if _db_c is not None and _db_c < SYLPH_SKETCH_C:
+                if _sylph_prebuilt_name(_db.name):
+                    sys.exit(f"[MetaFlux] {_where}: {_db.name} looks like a database sketched at c {_db_c} "
+                             f"(from its file name). MetaFlux sketches reads at c {SYLPH_SKETCH_C}, and sylph "
+                             f"skips every sample against a denser database. Use a c 200 or c 1000 build")
+                sys.stderr.write(f"[MetaFlux] warning: {_where}: the file name {_db.name} suggests a database "
+                                 f"sketched at c {_db_c}. MetaFlux sketches reads at c {SYLPH_SKETCH_C}; if the "
+                                 f"database really is denser, sylph_profile will stop with sylph's own error.\n")
+
+            # Why: without a taxonomy, sylph-tax cannot name the genomes of this database.
+            _tax = str(_entry.get("taxonomy") or "").strip()
+            if not _tax:
+                sys.exit(f"[MetaFlux] {_where} ({_db.name}) has no 'taxonomy'. Give the sylph-tax name of its "
+                         f"lineage table (GTDB_r232 for gtdb-r232-*.syldb, FungiRefSeq-latest for "
+                         f"fungi-refseq-2025-10-11-*.syldb, ...) or the path of your own table")
+            # Why: viral ranks do not fit the seven k__..s__ slots of MetaFlux tables.
+            if _tax in SYLPH_TAX_VIRAL:
+                sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax} is a viral taxonomy whose ranks (realm, viral "
+                         f"kingdom, ...) do not fit the seven k__..s__ slots of MetaFlux tables. Viral sylph "
+                         f"databases are not supported yet; remove {_db.name} from references.sylph_databases")
+
+            if _tax in SYLPH_TAX_FILES:
+                # A built-in name: its table lives in references.sylph_taxonomy_dir.
+                # Why: sylph-tax needs the folder to find the table behind a built-in name.
+                if SYLPH_TAXONOMY_DIR is None:
+                    sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax} is read from references.sylph_taxonomy_dir, "
+                             f"which is not set.\n" + _SYLPH_DOWNLOAD)
+                # Why: a folder filled by an older sylph-tax can lack a newer table.
+                _tax_file = SYLPH_TAXONOMY_DIR / SYLPH_TAX_FILES[_tax]
+                if not _tax_file.is_file():
+                    sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax} needs {_tax_file.name} in "
+                             f"{SYLPH_TAXONOMY_DIR}, and it is not there (folders made before sylph-tax 1.9.2 "
+                             f"lack globdb_r232_taxonomy.tsv.gz).\n" + _SYLPH_DOWNLOAD)
+                # Why: a taxonomy from another release names genomes wrongly without any warning.
+                for _name_piece, _expected in SYLPH_DB_NAME_HINTS:
+                    if _name_piece in _db.name.lower() and _tax != _expected:
+                        sys.exit(f"[MetaFlux] {_where}: {_db.name} looks like a {_expected} database (from its "
+                                 f"file name) but is paired with taxonomy {_tax}. A taxonomy from another release "
+                                 f"names genomes wrongly without any warning (tested: GTDB_r226 names on an r232 "
+                                 f"profile). Use taxonomy: {_expected}, or rename the file if its name is wrong")
+                _tax_arg = _tax
+                _tax_label = _tax
+                _syl_builtin.append(_tax)
+            else:
+                # Not a built-in name, so it must be the path of your own lineage table.
+                # Why: built-in names are case-sensitive, and gtdb_r232 is an easy typo.
+                _near = []
+                for _builtin_name in SYLPH_TAX_FILES:
+                    if _builtin_name.lower() == _tax.lower():
+                        _near.append(_builtin_name)
+                if _near:
+                    sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax!r} is not a sylph-tax name (names are "
+                             f"case-sensitive); did you mean {_near[0]}?")
+                # Why: anything else must be an existing table file.
+                _tax_file = Path(_tax).resolve()
+                if not _tax_file.is_file():
+                    sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax!r} is neither a sylph-tax name nor an existing "
+                             f"file. Names (capitals matter): {', '.join(sorted(SYLPH_TAX_FILES))}")
+                _tax_arg = str(_tax_file)
+                _tax_label = _tax_file.name
+
+            SYLPH_DB_PATHS.append(_db)
+            if _tax_arg not in SYLPH_TAXONOMY_ARGS:
+                SYLPH_TAXONOMY_ARGS.append(_tax_arg)
+                SYLPH_TAXONOMY_FILES.append(_tax_file)
+            SYLPH_DB_LABELS.append(f"{_db.name} ({_tax_label})")
+
+        # Why: two databases of one family (two GTDB releases, or the c 200 and c 1000
+        # build of one release) share genomes and accessions: sylph then picks one copy of
+        # each shared genome arbitrarily, and sylph-tax keeps only one release's names.
+        _families = []
+        for _tax in _syl_builtin:
+            _families.append(_sylph_family(_tax))
+        _repeated_families = []
+        for _family in _families:
+            if _families.count(_family) > 1 and _family not in _repeated_families:
+                _repeated_families.append(_family)
+        if _repeated_families:
+            sys.exit(f"[MetaFlux] references.sylph_databases lists two databases of the same family "
+                     f"({', '.join(sorted(_repeated_families))}): two releases, or the c200 and c1000 (or "
+                     f".syldb and .syl2db) build of one release. They share genomes and accessions, so sylph "
+                     f"picks one copy of each shared genome arbitrarily and sylph-tax keeps only one release's "
+                     f"names. Keep one")
+        # Why: allowed, but costly and rarely useful, so say so.
+        if "GTDB" in _families and "GlobDB" in _families:
+            sys.stderr.write("[MetaFlux] warning: references.sylph_databases lists both a GTDB and a GlobDB "
+                             "database. GlobDB already contains the GTDB species representatives, so the pair "
+                             "roughly doubles the memory (measured 40.5 -> 66.4 GB) without adding species, and "
+                             "which copy of a shared genome is reported is arbitrary. Keep one unless you need both.\n")
+
+    # What rule sylph_taxprof passes before the word taxprof: the lineage-table folder,
+    # or nothing when every taxonomy is a table path of your own.
+    if SYLPH_TAXONOMY_DIR is not None:
+        SYLPH_TAXONOMY_DIR_OPTION = ["--taxonomy-dir", str(SYLPH_TAXONOMY_DIR)]
+    else:
+        SYLPH_TAXONOMY_DIR_OPTION = []
+
+    # Memory for the ONE sylph_profile job. sylph holds every database in memory: with
+    # sylph 1.0.0 the measured peak was 1.01-1.11 x the database files' size on disk
+    # (26.9-29.7 GB for GTDB r232 c200 + fungi, which are 26.66 GB of files). Ask for
+    # 1.2 x their size + 4 GB (34,601 MB for that pair), unless the config sets a number
+    # in resources.mem_mb.sylph_profile (e.g. on a cluster). Under profiler: kraken2
+    # there are no databases and the figure is never used.
+    _resources_cfg = config.get("resources") or {}
+    _mem_mb_cfg = _resources_cfg.get("mem_mb") or {}
+    _syl_mem_cfg = _mem_mb_cfg.get("sylph_profile")
+    if _syl_mem_cfg:
+        SYLPH_PROFILE_MEM_MB = int(_syl_mem_cfg)
+    else:
+        _syl_db_bytes = 0
+        for _db in SYLPH_DB_PATHS:
+            _syl_db_bytes += _db.stat().st_size
+        _syl_db_mb = _syl_db_bytes // (1024 * 1024)
+        SYLPH_PROFILE_MEM_MB = int(_syl_db_mb * 1.2) + 4096
+
+    # Why: databases listed under profiler: kraken2 are easy to mistake for a sylph run.
+    if PROFILER == "kraken2" and _syl_dbs_cfg:
+        sys.stderr.write("[MetaFlux] warning: references.sylph_databases is set, but shotgun.profiler is "
+                         "kraken2, so sylph will not run.\n")
+
 
 # ────────────────────── Sample discovery ───────────────────────
 # Works out the run's sample list exactly once, here, rather than letting every rule
@@ -1261,6 +1560,124 @@ for _s in SAMPLES:
     if any(c in _s for c in BAD_CHARS):
         sys.exit(f"[MetaFlux] sample '{_s}' has disallowed characters")
 
+# ── Sample names sylph-tax would rewrite (profiler sylph | both) ──
+# sylph-tax reads sylph's profile with pandas, which guesses each column's type. A
+# sample name that looks like a number, a missing value or a true/false word is
+# rewritten on the way, with exit code 0. Tested with sylph-tax 1.9.2 / pandas 3.0.6:
+# samples '01' and '1' were summed into ONE file (relative abundance 200 %), '001'
+# became '1', and 'NA' was dropped. Such names are refused here.
+# The number test mirrors pandas, not Python's float(): float() also accepts
+# underscores ('12_3' -> 123.0), but pandas keeps '12_3', '2019_05' or '1_000' as text,
+# so those names are fine. pandas is not pinned by sylph-tax, so the test errs on the
+# safe side (every name that pandas 3 reads as a number is refused, even when it would
+# survive the round trip, like '1').
+if MODE == "shotgun" and RUN_SYLPH:
+    # pandas' default missing-value words (read_csv na_values). Several contain
+    # characters BAD_CHARS already refuses; they are kept so the list stays complete.
+    _PANDAS_NA = {"", "#N/A", "#N/A N/A", "#NA", "-1.#IND", "-1.#QNAN", "-NaN", "-nan", "1.#IND",
+                  "1.#QNAN", "<NA>", "N/A", "NA", "NULL", "NaN", "None", "n/a", "nan", "null"}
+
+    def _pandas_reads_as_number(name):
+        """True for what pandas reads as a number: digits with an optional sign, decimal
+        point and exponent ('007', '+5', '5.', '.5', '1e5'), or inf / infinity / nan in any
+        capitals with an optional sign ('Infinity'). False for '12_3' or 'S001'."""
+        if re.fullmatch(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", name):
+            return True
+        if re.fullmatch(r"[+-]?(inf|infinity|nan)", name, flags=re.IGNORECASE):
+            return True
+        return False
+
+    def _pandas_rewrites(name):
+        """True when pandas would change this sample name on the way through sylph-tax."""
+        if name in _PANDAS_NA:
+            return True
+        if name.lower() in ("true", "false"):
+            return True
+        return _pandas_reads_as_number(name)
+
+    _bad_names = []
+    for _s in SAMPLES:
+        if _pandas_rewrites(_s):
+            _bad_names.append(_s)
+    if _bad_names:
+        sys.exit(f"[MetaFlux] shotgun.profiler: {PROFILER} cannot use these sample names: {_bad_names}. "
+                 f"sylph-tax reads sample names with pandas, which rewrites names that look like numbers "
+                 f"or missing values (tested: '001' becomes '1', samples '01' and '1' end up summed in one "
+                 f"file, 'NA' is dropped). Rename the FASTQ files so each name contains a letter (e.g. "
+                 f"001_R1.fastq.gz -> S001_R1.fastq.gz), or use profiler: kraken2.")
+
+# ── Output folders that already hold results of another profiler ──
+# Snakemake decides what to run from the files in out_dir. The trimmed reads both
+# profilers start from are temporary (deleted once read), so re-creating them re-runs
+# every step downstream of them that already finished. Switching profiler in a
+# finished out_dir can therefore do far more than the user expects; these checks stop
+# or warn before anything runs. They look only at files in out_dir.
+if MODE == "shotgun":
+
+    def _sylph_sketch_file(sample):
+        """The kept sylph sketch of one sample (rule sylph_sketch, 38_sylph.smk)."""
+        return OUT / "02c.sylph" / "sketches" / f"{sample}.paired.sylsp"
+
+    def _trimmed_r1_file(sample):
+        """The temporary trimmed R1 reads of one sample (rule trim_adapters)."""
+        return OUT / "01.preprocessing" / f"{sample}_trim_R1.fastq.gz"
+
+    def _kraken2_report_file(sample):
+        """The Kraken2 report of one sample (rule kraken2, 35_kraken2.smk)."""
+        return OUT / "02.classification" / f"{sample}_report.txt"
+
+    # Why: a sylph-only run in a Kraken2 folder would re-create the trimmed reads and
+    # replace the MultiQC report with one that no longer shows Kraken2, next to Kraken2
+    # tables from an earlier run.
+    _kraken2_results_here = ((OUT / "02.classification").is_dir()
+                             or (OUT / "03.abundance" / "otu_table.tsv").exists())
+    if PROFILER == "sylph" and _kraken2_results_here:
+        sys.exit(f"[MetaFlux] shotgun.profiler is 'sylph', but {OUT} already holds Kraken2 results "
+                 f"(02.classification/ or 03.abundance/otu_table.tsv). A sylph-only run here would re-create "
+                 f"the trimmed reads and replace the MultiQC report with one that no longer shows Kraken2, next "
+                 f"to Kraken2 tables from an earlier run. Use a new out_dir (or profiler: both, if this folder "
+                 f"was made with profiler: both).")
+
+    if PROFILER == "both":
+        # Why: adding sylph to a FINISHED Kraken2 run needs the deleted trimmed reads,
+        # so fastp would run again and then Kraken2, Bracken and every Kraken2 table.
+        _would_rerun_kraken2 = []
+        for _s in SAMPLES:
+            _kraken2_done = _kraken2_report_file(_s).exists()
+            _sketched = _sylph_sketch_file(_s).exists()
+            _reads_left = _trimmed_r1_file(_s).exists()
+            if _kraken2_done and not _sketched and not _reads_left:
+                _would_rerun_kraken2.append(_s)
+        if _would_rerun_kraken2:
+            _shown = ", ".join(_would_rerun_kraken2[:10])
+            if len(_would_rerun_kraken2) > 10:
+                _shown += ", ..."
+            sys.exit(f"[MetaFlux] Kraken2 has already finished in {OUT} for {len(_would_rerun_kraken2)} "
+                     f"sample(s), and their trimmed reads were deleted after use (they are temporary files). "
+                     f"sylph needs exactly those reads, so Snakemake would run fastp again and then re-run "
+                     f"Kraken2, Bracken and every Kraken2 table for these samples. To add sylph to this finished "
+                     f"run, use profiler: sylph with a NEW out_dir. Samples: {_shown}")
+
+        # Why: the reverse (adding Kraken2 to a finished sylph run) is allowed, but it also
+        # re-runs the sylph steps, so say so.
+        _sylph_only_done = []
+        for _s in SAMPLES:
+            _kraken2_done = _kraken2_report_file(_s).exists()
+            _sketched = _sylph_sketch_file(_s).exists()
+            _reads_left = _trimmed_r1_file(_s).exists()
+            if _sketched and not _kraken2_done and not _reads_left:
+                _sylph_only_done.append(_s)
+        if _sylph_only_done:
+            sys.stderr.write(f"[MetaFlux] warning: adding Kraken2 to a finished sylph run in {OUT}: the trimmed "
+                             f"reads are re-created, so sylph_sketch and the sylph steps after it run again too "
+                             f"(same results: sketches are made with one thread).\n")
+
+    # Why: sylph tables left from an earlier run are no longer updated under kraken2.
+    if PROFILER == "kraken2" and (OUT / "03.abundance" / "sylph_table.tsv").exists():
+        sys.stderr.write(f"[MetaFlux] warning: {OUT} holds sylph results from an earlier run "
+                         f"(03.abundance/sylph_table.tsv); with profiler: kraken2 they are left as they are "
+                         f"and no longer updated.\n")
+
 # The one-line summary every run prints before anything starts. In shotgun mode it also
 # names the profiler, so a log shows at a glance which chain made the tables. The
 # amplicon line stays word for word as before (the docs quote it).
@@ -1272,6 +1689,11 @@ sys.stderr.write(
     f"[MetaFlux v2.5.0] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
     f"{len(SAMPLES)} sample(s) in {FASTQ_DIR}\n"
 )
+# When sylph runs, a second line names its databases (with the taxonomy of each) and
+# the memory the one sylph_profile job will ask for, so a log shows both at a glance.
+if MODE == "shotgun" and RUN_SYLPH:
+    sys.stderr.write(f"[MetaFlux] sylph databases: {', '.join(SYLPH_DB_LABELS)}; "
+                     f"sylph_profile asks for {SYLPH_PROFILE_MEM_MB:,} MB\n")
 
 
 # ────────────────────── Path helpers (shared) ──────────────────
@@ -1479,8 +1901,8 @@ def _shotgun_targets():
             OUT / "stats" / "sylph" / "sylph_summary.tsv",
         ]
     # Shared by every profiler: the read-tracking table (written by
-    # aggregate_read_counts in 80_stats.smk when Kraken2 runs), the MultiQC report and
-    # the sample manifest.
+    # aggregate_read_counts in 80_stats.smk when Kraken2 runs, by sylph_read_tracking
+    # in 38_sylph.smk under profiler: sylph), the MultiQC report and the sample manifest.
     out += [
         OUT / "stats" / "read_tracking.txt",
         OUT / "multiqc" / "multiqc_report.html",
