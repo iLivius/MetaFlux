@@ -175,7 +175,10 @@ consequences:
     plain re-run redoes the denoising and everything after it; a 16S folder also moves
     to SILVA 144, the new default. With `references: {silva: {release: "138.2"}}` the
     denoised ASVs and counts come out the same as before, and only the taxon filter's
-    new best-hit check can remove a few more organelle ASVs. In a shotgun folder the
+    new best-hit check and its organelle filter (`filter.organelles`, which removes the
+    ASVs Metaxa2 calls mitochondria or chloroplast) can remove more organelle ASVs; on
+    the 16S test set with `sintax` they removed 2 and 10 more. `target_extract` and `assign_taxonomy`
+    run again in any case, since both now write one more file. In a shotgun folder the
     Bracken environment is now pinned to 3.1p1, so `bracken` and the steps after it run
     again; the species-level numbers do not change.
 

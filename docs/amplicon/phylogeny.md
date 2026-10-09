@@ -140,8 +140,11 @@ the tree's tips and the abundance table you pair it with in R are the same featu
     (`filter.discard_min_support`, see [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support)),
     which also removes such an ASV in the run where its family call falls below the
     cutoff, as long as its best hit there is still *Mitochondria* with at least 50%
-    support. Set `resources.threads.assign_taxonomy: 1` if you need the ASV set itself
-    to be reproducible.
+    support. The organelle filter (`filter.organelles`, on by default for 16S) goes
+    further for the ASVs Metaxa2 calls mitochondria or chloroplast: it removes them
+    whatever the classifier said, so those cannot drift into the tree. Set
+    `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
+    reproducible.
 
 !!! warning "The filter has to be doing something"
     If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,
@@ -884,7 +887,9 @@ at every stage, the ASV sequences, the per-sample counts, the alignment and
 - **Metaxa2's own taxonomy file** (`5.dada2/metaxa2/seqs.taxonomy.txt`) shifts between
   runs for the same reason. MetaFlux never reads it — the extracted sequences and the
   extracted table were byte-identical — so it is a by-product worth knowing about, not
-  something that feeds a result.
+  something that feeds a result. The organelle filter reads Metaxa2's per-origin FASTA
+  files instead, and those did not move: every ASV had the same origin in all 16
+  Metaxa2 runs of the test set.
 
 **If you are not chasing byte-identity**, the thing worth knowing is how far these
 choices move the tree, because it is further than people expect. Taking the alignment

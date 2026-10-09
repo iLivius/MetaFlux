@@ -31,7 +31,8 @@ out_dir/
 ├── 3.stripped/       # primer-trimmed reads
 ├── 4.filtered/       # DADA2 filterAndTrim output
 ├── 5.dada2/          # ASV sequences and count tables at each stage
-├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
+├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
+│                     # asv_table_unfiltered.txt (every ASV, removed ones included)
 │                     # (+ _sintax_raw.tsv on the sintax path)
 │                     # (+ taxonomy_lineage_full.tsv for 16S on SILVA 144)
 ├── 7.phylogeny/      # alignment + unrooted tree  (only when phylogeny.enabled: true)
@@ -97,7 +98,7 @@ The extraction step leaves a per-extractor trail:
 
 | Marker | Extractor | Files in `5.dada2/` |
 |---|---|---|
-| 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary) plus the raw `seqs.*` working files under `metaxa2/` |
+| 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter) plus the raw `seqs.*` working files under `metaxa2/` |
 | ITS | ITSx | `itsx_extraction.summary.txt`, `itsx_collapse_map.tsv`, plus the raw `seqs.*` working files under `_itsx_tmp/` |
 
 `itsx_collapse_map.tsv` is worth knowing about. Two ASVs can differ only in the
@@ -109,7 +110,9 @@ that merge is auditable rather than silent.
 ### `6.taxonomy/`
 
 Three tables, all written by `assign_taxonomy`, all built from the same filtered
-set of ASVs. They differ only in what labels the rows.
+set of ASVs. They differ only in what labels the rows. A fourth,
+`asv_table_unfiltered.txt`, is written by the same rule and holds every ASV that
+reached the filter, the removed ones included (see below).
 
 With `taxonomy.method: sintax` — the shipped default — the directory also holds
 `_sintax_raw.tsv`, the raw VSEARCH `--tabbedout` result the parser was fed. It is
@@ -120,6 +123,20 @@ kept for troubleshooting and no rule reads it.
 | `asv_table.txt` | `ASV_#` | one per sample, then `taxonomy` |
 | `asv_table_seqs.txt` | the ASV sequence | one per sample, then `taxonomy` |
 | `taxon_seq_table.txt` | `ASV_#` | one per taxonomic rank, then `sequence` |
+| `asv_table_unfiltered.txt` | `ASV_#`, every ASV that reached the filter | one per sample, then `taxonomy`, `metaxa2_origin`, `filter_status` |
+
+`asv_table_unfiltered.txt` is `asv_table.txt` before the filter, with two more
+columns. `metaxa2_origin` is Metaxa2's call for the ASV (`mitochondria`,
+`chloroplast`, `bacteria`, `archaea`, `eukaryota`, `uncertain`), or `NA` when
+Metaxa2 did not run (markers other than 16S, or extraction off) or made no call.
+`filter_status` is `kept` or the first filter step that removed the ASV, in the order
+the steps run: `removed_keep`, `removed_discard`, `removed_best_hit`,
+`removed_organelle`. The `kept` rows are exactly `asv_table.txt`, and the read
+counts of all rows add up to the `post_length_filter` column of
+`stats/read_tracking.txt`. Use it when the removed ASVs matter, for instance to
+compare how many organelle reads two primer pairs pick up — see
+[keeping and discarding taxa](../amplicon/taxon-filter.md#the-table-with-everything-asv_table_unfilteredtxt).
+Nothing in the pipeline reads it; the tree and every other table use the filtered set.
 
 For 16S on SILVA 144 there is a fourth file, `taxonomy_lineage_full.tsv`, written
 by `restore_kingdom` after the three tables (which it does not change). SILVA 144
@@ -153,13 +170,15 @@ for 18S.
     These follow R's `write.table(col.names = NA)` conventions, on both the rdp
     and the sintax path: tab-separated, the header line starts with an empty cell
     for the row-name column, and text values (row names, taxonomy strings, rank
-    names) are wrapped in double quotes. `read.table(..., sep = "\t", header = TRUE,
+    names) are wrapped in double quotes; a missing `metaxa2_origin` is an unquoted
+    `NA`, as R writes it. `read.table(..., sep = "\t", header = TRUE,
     row.names = 1)` in R and `pd.read_csv(..., sep = "\t", index_col = 0)` in
-    pandas both read them without extra arguments.
+    pandas both read them without extra arguments, `NA` as a missing value.
 
-The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`) has already
-been applied when these tables are written, so the ASVs it removed are absent
-here — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
+The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
+check and, for 16S, the organelle filter) has already been applied when these tables
+are written, so the ASVs it removed are absent here, except from
+`asv_table_unfiltered.txt` — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
 
 ### `7.phylogeny/`
 

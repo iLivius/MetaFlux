@@ -309,7 +309,7 @@ extractor:
 
 | Marker | Extractor | Notes |
 |--------|-----------|-------|
-| 16S | Metaxa2 | Run with `-t all` (all domains). Every extracted sequence is kept; domain-level pruning is left to the taxonomy filter in step 9. |
+| 16S | Metaxa2 | Run with `-t all` (all domains). Every extracted sequence is kept; pruning is left to the taxonomy filter in step 9, which also uses Metaxa2's own call to remove mitochondria and chloroplasts (`metaxa2_origin.tsv`). |
 | ITS | ITSx | Run with `-t all --only_full F`. Partial detections must be kept: a targeted ITS1 or ITS2 amplicon never contains the full ITS region. The region kept is the one named by `amplicon.its_region`. |
 | 18S, gyrB, rpoB | *none* | No extractor exists in MetaFlux for these. Extraction is forced off with a warning if the config still asks for it. |
 
@@ -384,7 +384,7 @@ is built from the result by `convert_silva_sintax`, and the rpoB reference is re
 from the FROGS release by `convert_rpob_to_dada2`. See the
 [marker pages](markers/index.md) for what each one contains.
 
-Both paths write the same three tables; the `sintax` path additionally leaves
+Both paths write the same four tables; the `sintax` path additionally leaves
 `_sintax_raw.tsv`, the raw VSEARCH output, for troubleshooting, and a 16S run on SILVA
 144 adds `taxonomy_lineage_full.tsv` with the Kingdom rank put back.
 
@@ -393,6 +393,7 @@ Both paths write the same three tables; the `sintax` path additionally leaves
 | `asv_table.txt` | `ASV_#` IDs | per-sample counts + taxonomy |
 | `asv_table_seqs.txt` | ASV sequences | per-sample counts + taxonomy |
 | `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank + the sequence |
+| `asv_table_unfiltered.txt` | `ASV_#` IDs, every ASV that reached the filter | per-sample counts + taxonomy + `metaxa2_origin` + `filter_status` |
 
 The taxonomy string is built from the marker's rank model, so it has the right depth for
 the reference in use — the Linnaean seven for 16S, ITS and rpoB, and nine ranks for
@@ -406,8 +407,10 @@ The last thing the step does is apply the keep/discard contaminant filter
 (`amplicon.taxonomy.filter`), which matches whole rank segments of each ASV's lineage. It
 has no built-in default: left unset, both lists resolve to `[]` and nothing is filtered.
 The lists have to match the marker being run — a 16S keep list applied to an 18S run would
-discard every ASV. It is described on the
-[keeping and discarding taxa](taxon-filter.md) page.
+discard every ASV. For 16S the filter also removes, by default, the ASVs that Metaxa2
+called mitochondria or chloroplast in step 7 (`filter.organelles`), whatever the lists say;
+every ASV, removed ones included, stays listed in `asv_table_unfiltered.txt`. It is
+described on the [keeping and discarding taxa](taxon-filter.md) page.
 
 ## Read tracking and the QC report
 

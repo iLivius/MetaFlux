@@ -682,7 +682,7 @@ still runs either way.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `method` | Which classifier assigns taxonomy | `sintax` | `rdp` is DADA2's `assignTaxonomy` (plus `addSpecies` for 16S); `sintax` is `vsearch --sintax`, which uses roughly 2–3 GB regardless of ASV count. Both paths apply the same taxon filter and write the same three tables. |
+| `method` | Which classifier assigns taxonomy | `sintax` | `rdp` is DADA2's `assignTaxonomy` (plus `addSpecies` for 16S); `sintax` is `vsearch --sintax`, which uses roughly 2–3 GB regardless of ASV count. Both paths apply the same taxon filter and write the same tables. |
 | `min_boot` | RDP bootstrap confidence a rank must reach to be reported | `80` | Read only by the `rdp` path. Range 0–100. |
 | `sintax_cutoff` | SINTAX confidence a rank must reach to be reported | `0.8` | Read only by the `sintax` path. Range 0–1; 0.8 is roughly equivalent to `min_boot: 80`. |
 | `try_rc` | Also tries the reverse complement of each ASV during classification | `true` | Read only by the `rdp` path. The `sintax` path always searches both strands. |
@@ -703,14 +703,16 @@ still runs either way.
       keep:    #[k__Bacteria, k__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
       discard_min_support: 50
+      organelles: metaxa2   # metaxa2 | off; acts on 16S only
 ```
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists. |
+| `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists, and switches `organelles` off too. |
 | `keep` | Tokens defining what survives | unset → `[]` | An ASV is kept only if one of its ranks matches a token. An empty list does nothing. |
 | `discard` | Tokens pruning what `keep` left | unset → `[]` | An ASV is removed if any of its ranks matches a token. Runs after `keep`. |
 | `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. `null` switches it off (the v2.4.0 behaviour). See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
+| `organelles` | Also removes the ASVs that Metaxa2 calls mitochondria or chloroplast | `metaxa2` | 16S only, and only with `extraction.enabled: true`, since Metaxa2 has to have run; for every other marker it is inactive and the run prints one info line. Runs after `keep`, `discard` and the best-hit check, and catches plant mitochondria the classifier reports as bacteria (e.g. *Enterobacterales*), which no token can match. Metaxa2's other calls (domains, eukaryota, uncertain) remove nothing. `off` (or `null`) switches it off; any other value stops the run at start-up. Every ASV, organelles included, is still listed in `6.taxonomy/asv_table_unfiltered.txt`. See [the organelle filter](../amplicon/taxon-filter.md#the-organelle-filter-organelles). |
 
 Each token is matched against a whole segment of the taxonomy string
 (`k__Bacteria`, `o__Chloroplast`, `g__Ralstonia`), so it targets exactly one rank
