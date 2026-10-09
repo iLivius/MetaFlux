@@ -11,7 +11,7 @@ tracked by git, since they carry local paths.
 
 | Marker | Dataset | Samples | Primers | Reference |
 |---|---|--:|---|---|
-| 16S (V5–V7) | [PRJNA305879](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA305879) — plant-associated bacterial communities, MiSeq 2×300 | 6 | 799F / 1175R | SILVA v138.2 |
+| 16S (V5–V7) | [PRJNA305879](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA305879) — plant-associated bacterial communities, MiSeq 2×300 | 6 | 799F / 1175R | SILVA 144 (138.2 selectable) |
 | ITS (ITS2) | [PRJNA862334](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA862334) — yeast mock communities, MiSeq 2×300 | 6 | ITS3 / ITS4 | UNITE |
 | 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
 | gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA459479) — 15-strain mock communities | 5 | F64 / R353 | DD7RZ8 v6 |

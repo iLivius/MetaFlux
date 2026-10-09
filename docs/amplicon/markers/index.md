@@ -43,7 +43,7 @@ file — as in the config template:
 ```yaml
 references:
   silva:
-    train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz
+    species: /shared/dbs/silva_v144_assignSpecies.fa.gz
 ```
 
 A top-level `silva_train:` instead does nothing: the entry is ignored and the pack
@@ -57,9 +57,11 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 
 | Marker | Symbol | File under `refdb/` | Role | Run-config key that relocates it |
 |---|---|---|---|---|
-| 16S | `silva_train` | `silva/silva_nr99_v138.2_toGenus_trainset.fa.gz` | probe substrate + `rdp` trainset | `silva.train` |
-| 16S | `silva_species` | `silva/silva_v138.2_assignSpecies.fa.gz` | DADA2 `addSpecies` (16S only) | `silva.species` |
-| 16S | `silva_sintax` | `silva/silva_nr99_v138.2_sintax.fa.gz` | `sintax` database — *converted* from `silva_train` | `silva.sintax` |
+| 16S | `silva_train_raw` | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` | SILVA 144 training set as published (seven ranks) | `silva.train_raw` |
+| 16S | `silva_train` | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` | probe substrate + `rdp` trainset — *converted* from `silva_train_raw` (Kingdom rank removed) | `silva.train` |
+| 16S | `silva_kingdom_map` | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` | phylum → kingdom table for the sidecar — *converted* with `silva_train` | `silva.kingdom_map` |
+| 16S | `silva_species` | `silva/silva_v144_assignSpecies.fa.gz` | DADA2 `addSpecies` (16S only) | `silva.species` |
+| 16S | `silva_sintax` | `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | `sintax` database — *converted* from `silva_train` | `silva.sintax` |
 | ITS | `unite_fasta` | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta` | `rdp` trainset — *extracted* from a `.tgz` | `unite.fasta` |
 | ITS | `unite_sintax` | `unite/utax_reference_dataset_all_19.02.2025.fasta.gz` | `sintax` database | `unite.sintax` |
 | ITS | `unite_uchime_ITS1` | `unite/uchime_its1.fasta` | probe substrate when `its_region: ITS1` — *extracted* from a `.zip` | `unite.uchime_its1` |
@@ -69,6 +71,13 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 | 18S | `pr2_utax` | `pr2/pr2_SSU_UTAX.fasta.gz` | `sintax` database | `pr2.utax` |
 | gyrB | `gyrb_dada2` | `gyrb/train_set_gyrB_v6.fa.gz` | probe substrate + `rdp` trainset | `gyrb.dada2` |
 | rpoB | `rpob_frogs` | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` | probe substrate + `rdp` trainset — *converted* from the FROGS archive | `rpob.frogs` |
+
+The 16S rows are those of the default release, SILVA 144; `other-verbatim` becomes
+`other-stripped` with `amplicon.taxonomy.silva_other: strip`. With
+`references.silva.release: "138.2"` the 16S files are
+`silva/silva_nr99_v138.2_toGenus_trainset.fa.gz`, `silva/silva_v138.2_assignSpecies.fa.gz`
+and `silva/silva_nr99_v138.2_sintax.fa.gz`, and there is no `silva_train_raw` or
+`silva_kingdom_map`. See [16S rRNA](16S.md#reference-databases).
 
 Everything here is fetched on first use and cached, so a second run reuses it. The only
 reason to put a `references:` entry in the run config is to point MetaFlux at a copy that

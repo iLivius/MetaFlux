@@ -135,9 +135,13 @@ the tree's tips and the abundance table you pair it with in R are the same featu
     tree input stayed the same 211 ASVs each time. That is luck, not a guarantee: the
     `discard` tokens (`o__Chloroplast`, `f__Mitochondria`) sit exactly at the ranks whose
     confidence drifts, so a mitochondrial ASV called to family in one run and only to order
-    in the next is discarded in the first run and reaches the tree in the second. Set
-    `resources.threads.assign_taxonomy: 1` if you need the ASV set itself to be
-    reproducible.
+    in the next is discarded in the first run and reaches the tree in the second. Since
+    v2.5.0 the filter also checks the best hit below the cutoff
+    (`filter.discard_min_support`, see [Keeping and discarding taxa](taxon-filter.md#the-best-hit-check-discard_min_support)),
+    which also removes such an ASV in the run where its family call falls below the
+    cutoff, as long as its best hit there is still *Mitochondria* with at least 50%
+    support. Set `resources.threads.assign_taxonomy: 1` if you need the ASV set itself
+    to be reproducible.
 
 !!! warning "The filter has to be doing something"
     If `amplicon.taxonomy.filter` is disabled or its `keep`/`discard` lists are empty,

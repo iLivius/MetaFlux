@@ -248,10 +248,18 @@ optional phylogeny stage, which is sensitive to the order of the alignment rows.
 `amplicon.seed` (42 by default) fixes the generator for all three, but only two
 of them become fully reproducible:
 
-- **`learnErrors` and `assignTaxonomy` (rdp): fully reproducible at any thread
-  count.** Verified by running the amplicon test set twice at 8 threads with the
-  same seed — the ASV sequences, their per-sample counts and the rdp-path taxonomy
-  came back identical.
+- **`learnErrors` and `assignTaxonomy` (rdp): reproducible at any thread count,
+  with one small exception.** Verified by running the amplicon test set twice at 8
+  threads with the same seed — the ASV sequences, their per-sample counts and the
+  rdp-path taxonomy came back identical. The exception is inside `assignTaxonomy`:
+  when two reference genera fit a bootstrap sample exactly equally well, DADA2 picks
+  one with a random number it does not draw from R's seed. Exact ties are rare, so
+  this moves a bootstrap value by a point here and there; between two identical runs
+  on the 16S test set, 1 of 229 sequences differed on SILVA 138.2, 2 on SILVA 144
+  with `silva_other: strip`, and 10 with `verbatim` (where an `X` and an `X--other`
+  reference are often the same sequence). The reported lineage changes only when such
+  a value sits right at `min_boot`; across the repeated runs made for v2.5.0 that
+  happened to one genus call, once.
 - **`--sintax`: not.** VSEARCH runs its bootstrap confidence step across threads
   that share one random-number stream, so which thread consumes which draw still
   depends on scheduling, seed or no seed. Verified the same way: with

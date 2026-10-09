@@ -241,7 +241,17 @@ Bracken's estimates depend on read length, and the database ships pre-computed
 distributions for several lengths (50, 75, 100, 150, 200, 250 and 300 bp). MetaFlux
 reads the mean post-trim read length from the sample's fastp JSON and picks the
 closest available distribution automatically — using a 150 bp distribution on 100 bp
-reads would bias the redistribution.
+reads would bias the redistribution. With `threshold: auto` the minimum read count is
+computed from the sample's classified read pairs in the same step. All three small
+calculations (mean length, closest distribution, threshold) are done with `jq` from the
+Bracken environment, so they give the same answer on any machine; up to v2.4.0 they
+used whatever `awk` the host had, with identical results on every benchmark sample.
+
+MetaFlux pins Bracken 3.1p1, bioconda's build of 3.1 with the fix for upstream issue
+[#315](https://github.com/jenniferlu717/Bracken/issues/315): plain 3.1 reports 0 reads
+assigned directly to a taxon (third column of `{sample}_report.txt`) for almost every
+taxon above species. The abundances MetaFlux reports come from the clade counts and are
+the same with either build.
 
 Input: the Kraken2 report plus the fastp JSON. Output, in `03.abundance/`:
 `{sample}_report.txt` (Bracken's re-estimated report) and `{sample}_output.txt`

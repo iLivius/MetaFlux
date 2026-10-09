@@ -57,6 +57,13 @@ genus is exactly *Bacillus*, and nothing else: not a differently suffixed genus 
 `g__Bacillus_A`, and not a species or family segment that happens to contain the same
 letters. Substring accidents cannot happen.
 
+One exception is deliberate. SILVA 144 marks some clades `X--other` (a clade that does
+not contain the type of taxon *X* but is still considered part of it), and the filter
+ignores that suffix on both sides: `g__Bradyrhizobium` also matches
+`g__Bradyrhizobium--other`. Labels that SILVA 144 merges with `+`
+(`g__Enterobacter--other+Klebsiella--other`) are not split; to match one, use the whole
+label as the token. See [16S rRNA](markers/16S.md#the-other-suffix-amplicontaxonomysilva_other).
+
 An ASV passes the filter as follows:
 
 - **`keep` runs first and defines what survives.** An ASV is kept only if at least one
@@ -67,9 +74,13 @@ An ASV passes the filter as follows:
 - **`discard` then prunes what remains.** An ASV is removed if any of its ranks matches
   a `discard` token. `discard: [o__Chloroplast, f__Mitochondria]` removes the usual 16S
   plastid and host carry-over.
+- **`discard` also checks the best hit** (`discard_min_support`, below): an ASV is
+  removed when the classifier's best hit carries a `discard` token at that token's rank
+  with enough support, even if that rank fell below the confidence cutoff and is
+  missing from the reported lineage.
 - Because `discard` runs second, it wins: a taxon named in both lists is removed.
 
-## The three keys
+## The four keys
 
 ```yaml
 amplicon:
@@ -78,6 +89,7 @@ amplicon:
       enabled: true
       keep:    [k__Bacteria, k__Archaea]
       discard: [o__Chloroplast, f__Mitochondria]
+      discard_min_support: 50
 ```
 
 | Key | Effect |
@@ -85,6 +97,7 @@ amplicon:
 | `enabled` | Master switch. `false` turns the filter off entirely and every classified ASV is written out, whatever `keep` and `discard` contain. |
 | `keep` | Tokens that define what survives. An empty list (or the key left unset) means this direction does nothing — no ASV is dropped for failing to match. |
 | `discard` | Tokens that are then removed from the survivors. An empty list means this direction does nothing. |
+| `discard_min_support` | Best-hit check for `discard`, in percent (0–100). Default `50`; `null` switches it off. See below. |
 
 Both lists accept a bare scalar as well as a YAML list, so `keep: k__Fungi` and
 `keep: [k__Fungi]` are equivalent.
@@ -110,7 +123,44 @@ template ships the recommended values commented out:
 ```
 
 Left unset they resolve to `[]`, which filters nothing. Copy the line for the marker in
-use into the run config and uncomment it there.
+use into the run config and uncomment it there. `discard_min_support` ships set,
+because it does nothing until `discard` lists a token.
+
+### The best-hit check (`discard_min_support`)
+
+The taxonomy each ASV is reported with stops at the last rank whose confidence reaches
+`min_boot` (rdp) or `sintax_cutoff` (sintax). Below that rank the classifier still has a
+best guess; it is simply not confident enough to report it. For most taxa that is the
+right behaviour. For organelle 16S it lets contaminants through: a mitochondrial ASV
+whose best hit is *Mitochondria* at 60% support is reported as `p__Pseudomonadota`, so
+`f__Mitochondria` never sees it. Plant and algal mitochondria are diverse, SILVA 144
+holds many of them, and the classifiers often stay below 80% at order and family level
+for them.
+
+So, for every ASV that survived `keep` and `discard`, each `discard` token is also
+compared with the best hit's name at the token's own rank (`o__` = Order, `f__` =
+Family, and so on), and the ASV is removed when the names match and the support at that
+rank is at least `discard_min_support`:
+
+| Method | Support used |
+|---|---|
+| `rdp` | the bootstrap support of that rank (0–100), from DADA2 `assignTaxonomy` |
+| `sintax` | the confidence of that rank in the full best-hit lineage VSEARCH reports (0–1, compared ×100) |
+
+The `keep` list is not affected, and `s__` tokens are only ever compared with the
+reported lineage (the species from `addSpecies` has no support value). Each ASV removed
+this way gets its own log line:
+
+```text
+[assign_taxonomy]   ASV_19: best hit f__Mitochondria at 70% support (reported as k__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria)
+[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 5 more ASV(s) removed
+```
+
+The default of 50 means the best hit has to be the majority answer at that rank. On the
+16S test set (SILVA 144) it removed, on top of the 12–20 ASVs `f__Mitochondria` already
+caught, 6 more with `sintax` and 4 more with `rdp`; all but one have a mitochondrial
+nearest reference at 95–98% identity. Set it higher to be more conservative, or to
+`null` to get the filter of MetaFlux v2.4.0 and earlier.
 
 ## Recommended starting points per marker
 
@@ -223,16 +273,17 @@ What to check, in order:
 
 ## Seeing what the filter did
 
-Both classifier paths log their counts to `logs/assign_taxonomy.log`, three lines that
-say exactly how many ASVs each direction cost:
+Both classifier paths log their counts to `logs/assign_taxonomy.log`, one line per
+step that say exactly how many ASVs each direction cost:
 
 ```text
 [assign_taxonomy] Keep filter (k__Bacteria,k__Archaea): 1620 / 1843 ASVs retained
 [assign_taxonomy] Discard filter (o__Chloroplast,f__Mitochondria): 47 ASV(s) removed
-[assign_taxonomy] Final ASV count: 1573
+[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 3 more ASV(s) removed
+[assign_taxonomy] Final ASV count: 1570
 ```
 
-The `sintax` path writes the same three lines under an `[assign_taxonomy/sintax]` tag.
+The `sintax` path writes the same lines under an `[assign_taxonomy/sintax]` tag.
 A `keep` line that retains far fewer ASVs than expected is worth following up before
 trusting the table: often the reference simply failed to classify those ASVs at the rank
 the token names, rather than the ASVs being genuinely off-target.
@@ -247,6 +298,7 @@ the token names, rather than the ASVs being genuinely off-target.
 ## The shotgun counterpart
 
 Shotgun runs have their own filter, `shotgun.taxonomy_filter`, with the same three keys
+(`enabled`, `keep`, `discard`; there is no best-hit check)
 and exactly the same whole-segment token matching: `keep` first, then `discard`, empty
 list means no-op. It is applied to the final OTU table after Bracken, so it changes
 which OTUs appear in `03.abundance/otu_table.tsv` and `otu_table.biom`, never how reads

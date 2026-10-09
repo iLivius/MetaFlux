@@ -378,13 +378,15 @@ failing later.
 
 The reference database follows from the marker — SILVA for 16S, UNITE for ITS, PR2 for 18S,
 DD7RZ8 for gyrB, FROGS RefSeq for rpoB — and is fetched on first use. Two of them arrive
-by way of a local conversion step rather than a plain download: the 16S SINTAX database is
-built from the SILVA DADA2 trainset by `convert_silva_sintax`, and the rpoB reference is
-rebuilt from the FROGS release by `convert_rpob_to_dada2`. See the
+by way of a local conversion step rather than a plain download: for 16S, SILVA 144's
+training set has its Kingdom rank removed by `convert_silva_train` and the SINTAX database
+is built from the result by `convert_silva_sintax`, and the rpoB reference is rebuilt
+from the FROGS release by `convert_rpob_to_dada2`. See the
 [marker pages](markers/index.md) for what each one contains.
 
 Both paths write the same three tables; the `sintax` path additionally leaves
-`_sintax_raw.tsv`, the raw VSEARCH output, for troubleshooting.
+`_sintax_raw.tsv`, the raw VSEARCH output, for troubleshooting, and a 16S run on SILVA
+144 adds `taxonomy_lineage_full.tsv` with the Kingdom rank put back.
 
 | File | Rows | Columns |
 |------|------|---------|

@@ -78,7 +78,9 @@ usual 5 and 6 — which matters for anything else that picks fields out of it.
 For each sample and each named taxon:
 
 1. The taxon's NCBI taxid is looked up in that sample's Bracken report
-   (`03.abundance/{sample}_report.txt`).
+   (`03.abundance/{sample}_report.txt`): the first row whose name contains the
+   requested name as plain text. The lookup runs with the Python of the KrakenTools
+   environment, so it does not depend on the tools installed on the host.
 2. `extract_kraken_reads.py` reads the Kraken2 per-read output
    (`02.classification/{sample}_output.txt`), which records the assignment of every
    read pair, together with the Bracken report so it can walk the taxonomy below the

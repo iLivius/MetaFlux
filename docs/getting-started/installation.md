@@ -83,7 +83,7 @@ by hand.
 | Database                           | Mode               | Provisioning                                                           |
 |------------------------------------|--------------------|------------------------------------------------------------------------|
 | PhiX                               | both               | **Auto-fetched** (NCBI) for amplicon; BBDuk's bundled copy for shotgun |
-| SILVA (toGenus + species + SINTAX) | amplicon (16S)     | **Auto-fetched + converted** — toGenus and species from Zenodo, SINTAX built locally from the trainset |
+| SILVA 144 (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched + converted** — toGenus and species from SILVA (md5-checked), Kingdom rank removed and SINTAX built locally; SILVA 138.2 from Zenodo on request |
 | UNITE (general + UCHIME + SINTAX)  | amplicon (ITS)     | **Auto-fetched** from PlutoF on first run                              |
 | PR2 (DADA2 + UTAX) + SILVA-Euk     | amplicon (18S)     | **Auto-fetched** from GitHub/Zenodo on first run                       |
 | DD7RZ8 (DADA2 trainset)            | amplicon (gyrB)    | **Auto-fetched** from Recherche Data Gouv                              |
@@ -104,7 +104,7 @@ does not pull UNITE or PR2.
 
 | Marker | Files created under `refdb_root` | Where they come from |
 |--------|----------------------------------|----------------------|
-| 16S | `silva/silva_nr99_v138.2_toGenus_trainset.fa.gz`, `silva/silva_v138.2_assignSpecies.fa.gz`, `silva/silva_nr99_v138.2_sintax.fa.gz` | Zenodo; the SINTAX file is not downloaded but built locally from the trainset (`convert_silva_sintax`) |
+| 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz`, `silva/silva_v144_assignSpecies.fa.gz`, plus three built files: `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz`, `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv`, `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | SILVA's `release_144` DADA2 folder, md5-checked; the six-rank trainset and kingdom table are built by `convert_silva_train`, the SINTAX file by `convert_silva_sintax`. With `references.silva.release: "138.2"`: `silva_nr99_v138.2_*` files from Zenodo, as before |
 | ITS | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta`, `unite/utax_reference_dataset_all_19.02.2025.fasta.gz`, `unite/uchime_its1.fasta`, `unite/uchime_its2.fasta` | PlutoF; the general release arrives as a `.tgz` and the UCHIME subregions as a `.zip`, both unpacked by `fetch_unite` / `fetch_uchime` |
 | 18S | `silva_euk/silva_132.18s.dada2.fa.gz`, `pr2/pr2_SSU_dada2.fasta.gz`, `pr2/pr2_SSU_UTAX.fasta.gz` | Zenodo (SILVA-Euk v132) and the PR2 v5.1.1 GitHub release |
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
@@ -124,8 +124,12 @@ single database, for example when a copy already exists on the machine:
 
 ```yaml
 references:
-  silva: {train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz}
+  silva: {species: /shared/dbs/silva_v144_assignSpecies.fa.gz}
 ```
+
+Every file that has an md5 in its marker pack (the SILVA files, for now) is checked
+after download; a mismatch deletes the file and stops the run, so a broken download is
+never used.
 
 Downloads happen once. A database is a normal Snakemake output: present on disk, its
 fetch rule does not run again, so a second project reusing the same `refdb_root`

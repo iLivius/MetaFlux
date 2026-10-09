@@ -53,7 +53,7 @@ is why the code and these pages read the way they do.
 6. Bengtsson-Palme, J., et al. (2015). Metaxa2: improved identification and taxonomic classification of small and large subunit rRNA in metagenomic data. *Molecular Ecology Resources*.
 7. Bengtsson-Palme, J., et al. (2013). ITSx: improved software detection and extraction of ITS1 and ITS2. *Methods in Ecology and Evolution*.
 8. Rognes, T., et al. (2016). VSEARCH: a versatile open source tool for metagenomics. *PeerJ*.
-9. Quast, C., et al. (2013). The SILVA ribosomal RNA gene database project. *Nucleic Acids Research*.
+9. Chuvochina, M., Gerken, J., Frentrup, M., Sandikci, Y., Goldmann, R., Freese, H. M., Göker, M., Sikorski, J., Yarza, P., Quast, C., Peplies, J., Glöckner, F. O. & Reimer, L. C. (2026). SILVA in 2026: a global core biodata resource for rRNA within the DSMZ digital diversity. *Nucleic Acids Research* 54(D1):D334–D341. https://doi.org/10.1093/nar/gkaf1247 (SILVA 144, the 16S default) · SILVA 144 DADA2 files: toGenus training set https://doi.org/10.82364/144/SSU/Ref-NR99/DADA2/genus and assignSpecies file https://doi.org/10.82364/144/SSU/Ref/DADA2/species · Quast, C., et al. (2013). The SILVA ribosomal RNA gene database project. *Nucleic Acids Research* 41:D590–D596. https://doi.org/10.1093/nar/gks1219 (SILVA 138.2, and SILVA-Euk for 18S) · Callahan, B. J. (2024). Silva taxonomic training data formatted for DADA2 (Silva version 138.2). *Zenodo*. https://doi.org/10.5281/zenodo.14169026
 10. Abarenkov, K., et al. (2024). UNITE general FASTA release for eukaryotes. *UNITE Community*.
 11. Chen, S., et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. *Bioinformatics*.
 12. Bushnell, B. BBTools (BBDuk, BBMap). *DOE Joint Genome Institute*.

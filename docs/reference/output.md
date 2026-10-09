@@ -33,6 +33,7 @@ out_dir/
 ├── 5.dada2/          # ASV sequences and count tables at each stage
 ├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt
 │                     # (+ _sintax_raw.tsv on the sintax path)
+│                     # (+ taxonomy_lineage_full.tsv for 16S on SILVA 144)
 ├── 7.phylogeny/      # alignment + unrooted tree  (only when phylogeny.enabled: true)
 ├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
 │                     # (+ phylogeny/ when phylogeny.enabled: true)
@@ -119,6 +120,27 @@ kept for troubleshooting and no rule reads it.
 | `asv_table.txt` | `ASV_#` | one per sample, then `taxonomy` |
 | `asv_table_seqs.txt` | the ASV sequence | one per sample, then `taxonomy` |
 | `taxon_seq_table.txt` | `ASV_#` | one per taxonomic rank, then `sequence` |
+
+For 16S on SILVA 144 there is a fourth file, `taxonomy_lineage_full.tsv`, written
+by `restore_kingdom` after the three tables (which it does not change). SILVA 144
+added a Kingdom rank between Domain and Phylum; MetaFlux removes it before
+classifying, so the three tables keep their usual shape with `k__` holding the domain,
+and puts it back here, looked up from each ASV's phylum in a table built from the same
+reference. One row per ASV, same ASVs as `asv_table.txt`:
+
+| Column | Contents |
+|---|---|
+| `asv_id` | `ASV_#`, as in the other tables |
+| `Domain` | what the other tables call `Kingdom` (Bacteria, Archaea) |
+| `Kingdom` | SILVA 144's kingdom (*Bacillati*, *Pseudomonadati*, …), or empty |
+| `Phylum` … `Genus`, `Species` | copied from `taxon_seq_table.txt` |
+| `lineage` | the SILVA-style path, `Bacteria;Pseudomonadati;Pseudomonadota;…;Genus;`, down to the deepest assigned rank; a rank left empty in the middle keeps an empty slot (`;;`) |
+| `kingdom_note` | why the kingdom is empty, or a remark about it |
+
+The kingdom is empty for ASVs classified to domain only (the kingdom comes from the
+phylum), for the placeholder phylum *Incertae Sedis* (it sits under more than one
+kingdom) and for eukaryotes (the DADA2 file has no eukaryote kingdom). Join the file to
+the abundance table by `asv_id`.
 
 The rank columns in `taxon_seq_table.txt` come from the marker pack, so they
 match the reference's actual depth: `Kingdom … Species` for 16S, ITS and rpoB,
@@ -315,7 +337,7 @@ at higher ranks.
 
 | File | Contents |
 |---|---|
-| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. At any `tax_lev` other than `S`, Bracken 3.1 writes `0` in the third column (reads assigned directly to the taxon) on almost every row, an upstream bug ([Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315)). The second column, the clade count, is correct, and it is the only count MetaFlux uses. |
+| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. Since v2.5.0 MetaFlux uses Bracken 3.1p1, bioconda's build of 3.1 with the fix for [Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315): plain 3.1, used up to v2.4.0, writes `0` in the third column (reads assigned directly to the taxon) on almost every row at any `tax_lev` other than `S`. The second column, the clade count, is correct in both, and it is the only count MetaFlux uses. |
 | `{sample}_output.txt` | Bracken's own per-taxon table for that sample. |
 | `otu_table.biom` | Cross-sample abundance table in BIOM (HDF5) format. |
 | `otu_table.tsv` | The same table as tab-separated text. |

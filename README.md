@@ -126,7 +126,7 @@ are cached under `refdb/`. Shotgun mode needs a Kraken2 index supplied by hand.
 | Database | Mode | Provisioning |
 |---|---|---|
 | PhiX | both | auto-fetched (NCBI) for amplicon; BBDuk's bundled copy for shotgun |
-| SILVA (toGenus + species + SINTAX) | amplicon (16S) | auto-fetched on first run |
+| SILVA 144 (toGenus + species + SINTAX; 138.2 selectable) | amplicon (16S) | auto-fetched (md5-checked) and converted on first run |
 | UNITE (general + UCHIME + SINTAX) | amplicon (ITS) | auto-fetched on first run |
 | PR2 (DADA2 + UTAX) + SILVA-Euk | amplicon (18S) | auto-fetched on first run |
 | DD7RZ8 (DADA2 trainset) | amplicon (gyrB) | auto-fetched on first run |

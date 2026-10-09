@@ -156,7 +156,7 @@ copy already on a shared filesystem rather than let MetaFlux download its own:
 ```yaml
 references:
   silva:
-    train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz
+    species: /shared/dbs/silva_v144_assignSpecies.fa.gz
 ```
 
 A **non-empty** `references.*` entry wins; the pack default is used otherwise. The test
@@ -344,7 +344,7 @@ filesystem:
 ```yaml
 references:
   silva:
-    train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz
+    species: /shared/dbs/silva_v144_assignSpecies.fa.gz
 ```
 
 When such a key is present it wins; otherwise the path is `refdb_root` joined with
@@ -352,9 +352,11 @@ the pack's declared filename. The full set of relocatable keys:
 
 | Config key | Marker | Default location under `refdb_root` |
 |---|---|---|
-| `silva.train` | 16S | `silva/silva_nr99_v138.2_toGenus_trainset.fa.gz` |
-| `silva.species` | 16S | `silva/silva_v138.2_assignSpecies.fa.gz` |
-| `silva.sintax` | 16S | `silva/silva_nr99_v138.2_sintax.fa.gz` (derived from the trainset, not downloaded) |
+| `silva.train_raw` | 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` (SILVA 144 as published, seven ranks) |
+| `silva.train` | 16S | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` (built from `train_raw`, Kingdom rank removed) |
+| `silva.kingdom_map` | 16S | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` (built with `train`) |
+| `silva.species` | 16S | `silva/silva_v144_assignSpecies.fa.gz` |
+| `silva.sintax` | 16S | `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` (derived from the trainset, not downloaded) |
 | `unite.fasta` | ITS | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta` |
 | `unite.sintax` | ITS | `unite/utax_reference_dataset_all_19.02.2025.fasta.gz` |
 | `unite.uchime_its1` | ITS | `unite/uchime_its1.fasta` |
@@ -365,8 +367,23 @@ the pack's declared filename. The full set of relocatable keys:
 | `gyrb.dada2` | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` |
 | `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` (the converted DADA2 trainset) |
 
+The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
+`silva_other: strip`, `other-verbatim` becomes `other-stripped`.
+
 A reference that has neither a config entry nor a pack default stops the run with a
 message naming both places it could be fixed.
+
+### SILVA release (16S)
+
+```yaml
+references:
+  silva:
+    release: "138.2"     # unset = "144"
+```
+
+| Key | What it does | Default | Notes |
+|---|---|---|---|
+| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `6.taxonomy/taxonomy_lineage_full.tsv`; 138.2 has neither. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
 
 ---
 
@@ -399,9 +416,11 @@ Each marker has its own page with the databases it uses and its quirks:
 !!! note "How far the seed goes"
 
     DADA2's `learnErrors(randomize = TRUE)` and `assignTaxonomy`'s bootstrap
-    confidence are fully reproducible with this seed at any thread count —
+    confidence are reproducible with this seed at any thread count —
     verified by running the same data twice at 8 threads and getting the same
-    sequences, counts and taxonomy. Read order used to escape the seed — multithreaded
+    sequences, counts and taxonomy — except that `assignTaxonomy` breaks exact ties
+    between reference genera with its own random number, which can move a bootstrap
+    value by a point (see [Troubleshooting](../troubleshooting.md)). Read order used to escape the seed — multithreaded
     bowtie2 phiX removal emitted the surviving pairs in a run-dependent order, so ASVs
     with equal total abundance could swap IDs — but bowtie2 now runs with `--reorder`
     and two complete runs return byte-identical reads and ASVs. See
@@ -472,7 +491,7 @@ already cut to amplicon length are measured directly.
 
 | Marker | How `auto` measures the amplicon | Probe reference | Statistic key read |
 |---|---|---|---|
-| 16S | In-silico PCR | SILVA trainset | `16S` |
+| 16S | In-silico PCR; chloroplast, mitochondrial and eukaryote references are left out of the statistics | SILVA trainset | `16S` |
 | ITS | Direct read of pre-extracted subregion lengths | UNITE UCHIME ITS1 or ITS2 | not used |
 | 18S | In-silico PCR | SILVA-Eukaryotic 18S | `18S` |
 | gyrB | Direct read — DD7RZ8 already ships trimmed amplicons | DD7RZ8 | `16S` (deliberate reuse) |
@@ -658,6 +677,7 @@ still runs either way.
     min_boot: 80          # rdp only
     sintax_cutoff: 0.8    # sintax only
     try_rc: true          # rdp only
+    silva_other: verbatim # 16S on SILVA 144 only: verbatim | strip
 ```
 
 | Key | What it does | Default | Notes |
@@ -666,6 +686,7 @@ still runs either way.
 | `min_boot` | RDP bootstrap confidence a rank must reach to be reported | `80` | Read only by the `rdp` path. Range 0–100. |
 | `sintax_cutoff` | SINTAX confidence a rank must reach to be reported | `0.8` | Read only by the `sintax` path. Range 0–1; 0.8 is roughly equivalent to `min_boot: 80`. |
 | `try_rc` | Also tries the reverse complement of each ASV during classification | `true` | Read only by the `rdp` path. The `sintax` path always searches both strands. |
+| `silva_other` | What to do with SILVA 144's `X--other` names (a clade that does not contain the type of taxon X but belongs to it) | `verbatim` | `verbatim` keeps the names; the filter and `addSpecies` then treat `X--other` as `X`. `strip` removes the suffix before training, so the two become one taxon. No effect with SILVA 138.2 or other markers. See [16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other). |
 
 !!! warning "gyrB and rpoB are rdp-only"
 
@@ -681,6 +702,7 @@ still runs either way.
       enabled: true
       keep:    #[k__Bacteria, k__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
+      discard_min_support: 50
 ```
 
 | Key | What it does | Default | Notes |
@@ -688,6 +710,7 @@ still runs either way.
 | `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists. |
 | `keep` | Tokens defining what survives | unset → `[]` | An ASV is kept only if one of its ranks matches a token. An empty list does nothing. |
 | `discard` | Tokens pruning what `keep` left | unset → `[]` | An ASV is removed if any of its ranks matches a token. Runs after `keep`. |
+| `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. `null` switches it off (the v2.4.0 behaviour). See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
 
 Each token is matched against a whole segment of the taxonomy string
 (`k__Bacteria`, `o__Chloroplast`, `g__Ralstonia`), so it targets exactly one rank

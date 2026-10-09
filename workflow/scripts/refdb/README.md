@@ -11,7 +11,8 @@ download, which needs unpacking, which needs one of the scripts below).
 
 | Script | Turns | Into | Used by (rule) |
 |---|---|---|---|
-| `silva_to_sintax.py` | SILVA 16S DADA2 trainset | VSEARCH SINTAX FASTA | `convert_silva_sintax` |
+| `silva_drop_kingdom.py` | SILVA 144 DADA2 trainset (7 ranks) | 6-rank DADA2 trainset + phylum → kingdom table | `convert_silva_train` |
+| `silva_to_sintax.py` | SILVA 16S DADA2 trainset (6 ranks; stops on more) | VSEARCH SINTAX FASTA | `convert_silva_sintax` |
 | `frogs_rpob_to_dada2.py` | FROGS rpoB release FASTA | DADA2 assignTaxonomy trainset | `convert_rpob_to_dada2` |
 
 ## Conventions

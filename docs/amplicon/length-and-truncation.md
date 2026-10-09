@@ -405,11 +405,20 @@ gyrB amplicons rather than full genes, with the same consequence.
 
 | Marker | `probe_mode` | Probe substrate | Reference tag in the cache filename | `probe_length_stat` key read |
 |---|---|---|---|---|
-| 16S | `pcr` | SILVA trainset | `silva_v138.2_toGenus` | `16S` |
+| 16S | `pcr` | SILVA trainset, without chloroplast, mitochondrial and eukaryote sequences | `silva_v144_toGenus_excl-chloroplast-eukaryota-mitochondria` (`silva_v138.2_…` with release 138.2) | `16S` |
 | ITS | `direct` | UNITE UCHIME, pre-extracted ITS1 or ITS2 | `unite_uchime_ITS1` / `unite_uchime_ITS2` | none — ITS never resolves a stat |
 | 18S | `pcr` | SILVA-Eukaryotic 18S v132 | `silva_euk_18s_v132` | `18S` |
 | gyrB | `direct` | DD7RZ8 v6 | `gyrb_dd7rz8_v6` | `16S` (gyrB reuses that key) |
 | rpoB | `pcr` | FROGS RefSeq rpoB | `rpob_refseq_cc_20240707` | `rpoB` |
+
+For 16S, the in-silico products of chloroplast, mitochondrial and eukaryote references
+are left out of the statistics (marker pack field `probe_exclude_taxa`, written into the
+cache filename). Organelle SSU is often much longer than bacterial 16S between the same
+primers, and SILVA 144 holds eight times more of it than 138.2: for 799F/1175R the
+p95 would be 397 bp with it and is 386 bp without (384 bp with 138.2 either way).
+Since `expected_length` feeds the overlap constraint, those extra 11 bp would raise
+truncLen and cost reads at the quality-poor 3' end, for amplicons the taxon filter
+removes later anyway.
 
 For 18S the probe substrate and the taxonomy reference are deliberately different
 databases: SILVA-Eukaryotic is probed, PR2 classifies. See

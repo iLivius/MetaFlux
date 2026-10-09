@@ -167,6 +167,18 @@ consequences:
 - **A dry run answers the question directly.** `-n` prints exactly which jobs a
   re-run would execute, which is faster than reasoning about it.
 
+!!! note "Re-running an output folder made with v2.4.0"
+
+    The same rules apply to a MetaFlux upgrade, and v2.5.0 changes several steps on
+    purpose. In an amplicon folder, `pick_trunclen` and `aggregate_read_counts` now run
+    in the `python_utils` environment and the length probe has a new cache name, so a
+    plain re-run redoes the denoising and everything after it; a 16S folder also moves
+    to SILVA 144, the new default. With `references: {silva: {release: "138.2"}}` the
+    denoised ASVs and counts come out the same as before, and only the taxon filter's
+    new best-hit check can remove a few more organelle ASVs. In a shotgun folder the
+    Bracken environment is now pinned to 3.1p1, so `bracken` and the steps after it run
+    again; the species-level numbers do not change.
+
 Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under
 `refdb/cache/` inside the MetaFlux checkout — that second path is fixed and does
