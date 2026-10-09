@@ -202,6 +202,89 @@ def _load_marker_packs():
 
 MARKERS = _load_marker_packs()
 
+
+# ── SILVA '--other' handling (16S, SILVA 144 onwards) ──
+# SILVA 144 marks some clades with the suffix "--other": a clade that does NOT
+# contain the nomenclatural type of a taxon, but whose sequences SILVA still
+# considers part of that taxon (e.g. "Bacillaceae--other" next to "Bacillaceae").
+# amplicon.taxonomy.silva_other chooses what MetaFlux does with it:
+#   verbatim (default) — keep the names exactly as SILVA writes them. The keep/
+#                        discard filter and the addSpecies genus check then treat
+#                        "X--other" as "X" (see 80a/80c), so a token such as
+#                        g__Bradyrhizobium still removes g__Bradyrhizobium--other.
+#   strip              — remove the suffix from every name before the classifier is
+#                        trained, so "X" and "X--other" become one taxon.
+# The value only matters for a release that ships the suffix (144); 138.2 has none.
+# It is read here, before the marker packs are finalised, because it is part of the
+# derived reference FILE NAMES below (the two settings give different files).
+_silva_other_cfg = (
+    ((config.get("amplicon") or {}).get("taxonomy") or {}).get("silva_other", "verbatim")
+)
+SILVA_OTHER = str(_silva_other_cfg).strip().lower()
+if SILVA_OTHER not in ("verbatim", "strip"):
+    sys.exit(
+        f"[MetaFlux] amplicon.taxonomy.silva_other must be 'verbatim' or 'strip' "
+        f"(got: {_silva_other_cfg!r})"
+    )
+# The tag that replaces "{other}" in a pack's reference file names.
+_SILVA_OTHER_TAG = {"verbatim": "other-verbatim", "strip": "other-stripped"}[SILVA_OTHER]
+
+
+def _select_pack_releases(packs):
+    """Resolve marker packs that ship more than one reference release.
+
+    A pack may carry a `releases:` block (today only 16S, for SILVA 144 and 138.2).
+    The run config picks one with references.<release_selector>.release (for 16S:
+    references.silva.release); without it the pack's default_release is used. The
+    chosen block's fields are copied over the pack's top-level fields — `references`
+    and probe_ref_tag for SILVA — so every later line of this file sees one ordinary
+    pack and does not need to know releases exist.
+
+    "{other}" in a reference file name is filled with the silva_other tag above.
+
+    A pack without `releases:` is returned unchanged.
+    """
+    for name, pack in packs.items():
+        releases = pack.get("releases")
+        if not releases:
+            continue
+        selector = pack.get("release_selector")
+        default  = str(pack.get("default_release"))
+        # YAML reads an unquoted 138.2 as a number; str() makes "138.2" and 138.2 the same.
+        ref_cfg   = (config.get("references") or {}).get(selector) or {}
+        requested = ref_cfg.get("release") if isinstance(ref_cfg, dict) else None
+        chosen    = default if requested is None else str(requested).strip()
+        available = {str(k): v for k, v in releases.items()}
+        if chosen not in available:
+            sys.exit(
+                f"[MetaFlux] references.{selector}.release = {requested!r} is not a release "
+                f"the {name} marker pack ships. Available: {sorted(available)} "
+                f"(default {default!r})."
+            )
+        block = available[chosen] or {}
+        # Fill "{other}" in every reference file name of the chosen release.
+        refs = {}
+        for sym, spec in (block.get("references") or {}).items():
+            spec = dict(spec)
+            if "file" in spec:
+                spec["file"] = spec["file"].format(other=_SILVA_OTHER_TAG)
+            refs[sym] = spec
+        for key, value in block.items():
+            if key != "references":
+                pack[key] = value
+        # Release entries are added to (and win over) any references the pack
+        # declares at top level, so a pack can mix release-specific and shared files.
+        merged_refs = dict(pack.get("references") or {})
+        merged_refs.update(refs)
+        pack["references"] = merged_refs
+        # Kept on the pack so logs and rules can say which release is running.
+        pack["release"] = chosen
+        del pack["releases"]
+    return packs
+
+
+MARKERS = _select_pack_releases(MARKERS)
+
 def _as_taxon_list(v):
     """Normalize a keep/discard config value to a list of tokens.
     YAML lets `keep: [k__Fungi]` and `keep: k__Fungi` both parse; the bare scalar
@@ -290,6 +373,25 @@ if MODE == "amplicon":
         "gyrb_dada2":        GYRB_DADA2,
         "rpob_frogs":        RPOB_FROGS,
     }
+
+    # ── SILVA Kingdom handling (only for a release whose lineages carry a Kingdom) ──
+    # SILVA 144 lineages have seven ranks, Domain;Kingdom;Phylum;...;Genus, where
+    # SILVA 138.2 had six. MetaFlux classifies on six — the Kingdom field is dropped
+    # by rule convert_silva_train (10_refdb.smk), so the domain keeps its k__ slot
+    # and every filter token and table keeps working — and puts the Kingdom back
+    # afterwards from a phylum -> kingdom table written by that same rule.
+    # The pack signals this by declaring the raw download (silva_train_raw); a
+    # release without it (138.2) has no conversion step and no kingdom table, and
+    # these stay None.
+    SILVA_DROPS_KINGDOM = "silva_train_raw" in _PACK_REF_FILES
+    SILVA_TRAIN_RAW     = None
+    SILVA_KINGDOM_MAP   = None
+    if SILVA_DROPS_KINGDOM:
+        SILVA_TRAIN_RAW   = _ref_path("silva_train_raw",   "silva", "train_raw")
+        SILVA_KINGDOM_MAP = _ref_path("silva_kingdom_map", "silva", "kingdom_map")
+        REF_PATHS["silva_train_raw"]   = SILVA_TRAIN_RAW
+        REF_PATHS["silva_kingdom_map"] = SILVA_KINGDOM_MAP
+    SILVA_RELEASE = MARKERS.get("16S", {}).get("release")
 
     # ── Primers (hard error if missing — mode=amplicon requires them) ──
     PRIMER_FWD = Path(amp_cfg["primers"]["fwd"]).resolve()
@@ -515,6 +617,17 @@ if MODE == "amplicon":
         sys.exit(
             f"[MetaFlux] marker {AMPLICON_TYPE} has no SINTAX reference database, so "
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
+        )
+
+    # The kingdom sidecar (6.taxonomy/taxonomy_lineage_full.tsv, rule restore_kingdom
+    # in 80_taxonomy.smk) exists only for a 16S run on a SILVA release whose Kingdom
+    # field was dropped before classification (144). Under 138.2 there is no kingdom
+    # to put back, and the other markers never had one removed.
+    KINGDOM_SIDECAR = AMPLICON_TYPE == "16S" and SILVA_DROPS_KINGDOM
+    if AMPLICON_TYPE == "16S":
+        sys.stderr.write(
+            f"[MetaFlux] 16S reference: SILVA {SILVA_RELEASE} "
+            f"(silva_other: {SILVA_OTHER}; trainset {TAXONOMY_REFDB.name})\n"
         )
 
     # ── Optional 16S phylogeny (stage 85) ──────────────────────────────────

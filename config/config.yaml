@@ -53,7 +53,14 @@ references:
   # NOT listed here. Each marker pack (workflow/markers/<type>.yaml) declares its own
   # DB filenames and download URLs, and MetaFlux fetches them on first use into
   # refdb_root. An entry here is only needed to RELOCATE one, e.g.
-  #     silva: {train: /shared/dbs/silva_nr99_v138.2_toGenus_trainset.fa.gz}
+  #     silva: {train: /shared/dbs/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz}
+  #
+  # 16S ships two SILVA releases: 144 (the default) and 138.2. To run on 138.2, put
+  #     silva: {release: "138.2"}
+  # in your run config. Each release keeps its own file names under refdb_root, so
+  # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank
+  # that MetaFlux removes before classifying and restores afterwards in
+  # 6.taxonomy/taxonomy_lineage_full.tsv; see silva_other under amplicon.taxonomy.)
   refdb_root: refdb            # where fetched databases are cached
 
   phix: # [shared] — used by both modes; amplicon also builds a bowtie2 index
@@ -172,6 +179,14 @@ amplicon:
     min_boot: 80                              # rdp only  — RDP bootstrap minimum (0–100)
     sintax_cutoff: 0.8                        # sintax only — confidence threshold (0–1); 0.8 ≈ min_boot=80
     try_rc: true                              # rdp only  — try reverse complement during assignTaxonomy
+    silva_other: verbatim                     # 16S, SILVA 144 only — verbatim | strip
+                                              # SILVA 144 writes "X--other" for a clade that does not
+                                              # contain the type of taxon X but is considered part of X
+                                              # (e.g. Bacillaceae--other next to Bacillaceae).
+                                              #   verbatim: keep the names as SILVA writes them; the
+                                              #     filter and addSpecies treat "X--other" as "X".
+                                              #   strip: remove the suffix before training, so X and
+                                              #     X--other become one taxon.
     filter:
       enabled: true                           # master switch; false = keep every ASV
       # Contaminant filter as rank-aware TOKEN LISTS. Each token is matched against
