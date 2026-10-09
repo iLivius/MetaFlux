@@ -617,7 +617,19 @@ if MODE == "amplicon":
     # even if that rank is below min_boot / sintax_cutoff and so missing from the
     # reported taxonomy. It exists for organelle 16S (see 80a/80c). null or false
     # switches it off, which gives the filter of MetaFlux v2.4.0 and earlier.
+    #
+    # YAML reads a bare off / no / false as the boolean False, so those switch it off
+    # too. A bare on / yes / true arrives as True, and Python counts True as the
+    # number 1 (float(True) is 1.0), so without the check below the run would quietly
+    # use a 1 % threshold. The value has to be a number, so True is refused.
     _dms = _filter_cfg.get("discard_min_support", 50)
+    if _dms is True:
+        sys.exit(
+            "[MetaFlux] amplicon.taxonomy.filter.discard_min_support must be a number "
+            "from 0 to 100, or null (also a bare false / off / no) to switch the "
+            "best-hit check off (got: True; YAML reads on / yes / true as True, so "
+            "write the number, e.g. 50)"
+        )
     if _dms is None or _dms is False:
         FILTER_DISCARD_MIN_SUPPORT = None
     else:
@@ -628,7 +640,8 @@ if MODE == "amplicon":
         if not 0 <= FILTER_DISCARD_MIN_SUPPORT <= 100:
             sys.exit(
                 f"[MetaFlux] amplicon.taxonomy.filter.discard_min_support must be a number "
-                f"from 0 to 100, or null to switch the best-hit check off (got: {_dms!r})"
+                f"from 0 to 100, or null (also a bare false / off / no) to switch the "
+                f"best-hit check off (got: {_dms!r})"
             )
 
     # ── Organelle filter (16S: Metaxa2's own origin call) ──
@@ -868,16 +881,46 @@ if MODE == "amplicon":
     # POST-taxonomy ASV set is that MetaFlux's contaminant filter has already removed
     # chloroplast, mitochondrial and wrong-domain sequences, which are exactly the
     # off-target ASVs that show up in a de novo tree as long branches and distort
-    # UniFrac and Faith's PD. With the filter switched off or its lists empty, the
-    # tree still gets built, but from an unfiltered set — so say so before the run
+    # UniFrac and Faith's PD. When the filter removes little or nothing, the tree
+    # still gets built, but from a poorly filtered set — so say so before the run
     # rather than leaving the user to discover it in the long-branch QC report.
-    if PHYLO_ENABLED and (not FILTER_ENABLED or not (FILTER_KEEP or FILTER_DISCARD)):
+    #
+    # Two situations get different messages, because they protect the tree to a
+    # different degree:
+    #   - nothing filters at all: filter.enabled is false, or the keep/discard lists
+    #     are empty and the organelle filter is not acting either (organelles: off,
+    #     or extraction off so Metaxa2 never ran);
+    #   - the keep/discard lists are empty but the organelle filter still acts
+    #     (the shipped 16S default): Metaxa2's mitochondria and chloroplast calls
+    #     are removed, but eukaryotic, unclassified and other off-target ASVs are not.
+    _filter_lists_empty = not (FILTER_KEEP or FILTER_DISCARD)
+    if PHYLO_ENABLED and not FILTER_ENABLED:
         sys.stderr.write(
             "[MetaFlux] warning: phylogeny is enabled but the contaminant filter "
-            "(amplicon.taxonomy.filter) is off or has empty keep/discard lists. The "
-            "tree will include any chloroplast, mitochondrial or off-target ASVs, which "
-            "typically appear as long branches and inflate Faith's PD. Check "
+            "(amplicon.taxonomy.filter.enabled) is off. The tree will include any "
+            "chloroplast, mitochondrial or off-target ASVs, which typically appear as "
+            "long branches and inflate Faith's PD. Check "
             "stats/phylogeny/phylogeny_qc.json's long-branch report.\n"
+        )
+    elif PHYLO_ENABLED and _filter_lists_empty and not ORGANELLE_FILTER:
+        sys.stderr.write(
+            "[MetaFlux] warning: phylogeny is enabled but the contaminant filter "
+            "(amplicon.taxonomy.filter) has empty keep/discard lists and the organelle "
+            "filter is not acting, so no ASV is removed. The tree will include any "
+            "chloroplast, mitochondrial or off-target ASVs, which typically appear as "
+            "long branches and inflate Faith's PD. Check "
+            "stats/phylogeny/phylogeny_qc.json's long-branch report.\n"
+        )
+    elif PHYLO_ENABLED and _filter_lists_empty:
+        sys.stderr.write(
+            "[MetaFlux] warning: phylogeny is enabled but amplicon.taxonomy.filter has "
+            "empty keep/discard lists. The organelle filter still removes the ASVs "
+            "Metaxa2 calls mitochondria or chloroplast, but eukaryotic, unclassified "
+            "and other off-target ASVs will reach the tree, where they typically appear "
+            "as long branches and inflate Faith's PD. Consider "
+            "keep: [k__Bacteria, k__Archaea] and discard: [o__Chloroplast, "
+            "f__Mitochondria]. Check stats/phylogeny/phylogeny_qc.json's long-branch "
+            "report.\n"
         )
 
     # Taxonomy always reads the length-filtered outputs (dada_length_filter

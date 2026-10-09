@@ -44,9 +44,9 @@
 #                        among the relatives that passed. Mostly it can: where a
 #                        parent still has a surviving taxon at the target rank the
 #                        reads move, but where pruning emptied the parent completely
-#                        Bracken has no destination and drops them (measured at
-#                        -0.16% of reads on the MetaFlux test data). The per-sample
-#                        kmer_evidence log estimates this before Bracken runs.
+#                        Bracken has no destination and drops them. The per-sample
+#                        kmer_evidence log estimates how many reads that is before
+#                        Bracken runs.
 # Bracken itself runs either way — the gate filters Bracken's input, it does not
 # replace or bypass Bracken. The corrected counts therefore propagate through
 # kraken_biom into the final otu_table, which is the whole point of putting the

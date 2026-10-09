@@ -385,27 +385,35 @@ def main() -> int:
         "tip_accounting": tip_accounting,
         "alignment": aln_summary,
         "long_branches": branches,
+        # What a user can expect when the run is repeated. Kept in step with the
+        # Reproducibility section of docs/amplicon/phylogeny.md: the tree search has to
+        # run on one thread for IQ-TREE or RAxML-NG to return the same tree, FastTree
+        # has no random component, and the only remaining source of change upstream is
+        # the taxonomy step, which decides which ASVs become tips.
         "reproducibility_note": (
             "At the shipped defaults two complete runs of the same data give the same "
             "tree, byte for byte: the reads are written in a fixed order (bowtie2 "
             "--reorder), this alignment is built from a FASTA sorted by sequence rather "
             "than by ASV numbering, and the search runs on one thread. Raising "
-            "resources.threads.phylo_tree gives that up — two runs of the same alignment "
-            "at 4 threads landed 52 of 416 splits apart on the 16S test set. One thing "
-            "outside this stage can still change the tree: with taxonomy.method sintax "
-            "on more than one thread, confidence values drift and the contaminant filter "
-            "can in principle keep a different set of ASVs; set "
-            "resources.threads.assign_taxonomy to 1 if that matters. Compare trees by "
-            "patristic distance or PD, never by diff. See docs/amplicon/phylogeny.md, "
+            "resources.threads.phylo_tree gives that up: a search on several threads "
+            "can end on a different, about equally good tree. The tips are the ASVs the "
+            "contaminant filter kept, so they are only as reproducible as the taxonomy "
+            "step. With a fixed amplicon.seed, taxonomy.method sintax gives the same "
+            "result at any thread count; with rdp, DADA2 breaks exact ties between "
+            "equally good references at random, so a few bootstrap values can differ "
+            "between runs. When two trees do differ, compare them by patristic "
+            "distance or PD rather than by diff. See docs/amplicon/phylogeny.md, "
             "Reproducibility."
             if backend != "fasttree" else
             "FastTree here is single-threaded with no random component, and at the "
             "shipped defaults the whole path into it is fixed too (bowtie2 --reorder, "
             "and an alignment built from a FASTA sorted by sequence rather than by ASV "
             "numbering), so two complete runs of the same data give a byte-identical "
-            "tree. With taxonomy.method sintax on more than one thread the contaminant "
-            "filter can still in principle keep a different set of ASVs; set "
-            "resources.threads.assign_taxonomy to 1 if that matters. See "
+            "tree. The tips are the ASVs the contaminant filter kept, so they are only "
+            "as reproducible as the taxonomy step. With a fixed amplicon.seed, "
+            "taxonomy.method sintax gives the same result at any thread count; with "
+            "rdp, DADA2 breaks exact ties between equally good references at random, so "
+            "a few bootstrap values can differ between runs. See "
             "docs/amplicon/phylogeny.md, Reproducibility."
         ),
         "downstream_note": (
