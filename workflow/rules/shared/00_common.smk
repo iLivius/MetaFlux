@@ -17,8 +17,10 @@
 #   - for amplicon mode: which marker is running (AMPLICON_TYPE), that marker's full
 #     profile of facts (PROFILE, loaded from workflow/markers/<type>.yaml — see the
 #     "Marker registry" section below), and every resolved reference-database path
-#   - for shotgun mode: the Kraken2/Bracken settings and the PhiX/host decontamination
-#     toggles
+#   - for shotgun mode: which profiler turns the cleaned reads into taxon tables
+#     (shotgun.profiler: kraken2, sylph or both), the Kraken2/Bracken settings and the
+#     PhiX/host decontamination toggles
+#   - which rule files the Snakefile leaves out of this run (SKIP_RULE_FILES)
 #   - which samples exist and how their FASTQ files are named (SAMPLES, EXTN,
 #     FASTQ_NAMING), discovered once here rather than re-globbed by every rule
 #   - the final target file list `rule all` builds (all_targets(), at the bottom)
@@ -49,6 +51,12 @@ from snakemake.io import glob_wildcards
 MODE = config["mode"].lower()
 if MODE not in ("amplicon", "shotgun"):
     sys.exit(f"config.mode must be 'amplicon' or 'shotgun' (got: {config['mode']!r})")
+
+# Rule files the Snakefile leaves out of this run (see the include loop there). It
+# stays empty in amplicon mode. In shotgun mode the shotgun block below fills it from
+# shotgun.profiler, so the Kraken2 rule files are not even read when only sylph runs,
+# and the sylph rule file is not read when only Kraken2 runs.
+SKIP_RULE_FILES = []
 
 
 # ────────────────────────── Path resolution ────────────────────
@@ -936,16 +944,80 @@ if MODE == "amplicon":
 # The shotgun counterpart of the amplicon block above — runs only when mode: shotgun,
 # and only one of the two blocks ever executes for a given run. Shotgun mode has no
 # marker packs and no probe/truncation machinery to resolve, so this block is
-# considerably shorter: it validates the user-supplied Kraken2 database, resolves the
-# decontamination and classification settings rules/shotgun/*.smk read directly, and
-# works out how much memory to give the Kraken2 rule from the database's own size on
-# disk (see _kraken_hash_size_mb below) rather than a fixed guess.
+# considerably shorter. It first reads which profiler turns the cleaned reads into
+# taxon tables (shotgun.profiler) and, from that, which rule files the Snakefile reads.
+# It then validates the user-supplied Kraken2 database (only when Kraken2 runs),
+# resolves the decontamination and classification settings rules/shotgun/*.smk read
+# directly, and works out how much memory to give the Kraken2 rule from the database's
+# own size on disk (see _kraken_hash_size_mb below) rather than a fixed guess.
 else:  # MODE == "shotgun"
     sht_cfg = config["shotgun"]
 
-    # ── Reference DB (user-supplied; not auto-fetched) ──
-    KRAKEN_DB = Path(config["references"]["kraken_db"]).resolve()
-    if not KRAKEN_DB.exists():
+    # ── Which profiler turns the cleaned reads into taxon tables (shotgun.profiler) ──
+    # The read cleaning (PhiX, host, fastp) is the same whichever profiler is chosen:
+    #   kraken2  Kraken2 + Bracken, exactly as in earlier versions (the default)
+    #   sylph    sylph + sylph-tax instead: genomes detected from k-mer sketches of the
+    #            reads, abundance estimated from genome coverage
+    #   both     both chains on the same trimmed reads, side by side; never merged
+    # Read with a default, so a config written before this key existed still runs as
+    # kraken2, with nothing changed in a run that has already finished.
+    _profiler_raw = sht_cfg.get("profiler", "kraken2")
+    PROFILER = str(_profiler_raw).strip().lower()
+
+    # Stop on any other value here, before a single rule file is read, so that a typo
+    # such as "sylp" is never quietly treated as one of the three choices.
+    if PROFILER not in ("kraken2", "sylph", "both"):
+        sys.exit(
+            f"[MetaFlux] shotgun.profiler must be kraken2, sylph or both (got: {_profiler_raw!r}).\n"
+            "  kraken2  Kraken2 + Bracken, as in earlier MetaFlux versions (the default)\n"
+            "  sylph    sylph genome profiling against references.sylph_databases\n"
+            "  both     both on the same reads, side by side; their tables are never merged"
+        )
+    RUN_KRAKEN2 = PROFILER in ("kraken2", "both")
+    RUN_SYLPH   = PROFILER in ("sylph", "both")
+
+    # The switch above is in place before the sylph rules themselves exist. Until they
+    # are added, stop sylph and both here with a plain message, instead of letting
+    # them fail later with a confusing "missing rule" error from Snakemake.
+    if RUN_SYLPH:
+        sys.exit(
+            f"[MetaFlux] shotgun.profiler: {PROFILER} is available once the sylph rules are "
+            f"added; this version of the workflow runs shotgun.profiler: kraken2 only."
+        )
+
+    # Whole rule files belong to one profiler, and the Snakefile skips the files of a
+    # profiler that does not run (see SKIP_RULE_FILES at the top of this file).
+    # Every file in the Kraken2 list reads Kraken2 output; 80_stats.smk is there because
+    # its read-tracking script reads the Kraken2 reports. A new rule file that needs
+    # Kraken2 output belongs in this list too. 30_preprocess.smk (read cleaning) is in
+    # neither list, because every profiler starts from the reads it cleans.
+    KRAKEN2_RULE_FILES = [
+        "35_kraken2.smk",
+        "40_kmer_evidence.smk",
+        "45_abundance.smk",
+        "55_extract_taxa.smk",
+        "80_stats.smk",
+    ]
+    SYLPH_RULE_FILES = [
+        "38_sylph.smk",
+    ]
+    if not RUN_KRAKEN2:
+        SKIP_RULE_FILES += KRAKEN2_RULE_FILES
+    if not RUN_SYLPH:
+        SKIP_RULE_FILES += SYLPH_RULE_FILES
+
+    # ── Kraken2 database (user-supplied, never downloaded; checked only when Kraken2 runs) ──
+    # A sylph-only run may keep the template's /path/to/kraken2_db placeholder, and that
+    # must not stop it. When Kraken2 runs, the value and the message are exactly as
+    # before: rules kraken2 and bracken pass str(KRAKEN_DB) as a parameter (a changed
+    # value would re-run finished runs), and three docs pages quote the message
+    # (quick-start.md, installation.md, shotgun/databases.md).
+    _kraken_db_cfg = (config.get("references") or {}).get("kraken_db")
+    if _kraken_db_cfg:
+        KRAKEN_DB = Path(_kraken_db_cfg).resolve()
+    else:
+        KRAKEN_DB = None
+    if RUN_KRAKEN2 and (KRAKEN_DB is None or not KRAKEN_DB.exists()):
         sys.exit(f"[MetaFlux] mode=shotgun requires kraken_db but not found: {KRAKEN_DB}")
 
     # ── Primer warning (not an error — amplicon section can be filled out
@@ -1002,6 +1074,18 @@ else:  # MODE == "shotgun"
                  f"(e.g. 5.0e-05), got {BRACKEN_ALPHA}")
     EXTRACT_TAXA     = list(sht_cfg.get("extract_taxa", []) or [])
 
+    # Read extraction (55_extract_taxa.smk) picks reads by the taxon Kraken2 gave each
+    # one, and sylph labels no single read. Under profiler: sylph there is nothing to
+    # pick reads by, so warn and switch extraction off. Under profiler: both Kraken2
+    # runs, so extract_taxa is kept exactly as configured.
+    if PROFILER == "sylph" and EXTRACT_TAXA:
+        sys.stderr.write(
+            f"[MetaFlux] warning: shotgun.extract_taxa needs Kraken2's per-read output, which "
+            f"profiler: sylph does not produce. Ignoring extract_taxa {EXTRACT_TAXA}: no reads "
+            f"will be extracted (profiler: both keeps it).\n"
+        )
+        EXTRACT_TAXA = []
+
     # ── Species-level k-mer evidence (rule kmer_evidence, 40_kmer_evidence.smk) ──
     # The rule itself always runs and always writes its evidence table, plot and
     # gated report. KMER_GATE_ENABLED decides one thing only: whether rule bracken
@@ -1019,6 +1103,17 @@ else:  # MODE == "shotgun"
     if not 0 < KMER_PROTECT_FRAC <= 1:
         sys.exit("[MetaFlux] shotgun.kmer_evidence.never_prune_above_fraction must be "
                  f"a fraction in (0, 1], got {KMER_PROTECT_FRAC}")
+
+    # The k-mer evidence gate filters Kraken2's report before Bracken, and profiler:
+    # sylph runs neither, so the setting would do nothing. Warn and switch it off. This
+    # sits before the rank warning below, so that warning never fires for a gate that
+    # does not run. Under profiler: both the gate works as configured.
+    if PROFILER == "sylph" and KMER_GATE_ENABLED:
+        sys.stderr.write(
+            "[MetaFlux] warning: shotgun.kmer_evidence filters the Kraken2 report before "
+            "Bracken, and profiler: sylph runs neither. Ignoring kmer_evidence.enabled: true.\n"
+        )
+        KMER_GATE_ENABLED = False
 
     # The default threshold is converted from species-level literature (see the
     # config comment). Pointed at any coarser rank it is far too permissive to mean
@@ -1039,6 +1134,16 @@ else:  # MODE == "shotgun"
     OTU_FILTER_KEEP    = _as_taxon_list(_sht_filter.get("keep"))
     OTU_FILTER_DISCARD = _as_taxon_list(_sht_filter.get("discard"))
 
+    # The taxon filter acts on otu_table.tsv (Kraken2 + Bracken) only. The sylph tables
+    # are written unfiltered, so that each column still adds up to the read pairs after
+    # QC. Say so, so nobody assumes the filter also cleaned the sylph tables.
+    if RUN_SYLPH and OTU_FILTER_ENABLED:
+        sys.stderr.write(
+            "[MetaFlux] warning: shotgun.taxonomy_filter applies to otu_table.tsv (Kraken2 + "
+            "Bracken) only; the sylph tables in 03.abundance/ are written unfiltered, so each "
+            "column still adds up to the read pairs after QC.\n"
+        )
+
     # Kraken2 mem_mb is derived from the mmap mode + actual DB size at parse time:
     #   mmap on   → ~20 GB private workspace per process (DB is shared via the OS
     #               file cache, so it doesn't count against this rule's budget).
@@ -1049,7 +1154,12 @@ else:  # MODE == "shotgun"
         h = db_path / "hash.k2d"
         return (h.stat().st_size // (1024 * 1024)) if h.exists() else None
 
-    _hash_mb = _kraken_hash_size_mb(KRAKEN_DB)
+    # No kraken_db at all is possible only when Kraken2 does not run (checked above);
+    # then there is no database size to read, and the memory figure is never used.
+    if KRAKEN_DB is not None:
+        _hash_mb = _kraken_hash_size_mb(KRAKEN_DB)
+    else:
+        _hash_mb = None
     if KRAKEN_MMAP:
         KRAKEN2_MEM_MB = 20000
     elif _hash_mb:
@@ -1151,8 +1261,15 @@ for _s in SAMPLES:
     if any(c in _s for c in BAD_CHARS):
         sys.exit(f"[MetaFlux] sample '{_s}' has disallowed characters")
 
+# The one-line summary every run prints before anything starts. In shotgun mode it also
+# names the profiler, so a log shows at a glance which chain made the tables. The
+# amplicon line stays word for word as before (the docs quote it).
+if MODE == "shotgun":
+    _profiler_part = f", profiler={PROFILER}"
+else:
+    _profiler_part = ""
 sys.stderr.write(
-    f"[MetaFlux v2.5.0] mode={MODE}, input={INPUT_MODE}, "
+    f"[MetaFlux v2.5.0] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
     f"{len(SAMPLES)} sample(s) in {FASTQ_DIR}\n"
 )
 
@@ -1326,22 +1443,45 @@ def _amplicon_targets():
 
 def _shotgun_targets():
     """Default target list for mode=shotgun — the files `rule all` requests for a shotgun run."""
+    # The fastp report of every sample: the read cleaning runs whichever profiler is
+    # chosen.
     out = [
         *expand(OUT / "01.preprocessing" / "{s}_fastp.json",          s=SAMPLES),
-        *expand(OUT / "02.classification" / "{s}_report.txt",         s=SAMPLES),
-        *expand(OUT / "02.classification" / "{s}_output.txt",         s=SAMPLES),
-        *expand(OUT / "02.classification" / "{s}_R1.fastq.gz",        s=SAMPLES),
-        *expand(OUT / "02.classification" / "{s}_R2.fastq.gz",        s=SAMPLES),
-        # k-mer evidence: requested unconditionally, so the evidence table and plot
-        # exist on every shotgun run even when the gate is switched off. Asking for
-        # these also builds the gated report (same rule, three outputs), which is
-        # what makes "diff it before you trust it" possible.
-        *expand(OUT / "02b.evidence" / "{s}_species_evidence.tsv",    s=SAMPLES),
-        *expand(OUT / "02b.evidence" / "{s}_report_gated.txt",        s=SAMPLES),
-        *expand(OUT / "stats" / "kmer_evidence" / "{s}_evidence.png", s=SAMPLES),
-        *expand(OUT / "03.abundance" / "{s}_report.txt",              s=SAMPLES),
-        *expand(OUT / "03.abundance" / "{s}_output.txt",              s=SAMPLES),
-        OUT / "03.abundance" / "otu_table.tsv",
+    ]
+    # Kraken2 + Bracken (profiler kraken2 or both). Under kraken2 the whole list comes
+    # out exactly as before, in the same order, so a finished Kraken2 run sees no change.
+    if RUN_KRAKEN2:
+        out += [
+            *expand(OUT / "02.classification" / "{s}_report.txt",         s=SAMPLES),
+            *expand(OUT / "02.classification" / "{s}_output.txt",         s=SAMPLES),
+            *expand(OUT / "02.classification" / "{s}_R1.fastq.gz",        s=SAMPLES),
+            *expand(OUT / "02.classification" / "{s}_R2.fastq.gz",        s=SAMPLES),
+            # k-mer evidence: requested unconditionally, so the evidence table and plot
+            # exist on every shotgun run even when the gate is switched off. Asking for
+            # these also builds the gated report (same rule, three outputs), which is
+            # what makes "diff it before you trust it" possible.
+            *expand(OUT / "02b.evidence" / "{s}_species_evidence.tsv",    s=SAMPLES),
+            *expand(OUT / "02b.evidence" / "{s}_report_gated.txt",        s=SAMPLES),
+            *expand(OUT / "stats" / "kmer_evidence" / "{s}_evidence.png", s=SAMPLES),
+            *expand(OUT / "03.abundance" / "{s}_report.txt",              s=SAMPLES),
+            *expand(OUT / "03.abundance" / "{s}_output.txt",              s=SAMPLES),
+            OUT / "03.abundance" / "otu_table.tsv",
+        ]
+    # sylph (profiler sylph or both): the raw sylph profile, the per-genome tables made
+    # from it, and the per-sample summary that MultiQC shows.
+    if RUN_SYLPH:
+        out += [
+            OUT / "03.abundance" / "sylph_profile.tsv",
+            OUT / "03.abundance" / "sylph_table.tsv",
+            OUT / "03.abundance" / "sylph_table.genome_copies.tsv",
+            OUT / "03.abundance" / "sylph_table.biom",
+            OUT / "03.abundance" / "sylph_genomes.tsv",
+            OUT / "stats" / "sylph" / "sylph_summary.tsv",
+        ]
+    # Shared by every profiler: the read-tracking table (written by
+    # aggregate_read_counts in 80_stats.smk when Kraken2 runs), the MultiQC report and
+    # the sample manifest.
+    out += [
         OUT / "stats" / "read_tracking.txt",
         OUT / "multiqc" / "multiqc_report.html",
         OUT / "samples.tsv",

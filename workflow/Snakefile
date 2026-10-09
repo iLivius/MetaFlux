@@ -22,10 +22,11 @@
 # so there is no risk of an amplicon rule accidentally firing during a shotgun run:
 #   amplicon → rules/amplicon/*.smk  (DADA2-based multi-marker amplicon workflow:
 #              16S / ITS / 18S / gyrB / rpoB, chosen by amplicon.type in the config)
-#   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken-based shotgun workflow)
+#   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken and/or sylph, chosen by shotgun.profiler)
 # Shared modules (rules/shared/*.smk) are always included, in both modes.
 
 import glob
+import os
 
 print(r"""
 ______  ___    _____       _______________
@@ -64,7 +65,20 @@ include: "rules/shared/00_common.smk"
 # does not care what order rules are declared in — it builds the run from the DAG of
 # file dependencies, not from file order. The prefixes are a readability aid for
 # whoever opens the directory, not a control-flow mechanism.
+#
+# One exception to "every file of the mode": in shotgun mode, each profiler's rule
+# files are read only when that profiler runs. shotgun.profiler (kraken2 | sylph |
+# both) is checked in 00_common.smk, which lists the files to leave out in
+# SKIP_RULE_FILES (always empty in amplicon mode). A skipped file defines no rules at
+# all, so a Kraken2 run has exactly the rules it had before sylph existed, and a
+# sylph-only run has no Kraken2 rule that could be asked for by mistake.
+# Whole files are skipped, rather than their rules being wrapped in an `if`, because
+# Snakemake records each rule's command text (indentation included) and re-runs a
+# finished job whose text has changed: re-indenting the Kraken2 rules would make
+# every finished Kraken2 run start again from scratch.
 for _f in sorted(glob.glob(f"{workflow.basedir}/rules/{MODE}/*.smk")):
+    if os.path.basename(_f) in SKIP_RULE_FILES:
+        continue
     include: _f
 
 # The MultiQC report rule. Included last deliberately: it globs for whatever stats

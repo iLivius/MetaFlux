@@ -13,10 +13,11 @@
 #   [shotgun]  — only used when mode: shotgun
 
 # ┌────────────────────────────────────────────────────────────────────┐
-# │ WHAT THIS RUN IS — the four lines that define the analysis.        │
-# │   mode          : amplicon | shotgun              (below)          │
-# │   amplicon.type : 16S | ITS | 18S | gyrB | rpoB   (amplicon block) │
-# │   input.fastq_dir / output.out_dir                (below)          │
+# │ WHAT THIS RUN IS — the lines that define the analysis.             │
+# │   mode             : amplicon | shotgun            (below)         │
+# │   amplicon.type    : 16S | ITS | 18S | gyrB | rpoB (amplicon block)│
+# │   shotgun.profiler : kraken2 | sylph | both        (shotgun block) │
+# │   input.fastq_dir / output.out_dir                 (below)         │
 # │ Everything else in this file is tuning and can usually stay.       │
 # └────────────────────────────────────────────────────────────────────┘
 
@@ -391,6 +392,20 @@ amplicon:
 # Shotgun-only configuration — ignored when mode: amplicon
 # ═══════════════════════════════════════════════════════════════
 shotgun:
+  # Which profiler turns the cleaned reads into taxon tables. The cleaning (PhiX, host,
+  # fastp) is the same for all three. See docs/shotgun/sylph.md.
+  #   kraken2  Kraken2 + Bracken, exactly as in earlier versions (the default):
+  #            03.abundance/otu_table.tsv, read pairs classified per taxon.
+  #            Needs references.kraken_db.
+  #   sylph    sylph + sylph-tax instead: 03.abundance/sylph_table.tsv, read pairs
+  #            ESTIMATED from genome coverage, plus an 'unassigned' row. Needs
+  #            references.sylph_databases and sylph_taxonomy_dir. sylph labels no
+  #            single read, so kmer_evidence and extract_taxa are switched off.
+  #   both     both chains on the same reads, side by side; never merged.
+  # To add sylph to a FINISHED Kraken2 run, use a new out_dir with profiler: sylph
+  # (MetaFlux stops otherwise and says why).
+  profiler: kraken2                           # kraken2 | sylph | both
+
   decontamination:
     # PhiX is still routinely spiked into Illumina runs — keep this on unless the
     # lab is known to have skipped the spike-in.

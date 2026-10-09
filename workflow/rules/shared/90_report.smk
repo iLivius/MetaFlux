@@ -20,8 +20,10 @@
 # are told apart.
 #
 # Inputs and scan dirs are mode-dependent: amplicon path adds falco, cutadapt,
-# and bowtie2 (PhiX) logs; shotgun path adds fastp, kraken, bracken, BBDuk PhiX
-# stats, and (when host_genomes is set) BBMap host-removal stats.
+# and bowtie2 (PhiX) logs; shotgun path adds fastp, BBDuk PhiX stats, (when
+# host_genomes is set) BBMap host-removal stats, and then whatever the chosen
+# profiler (shotgun.profiler) writes: the Kraken2 and Bracken reports, the sylph
+# summary table, or both.
 
 def _multiqc_inputs():
     """Resolve MultiQC inputs based on MODE — only the files actually produced
@@ -41,11 +43,20 @@ def _multiqc_inputs():
         if REMOVE_PHIX:
             out["rm_phix_logs"] = expand(LOGS / "rm_phix" / "{sample}_phixFilter.log", sample=SAMPLES)
     else:  # shotgun
+        # fastp runs whichever profiler is chosen (shotgun.profiler).
         out = {
             "fastp":   expand(OUT / "01.preprocessing" / "{s}_fastp.json", s=SAMPLES),
-            "kraken":  expand(OUT / "02.classification" / "{s}_report.txt", s=SAMPLES),
-            "bracken": expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES),
         }
+        # The Kraken2 and Bracken reports exist only when Kraken2 runs (profiler
+        # kraken2 or both). Under kraken2 this dictionary comes out exactly as before,
+        # keys in the same order, so a finished Kraken2 run does not re-run MultiQC.
+        if RUN_KRAKEN2:
+            out["kraken"]  = expand(OUT / "02.classification" / "{s}_report.txt", s=SAMPLES)
+            out["bracken"] = expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES)
+        # The sylph summary table, shown by MultiQC as a custom-content table
+        # (profiler sylph or both).
+        if RUN_SYLPH:
+            out["sylph"] = OUT / "stats" / "sylph" / "sylph_summary_mqc.tsv"
         if REMOVE_PHIX:
             out["dephix_stats"] = expand(OUT / "01.preprocessing" / "{s}_dephix_stats.txt", s=SAMPLES)
         if HOST_GENOMES:
@@ -65,11 +76,22 @@ def _multiqc_scan_dirs():
         if REMOVE_PHIX:
             dirs.append(LOGS / "rm_phix")
         return dirs
-    return [
-        OUT / "01.preprocessing",
-        OUT / "02.classification",
-        OUT / "03.abundance",
-    ]
+    # Shotgun. Only folders the chosen profiler actually fills are listed: MultiQC
+    # stops with an error on a scan folder that does not exist. Under kraken2 the list
+    # is exactly as before (the rule records it as a parameter, so a different list
+    # would re-run MultiQC in every finished run).
+    dirs = [OUT / "01.preprocessing"]
+    if RUN_KRAKEN2:
+        dirs += [OUT / "02.classification", OUT / "03.abundance"]
+    # stats/sylph holds only the summary table MultiQC should show. The sylph-tax
+    # files in 02c.sylph/ are deliberately NOT scanned: MultiQC's own sylph-tax module
+    # would pick them up and present genome copies as if they were read shares. Checked with
+    # MultiQC 1.35; envs/multiqc.yaml is not pinned to it, so a later MultiQC could
+    # behave differently. stats/sylph is scanned only when sylph runs, so sylph files
+    # left over from an earlier run never reach a Kraken2-only report.
+    if RUN_SYLPH:
+        dirs.append(OUT / "stats" / "sylph")
+    return dirs
 
 
 # Runs the MultiQC tool once over every stats/log directory listed in
