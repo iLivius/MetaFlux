@@ -194,7 +194,7 @@ Bracken uses the same database directory. Its two settings:
 
 `tax_lev: S` is the usual choice and gives a species-level table. Drop it to `G` when
 the index is shallow, or when species-level assignments are not credible for the
-group in question.
+group in question. The table then has one row per genus.
 
 `threshold: 10` is applied to Kraken2's own clade read count for a taxon at the target
 rank, before Bracken re-estimates anything. Taxa below it are dropped from the model

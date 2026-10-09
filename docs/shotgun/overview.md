@@ -252,7 +252,8 @@ optional read extraction step, which looks up taxids in the Bracken report.
 
     Species-level re-estimation is only as good as the database's species
     representation. With a small or size-capped index, `tax_lev: G` gives a more
-    honest table.
+    honest table. The OTU table then lists genera, one row each, with an empty
+    species slot.
 
 !!! warning "The numbers in the OTU table are estimates, and they do not sum to the classified reads"
 

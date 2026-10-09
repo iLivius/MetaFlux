@@ -315,7 +315,7 @@ at higher ranks.
 
 | File | Contents |
 |---|---|
-| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. |
+| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. At any `tax_lev` other than `S`, Bracken 3.1 writes `0` in the third column (reads assigned directly to the taxon) on almost every row, an upstream bug ([Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315)). The second column, the clade count, is correct, and it is the only count MetaFlux uses. |
 | `{sample}_output.txt` | Bracken's own per-taxon table for that sample. |
 | `otu_table.biom` | Cross-sample abundance table in BIOM (HDF5) format. |
 | `otu_table.tsv` | The same table as tab-separated text. |
@@ -369,6 +369,9 @@ Both modes write taxonomy the same way structurally: ranks joined by `;` with no
 space, each rank carrying its prefix (`k__`, `p__`, `c__`, `o__`, `f__`, `g__`,
 `s__`; 18S uses the PR2 rank set, `d__`, `sg__`, `dv__` and so on). Ranks the
 classifier could not resolve are simply left out, so a string can end early.
+Shotgun tables are the exception: kraken-biom always writes all seven slots, and
+leaves empty any rank it has no name for and every rank below
+`shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level table).
 
 The exact form of the species slot follows the reference database, not the
 pipeline:

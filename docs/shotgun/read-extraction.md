@@ -53,6 +53,12 @@ deposited under strain taxids — *Escherichia coli* str. K-12 substr. MG1655, t
 511145, for instance — and Kraken2 routinely assigns reads to them. Lineages Bracken
 dropped below `shotgun.bracken.threshold` are missing for the same reason.
 
+At `tax_lev: G` or any coarser rank the loss is much larger, because the report then
+has no species rows at all. A species name is not found, so the sample gets empty
+files. A genus name pulls only the reads Kraken2 placed on the genus itself, not
+those placed on its species: on the D6331 mock, *Escherichia* would give 10,821 of
+the 38,441 read pairs in its clade.
+
 Where those reads matter, run `extract_kraken_reads.py` by hand against
 `02.classification/{sample}_report.txt`, which keeps the full tree. KrakenTools reads
 that report as it stands. Note the report is written with `--report-minimizer-data`,

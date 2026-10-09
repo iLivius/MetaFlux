@@ -184,6 +184,37 @@ pre-trimmed input buys nothing.
 More on host references and masking is in
 [Decontamination](shotgun/decontamination.md).
 
+## Shotgun: empty or nearly empty OTU table with `tax_lev` other than `S`
+
+!!! warning "Symptom"
+
+    `shotgun.bracken.tax_lev` is set to `G`, or to any rank other than `S`. The run
+    finishes without an error, but `03.abundance/otu_table.tsv` has no rows, or only a
+    handful, while Bracken's own `{sample}_output.txt` files list plenty of taxa.
+
+**Cause.** Fixed in v2.5.0. Up to v2.4.0, rule `kraken_biom` ran kraken-biom with its
+default settings, which assume a species-level report: it takes the clade count for
+species, and for every coarser rank only the reads placed directly on the taxon.
+Bracken 3.1 writes 0 in that column for almost every taxon above species (an upstream
+bug, [Bracken #315](https://github.com/jenniferlu717/Bracken/issues/315)), so those
+taxa dropped out. A genus survived only when Kraken2 had placed no reads on any of its
+species, and at class, phylum or domain level nothing survived at all. On the
+benchmark data the genus tables kept between 0.06 % and 9 % of the reads: 2 to 114
+genera, where Bracken had found 117 to 687. Bracken's `{sample}_output.txt` files were
+never affected, and neither were species-level runs.
+
+**Fix.** Update to v2.5.0 and run the same command again, from the same MetaFlux
+folder. Snakemake keeps a record of how each output was made (in `.snakemake/`), sees
+that rule `kraken_biom` has changed, and rebuilds the table from the Bracken files
+already in the output directory: only `kraken_biom` and `finalize_otu_table` run,
+Kraken2 and Bracken do not. A dry run (`-n`) shows those two jobs before anything
+runs. If they do not appear, for example because the run used
+`--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force them:
+
+```bash
+snakemake --sdm conda --cores 4 --configfile <your config> -R kraken_biom
+```
+
 ## Amplicon: ASV counts or taxonomy calls differ between identical re-runs
 
 Three steps in the amplicon path draw on a random-number generator, so two runs
