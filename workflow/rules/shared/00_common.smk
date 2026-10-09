@@ -320,8 +320,10 @@ if MODE == "amplicon":
     # each into a generated fetch rule. Entries carrying an `archive` (UNITE .tgz /
     # .zip) need extraction and keep their bespoke rule there instead, as does
     # silva_sintax, which is derived from silva_train rather than downloaded.
+    # "md5" is the checksum the pack lists for the file (empty string when it lists
+    # none); the generated fetch rule checks the download against it.
     PACK_FETCHABLE = {
-        _sym: {"path": REF_PATHS[_sym], "url": _spec["url"]}
+        _sym: {"path": REF_PATHS[_sym], "url": _spec["url"], "md5": str(_spec.get("md5") or "")}
         for _sym, _spec in (PROFILE.get("references") or {}).items()
         if isinstance(_spec, dict)
         and _spec.get("url")

@@ -222,6 +222,12 @@ rule convert_rpob_to_dada2:
 # reference — or a whole new marker — is a data change with no rule to write
 # here. References needing archive extraction (UNITE .tgz/.zip, PhiX .gz) or a
 # transform (silva_sintax, derived from silva_train) keep the bespoke rules above.
+#
+# When the pack lists an md5 for the file, the download is checked against it
+# before anything uses it: a truncated download, a changed file behind the same URL
+# or a proxy error page would otherwise be trained on without complaint. On a
+# mismatch the file is deleted and the rule fails, saying which checksum it got.
+# References without an md5 entry are downloaded exactly as before.
 for _sym, _spec in PACK_FETCHABLE.items():
 
     rule:
@@ -229,6 +235,7 @@ for _sym, _spec in PACK_FETCHABLE.items():
         output: _spec["path"]
         params:
             url = _spec["url"],
+            md5 = _spec["md5"],
         log:
             LOGS / "refdb" / f"fetch_{_sym}.log",
         conda:
@@ -237,4 +244,13 @@ for _sym, _spec in PACK_FETCHABLE.items():
             """
             mkdir -p $(dirname {output})
             wget -O {output} "{params.url}" > {log} 2>&1
+            if [ -n "{params.md5}" ]; then
+                got=$(md5sum {output} | cut -d' ' -f1)
+                if [ "$got" != "{params.md5}" ]; then
+                    echo "md5 mismatch for {output}: expected {params.md5}, got $got" >> {log}
+                    rm -f {output}
+                    exit 1
+                fi
+                echo "md5 OK: {params.md5}" >> {log}
+            fi
             """
