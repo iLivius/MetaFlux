@@ -1146,6 +1146,9 @@ def _amplicon_targets():
         OUT / "6.taxonomy" / "asv_table.txt",
         OUT / "6.taxonomy" / "asv_table_seqs.txt",
         OUT / "6.taxonomy" / "taxon_seq_table.txt",
+        # Kingdom sidecar (SILVA 144 only): one extra file next to the three tables
+        # above, which themselves stay exactly as they are.
+        *([OUT / "6.taxonomy" / "taxonomy_lineage_full.tsv"] if KINGDOM_SIDECAR else []),
         # Combined read-tracking table
         OUT / "stats" / "read_tracking.txt",
         # MultiQC aggregate
