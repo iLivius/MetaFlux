@@ -165,7 +165,7 @@ Cite these when `shotgun.profiler` is `sylph` or `both`, together with the sourc
 genomes in each database used.
 
 86. Shaw, J. & Yu, Y. W. (2025). Rapid species-level metagenome profiling and containment estimation with sylph. *Nature Biotechnology* 43(8):1348–1359. https://doi.org/10.1038/s41587-024-02412-y
-87. Shaw, J. sylph-tax: taxonomy manipulation for sylph. *GitHub*. https://github.com/bluenote-1577/sylph-tax (adds the lineages to sylph's output; MetaFlux pins version 1.9.2, whose lineage tables are downloaded from Zenodo)
+87. Shaw, J. sylph-tax: taxonomy manipulation for sylph. *GitHub*. https://github.com/bluenote-1577/sylph-tax (adds the lineages to sylph's output; MetaFlux pins version 1.9.2, whose lineage tables come from Zenodo, and GlobDB r232's from the GlobDB server)
 88. sylph pre-built databases. https://sylph-docs.github.io/pre%E2%80%90built-databases/ (user-supplied at runtime — cite the exact database files used, e.g. `gtdb-r232-c200-dbv1.syldb`, and the source of their genomes: GTDB, ref. 22, at the release of the database, or NCBI RefSeq for the fungal database)
 
 ## License

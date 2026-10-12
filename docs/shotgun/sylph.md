@@ -21,9 +21,11 @@ fastp) is the same whichever profiler runs.
 - **Abundance comes from coverage.** From how many of a genome's k-mers turn up, and how
   often, sylph estimates the genome's coverage. Coverage times genome size gives the
   share of the sample's sequence that genome explains.
-- **No read gets a label.** There is no per-read output, so the
-  [k-mer evidence gate](kmer-evidence.md) and [read extraction](read-extraction.md),
-  which work on Kraken2's per-read labels, have nothing to act on.
+- **No read gets a label.** sylph writes no per-read output, so
+  [read extraction](read-extraction.md), which picks reads by the taxon Kraken2 gave each
+  one, has nothing to work from. The [k-mer evidence gate](kmer-evidence.md) needs
+  Kraken2 too: it filters the Kraken2 report before Bracken, and under `sylph` neither
+  runs.
 - **Same reads as Kraken2.** sylph sketches exactly the trimmed read pairs Kraken2 would
   classify. With `profiler: both` the two tables come from identical input; they are
   written side by side and never merged.
@@ -47,12 +49,18 @@ With `sylph`, the Kraken2 database is not needed and `references.kraken_db` can 
 placeholder. With `both`, Kraken2 + Bracken and sylph run on the same reads in one run,
 and fastp still runs once per sample.
 
-All databases are profiled in one sylph run, so an organism present in two of them is
-reported once, by its closer genome. Everything in the block above is checked before the
-first job starts: the file names, a taxonomy for every database, the lineage table behind
-each taxonomy and, for the pre-built file names, that no database is paired with the
-taxonomy of another release. A mistake stops the run with a message that says what to
-change.
+All databases are profiled in one sylph run, so within a sample an organism present in
+two of them is reported once, by its closer genome.
+
+Everything in the block above is checked before the first job starts: the file names, a
+taxonomy for every database and the lineage table behind each. When a database file name
+shows its release (`gtdb-r232-c200-dbv1.syldb`, or a copy renamed `gtdb_r232_c200.syldb`),
+MetaFlux also checks that the taxonomy comes from the same release. That covers a
+built-in name and a lineage table given by its path under a built-in table's file name
+(`gtdb_r226_metadata.tsv.gz`, say); a table of your own under another name cannot be
+matched to a release at this point. After profiling, MetaFlux checks the GTDB release once
+more, from the genome paths in sylph's output, whatever the files are called. A mistake
+stops the run with a message that says what to change.
 
 ## Databases and lineage tables, set up once
 
@@ -67,8 +75,13 @@ index. The pre-built ones are listed on sylph's
 - **File types.** Both `.syldb` and the two-stage `.syl2db` files work.
 - **One database per family.** Two GTDB releases, or the c 200 and c 1000 builds of one
   release, share genomes and names, and listing both stops the run. GTDB and GlobDB
-  together are allowed, with a warning: GlobDB already holds the GTDB species
-  representatives, so the pair roughly doubles the memory without adding species.
+  together are allowed, with a warning, but best avoided. GlobDB already holds every
+  genome of the GTDB database, with the same lineage, under its accession without the
+  version suffix (`GCF_003096595` for GTDB's `GCF_003096595.1`). sylph reports such a
+  genome from one database or the other, and which one can change from sample to
+  sample, so one genome can end up on two rows, each with zeros where the other copy was
+  reported. Genome-level counts, prevalence and diversity are then wrong. The pair also
+  roughly doubles the memory without adding species; use GlobDB alone instead.
 - **No viral databases.** IMG/VR and UHGV use viral ranks that do not fit the table
   and are refused.
 
@@ -131,10 +144,11 @@ unassigned	0	98211	d__Unassigned;p__;c__;o__;f__;g__;s__
 
 The first slot always holds the domain and is always written `d__`: `d__Bacteria`,
 `d__Archaea` or `d__Eukaryota`, and `d__Unassigned` on the `unassigned` row. GTDB has no
-kingdom rank, so there is no `k__` slot. The fungal lineage table writes its domain as
-`k__Eukaryota`; MetaFlux writes it as `d__Eukaryota`, so every row uses the same seven
-prefixes. A lineage whose first rank is not a domain stops the run with a message that
-names the lineage table. The lineage of the Kraken2 table is described on the
+kingdom rank, so there is no `k__` slot. The FungiRefSeq-latest lineage table writes its
+domain as `k__Eukaryota`, and the TaraEukaryoticSMAG table spells it `Eukarya` in some
+rows; MetaFlux writes both as `d__Eukaryota`, so every row uses the same seven prefixes.
+A lineage whose first rank is not a domain stops the run with a message that names the
+lineage table. The lineage of the Kraken2 table is described on the
 [output files](../reference/output.md#taxonomy-strings-in-the-final-tables) page.
 
 ## Reading the numbers
@@ -143,17 +157,34 @@ names the lineage table. The lineage of the Kraken2 table is described on the
   `Sequence_abundance`, the share of the sample's reads that genome explains, estimated
   from its coverage, times the sample's read pairs after QC, rounded to a whole pair. No
   read was assigned to the genome. Each column adds up to the `trimmed` count of
-  `stats/read_tracking.txt`.
+  `stats/read_tracking.txt`, except by a few pairs per million in a sample sylph explains
+  to 100 % (`explained_capped: yes`). There the rounded genome rows can add up to
+  slightly more than `trimmed` (`unassigned` is then 0, and `logs/sylph_tables.log` says
+  so), or leave a few pairs over in `unassigned`.
 - **`unassigned` is a model estimate as well.** MetaFlux runs `sylph profile -u`, which
   estimates how much of each sample the detected genomes do not explain; that remainder
   is the `unassigned` row. It depends on the database, since a fuller database explains
-  more. It also depends on sylph's estimate of read accuracy: in a shallow sample sylph
-  uses a fixed value instead (`read_accuracy` in the summary says
-  `fixed 99.5% (low depth)`), and the remainder is rougher. When sylph explains the whole
-  sample, as in a mock community, the share is capped at 100 % (`explained_capped: yes`)
-  and nothing is left to estimate. `unassigned` cannot be compared with Kraken2's
-  unclassified read pairs. Leave the row out before computing relative abundances of the
-  detected genomes.
+  more. `unassigned` cannot be compared with Kraken2's unclassified read pairs. Leave the
+  row out before computing relative abundances of the detected genomes.
+- **Read accuracy.** The estimates also depend on sylph's estimate of read accuracy.
+  When the sample's genomes are covered too thinly for that estimate (common in shallow
+  samples, and in very diverse ones such as soil even when deeply sequenced), sylph
+  assumes 99.5 % instead; `read_accuracy` in the summary then reads
+  `fixed 99.5% (low depth)`, the depth being how deeply the genomes are covered. That
+  assumption moves every genome row of the sample by one common factor, and the
+  `unassigned` row with them, which can change the explained share by tens of percentage
+  points; which genomes are found, and their genome copies, do not change. Compare
+  explained shares, `unassigned` and estimated pairs only between samples with the same
+  `read_accuracy`. Otherwise leave out `unassigned` and compare shares among the detected
+  genomes, or use `sylph_table.genome_copies.tsv`.
+- **Capped samples.** `explained_capped: yes` usually means that sylph's coverage
+  estimates added up to at least all of the sample's sequence (sylph does not say by how
+  much; in a mock community it can be several percent). sylph then shares 100 % among
+  the detected genomes, as it does without `-u`, so every genome's estimated read pairs
+  in that sample are scaled down by that unknown amount, and they change when a database
+  is added or removed, even for a genome whose coverage stays the same. Nothing is left
+  for `unassigned` to estimate. Compare a capped sample with others by shares among the
+  detected genomes or by genome copies, not by estimated pairs.
 - **Genome copies are a different share.** `sylph_table.genome_copies.tsv` gives each
   genome's share of genome copies, roughly of cells, among the detected genomes only. A
   genome that is large but present in few copies has a high read share and a low copy
@@ -170,8 +201,9 @@ names the lineage table. The lineage of the Kraken2 table is described on the
 
 GTDB sometimes puts a genome in a genus known only by a code (a placeholder genus such as
 `g__G047199095`) while the genome's own FASTA header, written by whoever submitted it,
-names a Latin species of another genus. In GTDB r232 this is the case for some recent
-*Escherichia coli* assemblies: reads of an *E. coli* strain can land on such a genome, so
+names a Latin species of another genus. In GTDB r232 this is the case for some
+*Escherichia coli* assemblies that are new in that release: reads of an *E. coli* strain
+can land on such a genome, so
 that the strain appears under a placeholder name and not as *Escherichia coli*. MetaFlux
 renames and merges nothing.
 It flags the genome in `sylph_genomes.tsv` (`GTDB placeholder genus; genome labelled
@@ -205,11 +237,12 @@ colnames(tax_table(ps))[1] <- "Domain"
 
 ## Settings that do not apply
 
-Under `profiler: sylph`, `shotgun.kmer_evidence` and `shotgun.extract_taxa` are switched
-off with a warning, because they need Kraken2's per-read labels; under `both` they still
-act on the Kraken2 side. `shotgun.taxonomy_filter` and the `shotgun.kraken` and
-`shotgun.bracken` settings act on the Kraken2 chain only. The sylph tables are written
-unfiltered, so each column still adds up to the read pairs after QC.
+Under `profiler: sylph`, `shotgun.extract_taxa` (it needs Kraken2's per-read output) and
+`shotgun.kmer_evidence` (it filters the Kraken2 report before Bracken) are switched off
+with a warning; under `both` they still act on the Kraken2 side. `shotgun.taxonomy_filter`
+and the `shotgun.kraken` and `shotgun.bracken` settings act on the Kraken2 chain only.
+The sylph tables are written unfiltered, so each column still adds up to the read pairs
+after QC (with the one exception under [Reading the numbers](#reading-the-numbers)).
 
 ## Limits
 
@@ -227,12 +260,25 @@ unfiltered, so each column still adds up to the read pairs after QC.
   them stops at `sylph_tables`. GlobDB r232 places every genome in a domain.
 - **Memory.** sylph holds every database in memory, in a single `sylph_profile` job for
   all samples. MetaFlux asks for 1.2 times the size of the database files plus 4 GB; set
-  `resources.mem_mb.sylph_profile` to a number to override it, for example on a cluster.
-  GTDB r232 at c 200 with the fungal database is about 27 GB of files. With a few
-  samples, most of the job's time goes into reading the databases from disk.
+  `resources.mem_mb.sylph_profile` to a number to override it, for example on a cluster,
+  but keep it above about 1.1 times the size of the files, plus some headroom. GTDB r232
+  at c 200 with the fungal database is about 27 GB of files. With a few samples, most of
+  the job's time goes into reading the databases from disk. Do not size the job from
+  `benchmarks/sylph_profile.tsv`: sylph's memory climbs while it reads the databases and
+  peaks only in the last seconds of the job, and after its first 30 checks (about the
+  first 15 to 20 seconds) Snakemake records memory only every 30 seconds, so the recorded
+  `max_rss` usually misses the peak and can be far below it.
+- **Memory under `both`.** The `sylph_profile` job can start while Kraken2 jobs are
+  running. On a local run, Snakemake keeps their memory apart only when it is given a
+  cap, with `--resources mem_mb=...`. Give a cap at least as large as the `sylph_profile`
+  figure printed at start-up plus what the Kraken2 jobs declare. A smaller cap does not
+  stop the run: Snakemake lowers the job's request to the cap and runs it anyway.
 - **Reproducibility.** Sketches are made with one thread
-  (`resources.threads.sylph_sketch: 1`), because with more threads they differ slightly
-  from run to run. The thread count of `sylph_profile` changes no number. Genomes with
+  (`resources.threads.sylph_sketch: 1`), because with more threads their k-mer counts
+  differ slightly from run to run; with one thread they are the same every time. With
+  PhiX or host removal on, the reads can come out of those steps in a different order
+  from run to run, so the sketch files themselves can differ while every number in them
+  stays the same. The thread count of `sylph_profile` changes no number. Genomes with
   exactly the same abundance, common in mock communities, can come out in a different
   order from run to run in `sylph_profile.tsv` and in sylph-tax's files, so sort those
   before comparing two runs; the MetaFlux tables sort their own rows. Each sketch records

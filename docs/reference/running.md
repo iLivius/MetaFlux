@@ -127,9 +127,9 @@ clearer.
 asking for more threads than that is scaled down to fit. Lowering `--cores` is
 therefore the way to run fewer heavy jobs side by side. Memory is capped
 separately: every heavy rule declares a `mem_mb` — from `resources.mem_mb.*` in the
-config, except Kraken2, whose figure is computed while the workflow is read — so
-`--resources mem_mb=32000` lets Snakemake start jobs only while their declared memory
-still fits in 32 GB. This matters most for Kraken2 with
+config, except Kraken2 and `sylph_profile`, whose figures are computed while the
+workflow is read — so `--resources mem_mb=32000` lets Snakemake start jobs only while
+their declared memory still fits in 32 GB. This matters most for Kraken2 with
 `shotgun.kraken.memory_mapping: false`, where every concurrent process loads its own
 full copy of the database, and for the DADA2 steps, which hold all samples in
 memory at once.

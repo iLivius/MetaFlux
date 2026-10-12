@@ -909,8 +909,9 @@ shotgun:
 | `profiler` | Which profiler turns the cleaned reads into taxon tables | `kraken2` | `kraken2`: Kraken2 + Bracken, `03.abundance/otu_table.tsv`. `sylph`: sylph + sylph-tax instead, `03.abundance/sylph_table.tsv`, read pairs estimated from genome coverage plus an `unassigned` row. `both`: the two side by side on the same reads, never merged. Anything else stops the run at parse time. |
 
 The PhiX, host and fastp steps below are the same for all three. Under `sylph`,
-`kmer_evidence` and `extract_taxa` need Kraken2's per-read output, so they are switched
-off with a warning, and the `kraken` and `bracken` settings are not used.
+`extract_taxa` (it needs Kraken2's per-read output) and `kmer_evidence` (it filters the
+Kraken2 report before Bracken) are switched off with a warning, and the `kraken` and
+`bracken` settings are not used.
 `taxonomy_filter` acts on `otu_table.tsv` only; with `sylph` or `both` it warns that the
 sylph tables are written unfiltered. See [sylph](../shotgun/sylph.md).
 
@@ -1138,7 +1139,7 @@ so they are what a cluster executor turns into job requests.
 | `extract_taxon_reads` | shotgun | 4 | |
 | `compress_extracted` | shotgun | 6 | pigz parallelism for the extracted read files. |
 | `download_sra` | shotgun | 6 | `fasterq-dump` parallelism; past about 8 the bottleneck is disk, not CPU. |
-| `sylph_sketch` | shotgun | 1 | Only when sylph runs. **One thread is a reproducibility setting**: with two or more threads sylph removes duplicate k-mers in parallel and the sketch differs slightly from run to run, while one thread gives the same sketch every time and still takes only seconds per sample. Snakemake sketches several samples at once. Like `phylo_tree`, it falls back to 1, not `threads_default`. |
+| `sylph_sketch` | shotgun | 1 | Only when sylph runs. **One thread is a reproducibility setting**: with two or more threads sylph removes duplicate k-mers in parallel and the sketch differs slightly from run to run, while one thread gives the same k-mer counts every time and still takes only seconds per sample. (With PhiX or host removal on, the reads can reach fastp in a different order from run to run, so the sketch file's bytes can still differ; no number in it does.) Snakemake sketches several samples at once. Like `phylo_tree`, it falls back to 1, not `threads_default`. |
 | `sylph_profile` | shotgun | 16 | Only when sylph runs. One job for all samples and databases; the thread count changes no number. |
 | `sylph_taxprof` | shotgun | 1 | Only when sylph runs. sylph-tax uses one thread. |
 | `sylph_tables` | shotgun | 1 | Only when sylph runs. |
@@ -1171,7 +1172,7 @@ so they are what a cluster executor turns into job requests.
 | `bracken` | shotgun | 4000 | |
 | `kraken_biom` | shotgun | 2000 | |
 | `extract_taxon_reads` | shotgun | 2000 | |
-| `sylph_sketch` | shotgun | 4000 | Only when sylph runs. A sketch takes a few tens of MB for a few million read pairs; deep libraries make bigger ones, hence the headroom. |
+| `sylph_sketch` | shotgun | 4000 | Only when sylph runs. Making a sketch uses a few tens of MB of memory for a few million read pairs (the sketch file itself is a few MB); deep libraries need more, hence the headroom. |
 | `sylph_profile` | shotgun | `null` | Only when sylph runs. `null` means worked out at parse time: 1.2 × the size of the database files plus 4096 MB, because sylph holds every database in memory (about 34,600 MB for GTDB r232 c200 with the fungal database). The start-up line prints the figure. A number here overrides it, for example on a cluster. |
 | `sylph_taxprof` | shotgun | 2000 | Only when sylph runs. |
 | `sylph_tables` | shotgun | 2000 | Only when sylph runs. |

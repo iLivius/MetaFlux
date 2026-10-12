@@ -392,7 +392,7 @@ under `sylph`. The two sets are never merged.
 
 | File | Contents |
 |---|---|
-| `03.abundance/sylph_table.tsv` | Read pairs per genome and sample, estimated from genome coverage, plus a last row `unassigned`. Each column adds up to `trimmed` in `stats/read_tracking.txt`. |
+| `03.abundance/sylph_table.tsv` | Read pairs per genome and sample, estimated from genome coverage, plus a last row `unassigned`. Each column adds up to `trimmed` in `stats/read_tracking.txt`, except by a few pairs per million in a sample sylph explains to 100 % (see [Reading the numbers](../shotgun/sylph.md#reading-the-numbers)). |
 | `03.abundance/sylph_table.biom` | The same table in BIOM (HDF5) format. |
 | `03.abundance/sylph_table.genome_copies.tsv` | Each genome's share of genome copies (%) among the detected genomes; same rows, no `unassigned`. |
 | `03.abundance/sylph_genomes.tsv` | One row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI. |

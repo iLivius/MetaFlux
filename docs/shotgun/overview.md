@@ -29,9 +29,9 @@ The mode can also be set on the command line without editing the file:
     run at amplicon data (or the reverse) does not always produce an error — it
     produces the wrong analysis. Check `mode` before every run.
 
-Shotgun mode needs one thing that is not fetched automatically: a Kraken2 database
-(or sylph databases, when sylph is the profiler; see below). See
-[Reference databases](databases.md).
+Shotgun mode needs reference data that MetaFlux does not fetch: a Kraken2 database for
+the default profiler, sylph databases and their lineage tables for `profiler: sylph`, and
+both for `profiler: both`. See [Reference databases](databases.md).
 
 ## The chain
 
