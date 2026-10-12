@@ -39,8 +39,9 @@ def log(msg: str, fh) -> None:
 # run that too.
 # Keep the two copies word for word in step: a change to a parser there must be made
 # here too, so that profiler: sylph and profiler: kraken2 write the same cleaning
-# columns from the same files. The smoke tests check that the two scripts give the
-# same cleaning columns on the same files.
+# columns from the same files. Nothing in this repository checks this automatically:
+# after changing a parser in either file, copy it to the other and run both scripts on
+# the same BBDuk logs, host stats and fastp JSONs; the cleaning columns must match.
 
 def parse_bbduk_log(path: Path) -> tuple[int, int]:
     """Return (pairs_in, pairs_kept) from the log of rule decontam_phix.

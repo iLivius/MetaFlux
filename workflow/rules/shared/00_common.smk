@@ -1216,24 +1216,34 @@ else:  # MODE == "shotgun"
     # vFAM, ...) do not fit the seven d__..s__ slots (domain ... species) of the sylph
     # tables, so they are refused instead of producing a table phyloseq would read wrongly.
     SYLPH_TAX_VIRAL = {"IMGVR_4.1", "UHGV_default", "UHGV_ictv"}
-    # Pieces of the prebuilt database file names (as on sylph's download server and
-    # the files used to test MetaFlux) -> the built-in taxonomy that names their
-    # genomes. A built-in taxonomy paired with the wrong release would rename genomes
-    # without any warning, so the pair is checked. A custom lineage table (a file path)
-    # skips this check.
+    # A database paired with the lineage table of another release gets wrong genome
+    # names without any warning (sylph-tax looks each genome up by accession, and most
+    # accessions are in both releases), so each pair is checked against what the
+    # database file name says. The prebuilt GTDB and GlobDB file names carry their
+    # release (gtdb-r232-c200-dbv1.syldb, globdb_r232_sylph_c200.syldb), which
+    # _sylph_taxonomy_of_database() below reads with or without separators, so a
+    # renamed copy (gtdb_r232_c200.syldb) or a release newer than sylph-tax 1.9.2
+    # (gtdb-r236-...) is recognised too. The other prebuilt databases are known by a
+    # fixed piece of their name, listed here with the built-in taxonomy that names
+    # their genomes (as on sylph's download server and the files used to test MetaFlux).
+    # A lineage table given by its path is checked the same way when its file name is
+    # that of a built-in table (_sylph_taxonomy_of_table). A table of your own under
+    # another name cannot be matched to a release here; for GTDB, rule sylph_tables
+    # checks the release once more after profiling (38a_sylph_tables.py, section 2b).
     SYLPH_DB_NAME_HINTS = [
-        ("gtdb-r232", "GTDB_r232"),
-        ("gtdb-r226", "GTDB_r226"),
-        ("gtdb-r220", "GTDB_r220"),
-        ("gtdb-r214", "GTDB_r214"),
         ("fungi-refseq-2025-10-11", "FungiRefSeq-latest"),
         ("fungi-refseq-2024-07-25", "FungiRefSeq-2024-07-25"),
-        ("globdb_r232", "GlobDB_r232"),
-        ("globdb_r226", "GlobDB_r226"),
         ("smag-c", "SoilSMAG"),
         ("oceandna-c", "OceanDNA"),
         ("tara-eukmags", "TaraEukaryoticSMAG"),
     ]
+
+    # GlobDB's own download server ships its sylph lineage table, next to
+    # globdb_r232_sylph_c200.syldb, under another name than sylph-tax does. It is the
+    # same GlobDB r232 taxonomy, so a path to it counts as GlobDB_r232.
+    SYLPH_TABLE_ALIASES = {
+        "globdb_r232_taxonomy_sylph.tsv.gz": "GlobDB_r232",
+    }
 
     def _sylph_family(taxonomy):
         """The database family of a built-in taxonomy name: GTDB_r232 -> GTDB,
@@ -1247,6 +1257,55 @@ else:  # MODE == "shotgun"
             return "FungiRefSeq"
         return taxonomy
 
+    def _sylph_taxonomy_of_database(file_name):
+        """The sylph-tax taxonomy a database file name points to, or None when the name
+        shows none (a database you named yourself).
+          gtdb-r232-c200-dbv1.syldb or gtdb_r232_c200.syldb -> GTDB_r232
+          globdb_r232_sylph_c200.syldb                       -> GlobDB_r232
+          gtdb-r236-c200-dbv1.syldb                          -> GTDB_r236, a release
+                                     that sylph-tax 1.9.2 has no lineage table for
+          fungi-refseq-2025-10-11-c200-dbv1.syldb            -> FungiRefSeq-latest
+        The GTDB and GlobDB release is read from 'gtdb' or 'globdb', then an optional
+        '-' or '_', then 'r' and the release number."""
+        name = file_name.lower()
+        gtdb_release = re.search(r"gtdb[-_]?r(\d+)", name)
+        if gtdb_release is not None:
+            return "GTDB_r" + gtdb_release.group(1)
+        globdb_release = re.search(r"globdb[-_]?r(\d+)", name)
+        if globdb_release is not None:
+            return "GlobDB_r" + globdb_release.group(1)
+        for name_piece, taxonomy in SYLPH_DB_NAME_HINTS:
+            if name_piece in name:
+                return taxonomy
+        return None
+
+    def _sylph_family_of_database(file_name):
+        """The family a database file name shows (GTDB, GlobDB, FungiRefSeq, ...), or
+        None. Used for an entry whose taxonomy is a table of your own, which names no
+        family itself. A fungal build of a date not listed above still counts as
+        FungiRefSeq."""
+        taxonomy = _sylph_taxonomy_of_database(file_name)
+        if taxonomy is not None:
+            return _sylph_family(taxonomy)
+        if re.search(r"fungi[-_]refseq", file_name.lower()):
+            return "FungiRefSeq"
+        return None
+
+    def _sylph_taxonomy_of_table(file_name):
+        """The built-in taxonomy that a lineage table given by its path is a copy of,
+        judged by its file name (gtdb_r226_metadata.tsv.gz -> GTDB_r226), or None for a
+        table of your own. An unzipped copy (.tsv without .gz) counts as well."""
+        if file_name.endswith(".gz"):
+            zipped_name = file_name
+        else:
+            zipped_name = file_name + ".gz"
+        for taxonomy, table_file in SYLPH_TAX_FILES.items():
+            if table_file == zipped_name:
+                return taxonomy
+        if zipped_name in SYLPH_TABLE_ALIASES:
+            return SYLPH_TABLE_ALIASES[zipped_name]
+        return None
+
     def _sylph_c_in_name(file_name):
         """The sketch density written in a database file name, or None.
         'gtdb-r232-c200-dbv1.syldb' -> 200, 'uhgv_c100_dbv1.syldb' -> 100. The 'c' and
@@ -1259,13 +1318,13 @@ else:  # MODE == "shotgun"
 
     def _sylph_prebuilt_name(file_name):
         """True when a database file name looks like one of sylph's prebuilt databases:
-        it contains a known name piece (SYLPH_DB_NAME_HINTS) or sylph's own
-        database-version tag ('-dbv1', '_dbv1', 'v0.3'). Such names say truthfully what
-        the file is; a name you chose yourself may not."""
+        it names a known database (a GTDB or GlobDB release, or a piece listed in
+        SYLPH_DB_NAME_HINTS) or carries sylph's own database-version tag ('-dbv1',
+        '_dbv1', 'v0.3'). Such names say truthfully what the file is; a name you chose
+        yourself may not."""
         name = file_name.lower()
-        for name_piece, _taxonomy in SYLPH_DB_NAME_HINTS:
-            if name_piece in name:
-                return True
+        if _sylph_taxonomy_of_database(name) is not None:
+            return True
         if re.search(r"[-_]dbv\d", name):
             return True
         if "v0.3" in name:
@@ -1301,7 +1360,7 @@ else:  # MODE == "shotgun"
     SYLPH_TAXONOMY_ARGS  = []
     SYLPH_TAXONOMY_FILES = []
     SYLPH_DB_LABELS      = []
-    _syl_builtin = []       # the built-in taxonomy name of each entry (family checks)
+    _syl_families = []      # the family of each entry whose family is known (family checks)
 
     if RUN_SYLPH:
         # Why: MetaFlux never downloads sylph databases, and sylph needs at least one.
@@ -1387,16 +1446,9 @@ else:  # MODE == "shotgun"
                     sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax} needs {_tax_file.name} in "
                              f"{SYLPH_TAXONOMY_DIR}, and it is not there (folders made before sylph-tax 1.9.2 "
                              f"lack globdb_r232_taxonomy.tsv.gz).\n" + _SYLPH_DOWNLOAD)
-                # Why: a taxonomy from another release names genomes wrongly without any warning.
-                for _name_piece, _expected in SYLPH_DB_NAME_HINTS:
-                    if _name_piece in _db.name.lower() and _tax != _expected:
-                        sys.exit(f"[MetaFlux] {_where}: {_db.name} looks like a {_expected} database (from its "
-                                 f"file name) but is paired with taxonomy {_tax}. A taxonomy from another release "
-                                 f"names genomes wrongly without any warning (tested: GTDB_r226 names on an r232 "
-                                 f"profile). Use taxonomy: {_expected}, or rename the file if its name is wrong")
+                _tax_builtin = _tax       # the built-in taxonomy this entry uses
                 _tax_arg = _tax
                 _tax_label = _tax
-                _syl_builtin.append(_tax)
             else:
                 # Not a built-in name, so it must be the path of your own lineage table.
                 # Why: built-in names are case-sensitive, and gtdb_r232 is an easy typo.
@@ -1412,8 +1464,48 @@ else:  # MODE == "shotgun"
                 if not _tax_file.is_file():
                     sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax!r} is neither a sylph-tax name nor an existing "
                              f"file. Names (capitals matter): {', '.join(sorted(SYLPH_TAX_FILES))}")
+                # A table given by its path can still be a copy of a built-in table (a
+                # gtdb_r226_metadata.tsv.gz kept elsewhere, say) or GlobDB's own sylph
+                # table. Recognised by its file name, it gets the release and family
+                # checks below as if its built-in name had been given; sylph-tax is
+                # still handed the path. None for a table of your own.
+                _tax_builtin = _sylph_taxonomy_of_table(_tax_file.name)
                 _tax_arg = str(_tax_file)
                 _tax_label = _tax_file.name
+
+            # Why: a taxonomy from another release names genomes wrongly without any warning.
+            # Checked when both the database file name and the taxonomy show which
+            # database they belong to, and they disagree.
+            _db_taxonomy = _sylph_taxonomy_of_database(_db.name)
+            if _tax_builtin is not None and _db_taxonomy is not None and _tax_builtin != _db_taxonomy:
+                if _tax == _tax_builtin:
+                    _tax_shown = _tax
+                else:
+                    _tax_shown = f"{_tax} (the {_tax_builtin} lineage table)"
+                if _db_taxonomy in SYLPH_TAX_FILES:
+                    sys.exit(f"[MetaFlux] {_where}: {_db.name} looks like a {_db_taxonomy} database (from its "
+                             f"file name) but is paired with taxonomy {_tax_shown}. A taxonomy from another "
+                             f"release names genomes wrongly without any warning (tested: GTDB_r226 names on an "
+                             f"r232 profile). Use taxonomy: {_db_taxonomy}, or rename the file if its name is wrong")
+                # Why: a release newer than the pinned sylph-tax has no built-in table, so
+                # any built-in taxonomy would be from another release.
+                sys.exit(f"[MetaFlux] {_where}: {_db.name} looks like a {_db_taxonomy} database (from its "
+                         f"file name), a release that sylph-tax 1.9.2 (the version MetaFlux pins) has no "
+                         f"lineage table for, but it is paired with taxonomy {_tax_shown}. A taxonomy from "
+                         f"another release names genomes wrongly without any warning. Give the path of a "
+                         f"lineage table made for that release as its taxonomy, or rename the file if its "
+                         f"name is wrong")
+
+            # The family of this database (GTDB, GlobDB, ...), for the family checks after
+            # the loop: from its taxonomy when that is a built-in one or a copy of one,
+            # otherwise from the database file name. A database you named yourself, with
+            # a table of your own, has none and is left out of those checks.
+            if _tax_builtin is not None:
+                _syl_families.append(_sylph_family(_tax_builtin))
+            else:
+                _db_family = _sylph_family_of_database(_db.name)
+                if _db_family is not None:
+                    _syl_families.append(_db_family)
 
             SYLPH_DB_PATHS.append(_db)
             if _tax_arg not in SYLPH_TAXONOMY_ARGS:
@@ -1424,25 +1516,35 @@ else:  # MODE == "shotgun"
         # Why: two databases of one family (two GTDB releases, or the c 200 and c 1000
         # build of one release) share genomes and accessions: sylph then picks one copy of
         # each shared genome arbitrarily, and sylph-tax keeps only one release's names.
-        _families = []
-        for _tax in _syl_builtin:
-            _families.append(_sylph_family(_tax))
+        # The families come from the loop above: from each taxonomy, or from the database
+        # file name when the taxonomy is a table of your own, so a table given by its
+        # path cannot slip past this check.
         _repeated_families = []
-        for _family in _families:
-            if _families.count(_family) > 1 and _family not in _repeated_families:
+        for _family in _syl_families:
+            if _syl_families.count(_family) > 1 and _family not in _repeated_families:
                 _repeated_families.append(_family)
         if _repeated_families:
             sys.exit(f"[MetaFlux] references.sylph_databases lists two databases of the same family "
                      f"({', '.join(sorted(_repeated_families))}): two releases, or the c200 and c1000 (or "
                      f".syldb and .syl2db) build of one release. They share genomes and accessions, so sylph "
                      f"picks one copy of each shared genome arbitrarily and sylph-tax keeps only one release's "
-                     f"names. Keep one")
-        # Why: allowed, but costly and rarely useful, so say so.
-        if "GTDB" in _families and "GlobDB" in _families:
+                     f"names. Keep one (the family is read from each taxonomy or, for a lineage table of "
+                     f"your own, from the database file name)")
+        # Why: allowed, but a genome held by both databases can be split over two rows of
+        # the tables, and the pair costs about twice the memory, so say so. GlobDB holds
+        # every genome of the GTDB database, with the same lineage, under its accession
+        # without the version suffix; the two copies tie, and which one sylph reports can
+        # change from sample to sample.
+        if "GTDB" in _syl_families and "GlobDB" in _syl_families:
             sys.stderr.write("[MetaFlux] warning: references.sylph_databases lists both a GTDB and a GlobDB "
-                             "database. GlobDB already contains the GTDB species representatives, so the pair "
-                             "roughly doubles the memory (measured 40.5 -> 66.4 GB) without adding species, and "
-                             "which copy of a shared genome is reported is arbitrary. Keep one unless you need both.\n")
+                             "database. GlobDB already holds the GTDB genomes, with the same lineage, under "
+                             "accessions without the version suffix (GCF_003096595 for GTDB's GCF_003096595.1). "
+                             "sylph reports each such genome from one database or the other, and which one can "
+                             "change from sample to sample, so one genome can end up on two rows of "
+                             "sylph_table.tsv, each with zeros where the other copy was reported: genome-level "
+                             "counts, prevalence and diversity are then wrong. The pair also roughly doubles the "
+                             "memory (measured 40.5 -> 66.4 GB) without adding species. GlobDB alone covers "
+                             "GTDB; keep one.\n")
 
     # What rule sylph_taxprof passes before the word taxprof: the lineage-table folder,
     # or nothing when every taxonomy is a table path of your own.
@@ -1455,19 +1557,26 @@ else:  # MODE == "shotgun"
     # sylph 1.0.0 the measured peak was 1.01-1.11 x the database files' size on disk
     # (26.9-29.7 GB for GTDB r232 c200 + fungi, which are 26.66 GB of files). Ask for
     # 1.2 x their size + 4 GB (34,601 MB for that pair), unless the config sets a number
-    # in resources.mem_mb.sylph_profile (e.g. on a cluster). Under profiler: kraken2
-    # there are no databases and the figure is never used.
-    _resources_cfg = config.get("resources") or {}
-    _mem_mb_cfg = _resources_cfg.get("mem_mb") or {}
-    _syl_mem_cfg = _mem_mb_cfg.get("sylph_profile")
-    if _syl_mem_cfg:
-        SYLPH_PROFILE_MEM_MB = int(_syl_mem_cfg)
-    else:
-        _syl_db_bytes = 0
-        for _db in SYLPH_DB_PATHS:
-            _syl_db_bytes += _db.stat().st_size
-        _syl_db_mb = _syl_db_bytes // (1024 * 1024)
-        SYLPH_PROFILE_MEM_MB = int(_syl_db_mb * 1.2) + 4096
+    # in resources.mem_mb.sylph_profile (e.g. on a cluster). It is worked out only when
+    # sylph runs (profiler sylph | both): under profiler: kraken2 there is no
+    # sylph_profile rule, so a sylph-only setting must never stop a Kraken2 run.
+    SYLPH_PROFILE_MEM_MB = None      # profiler: kraken2 has no sylph_profile rule
+    if RUN_SYLPH:
+        _resources_cfg = config.get("resources") or {}
+        _mem_mb_cfg = _resources_cfg.get("mem_mb") or {}
+        _syl_mem_cfg = _mem_mb_cfg.get("sylph_profile")
+        if _syl_mem_cfg:
+            # Why: a word such as 'auto' would otherwise end in a Python traceback.
+            if not str(_syl_mem_cfg).isdigit():
+                sys.exit(f"[MetaFlux] resources.mem_mb.sylph_profile must be a whole number of MB, "
+                         f"or null to work it out from the database files (got: {_syl_mem_cfg!r})")
+            SYLPH_PROFILE_MEM_MB = int(_syl_mem_cfg)
+        else:
+            _syl_db_bytes = 0
+            for _db in SYLPH_DB_PATHS:
+                _syl_db_bytes += _db.stat().st_size
+            _syl_db_mb = _syl_db_bytes // (1024 * 1024)
+            SYLPH_PROFILE_MEM_MB = int(_syl_db_mb * 1.2) + 4096
 
     # Why: databases listed under profiler: kraken2 are easy to mistake for a sylph run.
     if PROFILER == "kraken2" and _syl_dbs_cfg:

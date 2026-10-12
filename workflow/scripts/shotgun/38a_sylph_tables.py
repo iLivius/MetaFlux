@@ -8,7 +8,10 @@ WHAT sylph REPORTS
     Sequence_abundance   share of the sample's reads explained by that genome.
                          MetaFlux always runs `sylph profile -u`, so these shares add
                          up to the part of the sample the detected genomes explain,
-                         not to 100 %. What is left over is the unknown part.
+                         not to 100 %. What is left over is the unknown part. The
+                         exception is a sample sylph caps at 100 % (its coverage
+                         estimates reach the whole sample): there sylph shares 100 %
+                         among the detected genomes, as it does without -u.
     Taxonomic_abundance  share of genome copies (roughly, cells) among the DETECTED
                          genomes only. Adds up to 100 % in every sample with a hit.
 
@@ -19,10 +22,13 @@ WHAT THIS SCRIPT WRITES
                                    'unassigned' = read pairs no detected genome
                                    explains. Each column adds up to the sample's read
                                    pairs after QC (the 'trimmed' column of
-                                   read_tracking.txt). One exception, logged: a sample
-                                   sylph explains to 100 %, where rounding can push the
-                                   genome rows a few pairs past the total; 'unassigned'
-                                   is then 0.
+                                   read_tracking.txt), with one exception: in a sample
+                                   sylph explains to 100 %, two roundings (sylph's
+                                   4-decimal shares, then whole pairs per genome) can
+                                   leave the genome rows a few pairs per million off,
+                                   either way. A few pairs over: 'unassigned' is 0 and
+                                   the overshoot is logged. A few pairs short: they
+                                   stay in 'unassigned' (section 8).
   03.abundance/sylph_table.biom    the same table in BIOM (HDF5) format, for phyloseq.
   03.abundance/sylph_table.genome_copies.tsv
                                    Taxonomic_abundance (%) per genome and sample, same
@@ -55,6 +61,9 @@ WHY SO MANY CHECKS
   sylph and sylph-tax finish with exit code 0 in several situations that would give a
   wrong table without any sign of trouble. Each one is checked below and stops the
   rule with a message that says what to fix:
+    - GTDB genomes named with the lineage table of another GTDB release, or genomes
+      of two GTDB releases profiled together (the profile records each genome's
+      release; section 2b);
     - a genome found in none of the lineage tables (NO_TAXONOMY): wrong 'taxonomy'
       for a database in references.sylph_databases;
     - a lineage that is not domain ... species (viral taxonomies), or whose first
@@ -76,7 +85,9 @@ import biom
 import numpy
 from biom.util import biom_open
 
-sm = snakemake  # noqa: F821  (the object Snakemake hands to every script: rule)
+# 'snakemake' is the object Snakemake hands to every script: this rule's input, output,
+# params and log. (noqa: F821 tells a code checker that the name is not undefined.)
+sm = snakemake  # noqa: F821
 
 # ── Settings handed over by rule sylph_tables ────────────────────────────────
 samples         = list(sm.params.samples)        # SAMPLES, sorted: the column order
@@ -126,13 +137,15 @@ for sample in samples:
 
 
 # ── 2. The raw sylph profile ─────────────────────────────────────────────────
-# Read for three things:
+# Read for four things:
 #   - a check that sylph ran with -u: with -u it names column 6 True_cov, without it
 #     Eff_cov. Without -u the shares are stretched to 100 % and the 'unassigned' row
 #     would be meaningless, so this is checked rather than assumed;
 #   - how many genomes sylph reported per sample (compared with sylph-tax below);
 #   - each genome's first FASTA header (Contig_name), used only for the name notes in
-#     sylph_genomes.tsv. No number in any table comes from this column.
+#     sylph_genomes.tsv. No number in any table comes from this column;
+#   - which GTDB release each GTDB genome comes from, read from its Genome_file path
+#     (checked against the taxonomies in section 2b).
 # The line is split into at most as many fields as the header has, so a FASTA header
 # that itself contains a tab (possible in a custom database) stays in one piece in the
 # last column, Contig_name.
@@ -154,6 +167,11 @@ rows_in_profile = {}          # sample -> number of genome rows sylph wrote for 
 for sample in samples:
     rows_in_profile[sample] = 0
 contig_name_of = {}           # genome accession -> first FASTA header of that genome
+gtdb_releases_in_profile = set()   # GTDB releases the detected genomes come from (section 2b)
+
+# The prebuilt GTDB databases store each genome's path from when they were built, and
+# that path starts with the release folder: 'gtdb_genomes_reps_r232/database/...'.
+GTDB_RELEASE_IN_PATH = re.compile(r"gtdb_genomes_reps_r(\d+)/")
 
 with profile_path.open() as fh:
     header = fh.readline().rstrip("\n").split("\t")
@@ -177,6 +195,69 @@ with profile_path.open() as fh:
         # under a given accession wins (they are the same genome in every sample).
         contig_name_of.setdefault(genome_file_to_gcf_acc(genome_file), contig_name)
         contig_name_of.setdefault(genome_file_to_gcf_acc_STRIP_DOT(genome_file), contig_name)
+        release_match = GTDB_RELEASE_IN_PATH.search(genome_file)
+        if release_match is not None:
+            gtdb_releases_in_profile.add(release_match.group(1))
+
+
+# ── 2b. Cross-check: GTDB genomes and GTDB names from the same release ───────
+# A lineage table of another GTDB release still names most genomes, but names wrongly
+# the ones GTDB moved between releases (tested: r226 names on an r232 profile turn
+# Allobosea thiooxidans into Bosea thiooxidans), and sylph-tax gives no warning.
+# 00_common.smk checks the pairing before the run, from the file names. This check
+# works whatever the files are called: the profile itself says which GTDB release its
+# genomes come from (section 2, from each Genome_file path), and that is compared with
+# the GTDB release the taxonomies name, either a built-in name (GTDB_r232) or a table
+# file named like the built-in one (gtdb_r232_metadata.tsv.gz, or the same without
+# .gz). Only prebuilt-style paths are recognised: a GTDB database you built yourself,
+# whose genome paths look different, is not checked, so it can never cause a false stop.
+named_gtdb_releases = set()
+for taxonomy in taxonomy_names:
+    by_name = re.fullmatch(r"GTDB_r(\d+)", taxonomy)
+    by_file = re.fullmatch(r"gtdb_r(\d+)_metadata\.tsv(\.gz)?", Path(taxonomy).name)
+    if by_name is not None:
+        named_gtdb_releases.add(by_name.group(1))
+    elif by_file is not None:
+        named_gtdb_releases.add(by_file.group(1))
+
+
+def release_list(releases: set) -> str:
+    """{'226', '232'} -> 'r226 and r232', for the messages below."""
+    labels = []
+    for release in sorted(releases, key=int):
+        labels.append("r" + release)
+    return " and ".join(labels)
+
+
+# Why: two GTDB releases in one profile means two GTDB databases were profiled together
+# (whatever their file names); they share most genomes, and sylph-tax names every
+# shared genome after one release only. This stops whether or not a GTDB taxonomy is
+# named, so a pair of databases with tables of your own is caught too.
+if len(gtdb_releases_in_profile) > 1:
+    stop(f"{profile_path.name} holds GTDB genomes of {release_list(gtdb_releases_in_profile)}: "
+         f"databases of two GTDB releases were profiled together. They share most genomes, "
+         f"and sylph-tax names every shared genome after one release only. Keep one GTDB "
+         f"database in references.sylph_databases (if the file names do not show the "
+         f"release, the files themselves do).")
+# Why: with two GTDB taxonomies, sylph-tax keeps the later one's names for every genome
+# both releases share.
+if len(named_gtdb_releases) > 1:
+    stop(f"the taxonomies in references.sylph_databases name two GTDB releases "
+         f"({release_list(named_gtdb_releases)}); sylph-tax keeps only the later one's names "
+         f"for every genome both releases share. Keep the taxonomy of the GTDB database's "
+         f"own release.")
+# Why: one release in the profile, another in the names. Checked only when a GTDB
+# release is named at all, so a GTDB database paired with a table of your own (under
+# another file name) is left alone.
+if named_gtdb_releases and gtdb_releases_in_profile and named_gtdb_releases != gtdb_releases_in_profile:
+    # The profile holds one release here (two would have stopped above).
+    profile_release = sorted(gtdb_releases_in_profile)[0]
+    stop(f"the GTDB genomes in {profile_path.name} come from GTDB r{profile_release}, but the "
+         f"taxonomy in references.sylph_databases names GTDB "
+         f"{release_list(named_gtdb_releases)}. A lineage table of another release names "
+         f"genomes wrongly without any warning. Pair the database with a taxonomy of GTDB "
+         f"r{profile_release} (the sylph-tax name GTDB_r{profile_release}, or the path of a "
+         f"lineage table of that release); only sylph_taxprof and sylph_tables then run again.")
 
 
 # ── 3. The genome rows of every sample, from sylph-tax ───────────────────────
@@ -393,11 +474,20 @@ for sample in samples:
 #   '<R1 file> short-read sample has high diversity compared to sequencing depth ...
 #    Using 99.5% as read accuracy estimate instead of automatic detection ...'
 # The first two name the sketch file (02c.sylph/sketches/<sample>.paired.sylsp); the
-# sample is its file name without '.paired.sylsp'. The third, printed only for a
-# sample too shallow for sylph to estimate its read accuracy, names the trimmed R1
-# file the sketch was made from (<sample>_trim_R1.fastq.gz). That fallback moves the
-# unknown (unassigned) estimate by several points, so the summary says which samples
-# it applied to. Samples are always matched by their exact name, never by a prefix.
+# sample is its file name without '.paired.sylsp'. The third names the trimmed R1 file
+# the sketch was made from (<sample>_trim_R1.fastq.gz). sylph prints it when the
+# sample's genomes are covered too thinly for its own estimate of read accuracy: it
+# ignores k-mers seen once, and falls back when the k-mers it sees more than once are
+# typically seen only about twice (its message: 'approx. avg depth < 3'), that is, when
+# the genomes are covered only about 2-fold. This happens in shallow samples, and in
+# very diverse ones (soil, marine) even when they are deeply sequenced. sylph then
+# assumes 99.5 % instead of its automatic estimate, which in these samples is
+# unreliable. Compared with that estimate, every genome's Sequence_abundance in the
+# sample moves by one common factor, and the unassigned row with them: the explained
+# share can change by tens of percentage points, while which genomes are found and
+# their genome copies stay the same. So samples with and without the fixed value are
+# on different scales, and the summary says which samples got it. Samples are always
+# matched by their exact name, never by a prefix.
 GENOMES_LINE  = re.compile(r"\] (.+?) has (\d+) genomes passing profiling threshold")
 DETECTED_LINE = re.compile(r"\] (.+?) has ([0-9.]+)% of reads detected in database by profile")
 FALLBACK_LINE = re.compile(r"\] (.+?) short-read sample has high diversity")
@@ -413,7 +503,7 @@ def sample_of_sketch(path_text: str) -> str:
 
 genomes_passing = {}      # sample -> genome count sylph printed
 detected_pct = {}         # sample -> '% of reads detected' sylph printed
-low_depth_samples = set() # samples that got the fixed 99.5 % read-accuracy fallback
+fixed_accuracy_samples = set()   # samples for which sylph used its fixed 99.5 % read accuracy
 
 trimmed_r1_to_sample = {}
 for sample in samples:
@@ -441,9 +531,9 @@ with per_sample_path.open() as fh:
         if match:
             r1_name = Path(match.group(1)).name
             if r1_name in trimmed_r1_to_sample:
-                low_depth_samples.add(trimmed_r1_to_sample[r1_name])
+                fixed_accuracy_samples.add(trimmed_r1_to_sample[r1_name])
             else:
-                logmsg(f"warning: sylph used the low-depth read-accuracy fallback for "
+                logmsg(f"warning: sylph used its fixed 99.5 % read accuracy for "
                        f"{r1_name}, which matches no trimmed read file of this run")
 
 # Every sample must have its result line, and sylph's genome count must equal the
@@ -484,10 +574,12 @@ genome_ids = sorted(lineage_of, key=lineage_then_id)
 # flag, for one case worth knowing about: GTDB puts the genome in a placeholder genus
 # while the genome's own FASTA header (sylph's Contig_name, the name the submitter
 # gave it in NCBI) is a Latin binomial of ANOTHER genus. Measured case: GTDB r232 puts
-# two 2025 Escherichia coli assemblies in their own placeholder genera; on the Zymo
-# mock they take the E. coli reads, and no 'Escherichia coli' row exists. The flag
-# never changes a number or a name in the tables; it only explains a row. Across
-# 9,570 benchmark hits it fired only on those E. coli genomes.
+# at least three Escherichia coli assemblies that are new in that release
+# (GCA_047199055.1, GCA_047199095.1, GCA_047199115.1) into placeholder genera of their
+# own; on the Zymo mock two of them (GCA_047199095.1, GCA_047199115.1) take the E. coli
+# reads, and no 'Escherichia coli' row exists. The flag never changes a number or a
+# name in the tables; it only explains a row. In the profiles it was tested on, it
+# fired only on these three genomes.
 NOT_A_SPECIES_WORD = {"sp.", "bacterium", "archaeon", "genomosp.", "cf.", "aff.",
                       "uncultured", "endosymbiont", "symbiont", "group", "cyanobacterium",
                       "proteobacterium", "actinobacterium", "clade"}
@@ -554,13 +646,19 @@ for genome_id in genome_ids:
 
 # ── 8. Estimated read pairs, and the unassigned remainder ───────────────────
 # estimated pairs = Sequence_abundance / 100 x read pairs after QC, rounded to a
-# whole pair with a half rounded up (as rule bracken rounds). Decimal does this
-# exactly on sylph's 4-decimal percentages, so a value sitting exactly on .5 is never
-# tipped either way by binary floating-point error.
+# whole pair with a half rounded up (the same half-up rule MetaFlux uses for Bracken's
+# depth-scaled threshold in 45_abundance.smk; Bracken's own estimates are cut off, not
+# rounded). Decimal does this exactly on sylph's 4-decimal percentages, so a value
+# sitting exactly on .5 is never tipped either way by binary floating-point error.
 # 'unassigned' takes whatever is left, so each column adds up to the read pairs after
-# QC. In a sample sylph explains to 100 % (mock communities, tiny samples), the
-# rounded genome rows can add up to a few pairs MORE than the total; 'unassigned' is
-# then set to 0 and the overshoot logged, rather than writing a negative count.
+# QC. The exception is a sample sylph explains to 100 % (capped; section 12). There
+# sylph's unrounded shares add up to exactly 100 %, but two roundings move the sum of
+# the genome rows a little: sylph prints each share with 4 decimals (up to 0.00005 %
+# off per genome), and each genome is then rounded to a whole pair here. The rows can
+# end up a few pairs MORE than the total, and then 'unassigned' is set to 0 and the
+# overshoot logged, rather than writing a negative count; or a few pairs LESS, which
+# stay in 'unassigned' although the sample is capped. Either way it is a few pairs
+# per million.
 def estimated_pairs(percent: Decimal, pairs: int) -> int:
     exact = percent / Decimal(100) * Decimal(pairs)
     return int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP))
@@ -623,7 +721,9 @@ with open(sm.output.table, "w") as fh:
     fh.write("#OTU ID\t" + "\t".join(samples) + "\ttaxonomy\n")
     for row_id, slots, values in zip(row_ids, row_slots, matrix):
         value_texts = [str(v) for v in values]
-        fh.write("\t".join([row_id] + value_texts + [";".join(slots)]) + "\n")
+        taxonomy_text = ";".join(slots)
+        row_fields = [row_id] + value_texts + [taxonomy_text]
+        fh.write("\t".join(row_fields) + "\n")
 
 # BIOM twin, for phyloseq (import_biom) and other tools. biom-format stores every
 # matrix as floating point, so the whole numbers come back as 896380.0. The second
@@ -654,7 +754,9 @@ with open(sm.output.copies, "w") as fh:
         for sample in samples:
             share = tax_abund.get((genome_id, sample), Decimal(0))
             value_texts.append(f"{share:.4f}")
-        fh.write("\t".join([genome_id] + value_texts + [";".join(lineage_of[genome_id])]) + "\n")
+        taxonomy_text = ";".join(lineage_of[genome_id])
+        row_fields = [genome_id] + value_texts + [taxonomy_text]
+        fh.write("\t".join(row_fields) + "\n")
 
 
 # ── 11. sylph_genomes.tsv ────────────────────────────────────────────────────
@@ -698,10 +800,20 @@ with open(sm.output.genomes, "w") as fh:
 #   read_pairs_after_qc        fastp's count, the column total of sylph_table.tsv
 #   est_pairs_explained        sum of the genome rows
 #   est_pairs_unassigned       the 'unassigned' row
-#   pct_explained              sum of Sequence_abundance, 2 decimals
-#   explained_capped           'yes' when that rounds to 100.00: sylph explained the
-#                              whole sample, so its unknown share cannot be estimated
-#   read_accuracy              'automatic', or 'fixed 99.5% (low depth)' (section 5)
+#   pct_explained              sum of Sequence_abundance, 2 decimals. As a sum of
+#                              sylph's rounded 4-decimal shares, it can differ by 0.01
+#                              from the percentage in sylph's own log line.
+#   explained_capped           'yes' when that rounds to 100.00. Usually this means
+#                              sylph capped the sample: its coverage estimates added up
+#                              to all of the sample's sequence or more (by how much,
+#                              sylph does not say). The unknown share then cannot be
+#                              estimated, and sylph shares 100 % among the detected
+#                              genomes, so every genome row of the sample is scaled
+#                              down. It also catches a sample sylph did not cap but
+#                              explained to 99.995 % or more.
+#   read_accuracy              'automatic', or 'fixed 99.5% (low depth)' when sylph had
+#                              to assume the read accuracy because the sample's genomes
+#                              are covered too thinly (section 5)
 #   genomes_detected           genome rows sylph reported
 #   pct_pairs_unnamed_species  estimated pairs on genomes whose name_status is not
 #                              'named', as % of est_pairs_explained (NA if that is 0)
@@ -713,7 +825,7 @@ for sample in samples:
         capped = "yes"
     else:
         capped = "no"
-    if sample in low_depth_samples:
+    if sample in fixed_accuracy_samples:
         read_accuracy = "fixed 99.5% (low depth)"
     else:
         read_accuracy = "automatic"
@@ -764,17 +876,22 @@ with open(sm.output.summary, "w") as fh:
 # own section. Rows keep the plain sample names: MultiQC does not add the folder
 # prefix to the rows of a custom-content table (checked with MultiQC 1.35).
 # The wording avoids any phrase that would suggest reads were classified one by one.
+# The description is a single-quoted YAML string, so it must not contain a ' itself.
 with open(sm.output.mqc, "w") as fh:
     fh.write("# id: 'metaflux_sylph'\n")
     fh.write("# section_name: 'sylph (coverage-based profile)'\n")
     fh.write("# description: 'Read pairs here are ESTIMATED from genome coverage (sylph "
              "profile -u); sylph labels no individual read. Explained = the share of the "
              "read pairs after QC that the detected genomes account for; the rest is the "
-             "\"unassigned\" row of 03.abundance/sylph_table.tsv. Capped = sylph reported "
-             "100 %, so the unknown share of that sample cannot be estimated. Read accuracy "
-             "\"fixed 99.5% (low depth)\" = too little depth for sylph to estimate it, so "
-             "the unassigned share is rougher. Flagged genomes: see "
-             "03.abundance/sylph_genomes.tsv.'\n")
+             "\"unassigned\" row of 03.abundance/sylph_table.tsv. Capped = the coverage "
+             "estimates reached the whole sample, so sylph reports 100 %: the unknown share "
+             "cannot be estimated, and every genome of that sample is scaled down by an "
+             "amount sylph does not report. Read accuracy \"fixed 99.5% (low depth)\" = the "
+             "genomes of that sample are covered too thinly for sylph to estimate it (common "
+             "in shallow and in very diverse samples); the fixed value moves every genome "
+             "and the unassigned share of that sample by one common factor, so compare "
+             "explained and unassigned shares only between samples with the same read "
+             "accuracy. Flagged genomes: see 03.abundance/sylph_genomes.tsv.'\n")
     fh.write("# plot_type: 'table'\n")
     fh.write("# pconfig:\n")
     fh.write("#     id: 'metaflux_sylph_table'\n")

@@ -10,9 +10,10 @@
 #   is in the sample (only genomes at 95 % ANI or more, roughly the same species, are
 #   reported) and its coverage. Coverage x genome size then gives the share of the
 #   sample's sequence that genome explains. So sylph's numbers are ESTIMATES derived
-#   from coverage, not counts of classified reads, and there are no per-read outputs:
-#   the k-mer evidence gate and read extraction need Kraken2 and are switched off
-#   under profiler: sylph (00_common.smk).
+#   from coverage, not counts of classified reads. With no per-read output, read
+#   extraction (which picks reads by the taxon Kraken2 gave each one) has nothing to
+#   work from, and the k-mer evidence gate filters the Kraken2 report, which only
+#   Kraken2 writes: both are switched off under profiler: sylph (00_common.smk).
 #
 # THE RULES, in data-flow order:
 #   sylph_sketch        per sample: trimmed reads -> 02c.sylph/sketches/{sample}.paired.sylsp
@@ -58,9 +59,13 @@
 # reproducibility setting, not a speed one: with 2 or more threads sylph removes
 # duplicate k-mers in parallel and the sketch differs slightly from run to run
 # (measured on the Zymo mock at 8 threads: 4,395,232 vs 4,395,237 k-mer counts, and
-# abundances moved in the 4th decimal). At one thread the sketch is identical every
-# time, and it is still fast (about 6 s for 4.7 million read pairs); Snakemake
-# sketches several samples at once.
+# abundances moved in the 4th decimal). At one thread the sketch holds the same k-mers
+# with the same counts every time, and it is still fast (about 6 s for 4.7 million
+# read pairs); Snakemake sketches several samples at once. The sketch FILE is
+# byte-identical only when the reads come in the same order: with PhiX or host
+# removal on, BBDuk and BBMap (which work in parallel) can write the reads in a
+# different order from run to run, so the file's bytes can differ while every k-mer
+# count, and so every number sylph reports, stays the same.
 # Two failures are turned into a stop with a plain message:
 #   - sylph cannot sketch (exit code not 0). The usual cause is a sample with no read
 #     pairs left after fastp: sylph cannot sketch an empty file.
@@ -76,6 +81,9 @@ rule sylph_sketch:
     output:
         sketch = OUT / "02c.sylph" / "sketches" / "{sample}.paired.sylsp",
     params:
+        # The output's folder, written out because sylph -d takes a folder and names the
+        # sketch file itself (from -S). snakemake --lint flags it as a hard-coded output
+        # prefix; that is harmless here.
         outdir = str(OUT / "02c.sylph" / "sketches"),
         c      = SYLPH_SKETCH_C,
     threads: lambda wc: threads_for_or("sylph_sketch", 1)
@@ -112,14 +120,22 @@ rule sylph_sketch:
 # memory once for the whole run (GTDB r232 c200 alone is 26 GB) rather than once per
 # sample; and genomes from different databases compete for the same k-mers, so an
 # organism present in two databases is reported once, by its closer genome, instead of
-# being counted twice.
+# being counted twice. That holds within a sample. When two databases hold the SAME
+# genome (GlobDB holds every GTDB genome, under its accession without the version
+# suffix), the two copies tie, and which one sylph reports can change from sample to
+# sample: the genome then ends up on two rows of the tables. 00_common.smk warns when
+# GTDB and GlobDB are listed together.
 #
 # -u (estimate unknown) is always on. Without it, sylph stretches each sample's
 # Sequence_abundance to add up to 100 %, as if the database explained every read.
 # With it, Sequence_abundance is a share of ALL the sample's reads, and what is left
-# over is the unknown part that sylph_tables writes as the 'unassigned' row. -u does
-# not change which genomes are reported or their Taxonomic_abundance. It also renames
-# column 6 from Eff_cov to True_cov, which sylph_tables uses to check -u was on.
+# over is the unknown part that sylph_tables writes as the 'unassigned' row. One
+# exception: when the coverage estimates of a sample add up to all of its sequence or
+# more, sylph caps the explained share at 100 % and shares that among the detected
+# genomes as it does without -u, so every genome of that sample is scaled down, by an
+# amount sylph does not report. -u does not change which genomes are reported or
+# their Taxonomic_abundance. It also renames column 6 from Eff_cov to True_cov, which
+# sylph_tables uses to check -u was on.
 # No thresholds are passed, so sylph 1.0.0's defaults apply. The thread count changes
 # no number (tested at 4 and 16 threads). One thing is not fixed from run to run: the
 # order in which sylph lists genomes with exactly the same abundance (the Zymo mock,
@@ -131,6 +147,13 @@ rule sylph_sketch:
 # (and the steps after it), but not the sketches. sylph holds them in memory: the
 # memory request (SYLPH_PROFILE_MEM_MB) is worked out at parse time from their size on
 # disk, in 00_common.smk.
+# The benchmark file (benchmarks/sylph_profile.tsv) under-reports this job's memory, so
+# it must not be used to size resources.mem_mb.sylph_profile. Snakemake checks memory
+# every 0.5 s for its first 30 checks (about the first 15-20 s), then only every 30 s,
+# while sylph's memory climbs as it reads the databases and peaks in the last seconds
+# of the job. The recorded max_rss therefore usually misses the peak (measured: max_rss
+# 18,845 MB recorded, against a real peak of 25,671 MB in the same units, 26.9 GB).
+# Size it from the database files instead: about 1.1 x their size, plus headroom.
 #
 # sylph exits with code 0 in three situations that must not pass silently, so each
 # one is turned into a stop here:
@@ -145,7 +168,8 @@ rule sylph_sketch:
 # column of zeros with all its read pairs unassigned.
 # Outputs: the profile (read by sylph_taxprof and sylph_tables) and a copy of sylph's
 # per-sample log lines (read by sylph_tables: genomes per sample, % of reads detected,
-# and which samples were too shallow for sylph's own read-accuracy estimate).
+# and which samples got sylph's fixed 99.5 % read accuracy because their genomes were
+# covered too thinly for its own estimate).
 rule sylph_profile:
     input:
         sketches  = expand(OUT / "02c.sylph" / "sketches" / "{s}.paired.sylsp", s=SAMPLES),
@@ -260,8 +284,8 @@ rule sylph_taxprof:
 # stats/read_tracking.txt (one logged exception: a sample sylph explains to 100 %).
 # Inputs: the sylph-tax folder (lineages and the two abundances of every genome), the
 # raw profile (to check that -u was on, and each genome's FASTA header for the name
-# notes), sylph's per-sample lines (genomes per sample, which samples got the low-depth
-# read-accuracy fallback) and the fastp JSONs (read pairs after QC). The params also
+# notes), sylph's per-sample lines (genomes per sample, which samples got sylph's fixed
+# read-accuracy value) and the fastp JSONs (read pairs after QC). The params also
 # carry the lineage tables sylph_taxprof used; the script opens them only to name the
 # table a wrong lineage came from, when it has to stop.
 # Outputs: the five files listed in _shotgun_targets() (00_common.smk), plus the

@@ -80,8 +80,11 @@ references:
   #   gtdb-r232-c200-dbv1.syldb                ->  GTDB_r232
   #   gtdb-r226-c200-dbv1.syldb                ->  GTDB_r226
   #   fungi-refseq-2025-10-11-c200-dbv1.syldb  ->  FungiRefSeq-latest
-  # All databases are profiled in ONE sylph run, so an organism present in two of them
-  # is counted once, by its closer genome. Use builds made at c 200 (best for thin
+  # All databases are profiled in ONE sylph run, so within a sample an organism present
+  # in two of them is counted once, by its closer genome. Do not pair GTDB with GlobDB:
+  # GlobDB holds every GTDB genome too (under its accession without the version suffix),
+  # and sylph may report a genome from either copy, differently per sample, which splits
+  # it over two rows; GlobDB alone covers GTDB. Use builds made at c 200 (best for thin
   # communities) or c 1000 (about 5x less memory). A c 100 build cannot be used:
   # MetaFlux sketches the reads at c 200. .syldb and two-stage .syl2db files both work.
   # Memory: sylph holds the files in memory; measured peak 1.01-1.11 x their size on
@@ -429,7 +432,8 @@ shotgun:
   #   sylph    sylph + sylph-tax instead: 03.abundance/sylph_table.tsv, read pairs
   #            ESTIMATED from genome coverage, plus an 'unassigned' row. Needs
   #            references.sylph_databases and sylph_taxonomy_dir. sylph labels no
-  #            single read, so kmer_evidence and extract_taxa are switched off.
+  #            single read and writes no Kraken2 report, so extract_taxa and
+  #            kmer_evidence are switched off.
   #   both     both chains on the same reads, side by side; never merged.
   # To add sylph to a FINISHED Kraken2 run, use a new out_dir with profiler: sylph
   # (MetaFlux stops otherwise and says why).
@@ -678,8 +682,10 @@ resources:
                                               # threads sylph removes duplicate k-mers in parallel and the
                                               # sketch differs from run to run (Zymo at 8 threads:
                                               # 4,395,232 vs 4,395,237 k-mer counts; abundances moved in
-                                              # the 4th decimal). At 1 thread the sketch is byte-identical
-                                              # and still fast (~6 s for 4.7 M read pairs); Snakemake
+                                              # the 4th decimal). At 1 thread the k-mer counts are the same
+                                              # every time (the file's bytes too, unless PhiX or host
+                                              # removal reorders the reads; no number changes then) and it
+                                              # is still fast (~6 s for 4.7 M read pairs); Snakemake
                                               # sketches several samples at once. Delete this line and it
                                               # still falls back to 1.
     sylph_profile: 16                         # one job for ALL samples; no number depends on it
@@ -730,7 +736,10 @@ resources:
     sylph_profile: null                       # null = worked out at parse time from the database files:
                                               # 1.2 x their size + 4096 MB (GTDB r232 c200 + fungi ->
                                               # 34,601 MB; measured peak 26.9-29.7 GB). Set a number to
-                                              # override it, e.g. on a cluster.
+                                              # override it, e.g. on a cluster, but not from
+                                              # benchmarks/sylph_profile.tsv: after its first ~15-20 s
+                                              # Snakemake samples memory only every 30 s, so its max_rss
+                                              # misses sylph's peak at the end of the job.
     sylph_taxprof: 2000                       # measured 135 MB
     sylph_tables: 2000
     sylph_read_tracking: 2000
