@@ -174,10 +174,11 @@ infrastructure around them is about being able to get the same answer again.
   DADA2 environments, because newer builds break DADA2 at load time; `vsearch=2.32.0`,
   because the random draws behind the `sintax` confidence values change between
   releases; `bracken=3.1p1`, for its corrected report; and `bbmap=39.52`, because the
-  BBDuk of newer releases crashes or hangs on trimmed read pairs. A few rules have no
-  environment of their own and run in Snakemake's: those that only link files, count
-  reads, write the sample list, or fetch and join host references, using Snakemake's
-  own Python or standard system utilities whose version does not change the result.
+  BBDuk of newer releases crashes or hangs on paired reads, trimmed ones above all. A
+  few rules have no environment of their own and run in Snakemake's: those that only
+  link files, count reads, write the sample list, or fetch and join host references,
+  using Snakemake's own Python or standard system utilities whose version does not
+  change the result.
 - **Resumable.** Snakemake tracks which outputs already exist and are current, so
   an interrupted run continues rather than restarting; `--rerun-incomplete`
   re-does any job that was cut off mid-write.

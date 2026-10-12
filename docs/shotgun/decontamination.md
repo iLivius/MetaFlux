@@ -182,11 +182,12 @@ for a masked human genome, whose BBMap index needs roughly 24–28 GB:
 | `decontam_host` | 16 | 30000 |
 | `decontam_phix` | 6 | 4000 |
 
-Both BBMap rules pass 85% of their `mem_mb` to the JVM as `-Xmx`, leaving the rest
-for the process itself. A smaller host genome can take a smaller budget; a larger one
-must be given more, or the index build will run out of heap. BBDuk is capped at 6
-threads on purpose — it scales poorly past four to six workers on a 5 kb reference,
-so running several samples in parallel is the better use of cores.
+All three rules, BBDuk and the two BBMap rules, pass 85% of their `mem_mb` to the JVM
+as `-Xmx`, leaving the rest for the process itself. A smaller host genome can take a
+smaller budget; a larger one must be given more, or the index build will run out of
+heap. BBDuk is capped at 6 threads on purpose — it scales poorly past four to six
+workers on a 5 kb reference, so running several samples in parallel is the better use
+of cores.
 
 ## Mis-paired FASTQs stop both steps
 

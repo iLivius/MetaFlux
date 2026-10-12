@@ -111,7 +111,11 @@ def _index(paths: list[str], strip_suffix: str) -> dict[str, Path]:
     us these paths in SAMPLES order already, but indexing by sample id makes
     the per-sample loop below (and any missing-file bug) trivial to reason
     about, instead of relying on every input list staying in lock-step order."""
-    return {Path(p).name.replace(strip_suffix, ""): Path(p) for p in paths}
+    # removesuffix() takes the suffix off the end of the file name only.
+    # replace() would also cut it out of the middle of a sample name: the PhiX
+    # log of a sample called "Plot.log2" is "Plot.log2.log", which
+    # replace(".log", "") turns into "Plot2", so the loop below could not find it.
+    return {Path(p).name.removesuffix(strip_suffix): Path(p) for p in paths}
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -165,8 +169,10 @@ for s in samples:
     row: list[str] = [s]
 
     if remove_phix:
-        # "raw" = every read pair BBDuk read; "nophix" = the pairs it kept, i.e.
-        # raw minus the pairs it removed as PhiX.
+        # "raw" = every read pair BBDuk read; "nophix" = the pairs it kept. So
+        # raw - nophix counts every pair BBDuk removed: pairs with PhiX in either
+        # mate, plus any pair with a read shorter than 10 bp, which BBDuk drops
+        # by default (rare in raw reads).
         phix_in, phix_kept = parse_bbduk_log(phix_idx[s])
         row.append(str(phix_in))
         row.append(str(phix_kept))

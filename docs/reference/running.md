@@ -201,8 +201,9 @@ consequences:
     built correctly, see
     [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s).
     The BBTools environment is now pinned to bbmap 39.52, because newer releases crash
-    or hang in PhiX removal on trimmed reads, so a folder made with PhiX or host removal
-    on runs those steps and every step after them again, Kraken2 included.
+    or hang in PhiX removal on paired reads, trimmed ones above all. So in a folder made
+    with PhiX or host removal on, those steps and every step after them run again,
+    Kraken2 included.
     `aggregate_read_counts` also runs again in every shotgun folder, because its script
     changed: with PhiX removal on, `nophix` now leaves out exactly the read pairs BBDuk
     removed (a pair with PhiX in one mate only used to count as half a pair).
