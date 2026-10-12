@@ -22,7 +22,10 @@ rule aggregate_read_counts:
     input:
         fastp_jsons    = expand(OUT / "01.preprocessing" / "{s}_fastp.json",    s=SAMPLES),
         kraken_reports = expand(OUT / "02.classification" / "{s}_report.txt",   s=SAMPLES),
-        **( {"phix_stats": expand(OUT / "01.preprocessing" / "{s}_dephix_stats.txt", s=SAMPLES)}
+        # PhiX step: BBDuk's log, not its stats file. The log's "Input:" and
+        # "Result:" lines count the reads BBDuk read and kept, so they give the
+        # pairs it really removed; the stats file only counts reads that matched.
+        **( {"phix_logs": expand(LOGS / "decontam_phix" / "{s}.log", s=SAMPLES)}
             if REMOVE_PHIX else {} ),
         **( {"host_stats": expand(OUT / "01.preprocessing" / "{s}_dehost_stats.txt", s=SAMPLES)}
             if HOST_GENOMES else {} ),

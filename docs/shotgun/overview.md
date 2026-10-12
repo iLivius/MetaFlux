@@ -113,8 +113,9 @@ against the PhiX reference bundled inside the BBTools package, so nothing is
 downloaded or indexed.
 
 Input: the raw FASTQs. Output: `{sample}_dephix_R1/_R2.fastq.gz` (temporary — see
-below) plus `{sample}_dephix_stats.txt`, which feeds both MultiQC and the read
-tracking table. Consumed by the host step, or by fastp when host removal is off.
+below) plus `{sample}_dephix_stats.txt`, which feeds MultiQC; the read tracking table
+takes its PhiX counts from BBDuk's log. Consumed by the host step, or by fastp when
+host removal is off.
 
 !!! warning "BBDuk needs R1 and R2 to be properly paired"
 

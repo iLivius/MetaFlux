@@ -23,9 +23,9 @@ raw FASTQs; with both disabled, fastp does. Nothing needs to be renamed and no e
 placeholder files are written.
 
 The decontaminated FASTQs are marked temporary — Snakemake deletes them
-once the next step has consumed them. The statistics files they produce are kept, and
-are what `stats/read_tracking.txt` reports on; of the two, only the BBDuk PhiX file is
-in a format MultiQC parses.
+once the next step has consumed them. The statistics files and logs they produce are
+kept, and are what `stats/read_tracking.txt` reports on; of the two statistics files,
+only the BBDuk PhiX one is in a format MultiQC parses.
 
 ## PhiX removal
 
@@ -53,9 +53,12 @@ read with a sequencing error still matches.
 | **Out** | `01.preprocessing/{sample}_dephix_R1/_R2.fastq.gz` (temporary), `{sample}_dephix_stats.txt` |
 | **Next** | host removal, or fastp when host removal is off |
 
-The stats file carries BBDuk's `#Total` and `#Matched` counts. MultiQC picks it up
-automatically, and the read tracking table derives both the `raw` and `nophix`
-columns from it (halving BBDuk's per-read counts to get read pairs).
+The stats file carries BBDuk's `#Total` and `#Matched` counts, and MultiQC picks it up
+automatically. The read tracking table takes its `raw` and `nophix` columns from the
+`Input:` and `Result:` lines at the end of BBDuk's log, `logs/decontam_phix/{sample}.log`
+(halving BBDuk's per-read counts to get read pairs). `#Matched` would under-count the
+pairs removed: it counts reads, and BBDuk removes the whole pair when either mate
+matches PhiX.
 
 Leaving PhiX removal on is the sensible default unless the lab is known to have
 skipped the spike-in. In shotgun data PhiX is a small fraction anyway, so switching it

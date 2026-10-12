@@ -123,8 +123,17 @@ rule samples_manifest:
 # k=31 hdist=1 is the BBTools-recommended setting for PhiX (see their
 # decontamination guide): match on 31-mers, allowing up to 1 mismatch
 # (hdist = hamming distance) per k-mer. stats= produces a small text file
-# that MultiQC picks up automatically, and that aggregate_read_counts
-# (80_stats.smk) also parses for the raw/nophix read-tracking columns.
+# that MultiQC picks up automatically. The raw/nophix read-tracking columns come
+# from this rule's log instead: aggregate_read_counts (80_stats.smk) reads the
+# "Input:" and "Result:" read counts BBDuk prints at the end of it, because the
+# stats file counts the reads that matched PhiX, not the pairs BBDuk removed.
+#
+# -Xmx is 85 % of mem_mb, worked out the same way as in the two BBMap rules
+# below. bbmap 39.52 (pinned in envs/bbtools.yaml) needs it: without -Xmx, its
+# launcher sometimes asks Java for a starting memory larger than the maximum, and
+# Java refuses to start. -Xmx also keeps Java inside the memory Snakemake reserves
+# for this job; without it, bbduk.sh gives Java about 40 % of the machine's free
+# memory (close to 50 GB on a 250 GB server), whatever mem_mb says.
 #
 # Output feeds fastp_upstream()/host_upstream() (00_common.smk), which route
 # decontam_host or trim_adapters to these _dephix_R1/R2 files whenever this
@@ -149,9 +158,10 @@ rule decontam_phix:
     priority: 6
     shell:
         """
+        xmx=$(( {resources.mem_mb} * 85 / 100 ))
         bbduk.sh ref=phix in1={input.r1} in2={input.r2} \
             out1={output.r1} out2={output.r2} stats={output.stats} \
-            k=31 hdist=1 threads={threads} overwrite=t > {log} 2>&1
+            k=31 hdist=1 threads={threads} overwrite=t -Xmx${{xmx}}m > {log} 2>&1
         """
 
 

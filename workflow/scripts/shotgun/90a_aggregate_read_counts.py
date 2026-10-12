@@ -6,10 +6,10 @@ Columns (left to right):
 
 All counts are read PAIRS throughout:
   raw          : pairs entering the pipeline
-                 source: BBDuk PhiX stats #Total/2 (if phix removal enabled)
+                 source: BBDuk PhiX log 'Input:' reads/2 (if phix removal enabled)
                          else fastp summary.before_filtering.total_reads/2
   nophix       : pairs surviving PhiX removal (only if REMOVE_PHIX)
-                 source: BBDuk PhiX stats (#Total - #Matched) / 2
+                 source: BBDuk PhiX log 'Result:' reads/2 (the reads BBDuk kept)
   no_host      : pairs surviving host decontamination (only if HOST_GENOMES set)
                  source: BBMap dehost stats 'surviving_pairs' (kept R1 records)
   trimmed      : pairs passing fastp adapter/quality filter
@@ -32,16 +32,33 @@ def log(msg: str, fh) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
-def parse_bbduk_stats(path: Path) -> tuple[int, int]:
-    """Return (total_pairs, matched_pairs) from a BBDuk stats file."""
-    total = matched = 0
+def parse_bbduk_log(path: Path) -> tuple[int, int]:
+    """Return (pairs_in, pairs_kept) from the log of rule decontam_phix.
+
+    BBDuk ends its log with a short summary that counts READS (both mates):
+        Input:          11836374 reads     1730990881 bases.
+        ...
+        Result:         11836370 reads (100.00%)     1730990288 bases (100.00%)
+    "Input" is what BBDuk read, "Result" is what it wrote out. BBDuk removes
+    the whole pair when either mate matches PhiX, so both counts are even and
+    half of each is a number of read pairs.
+
+    The stats file (stats=) is not used for this: its #Matched counts the reads
+    that matched PhiX, so a pair with PhiX in one mate only would count as half
+    a pair, and halving #Matched under-counts the pairs BBDuk removed."""
+    reads_in = None
+    reads_kept = None
     with path.open() as fh:
         for line in fh:
-            if line.startswith("#Total"):
-                total = int(line.split()[1])
-            elif line.startswith("#Matched"):
-                matched = int(line.split()[1])
-    return total // 2, matched // 2
+            if line.startswith("Input:"):
+                reads_in = int(line.split()[1])
+            elif line.startswith("Result:"):
+                reads_kept = int(line.split()[1])
+    # Both lines are printed only when BBDuk finished; a log without them
+    # should stop the run here rather than put a made-up number in the table.
+    if reads_in is None or reads_kept is None:
+        raise ValueError(f"no 'Input:' and 'Result:' lines in BBDuk log {path}")
+    return reads_in // 2, reads_kept // 2
 
 
 def parse_host_surviving(path: Path) -> int:
@@ -122,7 +139,7 @@ remove_host = bool(sm.params.remove_host)
 # never consulted (guarded by remove_phix / remove_host below).
 fastp_idx   = _index(list(sm.input.fastp_jsons),    "_fastp.json")
 kraken_idx  = _index(list(sm.input.kraken_reports), "_report.txt")
-phix_idx    = _index(list(sm.input.phix_stats),     "_dephix_stats.txt") if remove_phix else {}
+phix_idx    = _index(list(sm.input.phix_logs),      ".log")              if remove_phix else {}
 host_idx    = _index(list(sm.input.host_stats),     "_dehost_stats.txt") if remove_host else {}
 
 # Column header for the output TSV — must match the column order the per-sample
@@ -148,10 +165,11 @@ for s in samples:
     row: list[str] = [s]
 
     if remove_phix:
-        # "raw" = every read pair BBDuk saw; "nophix" = same minus PhiX matches.
-        phix_total, phix_matched = parse_bbduk_stats(phix_idx[s])
-        row.append(str(phix_total))
-        row.append(str(phix_total - phix_matched))
+        # "raw" = every read pair BBDuk read; "nophix" = the pairs it kept, i.e.
+        # raw minus the pairs it removed as PhiX.
+        phix_in, phix_kept = parse_bbduk_log(phix_idx[s])
+        row.append(str(phix_in))
+        row.append(str(phix_kept))
     else:
         # No PhiX step, so fastp is the first thing to see the raw reads —
         # its "before filtering" count IS the raw count here.

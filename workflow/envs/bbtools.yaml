@@ -1,7 +1,18 @@
 name: bbtools
 channels: [conda-forge, bioconda]
 dependencies:
-  - bbmap>=39.10
-  # pigz on PATH triggers BBDuk's parallel gzip read/write - big speedup on
-  # I/O-bound steps like PhiX decontamination
+  # One exact release, on purpose. From 39.76 on (the next bioconda release after
+  # 39.52), bbduk.sh runs a rewritten BBDuk whose paired-read reader loses track of
+  # mates whenever R1 and R2 reads differ in length, as they do in trimmed data:
+  # PhiX removal then crashes ("List size mismatch") or hangs. Every bioconda
+  # release from 39.76 to 40.02 does this at MetaFlux's default 6 threads. 39.52 is
+  # the newest release that still runs the original BBDuk, which keeps R1 and R2 in
+  # step. The Java version plays no part (tested with Java 17 and 25), so openjdk is
+  # not pinned. Upstream reports a fix for the new reader in 40.03; move to 40.03 or
+  # later only after it passes the same paired-read tests.
+  # 39.52 has one more quirk: started without -Xmx, its launcher sometimes asks Java
+  # for a starting memory larger than the maximum, and Java refuses to start. That
+  # is why rule decontam_phix passes -Xmx, as the two BBMap rules already do.
+  - bbmap=39.52
+  # bbmap 39.52 never calls pigz (checked): it writes .gz with bgzip, reads .gz in Java
   - pigz>=2.8
