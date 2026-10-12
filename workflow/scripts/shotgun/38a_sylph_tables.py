@@ -46,6 +46,10 @@ INPUTS (all named by rule sylph_tables)
   input.fastp_jsons the fastp reports (rule trim_adapters, 30_preprocess.smk).
   params.samples    SAMPLES, which fixes the column order.
   params.databases  'file (taxonomy)' of every database, for line 1 of the tables.
+  params.taxonomy_names, params.taxonomy_tables
+                    the taxonomies sylph-tax used (built-in names or table paths) and
+                    the lineage table file behind each, in the same order. Read only
+                    to say which table an odd lineage came from when a check fails.
 
 WHY SO MANY CHECKS
   sylph and sylph-tax finish with exit code 0 in several situations that would give a
@@ -53,13 +57,15 @@ WHY SO MANY CHECKS
   rule with a message that says what to fix:
     - a genome found in none of the lineage tables (NO_TAXONOMY): wrong 'taxonomy'
       for a database in references.sylph_databases;
-    - a lineage that is not domain ... species (viral taxonomies);
+    - a lineage that is not domain ... species (viral taxonomies), or whose first
+      rank is not a domain (a kingdom such as Fungi, for example);
     - a sample whose sylph-tax file is missing or renamed (sample names rewritten by
       pandas, which sylph-tax uses to read sylph's output);
     - genome counts that disagree between sylph's profile, its log and sylph-tax.
   A sample in which no genome was detected is NOT an error: it gets a column of
   zeros with all its read pairs in 'unassigned'.
 """
+import gzip
 import json
 import re
 import sys
@@ -75,6 +81,8 @@ sm = snakemake  # noqa: F821  (the object Snakemake hands to every script: rule)
 # ── Settings handed over by rule sylph_tables ────────────────────────────────
 samples         = list(sm.params.samples)        # SAMPLES, sorted: the column order
 databases       = list(sm.params.databases)      # 'file (taxonomy)' per database
+taxonomy_names  = list(sm.params.taxonomy_names) # GTDB_r232, ... or a table path, each once
+taxonomy_tables = [Path(p) for p in sm.params.taxonomy_tables]  # the file behind each name
 taxprof_dir     = Path(sm.input.taxprof)
 profile_path    = Path(sm.input.profile)
 per_sample_path = Path(sm.input.per_sample)
@@ -179,27 +187,87 @@ with profile_path.open() as fh:
 # Taxonomic_abundance), sequence_abundance (= Sequence_abundance), ANI (=
 # Adjusted_ANI), Coverage (= True_cov).
 #
-# Lineage shape. MetaFlux tables have seven slots, k__ ... s__ (domain, phylum,
-# class, order, family, genus, species). GTDB writes the domain as d__ and the fungal
-# RefSeq taxonomy as k__; mixed in one table, phyloseq and mia would read them as two
-# different ranks. So the first slot is always written k__ (it holds the domain, as
-# in otu_table.tsv). Names are not touched: GTDB's _A/_B suffixes and placeholder names
-# stay exactly as GTDB writes them. Two quirks are accepted: a rank the taxonomy leaves
-# empty stays a bare prefix (c__), and GlobDB r226's 'p_Unclassified' (one underscore)
-# becomes p__Unclassified. Anything else (an UNKNOWN level, eight levels as in the
-# IMG/VR viral taxonomy, another prefix) stops the rule rather than producing a table
-# phyloseq would read wrongly.
-SLOT_LETTERS = ["k", "p", "c", "o", "f", "g", "s"]
+# Lineage shape. The sylph tables have seven slots, d__ p__ c__ o__ f__ g__ s__
+# (domain, phylum, class, order, family, genus, species), the ranks GTDB uses. GTDB
+# has no kingdom rank, so there is no k__ slot: the first slot always holds the
+# domain and is always written d__, whatever prefix the lineage table used. Every
+# built-in table of sylph-tax 1.9.2 writes d__ except FungiRefSeq-latest, which
+# writes k__Eukaryota; that becomes d__Eukaryota, so that every row of a table uses
+# the same seven prefixes and phyloseq or mia put one rank in one column.
+# Only a real domain name is accepted in that first slot: Bacteria, Archaea or
+# Eukaryota. Eukarya, the other spelling (TaraEukaryoticSMAG uses both), becomes
+# Eukaryota. Anything else there, such as a kingdom (Fungi), a viral realm or
+# 'Unclassified', stops the rule with a message that names the lineage table it came
+# from, rather than putting something that is not a domain in the domain column.
+# GlobDB r226 is the one built-in taxonomy known to hit this: it writes
+# d__Unclassified for 754 genomes it could not place in any domain (GlobDB r232 has
+# no such genomes).
+# The other names are not touched: GTDB's _A/_B suffixes and placeholder names stay
+# exactly as GTDB writes them. Two quirks are accepted: a rank the taxonomy leaves
+# empty stays a bare prefix (c__), and a rank letter followed by a single underscore
+# is read as if it had two (GlobDB r226 writes 'p_Unclassified', though only in the
+# rows it also leaves without a domain). Anything else (an UNKNOWN level, eight levels
+# as in the IMG/VR viral taxonomy, a prefix out of order) also stops the rule rather
+# than producing a table phyloseq would read wrongly.
+SLOT_LETTERS = ["d", "p", "c", "o", "f", "g", "s"]
+
+# The names accepted in the first slot, and how each is written.
+DOMAIN_NAMES = {
+    "Bacteria":  "Bacteria",
+    "Archaea":   "Archaea",
+    "Eukaryota": "Eukaryota",
+    "Eukarya":   "Eukaryota",
+}
 
 
-def seven_slots(ranks: list, where: str) -> list:
-    """['d__Bacteria', 'p__Bacillota', ..., 's__Veillonella rogosae'] ->
-    ['k__Bacteria', 'p__Bacillota', ..., 's__Veillonella rogosae']."""
+def open_lineage_table(table: Path):
+    """Open a lineage table as text, whether it is gzip-compressed or plain (a table of
+    your own can be either). The first two bytes of a gzip file are always 1f 8b."""
+    with table.open("rb") as fh:
+        first_bytes = fh.read(2)
+    if first_bytes == b"\x1f\x8b":
+        return gzip.open(table, "rt")
+    return table.open()
+
+
+def table_label(name: str, table: Path) -> str:
+    """'gtdb_r232_metadata.tsv.gz (taxonomy GTDB_r232)' for a built-in name; the full
+    path for a table of your own (there the name already is the path)."""
+    if name == str(table):
+        return str(table)
+    return f"{table.name} (taxonomy {name})"
+
+
+def tables_listing(genome_id: str) -> str:
+    """Which lineage table(s) of this run list genome_id, as words for a stop message.
+    sylph-tax labels each genome with the first column of the table row it used
+    (t__<that column>), so the row is found by an exact match on that column. This
+    reads the tables, which takes a few seconds, so it is called only once a check
+    has already failed."""
+    found = []
+    for name, table in zip(taxonomy_names, taxonomy_tables):
+        with open_lineage_table(table) as fh:
+            for line in fh:
+                if line.split("\t", 1)[0] == genome_id:
+                    found.append(table_label(name, table))
+                    break
+    if found:
+        return "the lineage table " + " and ".join(found)
+    every_table = []
+    for name, table in zip(taxonomy_names, taxonomy_tables):
+        every_table.append(table_label(name, table))
+    return "one of this run's lineage tables (" + ", ".join(every_table) + ")"
+
+
+def seven_slots(ranks: list, sample: str, genome_id: str) -> list:
+    """['d__Bacteria', 'p__Bacillota', ..., 's__Veillonella rogosae'] -> the same seven
+    slots, checked; ['k__Eukaryota', ...] -> ['d__Eukaryota', ...]."""
+    where = f"sample {sample}, genome {genome_id}"
     lineage_text = "|".join(ranks)
     if len(ranks) != 7:
         stop(f"{where}: the lineage has {len(ranks)} ranks where MetaFlux expects 7 "
              f"(domain ... species): {lineage_text}. Only GTDB-style and fungal RefSeq "
-             f"taxonomies are supported.")
+             f"taxonomies are supported. The lineage comes from {tables_listing(genome_id)}.")
     slots = []
     for position in range(7):
         rank = ranks[position]
@@ -207,12 +275,26 @@ def seven_slots(ranks: list, where: str) -> list:
         # one letter, then one or two underscores, then the name (possibly empty)
         match = re.fullmatch(r"([a-z])_{1,2}(.*)", rank)
         if position == 0:
-            allowed_letters = ("d", "k")       # GTDB d__ or RefSeq k__: both the domain
-        else:
-            allowed_letters = (expected_letter,)
-        if match is None or match.group(1) not in allowed_letters:
+            # The domain. GTDB writes d__, FungiRefSeq-latest k__: both prefixes are
+            # accepted, but only in front of a real domain name, and both are written d__.
+            domain_name = None
+            if match is not None and match.group(1) in ("d", "k"):
+                domain_name = match.group(2)
+            if domain_name not in DOMAIN_NAMES:
+                stop(f"{where}: the first rank of the lineage must be a domain (Bacteria, Archaea "
+                     f"or Eukaryota), found {rank!r}, in the lineage {lineage_text}. The lineage "
+                     f"comes from {tables_listing(genome_id)}. MetaFlux writes the domain in the "
+                     f"first slot (d__) of every sylph table, so a lineage that starts with "
+                     f"anything else (a kingdom such as Fungi, a viral realm, 'Unclassified') "
+                     f"cannot be used as it is. Correct that table (then only sylph_taxprof and "
+                     f"sylph_tables run again), or use another database with its own taxonomy "
+                     f"(for GlobDB: release r232, which places every genome in a domain).")
+            slots.append("d__" + DOMAIN_NAMES[domain_name])
+            continue
+        if match is None or match.group(1) != expected_letter:
             stop(f"{where}: expected a {expected_letter}__ rank in position {position + 1}, "
-                 f"found {rank!r}, in the lineage {lineage_text}")
+                 f"found {rank!r}, in the lineage {lineage_text}. The lineage comes from "
+                 f"{tables_listing(genome_id)}.")
         slots.append(f"{expected_letter}__{match.group(2)}")
     return slots
 
@@ -260,7 +342,7 @@ for mpa_path in sorted(taxprof_dir.glob("*.sylphmpa")):
             if lineage_part == "NO_TAXONOMY":
                 no_lineage.append(f"{sample}: {genome_id}")
                 continue
-            slots = seven_slots(lineage_part.split("|"), f"sample {sample}, genome {genome_id}")
+            slots = seven_slots(lineage_part.split("|"), sample, genome_id)
             if (genome_id, sample) in seq_abund:
                 stop(f"sample {sample}: genome {genome_id} is reported twice; is the same "
                      f"genome in two of references.sylph_databases?")
@@ -512,7 +594,9 @@ for sample in samples:
 # One matrix feeds both files, so the TSV and the BIOM can never disagree. The layout
 # is otu_table.tsv's: line 1 a comment, line 2 '#OTU ID', the samples, 'taxonomy';
 # then one row per genome and the 'unassigned' row last. Values are whole numbers.
-UNASSIGNED_SLOTS = ["k__Unassigned", "p__", "c__", "o__", "f__", "g__", "s__"]
+# The 'unassigned' row gets the domain 'Unassigned' and empty lower ranks, so it reads
+# as its own group in any tool that sums the table by domain.
+UNASSIGNED_SLOTS = ["d__Unassigned", "p__", "c__", "o__", "f__", "g__", "s__"]
 database_text = ", ".join(databases)
 
 row_ids = []

@@ -1213,8 +1213,8 @@ else:  # MODE == "shotgun"
         "TaraEukaryoticSMAG":     "tara_SMAGs_metadata.tsv.gz",
     }
     # sylph-tax also knows three viral taxonomies. Their ranks (realm, viral kingdom,
-    # vFAM, ...) do not fit the seven k__..s__ slots of MetaFlux tables, so they are
-    # refused instead of producing a table phyloseq would read wrongly.
+    # vFAM, ...) do not fit the seven d__..s__ slots (domain ... species) of the sylph
+    # tables, so they are refused instead of producing a table phyloseq would read wrongly.
     SYLPH_TAX_VIRAL = {"IMGVR_4.1", "UHGV_default", "UHGV_ictv"}
     # Pieces of the prebuilt database file names (as on sylph's download server and
     # the files used to test MetaFlux) -> the built-in taxonomy that names their
@@ -1368,11 +1368,12 @@ else:  # MODE == "shotgun"
                 sys.exit(f"[MetaFlux] {_where} ({_db.name}) has no 'taxonomy'. Give the sylph-tax name of its "
                          f"lineage table (GTDB_r232 for gtdb-r232-*.syldb, FungiRefSeq-latest for "
                          f"fungi-refseq-2025-10-11-*.syldb, ...) or the path of your own table")
-            # Why: viral ranks do not fit the seven k__..s__ slots of MetaFlux tables.
+            # Why: viral ranks do not fit the seven d__..s__ slots of the sylph tables.
             if _tax in SYLPH_TAX_VIRAL:
                 sys.exit(f"[MetaFlux] {_where}: taxonomy {_tax} is a viral taxonomy whose ranks (realm, viral "
-                         f"kingdom, ...) do not fit the seven k__..s__ slots of MetaFlux tables. Viral sylph "
-                         f"databases are not supported yet; remove {_db.name} from references.sylph_databases")
+                         f"kingdom, ...) do not fit the seven d__..s__ slots (domain ... species) of the "
+                         f"sylph tables. Viral sylph databases are not supported yet; remove {_db.name} "
+                         f"from references.sylph_databases")
 
             if _tax in SYLPH_TAX_FILES:
                 # A built-in name: its table lives in references.sylph_taxonomy_dir.

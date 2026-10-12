@@ -261,7 +261,9 @@ rule sylph_taxprof:
 # Inputs: the sylph-tax folder (lineages and the two abundances of every genome), the
 # raw profile (to check that -u was on, and each genome's FASTA header for the name
 # notes), sylph's per-sample lines (genomes per sample, which samples got the low-depth
-# read-accuracy fallback) and the fastp JSONs (read pairs after QC).
+# read-accuracy fallback) and the fastp JSONs (read pairs after QC). The params also
+# carry the lineage tables sylph_taxprof used; the script opens them only to name the
+# table a wrong lineage came from, when it has to stop.
 # Outputs: the five files listed in _shotgun_targets() (00_common.smk), plus the
 # MultiQC copy of the summary, which rule multiqc (90_report.smk) shows as a table.
 #
@@ -288,6 +290,10 @@ rule sylph_tables:
         # 'file name (taxonomy)' of every database, written into line 1 of the tables,
         # so a table always says which databases its names came from.
         databases = SYLPH_DB_LABELS,
+        # The taxonomies sylph_taxprof used and the lineage table behind each (same
+        # order), so that a stop on an odd lineage can name the table it came from.
+        taxonomy_names  = SYLPH_TAXONOMY_ARGS,
+        taxonomy_tables = SYLPH_TAXONOMY_FILES,
     threads: lambda wc: threads_for("sylph_tables")
     resources:
         mem_mb = lambda wc: mem_mb_for("sylph_tables"),
@@ -307,7 +313,7 @@ rule sylph_tables:
 # added. Under profiler: sylph that rule file is not read, so this rule writes the
 # same file without the Kraken2 columns. It exists only when Kraken2 does not run,
 # so the two rules never compete for the same output.
-# Inputs: the fastp JSONs, plus the BBDuk PhiX stats and the BBMap host stats when
+# Inputs: the fastp JSONs, plus BBDuk's PhiX log and the BBMap host stats when
 # those steps ran (REMOVE_PHIX, HOST_GENOMES). The parsing is a copy of the Kraken2
 # rule's script (scripts/shotgun/38b_sylph_read_tracking.py says why).
 # Output: stats/read_tracking.txt, a final file for the user; nothing reads it back.
@@ -316,7 +322,7 @@ if not RUN_KRAKEN2:
     rule sylph_read_tracking:
         input:
             fastp_jsons = expand(OUT / "01.preprocessing" / "{s}_fastp.json", s=SAMPLES),
-            **( {"phix_stats": expand(OUT / "01.preprocessing" / "{s}_dephix_stats.txt", s=SAMPLES)}
+            **( {"phix_logs": expand(LOGS / "decontam_phix" / "{s}.log", s=SAMPLES)}
                 if REMOVE_PHIX else {} ),
             **( {"host_stats": expand(OUT / "01.preprocessing" / "{s}_dehost_stats.txt", s=SAMPLES)}
                 if HOST_GENOMES else {} ),

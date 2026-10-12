@@ -11,10 +11,10 @@ with the same arithmetic. That rule also adds Kraken2's classified/unclassified
 columns; under profiler: sylph Kraken2 does not run, its rule file is not read, and
 this script writes the table instead. All counts are read PAIRS:
   raw      : pairs entering the pipeline
-             source: BBDuk PhiX stats #Total/2 (if PhiX removal ran)
+             source: BBDuk PhiX log 'Input:' reads/2 (if PhiX removal ran)
                      else fastp summary.before_filtering.total_reads/2
   nophix   : pairs surviving PhiX removal (only if REMOVE_PHIX)
-             source: BBDuk PhiX stats (#Total - #Matched) / 2
+             source: BBDuk PhiX log 'Result:' reads/2 (the reads BBDuk kept)
   no_host  : pairs surviving host removal (only if HOST_GENOMES is set)
              source: BBMap dehost stats 'surviving_pairs' (kept R1 records)
   trimmed  : pairs passing fastp's adapter/quality filter
@@ -33,21 +33,42 @@ def log(msg: str, fh) -> None:
 
 # ── Parsers ───────────────────────────────────────────────────────────────────
 # The four functions below are copied word for word from
-# 90a_aggregate_read_counts.py, which must stay untouched so that finished Kraken2
-# runs are not re-run (Snakemake re-runs a script rule whose script has changed).
-# Keep the two copies in step: a change there must be made here too. The smoke tests
-# check that the two scripts give the same cleaning columns on the same files.
+# 90a_aggregate_read_counts.py, the script that writes this same table when Kraken2
+# runs (rule aggregate_read_counts, 80_stats.smk). They are copied, not imported,
+# because 90a builds its whole table as soon as it is loaded: importing it here would
+# run that too.
+# Keep the two copies word for word in step: a change to a parser there must be made
+# here too, so that profiler: sylph and profiler: kraken2 write the same cleaning
+# columns from the same files. The smoke tests check that the two scripts give the
+# same cleaning columns on the same files.
 
-def parse_bbduk_stats(path: Path) -> tuple[int, int]:
-    """Return (total_pairs, matched_pairs) from a BBDuk stats file."""
-    total = matched = 0
+def parse_bbduk_log(path: Path) -> tuple[int, int]:
+    """Return (pairs_in, pairs_kept) from the log of rule decontam_phix.
+
+    BBDuk ends its log with a short summary that counts READS (both mates):
+        Input:          11836374 reads     1730990881 bases.
+        ...
+        Result:         11836370 reads (100.00%)     1730990288 bases (100.00%)
+    "Input" is what BBDuk read, "Result" is what it wrote out. BBDuk removes
+    the whole pair when either mate matches PhiX, so both counts are even and
+    half of each is a number of read pairs.
+
+    The stats file (stats=) is not used for this: its #Matched counts the reads
+    that matched PhiX, so a pair with PhiX in one mate only would count as half
+    a pair, and halving #Matched under-counts the pairs BBDuk removed."""
+    reads_in = None
+    reads_kept = None
     with path.open() as fh:
         for line in fh:
-            if line.startswith("#Total"):
-                total = int(line.split()[1])
-            elif line.startswith("#Matched"):
-                matched = int(line.split()[1])
-    return total // 2, matched // 2
+            if line.startswith("Input:"):
+                reads_in = int(line.split()[1])
+            elif line.startswith("Result:"):
+                reads_kept = int(line.split()[1])
+    # Both lines are printed only when BBDuk finished; a log without them
+    # should stop the run here rather than put a made-up number in the table.
+    if reads_in is None or reads_kept is None:
+        raise ValueError(f"no 'Input:' and 'Result:' lines in BBDuk log {path}")
+    return reads_in // 2, reads_kept // 2
 
 
 def parse_host_surviving(path: Path) -> int:
@@ -75,7 +96,11 @@ def _index(paths: list[str], strip_suffix: str) -> dict[str, Path]:
     us these paths in SAMPLES order already, but indexing by sample id makes
     the per-sample loop below (and any missing-file bug) trivial to reason
     about, instead of relying on every input list staying in lock-step order."""
-    return {Path(p).name.replace(strip_suffix, ""): Path(p) for p in paths}
+    # removesuffix() takes the suffix off the end of the file name only.
+    # replace() would also cut it out of the middle of a sample name: the PhiX
+    # log of a sample called "Plot.log2" is "Plot.log2.log", which
+    # replace(".log", "") turns into "Plot2", so the loop below could not find it.
+    return {Path(p).name.removesuffix(strip_suffix): Path(p) for p in paths}
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -99,7 +124,7 @@ remove_host = bool(sm.params.remove_host)
 # only when that stage ran; otherwise they stay empty and are never used.
 fastp_idx = _index(list(sm.input.fastp_jsons), "_fastp.json")
 if remove_phix:
-    phix_idx = _index(list(sm.input.phix_stats), "_dephix_stats.txt")
+    phix_idx = _index(list(sm.input.phix_logs), ".log")
 else:
     phix_idx = {}
 if remove_host:
@@ -127,10 +152,13 @@ for s in samples:
     row: list[str] = [s]
 
     if remove_phix:
-        # "raw" = every read pair BBDuk saw; "nophix" = the same minus PhiX matches.
-        phix_total, phix_matched = parse_bbduk_stats(phix_idx[s])
-        row.append(str(phix_total))
-        row.append(str(phix_total - phix_matched))
+        # "raw" = every read pair BBDuk read; "nophix" = the pairs it kept. So
+        # raw - nophix counts every pair BBDuk removed: pairs with PhiX in either
+        # mate, plus any pair with a read shorter than 10 bp, which BBDuk drops
+        # by default (rare in raw reads).
+        phix_in, phix_kept = parse_bbduk_log(phix_idx[s])
+        row.append(str(phix_in))
+        row.append(str(phix_kept))
     else:
         # No PhiX step: fastp was the first to see the raw reads.
         row.append(str(fastp_before))
