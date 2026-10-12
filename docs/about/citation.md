@@ -16,9 +16,9 @@ MetaFlux is a wrapper around published tools and reference databases, and those
 do the actual work. Cite them too — the list below covers the tools and
 databases the workflow can invoke, general-purpose helpers such as pigz and seqtk aside,
 so pick the entries matching the mode, marker and databases that were actually
-used. Two of them cannot be pinned in advance: the Kraken2/Bracken index
-(ref. 23) and any host genome supplied for decontamination (ref. 25) are chosen at
-runtime, so cite the exact dated build used.
+used. Three of them cannot be pinned in advance: the Kraken2/Bracken index
+(ref. 23), the sylph databases (ref. 88) and any host genome supplied for
+decontamination (ref. 25) are chosen at runtime, so cite the exact dated build used.
 
 ## Acknowledgements
 
@@ -158,6 +158,15 @@ cites. None is a MetaFlux dependency — they run in your own session.
 
 84. Mantel, N. (1967). The detection of disease clustering and a generalized regression approach. *Cancer Research* 27:209–220. (Mantel test for agreement between distance matrices)
 85. Gower, J. C. (1975). Generalized Procrustes analysis. *Psychometrika* 40:33–51. https://doi.org/10.1007/BF02291478 · Peres-Neto, P. R. & Jackson, D. A. (2001). How well do multivariate data sets match? The advantages of a Procrustean superimposition approach over the Mantel test. *Oecologia* 129:169–178. https://doi.org/10.1007/s004420100720 (Procrustes comparison of ordinations; `vegan::protest`)
+
+### sylph profiler (optional, shotgun)
+
+Cite these when `shotgun.profiler` is `sylph` or `both`, together with the source of the
+genomes in each database used.
+
+86. Shaw, J. & Yu, Y. W. (2025). Rapid species-level metagenome profiling and containment estimation with sylph. *Nature Biotechnology* 43(8):1348–1359. https://doi.org/10.1038/s41587-024-02412-y
+87. Shaw, J. sylph-tax: taxonomy manipulation for sylph. *GitHub*. https://github.com/bluenote-1577/sylph-tax (adds the lineages to sylph's output; MetaFlux pins version 1.9.2, whose lineage tables are downloaded from Zenodo)
+88. sylph pre-built databases. https://sylph-docs.github.io/pre%E2%80%90built-databases/ (user-supplied at runtime — cite the exact database files used, e.g. `gtdb-r232-c200-dbv1.syldb`, and the source of their genomes: GTDB, ref. 22, at the release of the database, or NCBI RefSeq for the fungal database)
 
 ## License
 

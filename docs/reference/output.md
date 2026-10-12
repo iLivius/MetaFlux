@@ -311,9 +311,10 @@ primer changes the hash and the probe runs again.
 out_dir/
 ├── 01.preprocessing/    # QC reports and decontamination stats (reads are temporary)
 ├── 02.classification/   # Kraken2 reports, per-read output, classified reads
-├── 03.abundance/        # Bracken reports + otu_table.tsv / otu_table.biom
+├── 02c.sylph/           # sylph sketches and sylph-tax files (profiler sylph | both)
+├── 03.abundance/        # Bracken reports + otu_table.tsv / otu_table.biom; sylph tables
 ├── 04.extracted_reads/  # per-taxon reads (only when extract_taxa is set)
-├── stats/               # read_tracking.txt
+├── stats/               # read_tracking.txt; sylph/ summary (profiler sylph | both)
 ├── multiqc/             # multiqc_report.html + multiqc_data/
 ├── samples.tsv          # sample → source → FASTQ manifest
 └── logs/                # per-rule logs
@@ -321,14 +322,18 @@ out_dir/
 
 The result of a shotgun run is `03.abundance/otu_table.tsv` (taxon × sample
 abundances) with its BIOM twin `otu_table.biom`, the per-sample Bracken reports
-next to them, and `stats/read_tracking.txt`.
+next to them, and `stats/read_tracking.txt`. With `shotgun.profiler: sylph` the
+Kraken2 and Bracken files are not made and the result is
+`03.abundance/sylph_table.tsv` instead; with `both` there are both (see
+[below](#with-shotgunprofiler-sylph-or-both)).
 
 ### `01.preprocessing/`
 
 The cleaned FASTQs here are **temporary** — Snakemake removes a file marked that
 way as soon as every rule that needed it has finished: `_dephix` goes once host
 removal (or fastp) has read it, `_dehost` once fastp has, and `_trim` once Kraken2
-has. What persists is the QC and the counts:
+has, or `sylph_sketch`, or both, depending on `shotgun.profiler`. What persists is the
+QC and the counts:
 
 | File | Written by | Contents |
 |---|---|---|
@@ -380,6 +385,23 @@ normalises the taxonomy strings (see below), and applies the optional
 `shotgun.taxonomy_filter` keep/discard lists. The untidied intermediate
 `otu_table.raw.biom` is temporary and does not survive the run.
 
+### With `shotgun.profiler: sylph` or `both`
+
+sylph writes its own files, next to the Kraken2 ones under `both` and instead of them
+under `sylph`. The two sets are never merged.
+
+| File | Contents |
+|---|---|
+| `03.abundance/sylph_table.tsv` | Read pairs per genome and sample, estimated from genome coverage, plus a last row `unassigned`. Each column adds up to `trimmed` in `stats/read_tracking.txt`. |
+| `03.abundance/sylph_table.biom` | The same table in BIOM (HDF5) format. |
+| `03.abundance/sylph_table.genome_copies.tsv` | Each genome's share of genome copies (%) among the detected genomes; same rows, no `unassigned`. |
+| `03.abundance/sylph_genomes.tsv` | One row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI. |
+| `03.abundance/sylph_profile.tsv` | sylph's own output, unchanged: one row per sample and genome. |
+| `stats/sylph/sylph_summary.tsv` | One row per sample: read pairs after QC, the share the detected genomes explain, genomes found, flagged genomes. `sylph_summary_mqc.tsv` next to it is the copy MultiQC reads. |
+| `02c.sylph/` | The sketches (`sketches/{sample}.paired.sylsp`, kept), sylph-tax's `taxprof/{sample}.sylphmpa` files, and sylph's own log lines for each sample. |
+
+How to read these numbers is explained on the [sylph](../shotgun/sylph.md) page.
+
 ### `04.extracted_reads/`
 
 Only produced when `shotgun.extract_taxa` lists at least one taxon name. Files are
@@ -402,7 +424,8 @@ sample → raw → [nophix] → [no_host] → trimmed → classified → unclass
 **Every number is read pairs**, not reads: BBDuk and fastp count the two mates
 separately and the script halves them, while Kraken2 already counts a pair once.
 `classified` and `unclassified` come from the Kraken2 report's root and
-unclassified rows.
+unclassified rows. Under `shotgun.profiler: sylph`, Kraken2 does not run and the table
+ends at `trimmed`.
 
 `samples.tsv` is a small manifest with the columns `sample`, `source`,
 `bioproject`, `r1`, `r2` — handy for a downstream R or Python script that should
@@ -412,7 +435,9 @@ not have to re-parse the config or re-glob the FASTQ directory. `source` is
 `multiqc/multiqc_report.html` collects fastp, Kraken2, Bracken and — when PhiX
 removal ran — the BBDuk statistics. BBMap host removal contributes nothing to the
 report; its counts are in `stats/read_tracking.txt` and its mapping rate in
-`logs/decontam_host/{sample}.log`.
+`logs/decontam_host/{sample}.log`. When sylph runs, the report also has a sylph table
+section, built from `stats/sylph/sylph_summary_mqc.tsv`; under `profiler: sylph` it
+has no Kraken2 or Bracken sections.
 
 ---
 
@@ -439,12 +464,19 @@ pipeline:
 | SILVA / 16S via `rdp` | `s__Genus species` (a binomial, space-separated) | `s__Bacillus subtilis` |
 | UNITE / ITS | UNITE's own `s__Genus_species` (underscore), emitted verbatim | `s__Genus_species` |
 | Shotgun `otu_table` | the same binomial reconstruction as SILVA, where the reference supplies a bare epithet | `s__Bacillus subtilis` |
+| Shotgun `sylph_table` | the GTDB species name exactly as GTDB writes it, placeholders included | `s__Escherichia coli_E`, `s__JABGUH01 sp018646675` |
 | `sintax` path | whatever label the SINTAX database carries | — |
 
 The binomial is only assembled when the reference hands back a bare, lowercase
 epithet (`subtilis`). A reference that already returns a complete name — PR2's
 `Unruhdinium_kevei`, for instance — is passed through untouched, so the genus is
 never glued on twice.
+
+The sylph tables always have seven slots, the GTDB ranks `d__` to `s__`. The first
+holds the domain and is always written `d__` (`d__Bacteria`, `d__Archaea`,
+`d__Eukaryota`, and `d__Unassigned` on the `unassigned` row): GTDB has no kingdom rank,
+and a lineage table that writes the domain as `k__` is rewritten to `d__`. See
+[sylph](../shotgun/sylph.md#what-you-get).
 
 ---
 

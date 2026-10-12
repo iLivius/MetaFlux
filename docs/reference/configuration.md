@@ -238,6 +238,9 @@ what the analysis actually is:
 | `input.fastq_dir` | where the paired FASTQs are |
 | `output.out_dir` | where results go |
 
+In shotgun mode one more line chooses the profiler, `shotgun.profiler`: `kraken2` (the
+default), `sylph` or `both` (see [Profiler](#profiler) below).
+
 ---
 
 ## Mode selection `[shared]`
@@ -325,6 +328,8 @@ references:
     fasta: refdb/phix/phix.fna
     fetch_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/819/615/GCF_000819615.1_ViralProj14015/GCF_000819615.1_ViralProj14015_genomic.fna.gz
   kraken_db: /path/to/kraken2_db
+  sylph_databases: []
+  sylph_taxonomy_dir: null
 ```
 
 | Key | What it does | Default | Notes |
@@ -332,7 +337,9 @@ references:
 | `refdb_root` | Cache directory for the marker reference databases MetaFlux downloads itself | `refdb` | Amplicon only. Shared across runs and across output directories, so a database is fetched once and reused. |
 | `phix.fasta` | Local path of the PhiX genome | `refdb/phix/phix.fna` | Amplicon mode also builds a bowtie2 index next to it (same basename, `.bt2` files). |
 | `phix.fetch_url` | Where the PhiX genome is downloaded from if missing | NCBI FTP, `GCF_000819615.1_ViralProj14015` | Fetched once by the `fetch_phix` rule and gunzipped. |
-| `kraken_db` | Directory of a prebuilt Kraken2/Bracken index | `/path/to/kraken2_db` (placeholder) | Shotgun only, user-supplied — MetaFlux never builds or downloads it. The run stops immediately if the path does not exist. |
+| `kraken_db` | Directory of a prebuilt Kraken2/Bracken index | `/path/to/kraken2_db` (placeholder) | Shotgun only, user-supplied — MetaFlux never builds or downloads it. Needed when Kraken2 runs (`shotgun.profiler: kraken2` or `both`); the run then stops immediately if the path does not exist. |
+| `sylph_databases` | The sylph database files, one entry each with `path` and `taxonomy` | `[]` | Shotgun only, needed with `shotgun.profiler: sylph` or `both`, user-supplied. `taxonomy` is the sylph-tax name that goes with the file (`GTDB_r232`, `FungiRefSeq-latest`, …) or the path of your own lineage table. Checked at start-up; see [sylph](../shotgun/sylph.md#databases-and-lineage-tables-set-up-once). |
+| `sylph_taxonomy_dir` | Folder of sylph-tax lineage tables, filled once with `sylph-tax download` | `null` | Needed when a `taxonomy` above is a sylph-tax name. MetaFlux passes it to sylph-tax itself, so nothing in `~/.config/sylph-tax` is read or written. |
 
 **PhiX is used by both modes, but differently.** In amplicon mode the FASTA above is
 fetched and indexed, and bowtie2 maps reads against it. In shotgun mode BBDuk uses
@@ -890,6 +897,23 @@ is rejected at parse time with a pointer to the docs rather than silently ignore
 
 Ignored entirely when `mode: amplicon`.
 
+### Profiler
+
+```yaml
+shotgun:
+  profiler: kraken2
+```
+
+| Key | What it does | Default | Notes |
+|---|---|---|---|
+| `profiler` | Which profiler turns the cleaned reads into taxon tables | `kraken2` | `kraken2`: Kraken2 + Bracken, `03.abundance/otu_table.tsv`. `sylph`: sylph + sylph-tax instead, `03.abundance/sylph_table.tsv`, read pairs estimated from genome coverage plus an `unassigned` row. `both`: the two side by side on the same reads, never merged. Anything else stops the run at parse time. |
+
+The PhiX, host and fastp steps below are the same for all three. Under `sylph`,
+`kmer_evidence` and `extract_taxa` need Kraken2's per-read output, so they are switched
+off with a warning, and the `kraken` and `bracken` settings are not used.
+`taxonomy_filter` acts on `otu_table.tsv` only; with `sylph` or `both` it warns that the
+sylph tables are written unfiltered. See [sylph](../shotgun/sylph.md).
+
 ### Decontamination
 
 ```yaml
@@ -1114,6 +1138,11 @@ so they are what a cluster executor turns into job requests.
 | `extract_taxon_reads` | shotgun | 4 | |
 | `compress_extracted` | shotgun | 6 | pigz parallelism for the extracted read files. |
 | `download_sra` | shotgun | 6 | `fasterq-dump` parallelism; past about 8 the bottleneck is disk, not CPU. |
+| `sylph_sketch` | shotgun | 1 | Only when sylph runs. **One thread is a reproducibility setting**: with two or more threads sylph removes duplicate k-mers in parallel and the sketch differs slightly from run to run, while one thread gives the same sketch every time and still takes only seconds per sample. Snakemake sketches several samples at once. Like `phylo_tree`, it falls back to 1, not `threads_default`. |
+| `sylph_profile` | shotgun | 16 | Only when sylph runs. One job for all samples and databases; the thread count changes no number. |
+| `sylph_taxprof` | shotgun | 1 | Only when sylph runs. sylph-tax uses one thread. |
+| `sylph_tables` | shotgun | 1 | Only when sylph runs. |
+| `sylph_read_tracking` | shotgun | 1 | Only with `profiler: sylph`; under `kraken2` and `both`, `aggregate_read_counts` writes `read_tracking.txt`. |
 
 ### Memory
 
@@ -1142,6 +1171,11 @@ so they are what a cluster executor turns into job requests.
 | `bracken` | shotgun | 4000 | |
 | `kraken_biom` | shotgun | 2000 | |
 | `extract_taxon_reads` | shotgun | 2000 | |
+| `sylph_sketch` | shotgun | 4000 | Only when sylph runs. A sketch takes a few tens of MB for a few million read pairs; deep libraries make bigger ones, hence the headroom. |
+| `sylph_profile` | shotgun | `null` | Only when sylph runs. `null` means worked out at parse time: 1.2 × the size of the database files plus 4096 MB, because sylph holds every database in memory (about 34,600 MB for GTDB r232 c200 with the fungal database). The start-up line prints the figure. A number here overrides it, for example on a cluster. |
+| `sylph_taxprof` | shotgun | 2000 | Only when sylph runs. |
+| `sylph_tables` | shotgun | 2000 | Only when sylph runs. |
+| `sylph_read_tracking` | shotgun | 2000 | Only with `profiler: sylph`. |
 
 !!! note "Names here are lookup labels, not always rule names"
 
@@ -1156,9 +1190,9 @@ so they are what a cluster executor turns into job requests.
     of the same name. Adding a key for a rule that does not look it up has no
     effect. Conversely, `finalize_otu_table` does look its resources up but has
     no entry in the template, so it runs on `threads_default` and
-    `mem_mb_default`. One key breaks the other way: `phylo_tree` falls back to
-    **1**, not `threads_default`, because there the thread count changes the tree
-    itself and not just how long it takes.
+    `mem_mb_default`. Two keys break the other way: `phylo_tree` and `sylph_sketch`
+    fall back to **1**, not `threads_default`, because there the thread count changes
+    the result itself (the tree, the sketch) and not just how long it takes.
 
     One more special case: `threads.phylo_tree` is read by the `iqtree` and
     `raxml-ng` backends but **ignored by `fasttree`**, which is pinned to a single

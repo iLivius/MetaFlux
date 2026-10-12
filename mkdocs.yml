@@ -83,6 +83,7 @@ nav:
   - Shotgun mode:
       - Overview: shotgun/overview.md
       - Reference databases: shotgun/databases.md
+      - sylph (alternative profiler): shotgun/sylph.md
       - Decontamination: shotgun/decontamination.md
       - Choosing confidence and threshold: shotgun/confidence-and-threshold.md
       - Species-level k-mer evidence: shotgun/kmer-evidence.md

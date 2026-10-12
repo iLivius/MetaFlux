@@ -7,7 +7,8 @@ downloaded by the workflow.
 
 | Reference | Provisioning | Config key |
 |---|---|---|
-| Kraken2 / Bracken index | **user-supplied**, required | `references.kraken_db` |
+| Kraken2 / Bracken index | **user-supplied**, required when Kraken2 runs (`shotgun.profiler: kraken2`, the default, or `both`) | `references.kraken_db` |
+| sylph databases + lineage tables | **user-supplied**, only with `shotgun.profiler: sylph` or `both` — see [sylph](sylph.md#databases-and-lineage-tables-set-up-once) | `references.sylph_databases`, `references.sylph_taxonomy_dir` |
 | Host genome(s) | **user-supplied**, optional | `shotgun.decontamination.host_genomes` |
 | PhiX | bundled inside the BBTools package — nothing to fetch | *(none)* |
 
@@ -24,8 +25,9 @@ references:
   kraken_db: /path/to/db/k2_pluspf      # [shotgun] — user-supplied
 ```
 
-The path is checked when the workflow is parsed, before any job runs. A missing or
-mistyped path stops the run immediately with:
+When Kraken2 runs (`shotgun.profiler: kraken2`, the default, or `both`), the path is
+checked when the workflow is parsed, before any job runs. A missing or mistyped path
+then stops the run immediately with:
 
 ```text
 [MetaFlux] mode=shotgun requires kraken_db but not found: /path/to/db/k2_pluspf

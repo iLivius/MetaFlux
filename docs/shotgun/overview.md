@@ -29,8 +29,9 @@ The mode can also be set on the command line without editing the file:
     run at amplicon data (or the reverse) does not always produce an error — it
     produces the wrong analysis. Check `mode` before every run.
 
-Shotgun mode needs one thing that is not fetched automatically: a Kraken2 database.
-See [Reference databases](databases.md).
+Shotgun mode needs one thing that is not fetched automatically: a Kraken2 database
+(or sylph databases, when sylph is the profiler; see below). See
+[Reference databases](databases.md).
 
 ## The chain
 
@@ -42,6 +43,14 @@ raw R1/R2 ──▶ BBDuk PhiX* ──▶ BBMap host* ──▶ fastp ──▶ 
 
   * optional, toggled in config
 ```
+
+!!! note "sylph instead of Kraken2, or next to it"
+
+    With `shotgun.profiler: sylph`, sylph replaces everything from Kraken2 onwards: it
+    estimates genome abundances from k-mer sketches of the same trimmed reads and writes
+    `03.abundance/sylph_table.tsv`. With `both`, the two chains run side by side on the
+    same reads and their tables are never merged. The cleaning steps are the same in
+    every case. See [sylph](sylph.md).
 
 Each stage writes files tagged with the step it came off (`_dephix`, `_dehost`,
 `_trim`). When an optional step is switched off, the next step simply reads from
