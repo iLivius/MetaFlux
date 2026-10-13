@@ -614,7 +614,8 @@ shotgun:
   # classification, only which OTUs appear in the table. Default OFF (metagenomic
   # sample types vary too much for a universal default). Common uses:
   #   keep:    [d__Bacteria, d__Archaea]                # prokaryotes only
-  #   keep:    [d__Bacteria, d__Archaea, d__Eukaryota]  # everything but viruses
+  #   keep:    [d__Bacteria, d__Archaea, d__Eukaryota]  # drops viruses and anything
+  #                                                     # else without a domain (plasmids)
   #   keep:    [d__Duplodnaviria, d__Riboviria]         # viruses of these realms only
   #   discard: [g__Homo]                                # explicit host safety net
   taxonomy_filter:

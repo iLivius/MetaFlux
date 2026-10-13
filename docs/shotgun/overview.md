@@ -316,7 +316,7 @@ tidied in a second step, which:
 shotgun:
   taxonomy_filter:
     enabled: false
-    keep:    []           # e.g. [k__Bacteria, k__Archaea]
+    keep:    []           # e.g. [d__Bacteria, d__Archaea]
     discard: []           # e.g. [g__Homo]
 ```
 
@@ -325,7 +325,7 @@ must match a whole segment of the lineage, never a loose substring — and it ru
 the final table only, after Bracken. It therefore changes which OTUs appear in the
 table, never how a read was classified. It is off by default because metagenomic
 sample types vary too much for a sensible universal setting. Common uses are keeping
-prokaryotes (`keep: [k__Bacteria, k__Archaea]`) and dropping residual host
+prokaryotes (`keep: [d__Bacteria, d__Archaea]`) and dropping residual host
 (`discard: [g__Homo]`). If the filter would remove every taxon, the step stops with an
 error that names the tokens and lists the `d__` values in the table, rather than
 writing an empty table. The machinery is described in full under

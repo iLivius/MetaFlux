@@ -1063,7 +1063,7 @@ distribution to 100 bp reads biases the redistribution.
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `enabled` | Master switch | `false` | Off by default: metagenomic sample types vary too much for a universal default to be safe. |
-| `keep` | Tokens defining what survives | `[]` | e.g. `[k__Bacteria, k__Archaea]` for prokaryotes only. |
+| `keep` | Tokens defining what survives | `[]` | e.g. `[d__Bacteria, d__Archaea]` for prokaryotes only. |
 | `discard` | Tokens pruning what `keep` left | `[]` | e.g. `[g__Homo]` as an explicit host safety net. |
 
 This is the shotgun counterpart of `amplicon.taxonomy.filter` and uses the same

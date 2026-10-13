@@ -426,7 +426,7 @@ were classified.
 
 One difference from the amplicon side: it ships **off** (`enabled: false`). Metagenomic
 sample types vary too much for a universal starting point; common uses are
-`keep: [k__Bacteria, k__Archaea]` for prokaryotes only, or `discard: [g__Homo]` as an
+`keep: [d__Bacteria, d__Archaea]` for prokaryotes only, or `discard: [g__Homo]` as an
 explicit host safety net.
 
 Like the amplicon filter, it stops the run when it removes every OTU, instead of
