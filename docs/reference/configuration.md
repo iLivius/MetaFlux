@@ -1076,9 +1076,12 @@ changes which OTUs appear in the table and never how reads were classified.
 |---|---|---|---|
 | `extract_taxa` | NCBI scientific names whose reads should be pulled out into their own FASTQ files | `[]` | `[]` skips extraction entirely. Example: `[Bacteria, Archaea]`. |
 
-Each name is looked up in the Bracken report at whatever rank it appears, so a broad
-group (`Bacteria`) and a single species (`Escherichia coli`) work equally well.
-KrakenTools then extracts every read under that taxid, including its children.
+Each name must be exactly the name of one row in the Bracken report, and it is looked
+up at whatever rank it appears, so a broad group (`Bacteria`) and a single species
+(`Escherichia coli`) are named the same way. KrakenTools then extracts every read
+under that taxid, including its children. A name found in several rows of a report
+stops the run, and a single species gives only an approximate read set; the read
+extraction page explains both.
 Output files are named after a slug of the taxon (lower-case, spaces to
 underscores). A taxon absent from a sample yields empty files rather than a failure.
 See [per-taxon read extraction](../shotgun/read-extraction.md).

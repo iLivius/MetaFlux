@@ -64,22 +64,55 @@ that report as it stands. Note the report is written with `--report-minimizer-da
 which adds two columns, so the taxid and name sit in fields 7 and 8 rather than the
 usual 5 and 6 — which matters for anything else that picks fields out of it.
 
-!!! warning "Match is a plain substring, first hit wins"
+!!! warning "The name must match one report row exactly"
 
-    The taxid is found by scanning the sample's Bracken report for the first row
-    whose name column contains the string given. A partial or ambiguous name will
-    therefore match whatever row comes first — `coli` would match *Escherichia coli*
-    if that row is reached first, and a genus name matches the genus row before any
-    of its species. Write the full scientific name to get the taxon intended.
+    The taxid is found by looking for the row of the sample's Bracken report whose
+    name, without the indentation that shows its place in the tree, is exactly the
+    name given, capital letters included. A partial name therefore finds nothing:
+    `coli` does not match *Escherichia coli*, and `Prevotella` finds the genus, not
+    the family Prevotellaceae listed above it. Write the full scientific name.
+
+    Some names occur in more than one row of a report: a genus and a subgenus of the
+    same name (*Leishmania*, for instance), or a placeholder name that GTDB gives to a
+    family and to a genus alike. MetaFlux cannot tell which of them is meant, so the
+    run stops with a message that lists the rows, with their rank codes and taxids.
+    Remove the name from `extract_taxa`, and extract the taxon you mean by hand, as
+    described above, with `extract_kraken_reads.py -t <taxid>`.
+
+!!! warning "A single species gives an approximate read set"
+
+    Kraken2 assigns each read on its own, from the k-mers it shares with the genomes
+    in the database, so the reads extracted for one species are not exactly that
+    species' reads:
+
+    - reads of close relatives get mixed in, above all of relatives the database
+      lacks: their reads land on the nearest species it holds;
+    - part of the species' own reads are missing, often most of them. Kraken2 places
+      a read that matches several taxa on the lowest node they share, and extraction
+      takes only the reads placed on the named taxon or below it. *Escherichia coli*
+      reads that also match *Shigella*, a separate genus in NCBI's taxonomy, are
+      placed on the family Enterobacteriaceae. There can be many times more of them
+      there than on *E. coli* itself, while Bracken's estimate in the OTU table gives
+      them back to *E. coli*.
+
+    To collect reads for an assembly or a gene search, name the genus or a higher
+    rank (under the default `tax_lev: S`; coarser settings lose reads, as described
+    above). The direct-read column of `02.classification/{sample}_report.txt` (the
+    third) shows on which rows Kraken2 placed them. Use a species-level extraction to
+    check a doubtful species call instead: map the extracted reads to a genome of that
+    species and look at how evenly they cover it. Reads spread over the whole genome
+    support the call; reads piled up on a few regions, such as conserved genes or
+    mobile elements, point to a relative or to a false positive. Either way it is a
+    check, not proof.
 
 ## What it does
 
 For each sample and each named taxon:
 
 1. The taxon's NCBI taxid is looked up in that sample's Bracken report
-   (`03.abundance/{sample}_report.txt`): the first row whose name contains the
-   requested name as plain text. The lookup runs with the Python of the KrakenTools
-   environment, so it does not depend on the tools installed on the host.
+   (`03.abundance/{sample}_report.txt`): the row whose name is exactly the requested
+   name. The lookup runs with the Python of the KrakenTools environment, so it does
+   not depend on the tools installed on the host.
 2. `extract_kraken_reads.py` reads the Kraken2 per-read output
    (`02.classification/{sample}_output.txt`), which records the assignment of every
    read pair, together with the Bracken report so it can walk the taxonomy below the
