@@ -13,7 +13,7 @@ download, which needs unpacking, which needs one of the scripts below).
 |---|---|---|---|
 | `silva_prepare_trainset.py` | SILVA 144 DADA2 trainset (7 ranks, Domain to Genus) | the same 7-rank DADA2 trainset with every kingdom written without SILVA's `--other` suffix, and the other ranks without it only under `silva_other: strip`; headers only | `convert_silva_train` |
 | `silva_to_sintax.py` | SILVA 16S DADA2 trainset (the ranks of the chosen release: 7 on 144, 6 on 138.2; stops on more ranks than letters) | VSEARCH SINTAX FASTA, one letter per rank from the 16S marker pack (`d,k,p,c,o,f,g` on 144, `d,p,c,o,f,g` on 138.2) | `convert_silva_sintax` |
-| `frogs_rpob_to_dada2.py` | FROGS rpoB release FASTA | DADA2 assignTaxonomy trainset | `convert_rpob_to_dada2` |
+| `frogs_rpob_to_dada2.py` | FROGS rpoB release FASTA (an accession, `Root` and an `[id: N]` tag per rank in every header; the domain written `k__Bacteria`) | DADA2 assignTaxonomy trainset whose header is the 7-rank lineage, with the domain written `d__Bacteria`; stops on any other first rank; headers only | `convert_rpob_to_dada2` |
 | `pr2_utax_domain_first.py` | PR2 18S UTAX FASTA (domain under `k:`, supergroup under `d:`) | VSEARCH SINTAX FASTA with the domain under `d:` and the supergroup under `k:`, the order VSEARCH reads; headers only | `convert_pr2_sintax` |
 
 ## Conventions

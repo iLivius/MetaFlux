@@ -23,12 +23,27 @@ taxonomy_sintax_db:  null             # no SINTAX build for this reference
 extractor:           none
 
 # Rank model. After conversion (10_refdb.smk convert_rpob_to_dada2) the header is
-#   >k__Bacteria;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Genus_species
+#   >d__Bacteria;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Genus_species
 # an NCBI RefSeq lineage with ranks already prefixed and a binomial species —
-# the same shape as 16S. "embedded" = emit values verbatim.
-tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
+# the same seven slots as 16S on SILVA 138.2. "embedded" = emit values verbatim.
+#
+# The first rank is the domain. FROGS writes it under k__ (k__Bacteria), but this
+# release carries NCBI's taxonomy as it was when FROGS built it (July 2024), before
+# NCBI added kingdoms for prokaryotes, so every lineage has a domain and no kingdom.
+# In MetaFlux's amplicon tables d__ is the domain (16S, 18S) and k__ the kingdom rank
+# (16S on SILVA 144, ITS), so the converter (refdb/frogs_rpob_to_dada2.py) rewrites
+# k__Bacteria to d__Bacteria and stops on any other first rank, and this pack names
+# the rank Domain, with the prefix d__. The pack and the converted file must change
+# together: the best-hit check of the discard filter compares whole tokens
+# (d__Bacteria) with the names in the file (see rank_prefixes below).
+tax_levels:    [Domain, Phylum, Class, Order, Family, Genus, Species]
 rank_letters:  [d, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
-rank_prefixes: [k__, p__, c__, o__, f__, g__, s__] # not applied under embedded style
+# rank_prefixes: under embedded style the taxonomy strings keep the names exactly as
+# the reference writes them, so these prefixes are never added to them. They are
+# still used, so they must match the reference's own prefixes: the best-hit check of
+# the discard filter finds the rank of a token by its prefix (d__Bacteria ->
+# Domain), and taxon_seq_table.txt removes them from its per-rank cells.
+rank_prefixes: [d__, p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
 
 # The FROGS download is a .tar.gz bundling a FASTA, a BLAST index and an RDP tree,
@@ -36,9 +51,12 @@ prefix_style:  embedded
 # header transform to become a DADA2 trainset, so — like UNITE and silva_sintax — it
 # keeps bespoke rules in 10_refdb.smk (fetch_rpob_archive + convert_rpob_to_dada2)
 # rather than a generated fetch. `archive: tgz` marks it so, and `file` is the
-# CONVERTED output path.
+# CONVERTED output path. "domain-d" in its name marks the file that writes the
+# domain as d__: a refdb folder shared with an older MetaFlux checkout keeps that
+# checkout's own converted file (rpob_refseq_cc_20240707_dada2.fa.gz, domain as
+# k__), and each checkout reads the file that matches its pack.
 references:
   rpob_frogs:
     archive: tgz
-    file: rpob/rpob_refseq_cc_20240707_dada2.fa.gz
+    file: rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz
     url:  https://web-genobioinfo.toulouse.inrae.fr/frogs_databanks/assignation/rpoB/rpoB_bacteria_NCBI_refseq_genome_complete_and_chromosome_20240707.tar.gz

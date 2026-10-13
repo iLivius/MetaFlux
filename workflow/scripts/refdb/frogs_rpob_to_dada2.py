@@ -13,13 +13,24 @@ node carries a "[id: N]" database tag, under a constant "Root":
   >WP_095092576.1 Root;k__Bacteria [id: 1];p__Bacillota [id: 2];...;s__Staphylococcus_simiae [id: 7]
 
 DADA2's assignTaxonomy instead wants the header to BE the lineage — semicolon
-separated, no accession, no per-node tags:
+separated, no accession, no per-node tags — and MetaFlux writes the first rank,
+the domain, as d__ (edit 3 below):
 
-  >k__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus_simiae
+  >d__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus_simiae
 
-WHAT IT DOES (two edits per header, sequence lines untouched)
+WHAT IT DOES (three edits per header, sequence lines untouched)
   1. drop the leading ">ACCESSION Root;"  -> the lineage now starts at k__Bacteria
   2. strip every " [id: N]" database tag
+  3. write the first rank as a domain: k__Bacteria -> d__Bacteria. FROGS puts the
+     domain under the k__ prefix. This release carries NCBI's taxonomy as it was
+     when FROGS built it (July 2024), before NCBI added kingdoms for prokaryotes
+     (Pseudomonadati, Bacillati, ...), so every lineage has a domain and no
+     kingdom. In MetaFlux's amplicon tables d__ is the domain (16S, 18S) and k__
+     the kingdom rank (16S on SILVA 144, ITS), so the rpoB pack
+     (workflow/markers/rpoB.yaml) names the first rank Domain, with the prefix
+     d__, and this edit makes the file say the same. Only k__Bacteria and
+     k__Archaea are rewritten; a header whose first rank is anything else stops
+     the script (see HEADER-SHAPE VALIDATION below).
 
 The result is a 7-rank NCBI RefSeq lineage with prefixes already embedded and a
 binomial species — consumed by the rpoB marker pack as taxonomy_refdb (prefix_style
@@ -27,14 +38,17 @@ binomial species — consumed by the rpoB marker pack as taxonomy_refdb (prefix_
 so ASV-facing sequences are never altered.
 
 HEADER-SHAPE VALIDATION
-Both regexes are anchored to the exact shape of the 2024-07-07 FROGS release (see
-workflow/markers/rpoB.yaml's references.rpob_frogs.url, which pins that dated
+The three regexes are anchored to the exact shape of the 2024-07-07 FROGS release
+(see workflow/markers/rpoB.yaml's references.rpob_frogs.url, which pins that dated
 filename — not a "latest" pointer). If a future re-download ever points at a newer
 FROGS release with a different header shape, a silent no-op here would ship
 corrupted taxonomy strings (still-present accession/Root/id-tag text mistaken for
-a rank value) with no error at all. So each edit is checked: if a header doesn't
-start with ">ACCESSION Root;", or still contains "[id:" after both substitutions,
-the script stops and names the offending line rather than passing it through.
+a rank value, or a kingdom written as a domain) with no error at all. So each edit
+is checked: if a header doesn't start with ">ACCESSION Root;", still contains
+"[id:" once the tags are stripped, or then does not start with k__Bacteria or
+k__Archaea (for example a first rank that is a kingdom, such as k__Pseudomonadati,
+or one already written d__), the script stops and names the offending line rather
+than passing it through.
 
 INPUT  : the raw FROGS FASTA, extracted from the .tar.gz by rule fetch_rpob_archive.
 OUTPUT : the DADA2 trainset FASTA, used by rule assign_taxonomy for rpoB.
@@ -61,6 +75,10 @@ log_path = Path(sm.log[0])
 DROP_ACCESSION_ROOT = re.compile(r"^>[^ ]+ Root;")
 # Edit 2: remove each " [id: N]" tag wherever it appears in the header
 DROP_ID_TAG = re.compile(r" \[id: \d+\]")
+# Edit 3: the first rank, FROGS' k__ followed by a domain name, is written as a
+# domain, d__ (see "WHAT IT DOES" above). The name is captured so it is kept as it
+# is, and the ";" after it makes the pattern match the whole first rank only.
+KINGDOM_LABELLED_DOMAIN = re.compile(r"^>k__(Bacteria|Archaea);")
 
 
 def _open_maybe_gzip(path: Path, mode: str):
@@ -88,7 +106,7 @@ with (_open_maybe_gzip(in_path, "rt") as fi,
     # below; every other line is sequence data and is copied through as-is.
     for line_no, line in enumerate(fi, 1):
         if line.startswith(">"):
-            # Apply both edits, in order, to the header (newline preserved), and
+            # Apply the three edits, in order, to the header (newline preserved), and
             # confirm each one actually fired — a header that doesn't match means
             # the upstream FROGS format has changed since this script was written.
             new_line, n_root_sub = DROP_ACCESSION_ROOT.subn(">", line)
@@ -114,6 +132,27 @@ with (_open_maybe_gzip(in_path, "rt") as fi,
                     f"[frogs_rpob_to_dada2] {in_path}, line {line_no}: an '[id: N]' tag "
                     f"survived the conversion ({new_line.strip()!r}). The tag format may "
                     "have changed — update DROP_ID_TAG to match the new shape."
+                )
+            # Edit 3: k__Bacteria -> d__Bacteria (and k__Archaea -> d__Archaea). After
+            # edits 1 and 2 the header starts with its first rank. If that rank is not
+            # k__ followed by a domain name, the FROGS release has changed its rank
+            # model (a first rank that is a kingdom, or one already written d__):
+            # stop rather than guess what the first rank holds.
+            new_line, n_domain_sub = KINGDOM_LABELLED_DOMAIN.subn(r">d__\1;", new_line)
+            if n_domain_sub == 0:
+                log.write(
+                    f"[frogs_rpob_to_dada2] ERROR: header on line {line_no} does not "
+                    f"start with k__Bacteria or k__Archaea after conversion: "
+                    f"{new_line.strip()!r}\n"
+                )
+                sys.exit(
+                    f"[frogs_rpob_to_dada2] {in_path}, line {line_no}: the first rank is "
+                    f"not k__Bacteria or k__Archaea ({new_line.strip()!r}). FROGS writes "
+                    "the domain under k__ and this script rewrites it to d__; any other "
+                    "first rank means the FROGS release has changed its rank model. "
+                    "Compare a few headers from the new download with this script's "
+                    "docstring and with the rank model in workflow/markers/rpoB.yaml, "
+                    "then update KINGDOM_LABELLED_DOMAIN and the pack together."
                 )
             line = new_line
             n_headers += 1

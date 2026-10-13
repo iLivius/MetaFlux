@@ -34,7 +34,14 @@ extractor:           none
 # (the gene tag, being unprefixed, is emitted as-is; species stays a GTDB binomial).
 tax_levels:    [Gene, Phylum, Class, Order, Family, Genus, Species]
 rank_letters:  [g, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
-rank_prefixes: ["", p__, c__, o__, f__, g__, s__] # not applied under embedded style
+# rank_prefixes: under embedded style the taxonomy strings keep the names exactly as
+# the reference writes them, so these prefixes are never added to them. They are
+# still used, so they must match the reference's own prefixes: the best-hit check of
+# the discard filter finds the rank of a token by its prefix (f__Enterobacteriaceae
+# -> Family), and taxon_seq_table.txt removes them from its per-rank cells. "" is
+# the gene-tag slot, which has no prefix: its cell is written as it is, and a
+# gene-tag token (discard: [other]) is matched only against the reported taxonomy.
+rank_prefixes: ["", p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
 
 # The DD7RZ8 v6 trainset is a single plain .fa.gz download (Recherche Data Gouv /
