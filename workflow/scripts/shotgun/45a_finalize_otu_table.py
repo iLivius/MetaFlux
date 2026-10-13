@@ -86,11 +86,11 @@ THE OPTIONAL FILTER (shotgun.taxonomy_filter)
 
 OUTPUT
   otu_table.tsv and otu_table.biom in 03.abundance/, written from the same rows and
-  numbers, so the two never disagree. Both are final outputs listed in
-  _shotgun_targets() (00_common.smk); nothing else in MetaFlux reads them. Rows keep
-  the order kraken-biom gave them: taxa in order of first appearance, reading the
-  samples in the order of params.samples. Tables made before and after this change
-  can therefore be compared line by line.
+  numbers, so the two never disagree. otu_table.tsv is a final target listed in
+  _shotgun_targets() (00_common.smk), and otu_table.biom is written by the same job;
+  nothing else in MetaFlux reads them. Rows keep the order kraken-biom gave them: taxa
+  in order of first appearance, reading the samples in the order of params.samples.
+  Tables made before and after this change can therefore be compared line by line.
 """
 import os
 import sys
@@ -105,7 +105,9 @@ sm = snakemake  # noqa: F821
 
 # ── Settings handed over by rule finalize_otu_table (45_abundance.smk) ────────────
 # input.reports is expanded over SAMPLES, so report_paths[i] belongs to sample_names[i].
-report_paths      = [str(path) for path in sm.input.reports]
+report_paths = []
+for path in sm.input.reports:
+    report_paths.append(str(path))
 sample_names      = list(sm.params.samples)     # SAMPLES, sorted: the column order
 bracken_rank      = str(sm.params.tax_lev)      # the rank of every row, e.g. "S"
 # What the Kraken2 database ranks as a domain, a kingdom or a virus realm, and Viruses
@@ -347,7 +349,8 @@ if filter_enabled and (filter_keep or filter_discard):
     for taxid in row_order:
         if passes_filter(lineage_for[taxid]):
             kept_taxids.append(taxid)
-    logmsg(f"filter ON  (keep={filter_keep}, discard={filter_discard}): "
+    logmsg(f"filter ON  (keep: {as_yaml_list(filter_keep)}, "
+           f"discard: {as_yaml_list(filter_discard)}): "
            f"{len(kept_taxids)} / {len(row_order)} OTUs retained")
     if row_order and not kept_taxids:
         stop(f"shotgun.taxonomy_filter removed every taxon of the table "
@@ -400,6 +403,9 @@ with biom_open(out_biom, "w") as handle:
 # ── 5. otu_table.tsv, from the same rows and numbers ─────────────────────────────
 # The layout this table has always had: a comment line, the '#OTU ID' header with the
 # sample names and 'taxonomy', then one line per taxon, its slots joined by ';'.
+# The first line, '# Constructed from biom file', is kept word for word as biom-format's
+# own TSV export writes it, although this TSV is written here directly and not converted
+# from the BIOM file, so that old and new tables compare line by line.
 with open(out_tsv, "w") as handle:
     handle.write("# Constructed from biom file\n")
     handle.write("#OTU ID\t" + "\t".join(sample_names) + "\ttaxonomy\n")

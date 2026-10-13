@@ -162,8 +162,9 @@ rule bracken:
 # database ranks as a domain, a kingdom or a virus realm (read from its taxo.k2d when
 # the workflow starts, KRAKEN2_RANK_SETS in 00_common.smk), and the
 # shotgun.taxonomy_filter settings.
-# Outputs: otu_table.biom and otu_table.tsv, final targets in _shotgun_targets()
-# (00_common.smk); nothing else in the pipeline reads them.
+# Outputs: otu_table.biom and otu_table.tsv. otu_table.tsv is a final target in
+# _shotgun_targets() (00_common.smk), and otu_table.biom is written by the same job;
+# nothing else in the pipeline reads them.
 # Runs in the biom env (envs/biom.yaml), which it shares with sylph_tables
 # (38_sylph.smk): python, numpy and biom-format, nothing else.
 rule finalize_otu_table:
