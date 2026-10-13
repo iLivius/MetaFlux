@@ -40,10 +40,10 @@ rank_letters:  [g, p, c, o, f, g, s]              # SINTAX codes — unused (rdp
 # (rule check_taxonomy_reference) stops the run before classification when a name
 # does not start with its rank's prefix, the best-hit check of the discard filter
 # finds the rank of a token by its prefix (f__Enterobacteriaceae -> Family), and
-# taxon_seq_table.txt removes them from its per-rank cells. "" is the gene-tag
-# slot, which has no prefix: the reference check requires that its names carry
-# none, its cell is written as it is, and a gene-tag token (discard: [other]) is
-# matched only against the reported taxonomy.
+# 80a writes the per-rank cells of taxon_seq_table.txt without them. "" is the
+# gene-tag slot, which has no prefix: the reference check requires that its names
+# carry none, its cell is written as it is, and a gene-tag token (discard: [other])
+# is matched only against the reported taxonomy.
 rank_prefixes: ["", p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
 

@@ -44,8 +44,8 @@ rank_letters:  [d, p, c, o, f, g, s]              # SINTAX codes — unused (rdp
 # (rule check_taxonomy_reference) stops the run before classification when a name
 # does not start with its rank's prefix (the converted file of an older MetaFlux,
 # with k__Bacteria, stops there), the best-hit check of the discard filter finds the
-# rank of a token by its prefix (d__Bacteria -> Domain), and taxon_seq_table.txt
-# removes them from its per-rank cells.
+# rank of a token by its prefix (d__Bacteria -> Domain), and 80a writes the
+# per-rank cells of taxon_seq_table.txt without them.
 rank_prefixes: [d__, p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
 

@@ -64,8 +64,8 @@ references:
   # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank
   # between Domain and Phylum, and MetaFlux classifies on it like on every other
   # rank: SILVA 144 strings read d__Bacteria;k__Pseudomonadati;p__..., SILVA 138.2
-  # strings d__Bacteria;p__.... Its "--other" names are a separate matter, set by
-  # amplicon.taxonomy.silva_other.)
+  # strings d__Bacteria;p__.... SILVA 144's "--other" names are a separate matter,
+  # set by amplicon.taxonomy.silva_other.)
   refdb_root: refdb            # where fetched databases are cached
 
   phix: # [shared] — used by both modes; amplicon also builds a bowtie2 index

@@ -363,8 +363,9 @@ def _select_pack_releases(packs):
     references.silva.release); without it the pack's default_release is used. The
     chosen block's fields are copied over the pack's top-level fields — for SILVA:
     probe_ref_tag, the rank model (tax_levels, rank_letters, rank_prefixes, which
-    differ between 144 and 138.2) and `references` — so every later line of this
-    file sees one ordinary pack and does not need to know releases exist.
+    differ between 144 and 138.2), reference_values and `references` — so every
+    later line of this file sees one ordinary pack and does not need to know
+    releases exist.
 
     "{other}" in a reference file name is filled with the silva_other tag above.
 
@@ -509,8 +510,8 @@ if MODE == "amplicon":
     # convert_silva_train (10_refdb.smk) first writes every kingdom without SILVA's
     # "--other" suffix (and, with silva_other: strip, removes it from the other
     # ranks too). The pack signals this by declaring the raw download
-    # (silva_train_raw); a release without it (138.2) is used as downloaded, has no
-    # conversion step, and SILVA_TRAIN_RAW stays None.
+    # (silva_train_raw); a release without it (138.2) uses its training set as
+    # downloaded, with no training-set conversion, and SILVA_TRAIN_RAW stays None.
     SILVA_CONVERTS_TRAIN = "silva_train_raw" in _PACK_REF_FILES
     SILVA_TRAIN_RAW      = None
     if SILVA_CONVERTS_TRAIN:

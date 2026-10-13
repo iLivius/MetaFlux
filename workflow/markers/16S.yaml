@@ -119,8 +119,10 @@ releases:
         md5:  444de7c0cce0b66addda7a3f8b38e012
 
   # SILVA 138.2 (2024), DADA2 files built by Benjamin Callahan (Zenodo record
-  # 14169026). Six ranks, Domain;Phylum;...;Genus, no kingdom: used as downloaded,
-  # with no conversion step; md5 values are the ones Zenodo lists for each file.
+  # 14169026). Six ranks, Domain;Phylum;...;Genus, no kingdom. The training set is
+  # used as downloaded (no convert_silva_train step); the SINTAX file is built from
+  # it by convert_silva_sintax. md5 values are the ones Zenodo lists for each
+  # downloaded file.
   "138.2":
     probe_ref_tag: silva_v138.2_toGenus
     tax_levels:    [Domain, Phylum, Class, Order, Family, Genus, Species]

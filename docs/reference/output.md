@@ -167,8 +167,10 @@ kingdom) and for eukaryotes (the DADA2 file has no eukaryote kingdom). Join the 
 the abundance table by `asv_id`.
 
 The rank columns in `taxon_seq_table.txt` come from the marker pack, so they
-match the reference's actual depth: `Kingdom … Species` for 16S, ITS and rpoB,
-`Gene, Phylum … Species` for gyrB, and for 18S PR2's nine ranks
+match the reference's actual depth: `Domain, Kingdom, Phylum … Species` for 16S on
+SILVA 144, `Domain, Phylum … Species` for 16S on SILVA 138.2 and for rpoB,
+`Kingdom … Species` for ITS, `Gene, Phylum … Species` for gyrB, and for 18S PR2's
+nine ranks
 (`Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species`)
 under `method: rdp`, or eight under `method: sintax`, where PR2's UTAX file joins
 Division and Subdivision into one `Division_Subdivision` column.
@@ -184,9 +186,7 @@ Division and Subdivision into one `Division_Subdivision` column.
     `taxon_seq_table.txt`, and a missing `metaxa2_origin`.
     `read.table(..., sep = "\t", header = TRUE, row.names = 1)` in R and
     `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
-    extra arguments, `NA` as a missing value. `taxonomy_lineage_full.tsv` is a plain
-    tab-separated file instead: its first column is named `asv_id`, nothing is quoted,
-    and a missing rank is an empty cell. The same R and pandas calls read it.
+    extra arguments, `NA` as a missing value.
 
 The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
 check and, for 16S, the organelle filter) has already been applied when these tables
