@@ -148,17 +148,24 @@ def mem_mb_for(rule_name: str) -> int:
 #   taxonomy_sintax_db  reference symbol for the VSEARCH SINTAX database.
 #   extractor           "metaxa2" | "itsx" | "none" — target-region extractor.
 #   tax_levels          ordered rank column names emitted by the classifier
-#                       (assignTaxonomy columns / SINTAX ranks).
+#                       (assignTaxonomy columns / SINTAX ranks): the ranks of the
+#                       marker's own reference files (16S on SILVA 144: Domain,
+#                       Kingdom, Phylum ... Genus, plus the Species slot that
+#                       addSpecies fills). A pack that ships several reference
+#                       releases (16S) declares these three fields per release
+#                       instead (see _select_pack_releases below).
 #   rank_letters        the SINTAX one-letter rank codes paired to tax_levels.
-#   rank_prefixes       the output prefixes (k__/p__/…) paired to tax_levels.
+#   rank_prefixes       the output prefixes (d__/k__/p__/…) paired to tax_levels.
 #   sintax_tax_levels / sintax_rank_letters / sintax_rank_prefixes
 #                       OPTIONAL per-method overrides. The rdp and sintax
 #                       references usually share a rank model (16S, ITS), but not
 #                       always: PR2 ships 9 ranks in its DADA2 file and only 8 in
 #                       its UTAX file, where Division+Subdivision are merged into
 #                       one 'p:' field. When absent these fall back to the fields
-#                       above. Prefixes are keyed to rank MEANING, so the same
-#                       keep/discard token works under either method.
+#                       above. Prefixes are keyed to rank MEANING, so a keep/
+#                       discard token works the same under either method at every
+#                       rank the two models share (18S: d__, sg__ and c__ ... s__;
+#                       see 18S.yaml for dv__ and sbd__).
 #   prefix_style        "bare"     — classifier values carry no rank prefix, so
 #                                    the builder adds rank_prefixes (SILVA/16S).
 #                                    The species slot becomes a Genus+species
@@ -225,6 +232,9 @@ MARKERS = _load_marker_packs()
 #                        g__Bradyrhizobium still removes g__Bradyrhizobium--other.
 #   strip              — remove the suffix from every name before the classifier is
 #                        trained, so "X" and "X--other" become one taxon.
+# The kingdom is the one exception: it is always written without the suffix,
+# whichever value is set (rule convert_silva_train, 10_refdb.smk), because at
+# kingdom level the suffix only splits one kingdom into two labels.
 # The value only matters for a release that ships the suffix (144); 138.2 has none.
 # It is read here, before the marker packs are finalised, because it is part of the
 # derived reference FILE NAMES below (the two settings give different files).
@@ -247,9 +257,10 @@ def _select_pack_releases(packs):
     A pack may carry a `releases:` block (today only 16S, for SILVA 144 and 138.2).
     The run config picks one with references.<release_selector>.release (for 16S:
     references.silva.release); without it the pack's default_release is used. The
-    chosen block's fields are copied over the pack's top-level fields — `references`
-    and probe_ref_tag for SILVA — so every later line of this file sees one ordinary
-    pack and does not need to know releases exist.
+    chosen block's fields are copied over the pack's top-level fields — for SILVA:
+    probe_ref_tag, the rank model (tax_levels, rank_letters, rank_prefixes, which
+    differ between 144 and 138.2) and `references` — so every later line of this
+    file sees one ordinary pack and does not need to know releases exist.
 
     "{other}" in a reference file name is filled with the silva_other tag above.
 
@@ -387,24 +398,53 @@ if MODE == "amplicon":
         "rpob_frogs":        RPOB_FROGS,
     }
 
-    # ── SILVA Kingdom handling (only for a release whose lineages carry a Kingdom) ──
+    # ── SILVA training set (only for a release whose download needs preparing) ──
     # SILVA 144 lineages have seven ranks, Domain;Kingdom;Phylum;...;Genus, where
-    # SILVA 138.2 had six. MetaFlux classifies on six — the Kingdom field is dropped
-    # by rule convert_silva_train (10_refdb.smk), so the domain keeps its k__ slot
-    # and every filter token and table keeps working — and puts the Kingdom back
-    # afterwards from a phylum -> kingdom table written by that same rule.
-    # The pack signals this by declaring the raw download (silva_train_raw); a
-    # release without it (138.2) has no conversion step and no kingdom table, and
-    # these stay None.
-    SILVA_DROPS_KINGDOM = "silva_train_raw" in _PACK_REF_FILES
-    SILVA_TRAIN_RAW     = None
-    SILVA_KINGDOM_MAP   = None
-    if SILVA_DROPS_KINGDOM:
-        SILVA_TRAIN_RAW   = _ref_path("silva_train_raw",   "silva", "train_raw")
-        SILVA_KINGDOM_MAP = _ref_path("silva_kingdom_map", "silva", "kingdom_map")
-        REF_PATHS["silva_train_raw"]   = SILVA_TRAIN_RAW
-        REF_PATHS["silva_kingdom_map"] = SILVA_KINGDOM_MAP
+    # SILVA 138.2 had six (no kingdom). MetaFlux classifies on the ranks of the
+    # chosen release, but SILVA 144's file is not used exactly as published: rule
+    # convert_silva_train (10_refdb.smk) first writes every kingdom without SILVA's
+    # "--other" suffix (and, with silva_other: strip, removes it from the other
+    # ranks too). The pack signals this by declaring the raw download
+    # (silva_train_raw); a release without it (138.2) is used as downloaded, has no
+    # conversion step, and SILVA_TRAIN_RAW stays None.
+    SILVA_CONVERTS_TRAIN = "silva_train_raw" in _PACK_REF_FILES
+    SILVA_TRAIN_RAW      = None
+    if SILVA_CONVERTS_TRAIN:
+        SILVA_TRAIN_RAW = _ref_path("silva_train_raw", "silva", "train_raw")
+        REF_PATHS["silva_train_raw"] = SILVA_TRAIN_RAW
     SILVA_RELEASE = MARKERS.get("16S", {}).get("release")
+
+    # SINTAX letters for the ranks of the SILVA training set, top-down, read by rule
+    # convert_silva_sintax (10_refdb.smk) to write the 16S SINTAX file. They are the
+    # 16S pack's letters for the chosen release without the species letter "s": the
+    # SILVA toGenus files stop at genus (the Species slot is filled by addSpecies on
+    # the rdp path and stays empty under sintax).
+    #   SILVA 144   -> d, k, p, c, o, f, g
+    #   SILVA 138.2 -> d, p, c, o, f, g
+    # The 16S pack is read here, not PROFILE (the active marker, set further down),
+    # because the rule exists in every amplicon run; only a 16S sintax run uses it.
+    _silva_pack = MARKERS.get("16S", {})
+    if "sintax_rank_letters" in _silva_pack:
+        _silva_letters = _silva_pack["sintax_rank_letters"]
+    else:
+        _silva_letters = _silva_pack.get("rank_letters") or []
+    SILVA_SINTAX_LETTERS = []
+    for _letter in _silva_letters:
+        if _letter != "s":
+            SILVA_SINTAX_LETTERS.append(_letter)
+
+    # references.silva.kingdom_map pointed at the phylum -> kingdom table MetaFlux
+    # once wrote for SILVA 144. MetaFlux now classifies the kingdom like every other
+    # rank and writes no such table, so the setting is no longer read. A warning, not
+    # a stop: the run is unaffected, but the user should know the line does nothing.
+    _silva_ref_cfg = config["references"].get("silva")
+    if isinstance(_silva_ref_cfg, dict) and "kingdom_map" in _silva_ref_cfg:
+        sys.stderr.write(
+            "[MetaFlux] warning: references.silva.kingdom_map is no longer used and is "
+            "ignored. MetaFlux classifies the SILVA 144 kingdom like every other rank "
+            "and writes no phylum -> kingdom table; remove the line from your run "
+            "config.\n"
+        )
 
     # ── Primers (hard error if missing — mode=amplicon requires them) ──
     PRIMER_FWD = Path(amp_cfg["primers"]["fwd"]).resolve()
@@ -569,8 +609,34 @@ if MODE == "amplicon":
 
     # ── Taxonomy rank model (from the marker profile) ──
     # Drives the taxonomy-string builder in both 80a (rdp) and 80c (sintax),
-    # replacing the previously hardcoded 7-rank tuples. 16S/ITS/gyrB/rpoB use the
-    # Linnaean 7; 18S/PR2 is the one 9-rank marker today.
+    # replacing the previously hardcoded 7-rank tuples. The ranks are those of the
+    # marker's reference: 16S has eight slots on SILVA 144 (Domain, Kingdom, Phylum
+    # ... Species) and seven on SILVA 138.2 (no kingdom), declared per release in
+    # 16S.yaml; ITS, gyrB and rpoB have seven; 18S/PR2 has nine under rdp and eight
+    # under sintax.
+    #
+    # Guard first: a pack with releases (16S) gets its rank model only from the
+    # chosen release block, merged in by _select_pack_releases above. A pack that
+    # declares tax_levels, rank_letters or rank_prefixes nowhere, neither at its top
+    # level nor in that block (an incomplete pack of one's own in config/markers/,
+    # for example), would otherwise stop on the first line below with a bare Python
+    # KeyError. Stop here with a sentence that names the pack and the missing fields.
+    _missing_rank_fields = []
+    for _field in ("tax_levels", "rank_letters", "rank_prefixes"):
+        if not PROFILE.get(_field):
+            _missing_rank_fields.append(_field)
+    if _missing_rank_fields:
+        if PROFILE.get("release"):
+            _where = f"at its top level or in its release block {PROFILE['release']!r}"
+        else:
+            _where = "at its top level"
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r} has no complete rank model: "
+            f"{', '.join(_missing_rank_fields)} not declared {_where}. A pack in "
+            f"config/markers/ replaces the shipped one completely; compare it with "
+            f"workflow/markers/{AMPLICON_TYPE}.yaml."
+        )
+
     # rdp path rank model
     TAX_LEVELS    = PROFILE["tax_levels"]
     RANK_LETTERS  = PROFILE["rank_letters"]
@@ -604,7 +670,7 @@ if MODE == "amplicon":
         )
 
     # ── Contaminant keep/discard (config-only; no per-marker code default) ──
-    # Lists of rank-prefixed tokens (e.g. k__Bacteria, o__Chloroplast) matched
+    # Lists of rank-prefixed tokens (e.g. d__Bacteria, o__Chloroplast) matched
     # against whole taxonomy-string segments. Empty/null list → that direction
     # is a no-op. The recommended per-marker values ship in the config template.
     _filter_cfg      = amp_cfg["taxonomy"]["filter"]
@@ -616,7 +682,7 @@ if MODE == "amplicon":
         sys.exit(
             "[MetaFlux] amplicon.taxonomy.filter uses the retired include_pattern/"
             "exclude_pattern regex schema. Replace them with keep/discard token lists, e.g.\n"
-            "    keep:    [k__Bacteria, k__Archaea]\n"
+            "    keep:    [d__Bacteria, d__Archaea]\n"
             "    discard: [o__Chloroplast, f__Mitochondria]   # 16S\n"
             "  or keep: [k__Fungi]   discard: []              # ITS"
         )
@@ -740,11 +806,8 @@ if MODE == "amplicon":
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
         )
 
-    # The kingdom sidecar (6.taxonomy/taxonomy_lineage_full.tsv, rule restore_kingdom
-    # in 80_taxonomy.smk) exists only for a 16S run on a SILVA release whose Kingdom
-    # field was dropped before classification (144). Under 138.2 there is no kingdom
-    # to put back, and the other markers never had one removed.
-    KINGDOM_SIDECAR = AMPLICON_TYPE == "16S" and SILVA_DROPS_KINGDOM
+    # One line on every 16S run naming the SILVA release, the silva_other setting
+    # and the training-set file, so the log shows which reference classified the run.
     if AMPLICON_TYPE == "16S":
         sys.stderr.write(
             f"[MetaFlux] 16S reference: SILVA {SILVA_RELEASE} "
@@ -931,7 +994,7 @@ if MODE == "amplicon":
             "Metaxa2 calls mitochondria or chloroplast, but eukaryotic, unclassified "
             "and other off-target ASVs will reach the tree, where they typically appear "
             "as long branches and inflate Faith's PD. Consider "
-            "keep: [k__Bacteria, k__Archaea] and discard: [o__Chloroplast, "
+            "keep: [d__Bacteria, d__Archaea] and discard: [o__Chloroplast, "
             "f__Mitochondria]. Check stats/phylogeny/phylogeny_qc.json's long-branch "
             "report.\n"
         )
@@ -1938,9 +2001,6 @@ def _amplicon_targets():
         # Every ASV that reached the taxonomy filter, removed ones included (same rule
         # as the three tables above, so it adds no job).
         OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
-        # Kingdom sidecar (SILVA 144 only): one extra file next to the three tables
-        # above, which themselves stay exactly as they are.
-        *([OUT / "6.taxonomy" / "taxonomy_lineage_full.tsv"] if KINGDOM_SIDECAR else []),
         # Combined read-tracking table
         OUT / "stats" / "read_tracking.txt",
         # MultiQC aggregate

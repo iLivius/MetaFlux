@@ -61,10 +61,11 @@ references:
   # 16S ships two SILVA releases: 144 (the default) and 138.2. To run on 138.2, put
   #     silva: {release: "138.2"}
   # in your run config. Each release keeps its own file names under refdb_root, so
-  # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank,
-  # which MetaFlux removes before classifying and restores afterwards in
-  # 6.taxonomy/taxonomy_lineage_full.tsv. Its "--other" names are a separate
-  # matter, set by amplicon.taxonomy.silva_other.)
+  # switching never overwrites the other one's files. (SILVA 144 has a Kingdom rank
+  # between Domain and Phylum, and MetaFlux classifies on it like on every other
+  # rank: SILVA 144 strings read d__Bacteria;k__Pseudomonadati;p__..., SILVA 138.2
+  # strings d__Bacteria;p__.... Its "--other" names are a separate matter, set by
+  # amplicon.taxonomy.silva_other.)
   refdb_root: refdb            # where fetched databases are cached
 
   phix: # [shared] — used by both modes; amplicon also builds a bowtie2 index
@@ -227,10 +228,12 @@ amplicon:
                                               #     filter and addSpecies treat "X--other" as "X".
                                               #   strip: remove the suffix before training, so X and
                                               #     X--other become one taxon.
+                                              # The kingdom is always written without the suffix,
+                                              # whichever you choose.
     filter:
       enabled: true                           # master switch; false = keep every ASV
       # Contaminant filter as rank-aware TOKEN LISTS. Each token is matched against
-      # a whole segment of the taxonomy string (k__Bacteria, o__Chloroplast,
+      # a whole segment of the taxonomy string (d__Bacteria, o__Chloroplast,
       # g__Ralstonia, …), so it targets exactly one rank — never a loose substring.
       # `keep` runs first (defines what survives); then `discard` prunes what's left.
       # An empty list [] means that direction does nothing. There is NO built-in
@@ -246,7 +249,7 @@ amplicon:
       # marker into YOUR run config and uncomment it there.
       #
       # Recommended starting points:
-      #   16S  : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
+      #   16S  : keep [d__Bacteria, d__Archaea]   discard [o__Chloroplast, f__Mitochondria]
       #   ITS  : keep [k__Fungi]                  discard []
       #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__)
       #   gyrB : no recommended default — the DD7RZ8 paralog tag (discard: [other])
@@ -255,7 +258,7 @@ amplicon:
       #          equivalent to filter; leave empty unless your own run shows otherwise
       # To drop lab/kit contaminants a blank control revealed, add them to discard,
       # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
-      keep:    #[k__Bacteria, k__Archaea]
+      keep:    #[d__Bacteria, d__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
       # Best-hit check for discard. The reported taxonomy stops at the last rank that
       # reaches min_boot / sintax_cutoff, so an ASV whose best hit is Mitochondria with

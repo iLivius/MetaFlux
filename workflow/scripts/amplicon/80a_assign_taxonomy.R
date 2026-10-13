@@ -128,19 +128,22 @@ unique_seqs <- unique(unname(seqs_sub))
 message("[assign_taxonomy] Classifying ", length(unique_seqs),
         " unique sequence(s) from ", length(seqs_sub), " input ASVs")
 # taxLevels comes from the marker profile so the classifier matches the reference's
-# actual depth. For 16S/ITS these are the Linnaean 7, identical to DADA2's own
-# default (so passing them explicitly changes nothing); a 9-rank reference such as
-# PR2 (domain..species) needs them declared — assignTaxonomy sizes the output from
-# the reference's own depth, so undeclared levels arrive as unnamed columns AND the
-# names that were declared slide onto the wrong ranks (PR2's Family would be labelled
-# Species). make_tax_string below looks values up by name, so that misnaming is the
-# damaging half, not the unnamed tail.
+# actual depth. For ITS these are the seven ranks of DADA2's own default (Kingdom ..
+# Species, so passing them explicitly changes nothing). 16S declares the ranks of its
+# SILVA release (Domain, Kingdom, Phylum ... on SILVA 144; Domain, Phylum ... on
+# 138.2), and a 9-rank reference such as PR2 (domain..species) needs them declared
+# too — assignTaxonomy sizes the output from the reference's own depth, so
+# undeclared levels arrive as unnamed columns AND the names that were declared slide
+# onto the wrong ranks (PR2's Family would be labelled Species). make_tax_string
+# below looks values up by name, so that misnaming is the damaging half, not the
+# unnamed tail.
 #
 # assignTaxonomy is called with minBoot = 0 and outputBootstraps = TRUE, so it hands
 # back the classifier's best-hit lineage at EVERY rank together with the bootstrap
-# support of each rank. min_boot is then applied here, by apply_min_boot() below,
-# with exactly the rule DADA2 itself uses, so the reported taxonomy is the same as
-# a call with minBoot = min_boot (the bootstrap draws do not depend on minBoot).
+# support of each rank. min_boot is then applied here, by apply_min_boot() below.
+# Whenever support falls from rank to rank, the normal case, the reported taxonomy
+# is the same as a call with minBoot = min_boot (the bootstrap draws do not depend on
+# minBoot); apply_min_boot() explains the one case where it is not.
 # Keeping the unfiltered best hit is what lets the discard filter look one step
 # further than the reported lineage (see "Discard filter, best-hit check" below).
 classified <- assignTaxonomy(unique_seqs, refdb_path,
@@ -240,15 +243,30 @@ if (identical(prefix_style, "embedded") && ncol(best_hit) == n_ranks &&
           "not shorten)")
 }
 
-# DADA2's own minBoot rule (dada2::assignTaxonomy, taxonomy.R): for each sequence,
-# keep the ranks whose support reaches min_boot and write them from the first
-# column onwards. Support can only fall from domain to genus, so in practice this
-# keeps the lineage down to the last well-supported rank and blanks the rest.
+# min_boot rule: for each sequence, keep the lineage from the top rank down to the
+# last rank whose support reaches min_boot, and leave every rank from the first one
+# that fails onwards empty (NA).
+#   in : tax  = best-hit name per sequence (rows) and rank (columns), any support
+#        boot = the bootstrap support (0-100) of each of those names
+#   out: the same matrix with the names below the cutoff set to NA; the reported
+#        taxonomy is built from it (taxa_unique below)
+# This is DADA2's own minBoot result whenever support falls from rank to rank,
+# which is the normal case. DADA2 itself (dada2::assignTaxonomy, taxonomy.R) keeps
+# every rank that passes and writes them from the first column onwards, so if a rank
+# failed while a lower one passed, the lower name would land in the column of the
+# higher rank. With SILVA 144's kingdom rank that can happen, rarely: the
+# placeholder phylum "Incertae Sedis" sits under more than one kingdom, so its
+# kingdom can be uncertain while the phylum is not, and DADA2's rule would then
+# write the phylum into the Kingdom column. Stopping at the first failing rank keeps
+# every name in its own column.
 apply_min_boot <- function(tax, boot, min_boot) {
   out <- matrix(NA_character_, nrow = nrow(tax), ncol = ncol(tax), dimnames = dimnames(tax))
   for (i in seq_len(nrow(tax))) {
-    kept <- tax[i, boot[i, ] >= min_boot]
-    if (length(kept) > 0L) out[i, seq_along(kept)] <- kept
+    for (j in seq_len(ncol(tax))) {
+      # The first rank below the cutoff ends this sequence's lineage.
+      if (is.na(boot[i, j]) || boot[i, j] < min_boot) break
+      out[i, j] <- tax[i, j]
+    }
   }
   out
 }
@@ -258,9 +276,10 @@ taxa_unique <- apply_min_boot(best_hit, best_boot, min_boot)
 # assignTaxonomy returns one column per rank of the DEEPEST lineage in the
 # reference file, and simply names them from taxLevels in order — it never checks
 # that the reference's ranks are the ones the names describe. A reference one rank
-# deeper than the marker pack expects therefore comes back with every name shifted
-# one slot (SILVA 144's own file, with its extra Kingdom rank, would put each
-# family in the Genus column and each genus in Species), and nothing errors.
+# shallower or deeper than the marker pack expects therefore comes back with every
+# name shifted one slot (a SILVA 138.2 file, which has no kingdom, classified under
+# the SILVA 144 model would put each phylum in the Kingdom column, each class in
+# Phylum, and so on down), and nothing errors.
 # So compare the column count with the pack's rank model here, before anything is
 # built from it. For 16S the last slot (Species) is filled later by addSpecies, so
 # the training set itself must stop one rank short of the full model; every other
@@ -272,8 +291,9 @@ if (ncol(taxa_unique) != expected_ranks) {
        " ranks, but the marker pack's rank model (", paste(tax_levels, collapse = ","),
        ") expects ", expected_ranks, " in this file",
        if (length(species_db_list) > 0L) " (the Species slot comes from addSpecies)" else "",
-       ". The names would land on the wrong ranks. For SILVA 144 use the 6-rank file ",
-       "written by convert_silva_train, not the download itself.")
+       ". The names would land on the wrong ranks. The reference file and the marker ",
+       "pack's rank model do not match: check a reference path pinned in the run config ",
+       "(references:), and for 16S the SILVA release chosen with references.silva.release.")
 }
 
 # addSpecies for 16S only; species_db is an empty list for every other marker
@@ -376,7 +396,7 @@ count_t <- as.data.frame(t(seqtab_sub[, rownames(taxa_df), drop = FALSE]))
 asv_table <- cbind(count_t, taxonomy = tax_strings)
 
 # ── Contaminant filter (rank-aware keep/discard lists; config-only) ──────────
-# Each token (e.g. k__Bacteria, o__Chloroplast) is matched against whole
+# Each token (e.g. d__Bacteria, o__Chloroplast) is matched against whole
 # ';'-delimited segments of the taxonomy string, so g__Bacillus hits only a
 # genus named exactly that — never a substring elsewhere. keep runs first
 # (defines the universe), then discard prunes. An empty list = that direction
@@ -454,11 +474,12 @@ if (isTRUE(filter_enabled)) {
   # The reported taxonomy stops at the last rank whose bootstrap support reaches
   # min_boot (80 by default). An ASV can therefore have Mitochondria as its best
   # hit at family level with, say, 62% support, be reported only as
-  # k__Bacteria;p__Pseudomonadota, and slip past f__Mitochondria. Organelle 16S
-  # is the typical case: plant and algal mitochondria are diverse, and with
-  # SILVA 144 the RDP classifier often stays below 80% at order and family for
-  # them although the best hit is clearly mitochondrial. Such ASVs then end up in
-  # the abundance table and, as very long branches, in the tree.
+  # d__Bacteria;k__Pseudomonadati;p__Pseudomonadota, and slip past
+  # f__Mitochondria. Organelle 16S is the typical case: plant and algal
+  # mitochondria are diverse, and with SILVA 144 the RDP classifier often stays
+  # below 80% at order and family for them although the best hit is clearly
+  # mitochondrial. Such ASVs then end up in the abundance table and, as very long
+  # branches, in the tree.
   # So, for every ASV still in the table, each discard token is also compared with
   # the best-hit name at the token's own rank (o__ = Order, f__ = Family, ...), and
   # the ASV is removed when the names match and the support at that rank is at
@@ -562,8 +583,9 @@ if (isTRUE(filter_enabled) && n_before_filter > 0L && nrow(asv_table) == 0L) {
   } else ""
   stop("[assign_taxonomy] the keep/discard filter removed ALL ", n_before_filter,
        " ASVs (amp_type=", amp_type, "). The keep/discard lists likely do not match this ",
-       "marker: for ITS use keep: [k__Fungi]; for 16S use keep: [k__Bacteria, k__Archaea]. ",
-       "Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.",
+       "marker: for 16S use keep: [d__Bacteria, d__Archaea]; for 18S keep: [d__Eukaryota]; ",
+       "for ITS keep: [k__Fungi]. Fix amplicon.taxonomy.filter, or set ",
+       "amplicon.taxonomy.filter.enabled: false.",
        organelle_note)
 }
 
@@ -584,9 +606,10 @@ write.table(asv_table_seqs, file = snakemake@output[["asv_table_seqs"]], col.nam
 
 # ── Output (c): taxon_seq_table.txt — rows=ASV_IDs, parsed cols + sequence ───
 # Same ASVs and taxonomy as (a), but with the taxonomy split into one column
-# per rank (Kingdom, Phylum, ...) instead of one semicolon-joined string, plus
-# the ASV's sequence — convenient for filtering or grouping by a single rank
-# without string-parsing the taxonomy column first. Has no per-sample counts.
+# per rank (the pack's tax_levels: Domain, Kingdom, Phylum, ... for 16S on SILVA
+# 144) instead of one semicolon-joined string, plus the ASV's sequence —
+# convenient for filtering or grouping by a single rank without string-parsing the
+# taxonomy column first. Has no per-sample counts.
 taxon_table <- taxa_df[rownames(asv_table), , drop = FALSE]
 # Rank cells hold the bare name, without the rank prefix ("Fungi", "Ascomycota", ...,
 # "Hanseniaspora_uvarum"): the column header already names the rank. That is what

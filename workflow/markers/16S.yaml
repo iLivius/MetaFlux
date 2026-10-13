@@ -29,15 +29,16 @@ extractor:           metaxa2          # metaxa2 | itsx | none
 # Rank model. "bare" = reference values carry no rank prefix, so the builder adds
 # rank_prefixes and renders the species slot as a Genus+species binomial.
 #
-# This stays at the familiar seven slots (domain written as k__ ... species) for
-# BOTH SILVA releases below. SILVA 144 added an eighth level, Kingdom (Bacillati,
-# Pseudomonadati, ...), between Domain and Phylum; MetaFlux drops that field before
-# training (rule convert_silva_train) and restores it afterwards in a separate
-# sidecar table, so every taxonomy string, filter token and downstream table keeps
-# the shape it had with SILVA 138.2.
-tax_levels:    [Kingdom, Phylum, Class, Order, Family, Genus, Species]
-rank_letters:  [d, p, c, o, f, g, s]
-rank_prefixes: [k__, p__, c__, o__, f__, g__, s__]
+# The ranks themselves (tax_levels, rank_letters, rank_prefixes) are declared per
+# SILVA release below, because the two releases differ: SILVA 144 gives prokaryotes
+# seven ranks (Domain;Kingdom;Phylum;...;Genus), SILVA 138.2 six (no kingdom).
+# MetaFlux classifies on exactly the ranks of the chosen release, nothing added and
+# nothing removed. The Species slot after Genus is filled by addSpecies (rdp) and
+# stays empty under sintax (the SILVA files stop at genus).
+#   d__ / Domain  : Bacteria, Archaea, Eukaryota (the few eukaryote outgroup records)
+#   k__ / Kingdom : SILVA 144 only — Bacillati, Pseudomonadati, ... (the prokaryote
+#                   kingdoms), always written without SILVA's "--other" suffix (see
+#                   rule convert_silva_train in 10_refdb.smk)
 prefix_style:  bare
 
 # ── Which SILVA release ────────────────────────────────────────────────────
@@ -46,8 +47,9 @@ prefix_style:  bare
 #       silva:
 #         release: "138.2"
 # in its run config; without that line it gets default_release. 00_common.smk
-# copies the chosen release's block over the top-level fields above (only the
-# fields the block names), so everything downstream sees one ordinary pack.
+# copies the fields of the chosen release's block into the pack (over any top-level
+# field of the same name), so everything downstream sees one ordinary pack with one
+# rank model.
 #
 # Each release keeps its own file names, so switching back and forth never
 # overwrites the other release's downloads or derived files.
@@ -63,28 +65,32 @@ releases:
   # to each file.
   "144":
     probe_ref_tag: silva_v144_toGenus
+    tax_levels:    [Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species]
+    rank_letters:  [d, k, p, c, o, f, g, s]
+    rank_prefixes: [d__, k__, p__, c__, o__, f__, g__, s__]
     references:
       # The file exactly as SILVA publishes it: 7 ranks per lineage
       # (Domain;Kingdom;Phylum;Class;Order;Family;Genus). It is never classified
       # against directly — convert_silva_train (10_refdb.smk) reads it and writes
-      # the two files below.
+      # the training set below.
       silva_train_raw:
         file: silva/silva_nr99_v144_toGenus_trainset.fa.gz
         url:  https://www.arb-silva.de/fileadmin/silva_databases/release_144/DADA2/1.36.0/SSU/silva_nr99_v144_toGenus_trainset.fa.gz
         md5:  9e8a4c92c81efeeecdd091b1249f40fd
-      # The 6-rank training set MetaFlux actually uses (Kingdom field removed).
-      # "{other}" is filled from amplicon.taxonomy.silva_other (other-verbatim |
-      # other-stripped), because the two settings produce different headers and
-      # must never share one cached file.
+      # The 7-rank training set MetaFlux uses: SILVA's own ranks, kingdom names
+      # without "--other". "{other}" is filled from amplicon.taxonomy.silva_other
+      # (other-verbatim | other-stripped), because the two settings produce
+      # different headers below the kingdom and must never share one cached file.
+      # "7rank" in the name says the file keeps all seven SILVA ranks, so a training
+      # set of another shape (for example one with the kingdom removed) never shares
+      # its name, and in a refdb folder shared between MetaFlux checkouts one is
+      # never overwritten by the other.
       silva_train:
-        file: silva/silva_nr99_v144_toGenus_6rank_{other}_trainset.fa.gz
-      # phylum -> kingdom lookup table, written by the same conversion step from
-      # the same file, so it always matches the training set it sits next to.
-      silva_kingdom_map:
-        file: silva/silva_nr99_v144_kingdom_map_{other}.tsv
-      # SINTAX build, derived from the 6-rank training set by convert_silva_sintax.
+        file: silva/silva_nr99_v144_toGenus_7rank_{other}_trainset.fa.gz
+      # SINTAX build, derived from the training set by convert_silva_sintax
+      # (letters d, k, p, c, o, f, g).
       silva_sintax:
-        file: silva/silva_nr99_v144_6rank_{other}_sintax.fa.gz
+        file: silva/silva_nr99_v144_7rank_{other}_sintax.fa.gz
       # addSpecies reference: no Kingdom field (accession + "Genus species"), so it
       # is used exactly as downloaded.
       silva_species:
@@ -93,10 +99,13 @@ releases:
         md5:  444de7c0cce0b66addda7a3f8b38e012
 
   # SILVA 138.2 (2024), DADA2 files built by Benjamin Callahan (Zenodo record
-  # 14169026). Already 6 ranks, so no conversion step and no kingdom table; md5
-  # values are the ones Zenodo lists for each file.
+  # 14169026). Six ranks, Domain;Phylum;...;Genus, no kingdom: used as downloaded,
+  # with no conversion step; md5 values are the ones Zenodo lists for each file.
   "138.2":
     probe_ref_tag: silva_v138.2_toGenus
+    tax_levels:    [Domain, Phylum, Class, Order, Family, Genus, Species]
+    rank_letters:  [d, p, c, o, f, g, s]
+    rank_prefixes: [d__, p__, c__, o__, f__, g__, s__]
     references:
       silva_train:
         file: silva/silva_nr99_v138.2_toGenus_trainset.fa.gz
@@ -114,5 +123,5 @@ releases:
 # still pin an explicit path); `url` marks it a plain download, for which a fetch
 # rule is GENERATED — no code edit needed — and `md5`, when present, is checked
 # after the download. References needing archive extraction or a transform keep a
-# bespoke rule in 10_refdb.smk and carry no url here (silva_train under 144,
-# silva_kingdom_map and silva_sintax are all derived files).
+# bespoke rule in 10_refdb.smk and carry no url here (silva_train under 144 and
+# silva_sintax are derived files).

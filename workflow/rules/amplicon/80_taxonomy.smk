@@ -8,7 +8,11 @@
 #                         the same four output tables: the three filtered ones,
 #                         and asv_table_unfiltered.txt with every ASV that reached
 #                         the filter (organelles included), its Metaxa2 origin and
-#                         what the filter did to it.
+#                         what the filter did to it. The ranks of every table are
+#                         the marker pack's rank model, i.e. the ranks of the
+#                         marker's reference (16S: those of the chosen SILVA
+#                         release, Domain, Kingdom, Phylum ... on SILVA 144 and
+#                         Domain, Phylum ... on SILVA 138.2).
 # aggregate_read_counts : joins all per-stage read-count sources into one wide
 #                         TSV (one row per sample, one column per stage).
 
@@ -105,38 +109,6 @@ else:  # sintax
             mem_mb = lambda wc: mem_mb_for("assign_taxonomy"),
         script:
             "../../scripts/amplicon/80c_parse_sintax.py"
-
-
-# ── Kingdom sidecar (16S on SILVA 144 only) ───────────────────────────────
-# SILVA 144 lineages carry a Kingdom rank (Bacillati, Pseudomonadati, ...) that
-# MetaFlux removes before classifying (rule convert_silva_train), so the taxonomy
-# tables above keep their usual shape with k__ = domain. This rule puts the kingdom
-# back, in a separate file, by looking each ASV's (domain, phylum) up in the table
-# convert_silva_train wrote from the same reference. It reads the per-rank table,
-# which both taxonomy methods write identically, so it does not care which one ran.
-#   in : 6.taxonomy/taxon_seq_table.txt (final, filtered ASV set) + kingdom table
-#   out: 6.taxonomy/taxonomy_lineage_full.tsv — ASV id, Domain, Kingdom, Phylum ..
-#        Species, the SILVA-style lineage string, and a note for every ASV whose
-#        kingdom had to be left empty. Requested by rule all; nothing reads it back.
-# Defined only when KINGDOM_SIDECAR is set (16S run on a release with a Kingdom).
-if KINGDOM_SIDECAR:
-
-    rule restore_kingdom:
-        input:
-            taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
-            kingdom_map     = SILVA_KINGDOM_MAP,
-        output:
-            lineage_full = OUT / "6.taxonomy" / "taxonomy_lineage_full.tsv",
-        params:
-            # Column names of taxon_seq_table.txt — the rdp and sintax rank models
-            # are the same for 16S, but take the one that actually wrote the table.
-            tax_levels = TAX_LEVELS if TAXONOMY_METHOD == "rdp" else SINTAX_TAX_LEVELS,
-        log:
-            LOGS / "restore_kingdom.log",
-        conda:
-            "../../envs/python_utils.yaml"
-        script:
-            "../../scripts/amplicon/80d_restore_kingdom.py"
 
 
 # Joins every per-stage read-count source produced earlier in the run (the

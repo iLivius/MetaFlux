@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Reference-DB prep (workflow/scripts/refdb/): SILVA 144 DADA2 trainset -> 6-rank trainset
-plus a phylum -> kingdom table.
+"""Reference-DB prep (workflow/scripts/refdb/): SILVA 144 DADA2 trainset -> the 7-rank
+training set MetaFlux classifies with, kingdom names without SILVA's "--other".
 
 One of the reference-preparation scripts. Each script here turns one upstream
 database into the exact format a classifier wants; the rules in 10_refdb.smk just
@@ -17,30 +17,32 @@ where SILVA 138.2 read
 
   >Bacteria;Pseudomonadota;Gammaproteobacteria;Pseudomonadales;Pseudomonadaceae;Pseudomonas;
 
-MetaFlux's 16S rank model has six slots before species (domain written as k__,
-then p__ ... g__). Fed the 7-rank file, every name lands one slot too deep, the
-o__Chloroplast / f__Mitochondria filter tokens stop matching, and nothing errors.
-So this script removes the Kingdom field before any classifier is trained, which
-keeps every downstream table and filter exactly as it was with 138.2, and records
-which kingdom each phylum belongs to so the kingdom can be put back afterwards
-(rule restore_kingdom, 80_taxonomy.smk, writes it to a separate sidecar table).
-
-The kingdom can be recovered from the phylum because, in SILVA 144, a phylum sits
-under one kingdom only. The one exception is the placeholder phylum "Incertae
-Sedis" (sequences SILVA could not place in a named phylum), which occurs under more
-than one kingdom; the table marks it "ambiguous" and leaves its kingdom empty
-rather than picking one.
+MetaFlux classifies on exactly these seven ranks (16S.yaml, release "144": Domain,
+Kingdom, Phylum ... Genus, plus the Species slot that addSpecies fills), so the
+domain lands in d__ and the kingdom in k__, each with its own confidence. The file
+is still not used exactly as published, because of SILVA's "--other" suffix: SILVA
+writes "X--other" for a clade that does not contain the sequence of the
+nomenclatural type of X, but whose sequences SILVA still counts as part of X. So
+this script, before any classifier is trained:
+  1. writes every kingdom WITHOUT the suffix, always, whatever
+     amplicon.taxonomy.silva_other says. At kingdom level the suffix is a curation
+     note about SILVA's tree, not a separate taxon: it splits one kingdom into two
+     labels (Bacteroidota, Acidobacteriota, Planctomycetota and Verrucomicrobiota
+     all sit in "Pseudomonadati--other", Pseudomonadota in "Pseudomonadati";
+     Methanobacteriati is split the same way), and with two labels fewer ASVs reach
+     the confidence cutoff at kingdom level, while no other rank changes. The
+     keep/discard filter treats "X--other" as X anyway;
+  2. removes the suffix from the other ranks (phylum to genus) only when
+     amplicon.taxonomy.silva_other is "strip"; with "verbatim" they keep it.
 
 INPUT (rule convert_silva_train):
   input.fasta        = silva_nr99_v144_toGenus_trainset.fa.gz exactly as published
                        by SILVA (fetched and md5-checked by fetch_silva_train_raw)
   params.strip_other = True when amplicon.taxonomy.silva_other is "strip"
 OUTPUT:
-  output.fasta       = the 6-rank training set (gzip). Used by assignTaxonomy (rdp
+  output.fasta       = the 7-rank training set (gzip). Used by assignTaxonomy (rdp
                        path), the amplicon probe (in-silico PCR, which only reads
                        the sequences) and convert_silva_sintax (sintax path).
-  output.kingdom_map = TSV, one row per (domain, phylum): the kingdom, how many
-                       reference sequences support it, and whether it is unique.
   log[0]             = plain-text summary for a human; nothing reads it back.
 
 Sequence lines are never altered — only the FASTA headers change, so the ASVs are
@@ -63,14 +65,13 @@ SILVA 138.2 file, a toSpecies file (8 ranks) or a corrupted download:
 """
 import gzip
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 sm = snakemake  # noqa: F821 (injected by Snakemake)
 
 in_path     = Path(sm.input.fasta)
 out_fasta   = Path(sm.output.fasta)
-out_map     = Path(sm.output.kingdom_map)
 log_path    = Path(sm.log[0])
 strip_other = bool(sm.params.strip_other)
 
@@ -80,7 +81,6 @@ PROKARYOTES      = ("Bacteria", "Archaea")
 EXPECTED_MAX_DEPTH = 7     # Domain;Kingdom;Phylum;Class;Order;Family;Genus
 
 out_fasta.parent.mkdir(parents=True, exist_ok=True)
-out_map.parent.mkdir(parents=True, exist_ok=True)
 log_path.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -107,22 +107,19 @@ def looks_like_kingdom(name: str) -> bool:
 
 def fail(message: str) -> None:
     """Stop the rule with a message in both the log and Snakemake's console output."""
-    log.write(f"[silva_drop_kingdom] ERROR: {message}\n")
+    log.write(f"[silva_prepare_trainset] ERROR: {message}\n")
     log.close()
-    sys.exit(f"[silva_drop_kingdom] {message}")
+    sys.exit(f"[silva_prepare_trainset] {message}")
 
 
-# Running totals for the log, and the raw material of the kingdom table:
-# kingdoms_of[(domain, phylum)] counts how many reference sequences put that
-# phylum under each kingdom.
+# Running totals for the summary in the log.
 n_records          = 0
 n_sequence_lines   = 0
-n_names_stripped   = 0
-n_kingdom_only     = 0     # records that stop at kingdom (no phylum)
-depth_before       = Counter()
+n_kingdom_renamed  = 0     # kingdom names written without "--other" (always done)
+n_other_renamed    = 0     # phylum-to-genus names that lost it (silva_other: strip only)
+depth_counts       = Counter()
 domain_counts      = Counter()
-kingdom_counts     = Counter()
-kingdoms_of        = defaultdict(Counter)
+kingdom_counts     = Counter()   # kingdom names as written to the output
 
 # compresslevel 6 instead of Python's default 9: the file is a local cache that is
 # rebuilt on demand, and level 9 makes this step several times slower for a few
@@ -159,91 +156,55 @@ with (gzip.open(in_path,   "rt") as fi,
         if domain in PROKARYOTES and len(ranks) > EXPECTED_MAX_DEPTH:
             fail(f"{in_path}:{line_number}: {len(ranks)} ranks, more than the "
                  f"{EXPECTED_MAX_DEPTH} of a toGenus file (a toSpecies file?): {line!r}")
-        depth_before[len(ranks)] += 1
+        depth_counts[len(ranks)] += 1
         domain_counts[domain] += 1
 
-        # ── Split off the kingdom (prokaryotes with at least 2 ranks) ──
+        # ── Kingdom (second rank of a prokaryote record): always without "--other" ──
+        # Domain-only records (incl. the Eukaryota outgroup) have no kingdom field
+        # and are written as they are.
         if domain in PROKARYOTES and len(ranks) >= 2:
             kingdom = ranks[1]
             if not looks_like_kingdom(kingdom):
                 fail(f"{in_path}:{line_number}: second rank {kingdom!r} is not a kingdom "
-                     f"name — this does not look like a SILVA 144 file (a 6-rank SILVA "
-                     f"138.2 file has the phylum there): {line!r}")
-            kept = [domain] + ranks[2:]
-        else:
-            # Domain-only records (incl. the Eukaryota outgroup) have no kingdom field.
-            kingdom = None
-            kept = ranks
+                     f"name — this does not look like a SILVA 144 file (a SILVA 138.2 "
+                     f"file, which has no kingdom, has the phylum there): {line!r}")
+            plain_kingdom = strip_other_suffix(kingdom)
+            if plain_kingdom != kingdom:
+                n_kingdom_renamed += 1
+            ranks[1] = plain_kingdom
+            kingdom_counts[plain_kingdom] += 1
 
-        # ── Optional "--other" removal (amplicon.taxonomy.silva_other: strip) ──
+        # ── Phylum to genus: "--other" removed only with silva_other: strip ──
+        # The domain (position 0) never carries the suffix (checked above), and the
+        # kingdom (position 1) has just been handled, so the loop starts at the phylum.
         if strip_other:
-            stripped = [strip_other_suffix(r) for r in kept]
-            n_names_stripped += sum(1 for a, b in zip(kept, stripped) if a != b)
-            kept = stripped
-            if kingdom is not None:
-                kingdom = strip_other_suffix(kingdom)
+            for position in range(2, len(ranks)):
+                stripped = strip_other_suffix(ranks[position])
+                if stripped != ranks[position]:
+                    n_other_renamed += 1
+                    ranks[position] = stripped
 
-        # ── Record the phylum -> kingdom pair for the lookup table ──
-        if kingdom is not None:
-            kingdom_counts[kingdom] += 1
-            if len(kept) >= 2:
-                phylum = kept[1]
-                kingdoms_of[(domain, phylum)][kingdom] += 1
-            else:
-                # e.g. "Bacteria;Pseudomonadati;" — becomes domain-only after the
-                # drop, so there is no phylum to attach the kingdom to.
-                n_kingdom_only += 1
-
-        fo.write(">" + ";".join(kept) + ";\n")
+        fo.write(">" + ";".join(ranks) + ";\n")
 
     # ── File-level shape checks ──
     if n_records == 0:
         fail(f"{in_path} contains no FASTA headers.")
-    max_depth = max(depth_before)
+    max_depth = max(depth_counts)
     if max_depth != EXPECTED_MAX_DEPTH:
         fail(f"the deepest lineage in {in_path} has {max_depth} ranks; a SILVA 144 toGenus "
              f"training set has {EXPECTED_MAX_DEPTH} (Domain..Genus).")
 
-    # ── Write the phylum -> kingdom table ──
-    # One row per (domain, phylum). "unique": every reference with this phylum sits
-    # under the same kingdom, which is the kingdom restored later. "ambiguous": the
-    # phylum occurs under more than one kingdom (in SILVA 144 only the placeholder
-    # phylum "Incertae Sedis"), so no kingdom is restored for it and the candidates
-    # are listed in the note column instead.
-    n_unique = n_ambiguous = 0
-    with out_map.open("w") as fm:
-        fm.write("domain\tphylum\tkingdom\tn_refs\tstatus\tnote\n")
-        for (domain, phylum) in sorted(kingdoms_of):
-            counts = kingdoms_of[(domain, phylum)]
-            n_refs = sum(counts.values())
-            if len(counts) == 1:
-                kingdom = next(iter(counts))
-                status  = "unique"
-                note    = ""
-                if kingdom == "Incertae Sedis":
-                    note = "SILVA 144 places this phylum in no named kingdom"
-                n_unique += 1
-            else:
-                kingdom = ""
-                status  = "ambiguous"
-                candidates = ", ".join(f"{k} ({n})" for k, n in counts.most_common())
-                note = f"placed under more than one kingdom in SILVA 144: {candidates}"
-                n_ambiguous += 1
-            fm.write(f"{domain}\t{phylum}\t{kingdom}\t{n_refs}\t{status}\t{note}\n")
-
     # ── Summary for a human checking the refdb rebuild ──
     log.write(
-        f"[silva_drop_kingdom] input:  {in_path}\n"
-        f"[silva_drop_kingdom] {n_records} headers, {n_sequence_lines} sequence lines "
+        f"[silva_prepare_trainset] input:  {in_path}\n"
+        f"[silva_prepare_trainset] {n_records} headers, {n_sequence_lines} sequence lines "
         f"(sequences unchanged)\n"
-        f"[silva_drop_kingdom] records per domain: {dict(domain_counts)}\n"
-        f"[silva_drop_kingdom] ranks per record before the drop: {dict(sorted(depth_before.items()))}\n"
-        f"[silva_drop_kingdom] records per kingdom: {dict(kingdom_counts.most_common())}\n"
-        f"[silva_drop_kingdom] {n_kingdom_only} records stop at kingdom and became domain-only\n"
-        f"[silva_drop_kingdom] silva_other={'strip' if strip_other else 'verbatim'}; "
-        f"rank names with '--other' removed: {n_names_stripped}\n"
-        f"[silva_drop_kingdom] kingdom table: {len(kingdoms_of)} (domain, phylum) pairs, "
-        f"{n_unique} unique, {n_ambiguous} ambiguous\n"
-        f"[silva_drop_kingdom] output: {out_fasta}\n"
-        f"[silva_drop_kingdom] output: {out_map}\n"
+        f"[silva_prepare_trainset] records per domain: {dict(domain_counts)}\n"
+        f"[silva_prepare_trainset] ranks per record: {dict(sorted(depth_counts.items()))}\n"
+        f"[silva_prepare_trainset] records per kingdom (as written): "
+        f"{dict(kingdom_counts.most_common())}\n"
+        f"[silva_prepare_trainset] kingdom names written without '--other': {n_kingdom_renamed}\n"
+        f"[silva_prepare_trainset] silva_other={'strip' if strip_other else 'verbatim'}; "
+        f"phylum-to-genus names with '--other' removed: {n_other_renamed}\n"
+        f"[silva_prepare_trainset] output: {out_fasta}\n"
     )

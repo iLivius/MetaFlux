@@ -1,5 +1,6 @@
-# Reference DB management (amplicon-only). Each rule runs only when its output is
-# missing — DBs are cached under refdb/.
+# Reference DB management (amplicon-only). DBs are cached under refdb/: each rule
+# runs when its output is missing, and again when its script or params change
+# (Snakemake's rerun triggers), so a converter edit rebuilds its cached file once.
 #
 # REFERENCE PREPARATION MAP — every reference falls into one of three prep tiers:
 #
@@ -18,8 +19,7 @@
 #   TIER 2  reshape the FASTA into the format a classifier wants (bespoke rule +
 #           a named script in workflow/scripts/refdb/ — that folder is the ONE place
 #           the database-specific transform logic lives)
-#           silva_train + silva_kingdom_map
-#                         ← convert_silva_train     (refdb/silva_drop_kingdom.py; SILVA 144 only)
+#           silva_train   ← convert_silva_train     (refdb/silva_prepare_trainset.py; SILVA 144 only)
 #           silva_sintax  ← convert_silva_sintax   (refdb/silva_to_sintax.py)
 #           rpob_frogs    ← convert_rpob_to_dada2   (refdb/frogs_rpob_to_dada2.py)
 #           pr2_sintax    ← convert_pr2_sintax      (refdb/pr2_utax_domain_first.py)
@@ -105,35 +105,37 @@ rule fetch_unite:
         """
 
 
-# ───────────────────── SILVA 144: drop the Kingdom rank (16S) ──────────────
+# ───────────────────── SILVA 144: prepare the training set (16S) ──────────────
 # SILVA 144 added a Kingdom rank (Bacillati, Pseudomonadati, ...) between Domain
-# and Phylum, so its lineages have 7 ranks where MetaFlux's 16S rank model (and
-# SILVA 138.2) has 6 before the species slot. Fed as-is, every name would land one
-# rank too deep: genus in the species slot, Chloroplast at family, Mitochondria at
-# genus — and the o__Chloroplast / f__Mitochondria filter tokens would quietly stop
-# matching anything.
+# and Phylum, so its lineages have 7 ranks, Domain;Kingdom;Phylum;...;Genus, and
+# MetaFlux classifies on all seven (16S.yaml, release "144": the domain becomes d__,
+# the kingdom k__). The file is not used exactly as SILVA publishes it, because of
+# SILVA's "--other" suffix (a clade that does not contain the type of taxon X but
+# that SILVA counts as part of X, e.g. Pseudomonadati--other).
 #
 # This rule reads the file exactly as SILVA publishes it (silva_train_raw) and
-# writes two files next to each other:
-#   - the 6-rank training set (Domain;Phylum;...;Genus), sequences untouched —
-#     the file assignTaxonomy, the amplicon probe and convert_silva_sintax use;
-#   - a phylum -> kingdom table built from the same headers, which rule
-#     restore_kingdom (80_taxonomy.smk) uses to put the Kingdom back next to the
-#     final taxonomy.
-# amplicon.taxonomy.silva_other: strip also removes SILVA's "--other" suffix here,
-# before any classifier sees the names (the output file names carry the setting).
+# writes the training set, sequences untouched, with:
+#   - every kingdom written without "--other", always: at kingdom level the suffix
+#     only splits one kingdom into two labels, which costs kingdom calls, and the
+#     keep/discard filter treats X--other as X anyway;
+#   - the other ranks with or without it, as amplicon.taxonomy.silva_other says
+#     (verbatim keeps it, strip removes it, before any classifier sees the names;
+#     the output file names carry the setting).
+#   in : SILVA_TRAIN_RAW (silva_train_raw, downloaded and md5-checked by the
+#        generated rule fetch_silva_train_raw below)
+#   out: SILVA_TRAIN (silva_train), the file assign_taxonomy (rdp path), the
+#        amplicon probe and convert_silva_sintax (sintax path) read
 #
-# Defined only when the active SILVA release ships a Kingdom (144). Under 138.2 the
-# trainset is a plain download and this rule does not exist, so two rules can never
-# claim the same output file.
-if SILVA_DROPS_KINGDOM:
+# Defined only when the active SILVA release ships a raw file to prepare (144).
+# Under 138.2 the trainset is a plain download and this rule does not exist, so two
+# rules can never claim the same output file.
+if SILVA_CONVERTS_TRAIN:
 
     rule convert_silva_train:
         input:
             fasta = SILVA_TRAIN_RAW,
         output:
-            fasta       = SILVA_TRAIN,
-            kingdom_map = SILVA_KINGDOM_MAP,
+            fasta = SILVA_TRAIN,
         params:
             strip_other = SILVA_OTHER == "strip",
         log:
@@ -141,19 +143,27 @@ if SILVA_DROPS_KINGDOM:
         conda:
             "../../envs/python_utils.yaml"
         script:
-            "../../scripts/refdb/silva_drop_kingdom.py"
+            "../../scripts/refdb/silva_prepare_trainset.py"
 
 
 # ───────────────────── SILVA SINTAX conversion (16S) ──────────────────────
-# Reformats the SILVA RDP trainset (the 6-rank one MetaFlux classifies with) into
-# VSEARCH SINTAX header format (>id;tax=d:...,p:...,g:...). No download — depends on
-# fetch_silva_train (SILVA 138.2) or convert_silva_train (SILVA 144). Cached at the
-# silva_sintax path the marker pack gives for the active release.
+# Reformats the SILVA RDP trainset MetaFlux classifies with (SILVA 138.2: the
+# download, six ranks; SILVA 144: the seven-rank file convert_silva_train writes)
+# into VSEARCH SINTAX header format (>id;tax=d:...,k:...,p:...,g:...). Each rank
+# gets one SINTAX letter, top-down, from the 16S marker pack's rank model for the
+# chosen release (SILVA_SINTAX_LETTERS in 00_common.smk: d,k,p,c,o,f,g on 144;
+# d,p,c,o,f,g on 138.2), so the letters always match what the taxonomy step reads
+# back. No download — depends on fetch_silva_train (SILVA 138.2) or
+# convert_silva_train (SILVA 144). Cached at the silva_sintax path the marker pack
+# gives for the active release, and read by rule assign_taxonomy (80_taxonomy.smk)
+# on the sintax path.
 rule convert_silva_sintax:
     input:
         fasta = SILVA_TRAIN,
     output:
         fasta = SILVA_SINTAX,
+    params:
+        rank_letters = SILVA_SINTAX_LETTERS,
     log:
         LOGS / "refdb" / "convert_silva_sintax.log",
     conda:

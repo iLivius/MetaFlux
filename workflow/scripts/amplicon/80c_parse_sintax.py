@@ -44,7 +44,8 @@ chloroplast are removed together with keep/discard (see "Organelle filter").
 Output files (identical structure to the RDP path):
   asv_table.txt            — rows=ASV_IDs,   cols=[samples..., taxonomy]
   asv_table_seqs.txt       — rows=sequences, cols=[samples..., taxonomy]
-  taxon_seq_table.txt      — rows=ASV_IDs,   cols=[Kingdom..Species, sequence]
+  taxon_seq_table.txt      — rows=ASV_IDs,   cols=[one per rank of the marker pack's
+                             rank model (16S on SILVA 144: Domain..Species), sequence]
   asv_table_unfiltered.txt — rows=ASV_IDs, every ASV that reached the filter,
                              cols=[samples..., taxonomy, metaxa2_origin, filter_status]
 The first three hold only the ASVs the filter kept. All four are final pipeline
@@ -187,7 +188,10 @@ def parse_sintax_full(field: str) -> dict[str, tuple[str, float]]:
 
 
 def build_tax_string(ranks: dict[str, str]) -> str:
-    """Build 'k__X;p__Y;...' taxonomy string from {letter: value} dict."""
+    """Build the taxonomy string from a {letter: value} dict, rank by rank in the
+    order of the marker pack's rank model, each value behind the pack's own prefix
+    (rank_prefixes): e.g. 'd__X;k__Y;p__Z;...' for 16S on SILVA 144. A rank the
+    classifier did not reach is left out."""
     parts = []
     for letter, prefix in zip(RANK_LETTERS, RANK_PREFIX):
         if letter in ranks:
@@ -313,7 +317,7 @@ for asv_id in shared_ids:
     }
 
 # ── Contaminant filter (rank-aware keep/discard lists; config-only) ─────────
-# Each token (e.g. k__Bacteria, o__Chloroplast) matches whole ';'-delimited
+# Each token (e.g. d__Bacteria, o__Chloroplast) matches whole ';'-delimited
 # segments of the taxonomy string — so g__Bacillus hits only a genus named
 # exactly that, never a substring elsewhere. keep runs first (defines the
 # universe), then discard prunes. Empty list = that direction is a no-op.
@@ -471,9 +475,9 @@ logmsg(f"Final ASV count: {len(filtered_ids)}")
 # ASVs is almost always a marker/config mismatch (e.g. 16S keep tokens on an ITS run).
 if filter_enabled and n_before > 0 and len(filtered_ids) == 0:
     msg = (f"the keep/discard filter removed ALL {n_before} ASVs (amp_type={amp_type}). "
-           "The keep/discard lists likely do not match this marker: for ITS use keep: [k__Fungi]; "
-           "for 16S use keep: [k__Bacteria, k__Archaea]. Fix amplicon.taxonomy.filter, "
-           "or set amplicon.taxonomy.filter.enabled: false.")
+           "The keep/discard lists likely do not match this marker: for 16S use keep: "
+           "[d__Bacteria, d__Archaea]; for 18S keep: [d__Eukaryota]; for ITS keep: [k__Fungi]. "
+           "Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.")
     # If the organelle filter took part, say how much, because then the lists may
     # well be right and the sample simply holds little but organelle 16S.
     n_organelle_only = sum(1 for s in filter_status.values() if s == "removed_organelle")
