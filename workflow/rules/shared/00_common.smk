@@ -910,6 +910,75 @@ if MODE == "amplicon":
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
         )
 
+    # ── SINTAX letters: VSEARCH's fixed rank order ──
+    # VSEARCH does not read a SINTAX letter as the name of a rank. It reads the
+    # letters as one fixed top-down order, d, k, p, c, o, f, g, s, t (domain, kingdom,
+    # phylum, class, order, family, genus, species, strain), and counts the
+    # confidence of a rank only over the bootstrap rounds that agreed on every rank
+    # above it. So a pack must give its ranks letters in that order, top rank first;
+    # a letter may be skipped (16S on SILVA 138.2 goes d, p, c, ... with no kingdom).
+    # Otherwise VSEARCH takes a lower rank for a higher one, and a rank loses its call
+    # whenever a rank the pack lists BELOW it is uncertain. That is how PR2's own
+    # letters (domain under k:, supergroup under d:) hid the 18S domain, and why rule
+    # convert_pr2_sintax (10_refdb.smk) exists.
+    # The reference check (rule check_taxonomy_reference) compares the letters of
+    # each header of the SINTAX file with the PACK's letter order. That catches a
+    # wrong file, but not a pack whose order is wrong itself: an 18S pack copied into
+    # config/markers/ before v2.5.0 pairs PR2's own letters (k, d, p, ...) with PR2's
+    # own UTAX file, the two agree, and the check passes. So the pack's letters are
+    # checked here, when the run starts, against VSEARCH's order.
+    # Under method sintax only: the rdp path never reads the letters, and gyrB's
+    # letters (g, p, c, ..., written for an rdp-only marker) are not in this order.
+    #   in : SINTAX_RANK_LETTERS and SINTAX_TAX_LEVELS (the active pack's sintax rank
+    #        model, above), MARKER_PACK_FILES (the file each pack was read from)
+    #   out: nothing when the letters are in order; otherwise one sys.exit that names
+    #        the pack file, its ranks and letters, and how to fix it
+    _VSEARCH_LETTER_ORDER = ["d", "k", "p", "c", "o", "f", "g", "s", "t"]
+    if TAXONOMY_METHOD == "sintax":
+        _letters_in_order = True
+        _previous_position = -1
+        for _sintax_letter in SINTAX_RANK_LETTERS:
+            # A letter VSEARCH does not know has no place in its order at all.
+            if _sintax_letter not in _VSEARCH_LETTER_ORDER:
+                _letters_in_order = False
+                break
+            # Each letter must come later in VSEARCH's order than the one before it.
+            _position = _VSEARCH_LETTER_ORDER.index(_sintax_letter)
+            if _position <= _previous_position:
+                _letters_in_order = False
+                break
+            _previous_position = _position
+
+        if not _letters_in_order:
+            _pack_file = MARKER_PACK_FILES[AMPLICON_TYPE]
+            # The pack key the letters came from: the sintax override when the pack
+            # declares one, else the shared rank_letters (see the rank model above).
+            if "sintax_rank_letters" in PROFILE:
+                _letters_key = "sintax_rank_letters"
+            else:
+                _letters_key = "rank_letters"
+            # An old copy of a shipped pack is best replaced; a pack of one's own (or
+            # an edited shipped pack) has to be corrected by hand.
+            _shipped_pack = MARKERS_SHIPPED_DIR / f"{AMPLICON_TYPE}.yaml"
+            if _pack_file.parent == MARKERS_USER_DIR and _shipped_pack.is_file():
+                _fix_hint = (f"A pack in config/markers/ replaces the shipped one "
+                             f"completely, so copy workflow/markers/{AMPLICON_TYPE}.yaml "
+                             f"again and re-apply your change.")
+            else:
+                _fix_hint = (f"Give the ranks their letters in that order in "
+                             f"{_letters_key}; the SINTAX reference file must use the "
+                             f"same letters.")
+            sys.exit(
+                f"[MetaFlux] marker pack {AMPLICON_TYPE!r} ({_pack_file}) gives its "
+                f"SINTAX ranks ({', '.join(SINTAX_TAX_LEVELS)}) the letters "
+                f"{','.join(SINTAX_RANK_LETTERS)} ({_letters_key}). VSEARCH reads "
+                f"SINTAX letters as the fixed top-down order "
+                f"{','.join(_VSEARCH_LETTER_ORDER)}, so the ranks must take their letters "
+                f"in that order, top rank first (a letter may be skipped); otherwise "
+                f"VSEARCH drops a rank whenever a rank listed below it is uncertain. "
+                f"{_fix_hint}"
+            )
+
     # ── What the taxonomy reference must hold (reference_values) ──
     # The active pack's rules for the names in its reference, per rank name (see
     # "reference_values" in the Marker registry above). Rule check_taxonomy_reference
