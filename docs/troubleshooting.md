@@ -271,12 +271,12 @@ A config with `tax_lev: D` stops at start-up from v2.5.0 on; see the next entry.
     the k__ slot of otu_table.tsv gives the kingdom of each row.
     ```
 
-**Cause.** Bracken reads a Kraken2 report from top to bottom and counts every row
-below the target rank towards the last row of that rank it has read. For a taxon that
-has the target rank, that row is its own ancestor, because the report lists every
-branch right after its parent. A taxon without the rank is counted towards whichever
-row of that rank comes before it. At domain and kingdom level whole groups of taxa
-lack the rank:
+**Cause.** Bracken reads a Kraken2 report from top to bottom and adds the reads of
+every row below the target rank to the last row of that rank it has read. For a taxon
+that has the target rank, that last row is the taxon's own ancestor, because the report
+lists every branch right after its parent. A taxon without the rank is counted towards
+whichever row of that rank comes before it. At domain and kingdom level whole groups of
+taxa lack the rank:
 
 - **Domain.** Viruses have no domain in NCBI's taxonomy since 2025, and their branch
   comes after all cellular organisms. Their reads, and the share of the root's reads
@@ -292,8 +292,16 @@ lack the rank:
   level. On a GTDB database Bracken finds no kingdom and stops with "no reads found",
   after Kraken2 has run.
 
-**Fix.** Set `tax_lev` to `S` (the default) or another rank from `P` to `G`. Domain
-and kingdom totals can be read from any of these tables: add up the rows of
+**Fix.** Set `tax_lev` to `S`, the default. It is the only rank where this cannot
+happen, because every row below a species row is a strain of that species. At `P` to
+`G` it hits only the few taxa that lack that rank, but one row can still gain several
+times its own reads: in the soil sample, protists without a phylum took Oomycota from
+56 to 1,095 reads at `P`, and bacteria without an order took Nevskiales from 1,393 to
+6,237 at `O`; in the gut standard sample, phages without an order took
+Methanobacteriales from 6,415 to 13,484 at `O`. At these ranks, compare a surprising
+row with the species-level table.
+
+Domain and kingdom totals can be read from any of these tables: add up the rows of
 `otu_table.tsv` by their `d__` or `k__` slot. That sum counts the reads Bracken placed
 at the table's rank, not every read of the domain or kingdom: reads that Kraken2 left
 above that rank, and that Bracken could not push down, are in no row (see

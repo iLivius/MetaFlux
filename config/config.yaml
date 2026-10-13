@@ -490,8 +490,8 @@ shotgun:
     memory_mapping: true
     threads: null                             # null = use resources.threads.kraken2; or pin (e.g. 12)
 
-  # Bracken redistributes abundance from Kraken2 reports. Read only when Kraken2
-  # runs (profiler: kraken2 or both).
+  # Bracken redistributes abundance from Kraken2 reports. Bracken runs only when
+  # Kraken2 runs (profiler: kraken2 or both), and only then is tax_lev checked.
   # Target rank: P | C | O | F | G | S (one capital letter). D and K stop the run
   # at start-up: at those ranks Bracken counts the reads of viruses (D) or of
   # protists (K) towards a neighbouring domain or kingdom, and on GTDB it finds no

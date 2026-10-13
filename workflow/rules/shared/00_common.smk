@@ -1570,14 +1570,14 @@ else:  # MODE == "shotgun"
     #
     # D (domain) and K (kingdom) are refused, each with its own message. Both reasons
     # come from the way Bracken files the rows of a report (est_abundance.py): reading
-    # from top to bottom, it counts every row below the target rank towards the LAST
-    # row of the target rank it has read, whether or not that row is its ancestor. For
-    # a taxon that has the target rank that row is its own ancestor, because a Kraken2
-    # report lists every branch right after its parent. A taxon without the rank is
-    # counted towards whichever row of that rank happens to come before it. At D and K
-    # whole groups of taxa lack the rank. Measured with the pinned Bracken 3.1p1 on two
-    # Kraken2 reports made with an NCBI database built in 2025, the Zymo D6331 gut mock
-    # (SRR29240428) and a soil sample:
+    # from top to bottom, it adds the reads of every row below the target rank to the
+    # LAST row of the target rank it has read, whether or not that row is its ancestor.
+    # For a taxon that has the target rank, that last row is the taxon's own ancestor,
+    # because a Kraken2 report lists every branch right after its parent. A taxon
+    # without the rank is counted towards whichever row of that rank happens to come
+    # before it. At D and K whole groups of taxa lack the rank. Measured with the pinned
+    # Bracken 3.1p1 on two Kraken2 reports made with an NCBI database built in 2025, the
+    # Zymo D6331 gut mock (SRR29240428) and a soil sample:
     #   D  Viruses have no domain in NCBI's taxonomy since 2025, and their branch comes
     #      after all cellular organisms. Their reads, and the share of the reads left
     #      at the root that Bracken attributes to them, go to the domain listed last.
@@ -1604,7 +1604,8 @@ else:  # MODE == "shotgun"
     # strain of that species.
     #
     # Only when Kraken2 runs (profiler: kraken2 or both). A sylph-only run never runs
-    # Bracken and ignores the whole shotgun.bracken block, so its value is not checked.
+    # Bracken, so tax_lev is not checked; the threshold keys below are still read and
+    # checked.
     if RUN_KRAKEN2:
         if TAX_LEV == "D":
             sys.exit("[MetaFlux] shotgun.bracken.tax_lev: D is not allowed. Viruses have "
