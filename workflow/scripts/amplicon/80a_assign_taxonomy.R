@@ -7,15 +7,16 @@
 # k-mers (short, fixed-length subsequences — 8 bp here, the method's own
 # setting) against a reference database of sequences with known taxonomy
 # (SILVA for 16S, UNITE for ITS, PR2 for 18S, ...), and works down the rank
-# hierarchy (kingdom -> ... -> genus) assigning the best-supported taxon at
-# each level. Confidence at each rank comes from BOOTSTRAPPING: the
-# classifier repeats the classification 100 times over random subsets of the
-# sequence's own k-mers, and the fraction of those 100 repeats that agree is
-# the "bootstrap confidence" for that rank. A rank is only kept if its
-# confidence is >= min_boot; ranks that don't clear the bar come back NA
-# rather than a shaky guess. For 16S only, addSpecies then adds one more,
-# final rank on top — see the addSpecies block below for how that step
-# differs from assignTaxonomy.
+# hierarchy, from the top rank of the marker's reference (the domain, the
+# kingdom, or gyrB's gene tag) down to genus or species, assigning the
+# best-supported taxon at each level. Confidence at each rank comes from
+# BOOTSTRAPPING: the classifier repeats the classification 100 times over
+# random subsets of the sequence's own k-mers, and the fraction of those 100
+# repeats that agree is the "bootstrap confidence" for that rank. A rank is
+# only kept if its confidence is >= min_boot; ranks that don't clear the bar
+# come back NA rather than a shaky guess. For 16S only, addSpecies then adds
+# one more, final rank on top — see the addSpecies block below for how that
+# step differs from assignTaxonomy.
 #
 # Input: the length-filtered ASV FASTA (seqs_lenfilt.fasta) and its matching
 # ASV_#-keyed sequence table (seqtab_lenfilt_head_names.txt), both from rule
@@ -76,8 +77,12 @@ origin_path     <- snakemake@input[["metaxa2_origin"]]
 threads         <- as.integer(snakemake@threads)
 seed            <- as.integer(snakemake@params[["seed"]])
 
-# assignTaxonomy's RDP classifier draws bootstrap resamples via R's RNG to
-# compute minBoot confidence; fix it so calls near the threshold don't flip.
+# assignTaxonomy's RDP classifier draws its bootstrap resamples from R's random
+# number generator, so fixing the seed makes those draws repeatable. DADA2 also
+# breaks exact ties between equally good reference lineages at random, outside
+# this seed, so a few calls near min_boot can still differ between two identical
+# runs (docs/troubleshooting.md, "ASV counts or taxonomy calls differ between
+# identical re-runs").
 set.seed(seed)
 
 message("[assign_taxonomy] amp_type=", amp_type, " (", prefix_style, " ranks)")
@@ -140,10 +145,10 @@ message("[assign_taxonomy] Classifying ", length(unique_seqs),
 #
 # assignTaxonomy is called with minBoot = 0 and outputBootstraps = TRUE, so it hands
 # back the classifier's best-hit lineage at EVERY rank together with the bootstrap
-# support of each rank. min_boot is then applied here, by apply_min_boot() below.
-# Whenever support falls from rank to rank, the normal case, the reported taxonomy
-# is the same as a call with minBoot = min_boot (the bootstrap draws do not depend on
-# minBoot); apply_min_boot() explains the one case where it is not.
+# support of each rank. min_boot is then applied here, by apply_min_boot() below,
+# and the reported taxonomy is always the same as a call with minBoot = min_boot
+# (the bootstrap draws do not depend on minBoot; apply_min_boot() says why the two
+# rules agree).
 # Keeping the unfiltered best hit is what lets the discard filter look one step
 # further than the reported lineage (see "Discard filter, best-hit check" below).
 classified <- assignTaxonomy(unique_seqs, refdb_path,
@@ -250,15 +255,17 @@ if (identical(prefix_style, "embedded") && ncol(best_hit) == n_ranks &&
 #        boot = the bootstrap support (0-100) of each of those names
 #   out: the same matrix with the names below the cutoff set to NA; the reported
 #        taxonomy is built from it (taxa_unique below)
-# This is DADA2's own minBoot result whenever support falls from rank to rank,
-# which is the normal case. DADA2 itself (dada2::assignTaxonomy, taxonomy.R) keeps
-# every rank that passes and writes them from the first column onwards, so if a rank
-# failed while a lower one passed, the lower name would land in the column of the
-# higher rank. With SILVA 144's kingdom rank that can happen, rarely: the
-# placeholder phylum "Incertae Sedis" sits under more than one kingdom, so its
-# kingdom can be uncertain while the phylum is not, and DADA2's rule would then
-# write the phylum into the Kingdom column. Stopping at the first failing rank keeps
-# every name in its own column.
+# Why it is applied here: assignTaxonomy runs with minBoot = 0 (see above), so that
+# the best hit at every rank stays available for the discard filter's best-hit
+# check; the cutoff therefore has to be applied in this script.
+# The result is exactly DADA2's own minBoot result. DADA2 counts a bootstrap round
+# for a rank only while that round agrees with the best hit on that rank AND on
+# every rank above it (dada2's src/taxonomy.cpp), so the support never rises from
+# one rank to the next, and the ranks that reach min_boot always form an unbroken
+# run from the top. DADA2's own rule keeps every rank that passes and writes them
+# from the first column on (dada2::assignTaxonomy, R/taxonomy.R); this loop stops at
+# the first rank that fails instead, so that a name can never move into the column
+# of a higher rank, whatever the classifier returns.
 apply_min_boot <- function(tax, boot, min_boot) {
   out <- matrix(NA_character_, nrow = nrow(tax), ncol = ncol(tax), dimnames = dimnames(tax))
   for (i in seq_len(nrow(tax))) {

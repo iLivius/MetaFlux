@@ -88,8 +88,9 @@ def read_taxon_seq_table(path: Path) -> dict[str, str]:
     Layout written by 80a/80c: a header row naming the rank columns and then
     "sequence", followed by one row per ASV whose first field is the ASV ID and whose
     LAST field is the sequence. The sequence is located by position rather than by
-    counting rank columns, because the number of ranks differs between markers (7 for
-    16S, 9 for PR2/18S) — position is the stable property.
+    counting rank columns, because the number of ranks differs between markers and
+    references (16S: 8 on SILVA 144, 7 on SILVA 138.2; 18S: 9 under rdp, 8 under
+    sintax) — position is the stable property.
     """
     id_to_seq: dict[str, str] = {}
 
