@@ -32,6 +32,8 @@ def log(msg: str, fh) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
+# 38b_sylph_read_tracking.py keeps a word-for-word copy of parse_bbduk_log,
+# parse_host_surviving, parse_fastp_counts and _index: change both files together.
 def parse_bbduk_log(path: Path) -> tuple[int, int]:
     """Return (pairs_in, pairs_kept) from the log of rule decontam_phix.
 
