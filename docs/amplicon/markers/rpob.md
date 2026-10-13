@@ -316,7 +316,7 @@ The final tables are the same four files as for every other marker, under
 |---|---|---|
 | `asv_table.txt` | ASV IDs | per-sample counts plus one `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table keyed by sequence instead of ID |
-| `taxon_seq_table.txt` | ASV IDs | one column per rank (`Kingdom` … `Species`) plus the sequence |
+| `taxon_seq_table.txt` | ASV IDs | one column per rank (`Kingdom` … `Species`) plus the sequence; the cells hold the bare names (`Pseudomonadota`, `Xenorhabdus_nematophila`), while the `taxonomy` strings keep the prefixes |
 | `asv_table_unfiltered.txt` | ASV IDs, every ASV that reached the filter | the counts and `taxonomy` before the taxon filter, plus `metaxa2_origin` (`NA` for rpoB) and `filter_status` |
 
 An rpoB taxonomy string reads like a 16S one, with NCBI names:

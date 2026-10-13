@@ -153,6 +153,93 @@ classified <- assignTaxonomy(unique_seqs, refdb_path,
 best_hit  <- classified$tax     # best-hit name at every rank, whatever its support
 best_boot <- classified$boot    # bootstrap support (0-100) of each of those names
 
+# ── UNITE species names: put the genus back (ITS) ────────────────────────────
+# What this is for: DADA2 shortens UNITE's species names. When assignTaxonomy
+# recognises the UNITE general release (by "FU|refs" or "FU|reps" in its first ten
+# headers), it cuts the genus out of every species field before classifying, so
+# UNITE's s__Hanseniaspora_uvarum comes back as s__uvarum. The sintax path keeps
+# UNITE's whole name, and so does every other marker's reference. Without this
+# step an ITS species would read differently under the two methods, and a species
+# token such as s__Hanseniaspora_uvarum would match nothing under rdp.
+#
+# What it does: for each classified sequence, the best-hit genus is put back in
+# front of the best-hit species (g__Hanseniaspora + s__uvarum ->
+# s__Hanseniaspora_uvarum) when all of these hold:
+#   - the marker's reference values carry their own prefixes (prefix_style:
+#     embedded), as UNITE's do;
+#   - DADA2 did shorten this reference, decided with DADA2's own header test
+#     (reference_is_unite below). So the gyrB and rpoB references are never
+#     touched, although a few rpoB species also start lowercase
+#     (s__endosymbiont_of_Sipalinus_gigas);
+#   - both names are known: a "Genus_sp" placeholder species, and an
+#     "unidentified" genus, come back from DADA2 as NA;
+#   - the species is a plain epithet: it starts with a lowercase letter and has
+#     no "." in it.
+# It is not put back for the var./subsp./f. names, about 1 % of UNITE's named
+# species. For those DADA2 keeps only the part from "var." (or "subsp.", "f.")
+# onwards: s__Diaporthe_phaseolorum_var._meridionalis comes back as
+# s__var._meridionalis. The species epithet in front of it is lost, so the name
+# cannot be rebuilt; it is left as DADA2 wrote it. A name DADA2 did not shorten is
+# whole already and starts uppercase, so it is left as it is too: DADA2's cut skips
+# a hyphenated genus (s__Pseudo-nitzschia_limii).
+#
+# Why here, in the best-hit matrix: everything later reads this matrix. The
+# reported lineage is cut from it by apply_min_boot() just below, and the best-hit
+# check of the discard filter compares each discard token with it (see "Discard
+# filter, best-hit check"). Fixed once here, both see s__Hanseniaspora_uvarum.
+# Input: best_hit (above). Output: best_hit with its Species column rebuilt.
+
+# TRUE when DADA2 treats the reference file at `path` as UNITE: the test in
+# dada2::assignTaxonomy, "FU|refs" or "FU|reps" in each of the first ten headers.
+# Only the start of the file is read (readLines also opens a gzipped file).
+reference_is_unite <- function(path) {
+  first_lines <- readLines(path, n = 2000L)
+  headers     <- first_lines[startsWith(first_lines, ">")]
+  if (length(headers) < 10L) return(FALSE)
+  all(grepl("FU\\|re[pf]s", headers[1:10]))
+}
+
+# One best-hit species value with the genus put back, or the value unchanged when
+# it cannot be rebuilt (see the list above). With the prefixes s__ and g__:
+#   ("s__uvarum", "g__Hanseniaspora")         -> "s__Hanseniaspora_uvarum"
+#   ("s__var._meridionalis", "g__Diaporthe")  -> "s__var._meridionalis" (unchanged)
+put_genus_back <- function(species_val, genus_val, species_pfx, genus_pfx) {
+  if (is.na(species_val) || is.na(genus_val)) return(species_val)
+  if (!startsWith(species_val, species_pfx) || !startsWith(genus_val, genus_pfx)) {
+    return(species_val)
+  }
+  epithet <- substring(species_val, nchar(species_pfx) + 1L)
+  genus   <- substring(genus_val, nchar(genus_pfx) + 1L)
+  is_plain_epithet <- grepl("^[a-z]", epithet) && !grepl(".", epithet, fixed = TRUE)
+  if (!is_plain_epithet) return(species_val)
+  paste0(species_pfx, genus, "_", epithet)
+}
+
+# Only when the matrix has exactly the pack's ranks: with any other depth the
+# reference depth check below stops the run with its own message.
+n_ranks <- length(tax_levels)
+if (identical(prefix_style, "embedded") && ncol(best_hit) == n_ranks &&
+    reference_is_unite(refdb_path)) {
+  species_col <- tax_levels[n_ranks]
+  genus_col   <- tax_levels[n_ranks - 1L]
+  n_named     <- sum(!is.na(best_hit[, species_col]))
+  n_rebuilt   <- 0L
+  for (i in seq_len(nrow(best_hit))) {
+    old_val <- best_hit[i, species_col]
+    new_val <- put_genus_back(old_val, best_hit[i, genus_col],
+                              rank_prefixes[n_ranks], rank_prefixes[n_ranks - 1L])
+    if (!identical(new_val, old_val)) {
+      best_hit[i, species_col] <- new_val
+      n_rebuilt <- n_rebuilt + 1L
+    }
+  }
+  n_kept_as_is <- n_named - n_rebuilt
+  message("[assign_taxonomy] UNITE reference: genus put back in front of the best-hit ",
+          "species epithet of ", n_rebuilt, " sequence(s); ", n_kept_as_is, " other species ",
+          "name(s) kept as DADA2 returned them (var./subsp./f. names, or names DADA2 did ",
+          "not shorten)")
+}
+
 # DADA2's own minBoot rule (dada2::assignTaxonomy, taxonomy.R): for each sequence,
 # keep the ranks whose support reaches min_boot and write them from the first
 # column onwards. Support can only fall from domain to genus, so in practice this
@@ -501,6 +588,28 @@ write.table(asv_table_seqs, file = snakemake@output[["asv_table_seqs"]], col.nam
 # the ASV's sequence — convenient for filtering or grouping by a single rank
 # without string-parsing the taxonomy column first. Has no per-sample counts.
 taxon_table <- taxa_df[rownames(asv_table), , drop = FALSE]
+# Rank cells hold the bare name, without the rank prefix ("Fungi", "Ascomycota", ...,
+# "Hanseniaspora_uvarum"): the column header already names the rank. That is what
+# the sintax path writes for every marker, and what this path writes for 16S and
+# 18S, whose references carry no prefixes. The references of the embedded-style
+# markers (ITS, gyrB, rpoB) do carry them (k__Fungi, p__Bacillota), so here the
+# prefix is removed, rank by rank. Only this table changes: the taxonomy strings in
+# the other three tables keep their prefixes, as for every marker (they are what the
+# keep/discard filter matched). gyrB's first rank, the gene tag (gyrB or other), has
+# no prefix and stays as it is.
+if (identical(prefix_style, "embedded")) {
+  for (i in seq_along(tax_levels)) {
+    rank_name <- tax_levels[i]
+    prefix    <- rank_prefixes[i]
+    if (prefix == "") next
+    cells <- taxon_table[[rank_name]]
+    # Only a cell that starts with this rank's prefix changes; NA (a rank the
+    # classifier did not reach) stays NA.
+    has_prefix <- !is.na(cells) & startsWith(cells, prefix)
+    cells[has_prefix] <- substring(cells[has_prefix], nchar(prefix) + 1L)
+    taxon_table[[rank_name]] <- cells
+  }
+}
 taxon_table$sequence <- seqs_sub[rownames(asv_table)]
 write.table(taxon_table, file = snakemake@output[["taxon_seq_table"]], col.names = NA, sep = "\t")
 

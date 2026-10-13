@@ -342,6 +342,10 @@ prefixes on top. The SINTAX path reaches the same place from the other direction
 strips any prefix the database embedded, then re-adds the pack's own, so the rank
 prefixes come out identical whichever method ran.
 
+The prefixes belong to the taxonomy strings. In `taxon_seq_table.txt`, where each rank
+has its own column, the cells hold the bare names — `Fungi`, `Basidiomycota`, …,
+`Agaricus_bisporus` — under either method.
+
 The visible consequence is in the species slot. UNITE writes its binomial with an
 underscore and MetaFlux keeps it as it is, where the SILVA/16S path builds
 `s__Genus species` with a space:
@@ -353,17 +357,40 @@ ITS   k__Fungi;p__Basidiomycota;c__Agaricomycetes;o__Agaricales;f__Agaricaceae;g
 
 Filter tokens must be written the way the lineage writes them, underscore included.
 
-!!! warning "The species slot is the one place the two methods disagree"
+!!! note "Species names under `rdp`"
 
-    The lineage above is the `sintax` form: the UTAX file's `s:Agaricus_bisporus` is
-    carried through whole, so the string ends `;s__Agaricus_bisporus`. Under `rdp` it
-    does not. DADA2's `assignTaxonomy` recognises the UNITE general release from its
-    `FU|refs` / `FU|reps` headers and strips the genus out of the species field itself,
-    so the same ASV comes back as `;s__bisporus`. Species-level `keep`/`discard` tokens
-    therefore have to match the method actually being run: an `s__Agaricus_bisporus`
-    token matches nothing on an `rdp` run — silently harmless in `discard`, and harmless
-    in `keep` too unless it is the only keep token, in which case the filter empties the
-    table and the run stops. Ranks above species are unaffected.
+    The UTAX file's `s:Agaricus_bisporus` is carried through whole by `sintax`. DADA2's
+    `assignTaxonomy` instead recognises the UNITE general release from its `FU|refs` /
+    `FU|reps` headers and cuts the genus out of every species field, so on its own it
+    would return `;s__bisporus`. MetaFlux puts the classifier's genus back in front of
+    the epithet before anything else reads the result, so under `rdp` the string also
+    ends `;s__Agaricus_bisporus`, and a species token such as `s__Agaricus_bisporus`
+    works the same with either method, in `keep`, in `discard` and in the
+    [best-hit check](../taxon-filter.md#the-best-hit-check-discard_min_support) of `discard`.
+
+    Varieties, subspecies and forms are the exception, about 1 % of UNITE's named
+    species. Of those DADA2 keeps only the part from `var.`, `subsp.` or `f.` onwards,
+    so the epithet in front of it is lost and the name cannot be rebuilt: under `rdp`,
+    `s__Diaporthe_phaseolorum_var._meridionalis` is written `s__var._meridionalis`,
+    while `sintax` writes the full name. A token for such a name matches only under
+    `sintax`.
+
+### `rdp` and `sintax` on the same ASVs
+
+The two methods write the same form, but they are different classifiers reading two
+different UNITE files, so they do not give the same answers:
+
+- **Depth.** On the ITS test set (the yeast mock on
+  [Test datasets](../../about/test-datasets.md), 12 ASVs), `sintax` at
+  `sintax_cutoff: 0.8` named the species of 8 ASVs and the genus of 2 more. `rdp` at
+  `min_boot: 80` named the species of 1 and stopped at phylum or kingdom for 8; the
+  other 3 got no kingdom at all, so `keep: [k__Fungi]` removed them.
+- **Placeholders.** Where UNITE has no name for a rank, the general release (`rdp`)
+  carries an *Incertae sedis* placeholder such as `c__Ascomycota_cls_Incertae_sedis`,
+  while the UTAX file (`sintax`) leaves the rank out: the `sintax` string skips it and
+  its cell is `NA`. The 3,701 reference sequences of unknown kingdom read
+  `k__Eukaryota_kgd_Incertae_sedis` in the general release and `k__unidentified` under
+  `sintax`.
 
 ## Keeping and discarding taxa
 
@@ -400,7 +427,7 @@ The final tables are in `6.taxonomy/`:
 |---|---|---|
 | `asv_table.txt` | `ASV_#` IDs | per-sample counts plus a `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table, keyed by sequence |
-| `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank (Kingdom…Species) plus the sequence |
+| `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank (Kingdom…Species) plus the sequence; the cells hold the bare names (`Fungi`, `Hanseniaspora_uvarum`) |
 | `asv_table_unfiltered.txt` | `ASV_#` IDs, every ASV that reached the filter | the same counts and `taxonomy`, plus `metaxa2_origin` (`NA` for ITS) and `filter_status`: `kept`, or the filter step that removed the ASV |
 
 Two diagnostics are worth opening on every ITS run.

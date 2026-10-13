@@ -254,7 +254,8 @@ mismatch.
     that one.
 
     Check the names actually present before writing a filter — the `Genus` column of
-    `6.taxonomy/taxon_seq_table.txt` shows them — and list every variant that applies.
+    `6.taxonomy/taxon_seq_table.txt` shows them, without the `g__` that a token needs —
+    and list every variant that applies.
     This affects gyrB only: rpoB's FROGS reference carries NCBI taxonomy, where the
     genus is not split.
 
@@ -281,7 +282,7 @@ The final tables are the same four files as for every other marker, under
 |---|---|---|
 | `asv_table.txt` | ASV IDs | per-sample counts plus one `taxonomy` column |
 | `asv_table_seqs.txt` | ASV sequences | the same table keyed by sequence instead of ID |
-| `taxon_seq_table.txt` | ASV IDs | one column per rank (`Gene` … `Species`) plus the sequence |
+| `taxon_seq_table.txt` | ASV IDs | one column per rank (`Gene` … `Species`) plus the sequence; the cells hold the bare names (`Bacillota`, `Latilactobacillus_sakei`), while the `taxonomy` strings keep the prefixes |
 | `asv_table_unfiltered.txt` | ASV IDs, every ASV that reached the filter | the counts and `taxonomy` before the taxon filter, plus `metaxa2_origin` (`NA` for gyrB) and `filter_status`; the paralogs that `discard: [other]` removes can still be counted here |
 
 A gyrB taxonomy string keeps the gene tag in front of the GTDB lineage:
