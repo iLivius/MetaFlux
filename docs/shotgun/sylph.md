@@ -91,8 +91,13 @@ Each database is paired with the sylph-tax taxonomy that names its genomes:
 |---|---|
 | `gtdb-r232-c200-dbv1.syldb` or `gtdb-r232-c1000-dbv1.syldb` | `GTDB_r232` |
 | `gtdb-r226-c200-dbv1.syldb` or `gtdb-r226-c1000-dbv1.syldb` | `GTDB_r226` |
+| `globdb_r232_sylph_c200.syldb` | `GlobDB_r232` |
 | `fungi-refseq-2025-10-11-c200-dbv1.syldb` | `FungiRefSeq-latest` |
 | a database you built | the path of your own `accession<TAB>lineage` table (`.tsv` or `.tsv.gz`) |
+
+For the GlobDB file, sylph's Pre-built databases page sends you to the GlobDB website:
+`globdb_r232_sylph_c200.syldb` is on GlobDB's own download server, in the release's
+`taxonomic_profiling/` folder, next to GlobDB's copy of the lineage table.
 
 The built-in taxonomies read their lineage tables from `references.sylph_taxonomy_dir`.
 Fill that folder once, with the sylph-tax version MetaFlux pins in
@@ -260,7 +265,8 @@ after QC (with the one exception under [Reading the numbers](#reading-the-number
   has genomes without one: 754 of them have `Unclassified` as their first rank
   (`d__Unclassified`). MetaFlux therefore refuses GlobDB r226 at start-up: its taxonomy
   (`GlobDB_r226`, or its lineage table given by its path), and a database whose file name
-  says GlobDB r226 unless it is paired with a lineage table of your own. Use GlobDB r232,
+  says GlobDB r226 unless it is paired with a lineage table of your own. Use GlobDB r232
+  instead, the database `globdb_r232_sylph_c200.syldb` with `taxonomy: GlobDB_r232`,
   which places every genome in a domain. A lineage table of your own whose first rank is
   not a domain stops the run at `sylph_tables`, once sylph detects one of its genomes.
 - **Memory.** sylph holds every database in memory, in a single `sylph_profile` job for

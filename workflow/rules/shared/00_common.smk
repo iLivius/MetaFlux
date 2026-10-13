@@ -2029,13 +2029,16 @@ else:  # MODE == "shotgun"
             # anything runs and before the lineage-table checks below (so that nobody
             # downloads the table only to be told it cannot be used):
             #   - its lineage table, by the built-in name GlobDB_r226, or by a path whose
-            #     file name is the built-in one (with or without .gz);
+            #     file name is the built-in one (with or without .gz). The name is
+            #     compared without regard to capitals: a misspelt globdb_r226 would
+            #     otherwise reach the near-match check further down, whose advice
+            #     ('did you mean GlobDB_r226?') points to the very name refused here;
             #   - a database whose file name says GlobDB r226 (globdb_r226_...), unless
             #     it is paired with a lineage table of your own. With any other built-in
             #     taxonomy the release check further down would stop the run too, but
             #     with the advice to use GlobDB_r226; this message says what works.
             _tax_file_name = Path(_tax).name       # the table's file name when _tax is a path
-            _tax_is_globdb_r226 = (_tax == "GlobDB_r226"
+            _tax_is_globdb_r226 = (_tax.lower() == "globdb_r226"
                                    or _sylph_taxonomy_of_table(_tax_file_name) == "GlobDB_r226")
             _tax_is_own_table = (_tax not in SYLPH_TAX_FILES
                                  and _sylph_taxonomy_of_table(_tax_file_name) is None)
