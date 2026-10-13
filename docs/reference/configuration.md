@@ -379,7 +379,7 @@ the pack's declared filename. The full set of relocatable keys:
 | `silva_euk.fasta` | 18S | `silva_euk/silva_132.18s.dada2.fa.gz` |
 | `pr2.dada2` | 18S | `pr2/pr2_SSU_dada2.fasta.gz` |
 | `pr2.utax` | 18S | `pr2/pr2_SSU_UTAX.fasta.gz` |
-| `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only). A path given here is where MetaFlux writes the file it builds, so a file placed there is rebuilt whenever `pr2.utax` is newer |
+| `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only). A path given here is where MetaFlux writes the file it builds, and MetaFlux rebuilds that file whenever `pr2.utax` or the conversion script is newer than it (a fresh clone, or an update that changes the script), or when the conversion step's input or software changes. So never keep a file of your own at this path; a write-protected file there stops the run as soon as MetaFlux wants to rebuild it. If you pin `pr2.utax`, pin `pr2.sintax` to a path of its own too: otherwise the default file is rebuilt from your `pr2.utax`, or an older build from another `pr2.utax` is reused |
 | `gyrb.dada2` | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` |
 | `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` (the converted DADA2 trainset) |
 

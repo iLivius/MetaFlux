@@ -1,6 +1,10 @@
 # Reference DB management (amplicon-only). DBs are cached under refdb/: each rule
-# runs when its output is missing, and again when its script or params change
-# (Snakemake's rerun triggers), so a converter edit rebuilds its cached file once.
+# runs when its output is missing, and again when its input or its script file is
+# newer than the cached file, or when its params change (Snakemake's rerun
+# triggers). Snakemake compares a script by its file date, so a converter edit
+# rebuilds the cached file once, and so does each new checkout and each update that
+# changes the script, also when several checkouts share one refdb_root. Every output
+# folder that reads a rebuilt file then reruns the steps that use it.
 #
 # REFERENCE PREPARATION MAP — every reference falls into one of three prep tiers:
 #
@@ -331,6 +335,14 @@ rule convert_pr2_sintax:
 # reference stops the run then, not after hours of denoising. It is deliberately
 # not made an input of the probe or of the denoising: that would rerun the
 # denoising in every existing output folder.
+#
+# The cost of an edit: assign_taxonomy reads the report, so editing
+# check_reference_ranks.py, a pack's reference_values or the way the label below is
+# built reruns this check, then assign_taxonomy and every step after it, in every
+# existing output folder of the markers concerned (all markers, for the script).
+# Under method rdp such a rerun also moves a few calls at the min_boot cutoff
+# (DADA2's random tie-breaking, see 80a_assign_taxonomy.R). Make such edits only
+# together with a real fix.
 #
 # The file, and the rank model it is read with, depend on the taxonomy method; under
 # sintax a marker may declare its own model (18S: PR2's UTAX file has 8 ranks, its
