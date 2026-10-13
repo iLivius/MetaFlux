@@ -33,7 +33,10 @@ WHAT IS CHECKED, on every header of the file
     - no rank inside a lineage is empty;
     - no lineage is deeper than the rank model (minus the Species rank when
       addSpecies fills it, as for 16S), and the deepest lineage is exactly that
-      deep. Shallower lineages are normal: assignTaxonomy pads them;
+      deep. Shallower lineages are normal when the header ends with ';', as
+      SILVA's do: assignTaxonomy then pads them with empty ranks. Without that
+      ';' it glues its padding onto the last name and its table of ranks no
+      longer lines up, so such a lineage stops the run;
     - prefix_style embedded: every name starts with the pack's prefix for its rank,
       and a rank whose prefix is "" (gyrB's gene tag) carries no prefix at all;
       prefix_style bare: no name carries a rank prefix.
@@ -54,7 +57,8 @@ WHAT IS CHECKED, on every header of the file
       A name fails when it is in not_one_of. Otherwise, when one_of or ends_with is
       given, it must be in one_of or end with one of the endings. When the run
       starts, 00_common.smk has already checked that the active pack's rules name
-      ranks of this rank model and use only these three kinds, each a list of names.
+      ranks of this rank model and use only these three kinds, each a list of at
+      least one name.
 
 INPUT (rule check_taxonomy_reference, 10_refdb.smk):
   input.reference = the exact file the classifier reads (rdp: the DADA2 training
@@ -281,8 +285,10 @@ if ref_format == "dada2":
             lineage = header
         # assignTaxonomy ignores one ';' at the end of a lineage (R's strsplit drops
         # a last empty field), so a SILVA header "Bacteria;...;Pseudomonas;" has as
-        # many ranks as names.
-        if lineage.endswith(";"):
+        # many ranks as names. Whether the ';' was there is remembered, because it
+        # decides how assignTaxonomy pads a short lineage (see below).
+        ends_with_semicolon = lineage.endswith(";")
+        if ends_with_semicolon:
             lineage = lineage[:-1]
         names = lineage.split(";")
         depth_counts[len(names)] += 1
@@ -291,6 +297,23 @@ if ref_format == "dada2":
             note_problem(f"a lineage deeper than the {expected_depth} ranks the rank "
                          f"model expects in this file{species_note}", header)
             continue
+
+        # A lineage shallower than the rank model is normal (SILVA has lineages that
+        # end above genus), but only when it ends with ';'. assignTaxonomy brings
+        # every lineage to the depth of the deepest one by appending
+        # "_DADA2_UNSPECIFIED;" once per missing rank. After a closing ';' each piece
+        # is a rank of its own, which DADA2 reports as NA. Without the ';' the first
+        # piece is glued onto the last name (p__Bacillota_DADA2_UNSPECIFIED), and the
+        # lineage stays one rank short. assignTaxonomy then cuts the lineages, read one
+        # after the other, into rows of equal length, so the ranks of every lineage
+        # that follows this one in the file are shifted, and the bootstrap support of
+        # those genera is counted on the wrong ranks, without an error.
+        if len(names) < expected_depth and not ends_with_semicolon:
+            note_problem(f"a lineage shallower than the {expected_depth} ranks the rank "
+                         f"model expects{species_note}, without a ';' at its end: "
+                         f"assignTaxonomy would glue its padding (_DADA2_UNSPECIFIED) onto "
+                         f"the last name, which shifts the ranks of every lineage that "
+                         f"follows it in the file", header)
 
         # Each name in turn: is it empty, does it carry the right prefix, and, for
         # the ranks the pack gives a rule for, is it a name that rank may hold?
@@ -454,7 +477,7 @@ with log_path.open("w") as log:
 
     if problems:
         heading = (f"[check_taxonomy_reference] {reference_path} does not hold the ranks "
-                   f"that {label} declares ({', '.join(tax_levels)}):")
+                   f"declared by {label} ({', '.join(tax_levels)}):")
         advice = ("  The classifier would put names on the wrong ranks, so the run stops "
                   "before any classification. Either the run config points at a wrong "
                   "file (references:, and for 16S the SILVA release chosen with "
