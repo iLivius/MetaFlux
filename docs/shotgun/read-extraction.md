@@ -40,44 +40,52 @@ report — `Bacteria`, `Fungi`, `Pseudomonas`, `Escherichia coli`.
 The name is matched at whatever rank it occurs in the report. There is no rank
 setting and no restriction: a domain, a phylum, a genus and a single species are all
 named the same way and handled identically. Reads assigned to the named taxon **and
-to everything below it that appears in the Bracken report** are extracted, so
-`Bacteria` yields the bacterial fraction of the sample and `Escherichia coli` that one
-species.
+to everything below it** are extracted, so `Bacteria` yields the bacterial fraction of
+the sample and `Escherichia coli` that one species, its strains included.
 
-That qualification matters. `--include-children` works out the descendant taxids from
-the report file it is handed, and MetaFlux hands it the Bracken report, which is
-pruned to `shotgun.bracken.tax_lev`. Sub-species and strain rows are therefore not in
-it: under the default `tax_lev: S`, reads Kraken2 assigned to a strain taxid are left
-behind. That is a real loss on RefSeq-derived indexes, where many genomes are
-deposited under strain taxids — *Escherichia coli* str. K-12 substr. MG1655, taxid
-511145, for instance — and Kraken2 routinely assigns reads to them. Lineages Bracken
-dropped below `shotgun.bracken.threshold` are missing for the same reason.
+Both the lookup and the walk down the tree (`--include-children`) use the sample's own
+Kraken2 report, `02.classification/{sample}_report.txt`. It lists every taxon that
+Kraken2 assigned at least one read to, strains and other ranks below species included,
+so the read pairs extracted for a taxon are exactly its clade count in that report (the
+second column). The Bracken settings (`tax_lev`, `threshold`) and the
+[k-mer evidence gate](kmer-evidence.md) do not change this report, so they do not
+change which reads are extracted.
 
-At `tax_lev: G` or any coarser rank the loss is much larger, because the report then
-has no species rows at all. A species name is not found, so the sample gets empty
-files. A genus name pulls only the reads Kraken2 placed on the genus itself, not
-those placed on its species, so it can miss most of the reads in the genus's clade.
-
-Where those reads matter, run `extract_kraken_reads.py` by hand against
-`02.classification/{sample}_report.txt`, which keeps the full tree. KrakenTools reads
-that report as it stands. Note the report is written with `--report-minimizer-data`,
-which adds two columns, so the taxid and name sit in fields 7 and 8 rather than the
-usual 5 and 6 — which matters for anything else that picks fields out of it.
+Up to v2.4.0 MetaFlux used the Bracken report here, which has no rows below `tax_lev`
+and none for the taxa Bracken dropped below its threshold. The reads Kraken2 had placed
+on those rows were left out, without a warning: for a species whose genomes sit under a
+strain taxid, often all of them. In a sample of the ZymoBIOMICS Gut Microbiome Standard,
+every *Candida albicans* read sat on the strain SC5314, and the extracted files were
+empty.
 
 !!! warning "The name must match one report row exactly"
 
-    The taxid is found by looking for the row of the sample's Bracken report whose
+    The taxid is found by looking for the row of the sample's Kraken2 report whose
     name, without the indentation that shows its place in the tree, is exactly the
     name given, capital letters included. A partial name therefore finds nothing:
     `coli` does not match *Escherichia coli*, and `Prevotella` finds the genus, not
     the family Prevotellaceae listed above it. Write the full scientific name.
 
     Some names occur in more than one row of a report: a genus and a subgenus of the
-    same name (*Leishmania*, for instance), or a placeholder name that GTDB gives to a
-    family and to a genus alike. MetaFlux cannot tell which of them is meant, so the
-    run stops with a message that lists the rows, with their rank codes and taxids.
-    Remove the name from `extract_taxa`, and extract the taxon you mean by hand, as
-    described above, with `extract_kraken_reads.py -t <taxid>`.
+    same name (*Plasmodium* and *Leishmania*, for instance), or a placeholder name that
+    GTDB gives to a family and to a genus alike. MetaFlux cannot tell which of them is
+    meant, so the run stops with a message that lists the rows, with their rank codes
+    and taxids. Remove the name from `extract_taxa`, and extract the taxon you mean by
+    hand with KrakenTools (the bioconda package `krakentools`), giving it the taxid
+    from the message:
+
+    ```bash
+    extract_kraken_reads.py -t <taxid> --include-children \
+        -k 02.classification/<sample>_output.txt \
+        -r 02.classification/<sample>_report.txt \
+        -1 02.classification/<sample>_R1.fastq.gz \
+        -2 02.classification/<sample>_R2.fastq.gz \
+        --fastq-output -o <taxon>_R1.fastq -o2 <taxon>_R2.fastq
+    ```
+
+    KrakenTools reads the report as it is. Anything else that picks fields out of it
+    by position must allow for the two columns that `--report-minimizer-data` adds:
+    the taxid and the name sit in fields 7 and 8, not in the usual 5 and 6.
 
 !!! warning "A single species gives an approximate read set"
 
@@ -95,28 +103,28 @@ usual 5 and 6 — which matters for anything else that picks fields out of it.
       there than on *E. coli* itself, while Bracken's estimate in the OTU table gives
       them back to *E. coli*.
 
-    To collect reads for an assembly or a gene search, name the genus or a higher
-    rank (under the default `tax_lev: S`; coarser settings lose reads, as described
-    above). The direct-read column of `02.classification/{sample}_report.txt` (the
-    third) shows on which rows Kraken2 placed them. Use a species-level extraction to
-    check a doubtful species call instead: map the extracted reads to a genome of that
-    species and look at how evenly they cover it. Reads spread over the whole genome
-    support the call; reads piled up on a few regions, such as conserved genes or
-    mobile elements, point to a relative or to a false positive. Either way it is a
-    check, not proof.
+    To collect reads for an assembly or a gene search, name the lowest rank that holds
+    them: often the genus, but for *E. coli*, whose reads shared with *Shigella* sit on
+    the family, Enterobacteriaceae, which also brings in the reads of its other genera.
+    The direct-read column of `02.classification/{sample}_report.txt` (the third) shows
+    on which rows Kraken2 placed them. Use a species-level extraction to check a
+    doubtful species call instead: map the extracted reads to a genome of that species
+    and look at how evenly they cover it. Reads spread over the whole genome support the
+    call; reads piled up on a few regions, such as conserved genes or mobile elements,
+    point to a relative or to a false positive. Either way it is a check, not proof.
 
 ## What it does
 
 For each sample and each named taxon:
 
-1. The taxon's NCBI taxid is looked up in that sample's Bracken report
-   (`03.abundance/{sample}_report.txt`): the row whose name is exactly the requested
-   name. The lookup runs with the Python of the KrakenTools environment, so it does
-   not depend on the tools installed on the host.
+1. The taxon's NCBI taxid is looked up in that sample's Kraken2 report
+   (`02.classification/{sample}_report.txt`): the row whose name is exactly the
+   requested name. The lookup runs with the Python of the KrakenTools environment, so
+   it does not depend on the tools installed on the host.
 2. `extract_kraken_reads.py` reads the Kraken2 per-read output
    (`02.classification/{sample}_output.txt`), which records the assignment of every
-   read pair, together with the Bracken report so it can walk the taxonomy below the
-   target taxid (`--include-children`).
+   read pair, together with the same Kraken2 report so it can walk the taxonomy below
+   the target taxid (`--include-children`).
 3. The matching read pairs are written out as FASTQ and then compressed with `pigz` —
    `extract_kraken_reads.py` cannot write gzip itself, so a separate rule does it.
 
@@ -147,7 +155,7 @@ checking the disk has room.
 
 ## When a taxon is absent
 
-If no row in a sample's Bracken report matches the name, the rule writes **empty**
+If no row in a sample's Kraken2 report matches the name, the rule writes **empty**
 FASTQ files and records the reason in
 `logs/extract_taxon_reads/{sample}_{taxon}.log`:
 
@@ -157,12 +165,13 @@ no taxid found for 'Escherichia coli'
 
 Empty output is deliberate: Snakemake needs the declared files to exist for the run
 to finish, and an absent taxon in one sample should not fail the whole workflow. An
-unexpectedly empty file is a signal to check the log — either the taxon really is not
-in that sample, or the name did not match anything in the report.
+unexpectedly empty file is a signal to check the log — either Kraken2 assigned no read
+of that sample to the taxon, or the name did not match anything in the report.
 
-Since the lookup goes through the Bracken report, only taxa Bracken reported can be
-extracted. A taxon that fell below `shotgun.bracken.threshold` will not be found —
-see [Reference databases](databases.md#bracken-settings).
+The OTU table does not decide what can be extracted. A taxon that Bracken dropped for
+falling below `shotgun.bracken.threshold` (see
+[Reference databases](databases.md#bracken-settings)) has no row in `otu_table.tsv`,
+but its reads are in Kraken2's report, and they are extracted.
 
 ## Resources
 

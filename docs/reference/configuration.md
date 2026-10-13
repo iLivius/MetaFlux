@@ -1088,10 +1088,11 @@ still written, with a warning in `logs/finalize_otu_table.log`.
 |---|---|---|---|
 | `extract_taxa` | NCBI scientific names whose reads should be pulled out into their own FASTQ files | `[]` | `[]` skips extraction entirely. Example: `[Bacteria, Archaea]`. |
 
-Each name must be exactly the name of one row in the Bracken report, and it is looked
-up at whatever rank it appears, so a broad group (`Bacteria`) and a single species
-(`Escherichia coli`) are named the same way. KrakenTools then extracts every read
-under that taxid, including its children. A name found in several rows of a report
+Each name must be exactly the name of one row in the sample's Kraken2 report
+(`02.classification/{sample}_report.txt`), and it is looked up at whatever rank it
+appears, so a broad group (`Bacteria`) and a single species (`Escherichia coli`) are
+named the same way. KrakenTools then extracts every read under that taxid, including
+its children, strains among them. A name found in several rows of a report
 stops the run, and a single species gives only an approximate read set; the read
 extraction page explains both.
 Output files are named after a slug of the taxon (lower-case, spaces to

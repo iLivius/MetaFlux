@@ -376,7 +376,7 @@ at higher ranks.
 
 | File | Contents |
 |---|---|
-| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table, per-taxon extraction, and MultiQC. Since v2.5.0 MetaFlux uses Bracken 3.1p1, bioconda's build of 3.1 with a fix for the report: plain 3.1 writes `0` in the third column (reads assigned directly to the taxon) on almost every row when `tax_lev` is not `S`. The second column, the clade count, is correct in both, and it is the only count MetaFlux uses. |
+| `{sample}_report.txt` | The Bracken-corrected report, same layout as a Kraken2 report. Feeds the OTU table and MultiQC. Since v2.5.0 MetaFlux uses Bracken 3.1p1, bioconda's build of 3.1 with a fix for the report: plain 3.1 writes `0` in the third column (reads assigned directly to the taxon) on almost every row when `tax_lev` is not `S`. The second column, the clade count, is correct in both, and it is the only count MetaFlux uses. |
 | `{sample}_output.txt` | Bracken's own per-taxon table for that sample. |
 | `otu_table.biom` | Cross-sample abundance table in BIOM (HDF5) format. |
 | `otu_table.tsv` | The same table as tab-separated text. |

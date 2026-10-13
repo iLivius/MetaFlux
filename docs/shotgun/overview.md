@@ -224,8 +224,9 @@ Input: the fastp-trimmed reads and the Kraken2 database. Output, in
 | `{sample}_R1.fastq.gz` / `_R2.fastq.gz` | the reads Kraken2 could classify |
 
 The classified-read FASTQs are kept, not deleted, because per-taxon read extraction
-draws from them. The report is consumed by Bracken and by MultiQC; the per-read
-output is consumed by read extraction.
+draws from them. The report is consumed by Bracken, by MultiQC and by read extraction,
+which finds the taxon and everything below it there; the per-read output is consumed by
+read extraction.
 
 !!! note "The report format is not the standard one"
 
@@ -267,8 +268,7 @@ come from the clade counts and are the same with either build.
 
 Input: the Kraken2 report plus the fastp JSON. Output, in `03.abundance/`:
 `{sample}_report.txt` (Bracken's re-estimated report) and `{sample}_output.txt`
-(the per-taxon abundance table). Consumed by kraken-biom, by MultiQC, and by the
-optional read extraction step, which looks up taxids in the Bracken report.
+(the per-taxon abundance table). Consumed by kraken-biom and by MultiQC.
 
 !!! tip "Drop to genus on a shallow database"
 

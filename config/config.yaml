@@ -623,7 +623,8 @@ shotgun:
 
   # NCBI scientific names of taxa whose reads should be extracted via krakentools.
   # Empty list = skip extraction entirely. Example: [Bacteria, Archaea]
-  # Each name must be exactly the name of one row of the Bracken report.
+  # Each name must be exactly the name of one row of the sample's Kraken2 report
+  # (02.classification/{sample}_report.txt).
   extract_taxa: []
 
 # ─────────────────────── Resources [shared] ─────────────────────

@@ -2,7 +2,7 @@
 #
 # wildcards.taxon is the slug (e.g. "bacteria"); we map it back to the real
 # scientific name via params.target so we can look up its NCBI taxid in the
-# Bracken report. The name must be exactly the name of one report row (the
+# sample's Kraken2 report. The name must be exactly the name of one report row (the
 # comment above rule extract_taxon_reads says why). It is matched at WHATEVER
 # rank it appears in the report (domain, genus, species, ...) — there is no rank
 # restriction, so extract_taxa names a broad group (Bacteria) and a single
@@ -23,9 +23,10 @@
 # The extracted files are named <sample>_<taxon slug>_R1.fastq(.gz), and both parts may
 # contain '_' (the slug of "Escherichia coli" is escherichia_coli; a sample may be called
 # Ctrl_2). From the file name alone Snakemake cannot tell where the sample name ends, so
-# both wildcards are pinned to the values this run really has: the sample names found in
-# fastq_dir (SAMPLES) and the slugs of shotgun.extract_taxa, made exactly as
-# _shotgun_targets() (00_common.smk) makes them for the file names.
+# both wildcards are pinned to the values this run really has: the run's sample names
+# (SAMPLES: the FASTQs found in fastq_dir, or the runs of input.bioproject) and the slugs
+# of shotgun.extract_taxa, made exactly as _shotgun_targets() (00_common.smk) makes them
+# for the file names.
 _extract_sample_choices = []
 for _sample_name in SAMPLES:
     _extract_sample_choices.append(re.escape(_sample_name))
@@ -36,11 +37,28 @@ EXTRACT_SAMPLE_PATTERN = "|".join(_extract_sample_choices)
 EXTRACT_TAXON_PATTERN = "|".join(_extract_taxon_choices)
 
 
+# Which report the rule reads: Kraken2's own report of the sample,
+# 02.classification/{sample}_report.txt (rule kraken2, 35_kraken2.smk), both for the taxid
+# lookup below and for KrakenTools (-r). extract_kraken_reads.py works out which taxa lie
+# below the requested one (--include-children) only from the rows of the report it is
+# handed, and it skips, without a warning, every read placed on a taxon that report
+# lacks. Kraken2's report lists every taxon that got at least one read, strains
+# included, so the read pairs extracted for a taxon are exactly the clade count of its
+# row (column 2). The Bracken report (03.abundance/{sample}_report.txt) would lose
+# reads, because it has no rows below the Bracken rank (at tax_lev S, no strain rows)
+# and no row for a taxon that fell below Bracken's threshold. Many genomes of a
+# database sit under a strain taxid: in the Zymo gut mock all 78,214 Candida albicans
+# read pairs are on the strain SC5314, so an extraction through the Bracken report gave
+# none of them. Kraken2's report also does not depend on the Bracken settings or on the
+# k-mer evidence gate, so changing those never changes which reads are extracted.
+#
 # The taxid lookup at the start of the shell command below. extract_kraken_reads.py
 # needs the NCBI taxid of the taxon, while the config gives its name, so the rule first
-# finds that name in the sample's Bracken report. Each report row has six tab-separated
-# columns: percentage, clade reads, direct reads, rank code (column 4), taxid
-# (column 5) and name (column 6); the name is indented by two spaces per level of the
+# finds that name in the same Kraken2 report. Its rows are tab-separated, and their last
+# three columns are always the rank code, the taxid and the name. MetaFlux writes the
+# report with --report-minimizer-data, which puts two minimizer columns before them
+# (eight columns instead of the standard six), so the lookup counts the columns from the
+# end and works on either layout. The name is indented by two spaces per level of the
 # taxonomy tree.
 # A row counts only when its name, once that indentation is stripped, is exactly the
 # requested name. Taking the first row whose name merely CONTAINS it picks the wrong
@@ -50,15 +68,17 @@ EXTRACT_TAXON_PATTERN = "|".join(_extract_taxon_choices)
 # group. The test compares plain text, not a pattern, so a name with regex characters
 # in it (e.g. "Bacteroides sp.") is matched literally.
 #   one matching row       its taxid goes to KrakenTools;
-#   no matching row        the taxon is absent from this sample, and the rule writes
-#                          empty files (the else-branch of the shell command);
+#   no matching row        Kraken2 assigned no read of this sample to the taxon (or the
+#                          name is misspelt), and the rule writes empty files (the
+#                          else-branch of the shell command);
 #   several matching rows  one name at two ranks (a genus and a subgenus of the same
-#                          name; a GTDB placeholder name used for a family and a
-#                          genus) or two taxa that share a name. MetaFlux cannot tell
-#                          which one is meant, so the lookup writes a message listing
-#                          them to the terminal and to the log, and exits with an
-#                          error. Bash strict mode, which Snakemake always switches
-#                          on, then ends the job before any read file is written.
+#                          name, such as Plasmodium; a GTDB placeholder name used for
+#                          a family and a genus) or two taxa that share a name.
+#                          MetaFlux cannot tell which one is meant, so the lookup
+#                          writes a message listing them to the terminal and to the
+#                          log, and exits with an error. Bash strict mode, which
+#                          Snakemake always switches on, then ends the job before any
+#                          read file is written.
 # The lookup runs in the Python that the krakentools env already contains (KrakenTools
 # is a set of Python scripts), not in the host's awk, so it does not depend on the
 # machine. Its code must contain no curly braces (Snakemake would read them as
@@ -68,7 +88,8 @@ rule extract_taxon_reads:
         sample = EXTRACT_SAMPLE_PATTERN,
         taxon  = EXTRACT_TAXON_PATTERN,
     input:
-        report = OUT / "03.abundance" / "{sample}_report.txt",
+        # Kraken2's own report, not Bracken's (the comment above the rule says why).
+        report = OUT / "02.classification" / "{sample}_report.txt",
         kraken = OUT / "02.classification" / "{sample}_output.txt",
         r1     = OUT / "02.classification" / "{sample}_R1.fastq.gz",
         r2     = OUT / "02.classification" / "{sample}_R2.fastq.gz",
@@ -87,7 +108,7 @@ rule extract_taxon_reads:
     shell:
         r"""
         target="{params.target}"
-        # Find the NCBI taxid of the requested name in this sample's Bracken report:
+        # Find the NCBI taxid of the requested name in this sample's Kraken2 report:
         # the row whose name is exactly that name (the comment above the rule says why,
         # and what happens when no row or several rows carry it).
         taxid=$(python -c '
@@ -105,9 +126,11 @@ with open(report_path) as report:
         fields = line.rstrip("\n").split("\t")
         if len(fields) < 6:
             continue
-        rank_code = fields[3]
-        row_taxid = fields[4]
-        row_name = fields[5].strip()
+        # The last three columns are the rank code, the taxid and the name, in the
+        # eight-column report Kraken2 writes here and in the standard six-column one.
+        rank_code = fields[-3]
+        row_taxid = fields[-2]
+        row_name = fields[-1].strip()
         if row_name == target:
             matching_rows.append((rank_code, row_taxid))
 
