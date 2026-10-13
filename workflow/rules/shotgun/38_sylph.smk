@@ -293,8 +293,9 @@ rule sylph_taxprof:
 # Runs in the biom env (envs/biom.yaml), which it shares with finalize_otu_table, the
 # rule that writes otu_table.biom: both need biom-format, and this script needs nothing
 # else beyond the Python standard library and numpy. As with every env file, any edit
-# to envs/biom.yaml, even a comment, counts as new software and re-runs both this step
-# and finalize_otu_table in finished runs.
+# to envs/biom.yaml, even a comment, counts as new software: in finished runs this step
+# runs again, and with it MultiQC, which shows the summary this step writes; where
+# Kraken2 runs too (profiler: both), finalize_otu_table also runs again.
 rule sylph_tables:
     input:
         taxprof     = OUT / "02c.sylph" / "taxprof",

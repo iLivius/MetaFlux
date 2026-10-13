@@ -15,7 +15,8 @@ dependencies:
   #
   # Snakemake identifies this software environment by the full text of this file,
   # comments included. ANY edit, even to a comment, counts as new software, and
-  # every finished folder runs both rules again (seconds each).
+  # every finished folder runs these rules again: finalize_otu_table where Kraken2
+  # runs, sylph_tables (and then MultiQC) where sylph runs; seconds each.
   - python>=3.10
   - biom-format>=2.1.15
   - numpy
