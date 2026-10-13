@@ -1,11 +1,12 @@
 # Troubleshooting
 
-Six situations come up often enough to be worth writing down: an automatic
+Seven situations come up often enough to be worth writing down: an automatic
 truncation length that throws away every read, a PhiX-removal step that stops on
 the read pairs, a shotgun OTU table that comes out empty at a rank other than
-species, small differences between two runs on the same data, a reference download
-that fails its md5 check, and YAML mistakes in the config. Each entry gives the
-symptom, the reason behind it, and what to change.
+species, a shotgun taxon filter that removes every taxon, small differences between
+two runs on the same data, a reference download that fails its md5 check, and YAML
+mistakes in the config. Each entry gives the symptom, the reason behind it, and what
+to change.
 
 ## Amplicon: automatic `truncLen` can drop all reads on very clean runs
 
@@ -233,6 +234,37 @@ run used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force
 ```bash
 snakemake --sdm conda --cores 4 --configfile <your config> -R kraken_biom
 ```
+
+## Shotgun: the taxon filter removed every taxon
+
+!!! warning "Symptom"
+
+    The run stops at rule `finalize_otu_table` with a message like this one (wrapped
+    here; the numbers depend on the run):
+
+    ```text
+    [finalize_otu_table] shotgun.taxonomy_filter removed every taxon of the table
+    (111 taxa; keep: [k__Bacteria], discard: []). The d__ values in this table are:
+    d__Archaea (1 taxon), d__Bacteria (107 taxa), d__Eukaryota (3 taxa). A token must
+    equal one whole slot of the lineage, prefix included (d__ k__ p__ c__ o__ f__ g__
+    s__). Check the tokens, or set shotgun.taxonomy_filter.enabled: false.
+    ```
+
+    No `otu_table.tsv` or `otu_table.biom` is written.
+
+**Cause.** `shotgun.taxonomy_filter` compares each token with whole slots of the
+lineage, so a token with the wrong prefix or a misspelt name matches nothing. A `keep`
+list in which no token matches removes every row, and so does a `discard` list that
+covers every row. An empty table would look like a finished run, so MetaFlux stops
+instead, as the amplicon filter does. A common cause is a token written for another
+table: in MetaFlux's shotgun tables `d__` holds the domain (`d__Bacteria`) and `k__` the
+kingdom (`k__Pseudomonadati`), so `k__Bacteria` matches nothing.
+
+**Fix.** Compare the tokens with the `d__` values the message lists, or with the
+`taxonomy` column of a run made with `shotgun.taxonomy_filter.enabled: false`, correct
+them and run the same command again. Kraken2 and Bracken do not run again; the table is
+built again from the Bracken reports already in `03.abundance/`. To keep every taxon,
+switch the filter off.
 
 ## Amplicon: ASV counts or taxonomy calls differ between identical re-runs
 

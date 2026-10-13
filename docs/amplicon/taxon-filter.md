@@ -424,14 +424,16 @@ list means no-op. It is applied to the final OTU table after Bracken, so it chan
 which OTUs appear in `03.abundance/otu_table.tsv` and `otu_table.biom`, never how reads
 were classified.
 
-Two differences from the amplicon side:
+One difference from the amplicon side: it ships **off** (`enabled: false`). Metagenomic
+sample types vary too much for a universal starting point; common uses are
+`keep: [k__Bacteria, k__Archaea]` for prokaryotes only, or `discard: [g__Homo]` as an
+explicit host safety net.
 
-- It ships **off** (`enabled: false`). Metagenomic sample types vary too much for a
-  universal starting point; common uses are `keep: [k__Bacteria, k__Archaea]` for
-  prokaryotes only, or `discard: [g__Homo]` as an explicit host safety net.
-- If it removes every OTU, it logs a warning and writes an empty table rather than
-  failing. The amplicon filter is stricter because an amplicon run has exactly one
-  marker to get right, and getting it wrong is the common cause of an empty result.
+Like the amplicon filter, it stops the run when it removes every OTU, instead of
+writing an empty table. The error names the tokens and lists the `d__` values the table
+holds, which is usually enough to spot a token that does not fit the table. A table
+that is empty before the filter (no taxon at `tax_lev` in any sample) is still written,
+with a warning in the log.
 
 See the [shotgun overview](../shotgun/overview.md) and the
 [configuration reference](../reference/configuration.md).

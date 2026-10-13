@@ -69,12 +69,20 @@ CHECKS THAT STOP THE RUN
     code other taxa D or K.
   - One taxon with two lineages. All reports come from one database, so every sample
     gives a taxon the same lineage; two lineages mean reports of different databases.
+  - A filter that removes every taxon. A table that had rows before the filter and has
+    none after it would look like a finished run with nothing in it. Almost always the
+    tokens do not fit this table: a misspelt name, or a token written for another
+    table, such as k__Bacteria where this table writes the domain as d__Bacteria. The
+    message names the tokens and lists the d__ values the table holds. The amplicon
+    filter stops in the same case. A table that is already empty before the filter (no
+    sample has a taxon at the Bracken rank) is still written, with a warning in the log.
 
 THE OPTIONAL FILTER (shotgun.taxonomy_filter)
   A keep or discard token such as "g__Homo" must equal one whole slot of the lineage,
   so it can never match inside a longer name. keep runs first (a row must match at
   least one keep token), then discard (a row matching any discard token is removed).
   It changes only which rows this table shows; the Bracken reports stay as they are.
+  If it removes every row, the job stops (see CHECKS THAT STOP THE RUN above).
 
 OUTPUT
   otu_table.tsv and otu_table.biom in 03.abundance/, written from the same rows and
@@ -244,6 +252,44 @@ def passes_filter(lineage):
     return True
 
 
+def taxa_count_text(count):
+    """A number of table rows in words: '1 taxon', '2 taxa', '1,394 taxa'."""
+    if count == 1:
+        return "1 taxon"
+    return f"{count:,} taxa"
+
+
+def as_yaml_list(tokens):
+    """Filter tokens written as in the run config, '[d__Bacteria, d__Archaea]' or '[]',
+    so that the stop message can be compared with the config at a glance."""
+    return "[" + ", ".join(tokens) + "]"
+
+
+def d_values_text(taxids, lineages):
+    """The d__ values of these table rows, each with its number of rows, for the stop
+    message when the filter removes every taxon. `lineages` maps each taxid to its
+    eight slots (lineage_for, filled in block 1 below). Example:
+        'd__Bacteria (95 taxa), d__Eukaryota (6 taxa), an empty d__ (2 taxa)'
+    Rows without a domain or a virus realm (viruses without a realm, plasmids) have an
+    empty d__ slot; it is listed last and named in words, because 'd__' alone is easy
+    to miss in a list."""
+    rows_per_value = {}
+    for taxid in taxids:
+        d_slot = lineages[taxid][0]           # the first of the eight slots is d__
+        if d_slot not in rows_per_value:
+            rows_per_value[d_slot] = 0
+        rows_per_value[d_slot] += 1
+
+    pieces = []
+    for d_slot in sorted(rows_per_value):
+        if d_slot == "d__":
+            continue                          # the empty slot, added last below
+        pieces.append(f"{d_slot} ({taxa_count_text(rows_per_value[d_slot])})")
+    if "d__" in rows_per_value:
+        pieces.append(f"an empty d__ ({taxa_count_text(rows_per_value['d__'])})")
+    return ", ".join(pieces)
+
+
 # ── 1. Read every report: the counts and the lineage of every taxon ──────────────
 # The reports are read in the order of sample_names, so taxa enter row_order in the
 # order of their first appearance, sample by sample: the row order kraken-biom used.
@@ -292,15 +338,24 @@ if not row_order:
 
 # ── 2. The optional keep/discard filter (shotgun.taxonomy_filter) ────────────────
 # See THE OPTIONAL FILTER above. The tokens come from the run config unchanged.
+# A table that had rows and lost every one of them to the filter stops the job here,
+# before anything is written (see CHECKS THAT STOP THE RUN above): an empty table
+# would look like a finished run. A table that had no rows to begin with has already
+# been warned about above, and is written empty.
 if filter_enabled and (filter_keep or filter_discard):
     kept_taxids = []
     for taxid in row_order:
         if passes_filter(lineage_for[taxid]):
             kept_taxids.append(taxid)
-    if not kept_taxids:
-        logmsg("WARNING: keep/discard filter removed every OTU — writing an empty table")
     logmsg(f"filter ON  (keep={filter_keep}, discard={filter_discard}): "
            f"{len(kept_taxids)} / {len(row_order)} OTUs retained")
+    if row_order and not kept_taxids:
+        stop(f"shotgun.taxonomy_filter removed every taxon of the table "
+             f"({taxa_count_text(len(row_order))}; keep: {as_yaml_list(filter_keep)}, "
+             f"discard: {as_yaml_list(filter_discard)}). The d__ values in this table "
+             f"are: {d_values_text(row_order, lineage_for)}. A token must equal one whole "
+             f"slot of the lineage, prefix included (d__ k__ p__ c__ o__ f__ g__ s__). "
+             f"Check the tokens, or set shotgun.taxonomy_filter.enabled: false.")
 else:
     kept_taxids = list(row_order)
     logmsg("filter OFF (shotgun.taxonomy_filter disabled or empty)")

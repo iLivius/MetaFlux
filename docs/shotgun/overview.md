@@ -326,7 +326,9 @@ the final table only, after Bracken. It therefore changes which OTUs appear in t
 table, never how a read was classified. It is off by default because metagenomic
 sample types vary too much for a sensible universal setting. Common uses are keeping
 prokaryotes (`keep: [k__Bacteria, k__Archaea]`) and dropping residual host
-(`discard: [g__Homo]`). The machinery is described in full under
+(`discard: [g__Homo]`). If the filter would remove every taxon, the step stops with an
+error that names the tokens and lists the `d__` values in the table, rather than
+writing an empty table. The machinery is described in full under
 [Keeping and discarding taxa](../amplicon/taxon-filter.md).
 
 Output: `03.abundance/otu_table.biom` and `03.abundance/otu_table.tsv`. Both are

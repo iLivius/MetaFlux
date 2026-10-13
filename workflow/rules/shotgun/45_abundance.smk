@@ -145,7 +145,8 @@ rule bracken:
 #   filter   the optional keep/discard filter (shotgun.taxonomy_filter);
 #   checks   the job stops when the D or K codes of a report disagree with the
 #            database (reports of a Kraken2 older than 2.17, or of another database),
-#            and when one taxon has two lineages.
+#            when one taxon has two lineages, and when the filter removes every taxon
+#            of a table that had some (an empty table would look like a finished run).
 #
 # Up to MetaFlux v2.4.0 a separate rule ran kraken-biom here, and this rule cleaned its
 # output. kraken-biom dropped the kingdom rows, wrote the domain as k__, cut the genus

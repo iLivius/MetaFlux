@@ -1071,6 +1071,13 @@ rank-aware token matching: `keep` first, then `discard`, empty list means that
 direction does nothing. It is applied to the final OTU table after Bracken, so it
 changes which OTUs appear in the table and never how reads were classified.
 
+If the filter removes every taxon from a table that had some, rule `finalize_otu_table`
+stops with an error that names the tokens and lists the `d__` values the table holds,
+and no table is written; see
+[Troubleshooting](../troubleshooting.md#shotgun-the-taxon-filter-removed-every-taxon).
+A table that is empty before the filter, because no sample has a taxon at `tax_lev`, is
+still written, with a warning in `logs/finalize_otu_table.log`.
+
 ### Per-taxon read extraction
 
 ```yaml
