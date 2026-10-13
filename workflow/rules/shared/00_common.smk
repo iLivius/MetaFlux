@@ -429,6 +429,13 @@ def _as_taxon_list(v):
     return list(v)
 
 
+def _text_at(data, position):
+    """The text that starts at byte `position` of `data` (the bytes of a taxo.k2d file,
+    read by _kraken2_rank_sets below), up to the next zero byte."""
+    end = data.index(b"\0", position)
+    return data[position:end].decode()
+
+
 def _kraken2_rank_sets(taxo_path):
     """Read which taxa a Kraken2 database ranks as a domain, a kingdom or a virus realm.
 
@@ -503,11 +510,6 @@ def _kraken2_rank_sets(taxo_path):
                  f"copy complete? A database built with a Kraken2 newer than the one in "
                  f"workflow/envs/kraken2.yaml may store its taxonomy differently.")
 
-    def text_at(position):
-        """The text that starts at byte `position` of the file, up to the next zero byte."""
-        end = data.index(b"\0", position)
-        return data[position:end].decode()
-
     # The rank names kept, and the set each one goes into.
     set_for_rank = {
         "domain":       "domain",
@@ -530,14 +532,14 @@ def _kraken2_rank_sets(taxo_path):
         if taxid == 0:
             continue                  # node 0, the empty placeholder
         if rank_offset not in rank_name_at:
-            rank_name_at[rank_offset] = text_at(rank_block_start + rank_offset)
+            rank_name_at[rank_offset] = _text_at(data, rank_block_start + rank_offset)
         rank = rank_name_at[rank_offset]
         if rank not in set_for_rank:
             continue
         which_set = set_for_rank[rank]
         if which_set == "domain" and taxid == 10239:
             which_set = "virus_root"  # Viruses, ranked superkingdom before 2025
-        rank_sets[which_set][str(taxid)] = text_at(name_block_start + name_offset)
+        rank_sets[which_set][str(taxid)] = _text_at(data, name_block_start + name_offset)
     return rank_sets
 
 
