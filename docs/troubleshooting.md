@@ -223,17 +223,27 @@ nothing survived at all. Bracken's `{sample}_output.txt` files were never affect
 neither were species-level runs.
 
 **Fix.** Update to v2.5.0 and run the same command again, from the same MetaFlux
-folder. Snakemake keeps a record of how each output was made (in `.snakemake/`) and
-sees that rule `kraken_biom`, rule `bracken` and the Bracken environment have changed.
-It runs `bracken` again for each sample, on the Kraken2 reports already in the output
-directory, then `kraken_biom`, `finalize_otu_table` and MultiQC (and per-taxon read
-extraction, when it is on). Kraken2 does not run again. A dry run (`-n`) lists these
-jobs before anything runs. If `kraken_biom` is not among them, for example because the
-run used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force it:
+folder. v2.5.0 builds the table with rule `finalize_otu_table` straight from the Bracken
+reports, and pins Bracken 3.1p1, Kraken2 2.17.1 and bbmap 39.52 (see
+[What happens on a re-run](reference/running.md#what-happens-on-a-re-run)). By default
+the trimming, Kraken2, the k-mer evidence step, `bracken`, `finalize_otu_table`, read
+tracking (`aggregate_read_counts`) and MultiQC run again, and so do PhiX removal, host
+removal and per-taxon read extraction when they are on. Some folders were made with
+PhiX removal and host removal both off, still hold every file in `02.classification/`,
+and have raw FASTQs that were not replaced since. In those you can keep the Kraken2
+output by adding `--rerun-triggers mtime params input code`: then only `bracken`,
+`finalize_otu_table`, `aggregate_read_counts` and MultiQC run, plus the read extraction
+when it is on. If the table step then stops because the reports come from a Kraken2
+older than 2.17, run again without that option. A dry run (`-n`) lists the jobs before
+anything runs. If `finalize_otu_table` is not among them, for example because the run
+used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force it:
 
 ```bash
-snakemake --sdm conda --cores 4 --configfile <your config> -R kraken_biom
+snakemake --sdm conda --cores 4 --configfile <your config> -R finalize_otu_table
 ```
+
+It builds the table again from the Bracken reports already in `03.abundance/`, from
+their clade counts, which plain Bracken 3.1 also wrote correctly.
 
 A config with `tax_lev: D` stops at start-up from v2.5.0 on; see the next entry.
 
