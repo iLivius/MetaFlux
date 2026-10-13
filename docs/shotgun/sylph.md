@@ -170,13 +170,14 @@ lineage table. The lineage of the Kraken2 table is described on the
   When the sample's genomes are covered too thinly for that estimate (common in shallow
   samples, and in very diverse ones such as soil even when deeply sequenced), sylph
   assumes 99.5 % instead; `read_accuracy` in the summary then reads
-  `fixed 99.5% (low depth)`, the depth being how deeply the genomes are covered. That
-  assumption moves every genome row of the sample by one common factor, and the
-  `unassigned` row with them, which can change the explained share by tens of percentage
-  points; which genomes are found, and their genome copies, do not change. Compare
-  explained shares, `unassigned` and estimated pairs only between samples with the same
-  `read_accuracy`. Otherwise leave out `unassigned` and compare shares among the detected
-  genomes, or use `sylph_table.genome_copies.tsv`.
+  `fixed 99.5% (high diversity for the depth)`, after sylph's own words for this case
+  (high diversity compared to sequencing depth). That assumption moves every genome row
+  of the sample by one common factor, and the `unassigned` row with them, which can
+  change the explained share by tens of percentage points; which genomes are found, and
+  their genome copies, do not change. Compare explained shares, `unassigned` and
+  estimated pairs only between samples with the same `read_accuracy`. Otherwise leave
+  out `unassigned` and compare shares among the detected genomes, or use
+  `sylph_table.genome_copies.tsv`.
 - **Capped samples.** `explained_capped: yes` usually means that sylph's coverage
   estimates added up to at least all of the sample's sequence (sylph does not say by how
   much; in a mock community it can be several percent). sylph then shares 100 % among

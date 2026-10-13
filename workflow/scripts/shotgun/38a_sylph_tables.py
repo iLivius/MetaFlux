@@ -812,9 +812,13 @@ with open(sm.output.genomes, "w") as fh:
 #                              genomes, so every genome row of the sample is scaled
 #                              down. It also catches a sample sylph did not cap but
 #                              explained to 99.995 % or more.
-#   read_accuracy              'automatic', or 'fixed 99.5% (low depth)' when sylph had
-#                              to assume the read accuracy because the sample's genomes
-#                              are covered too thinly (section 5)
+#   read_accuracy              'automatic', or 'fixed 99.5% (high diversity for the
+#                              depth)' when sylph had to assume the read accuracy
+#                              because the sample's genomes are covered too thinly
+#                              (section 5). The words follow sylph's own message
+#                              ('high diversity compared to sequencing depth'): deeply
+#                              sequenced but very diverse samples get it too, so the
+#                              label names the diversity as well as the depth.
 #   genomes_detected           genome rows sylph reported
 #   pct_pairs_unnamed_species  estimated pairs on genomes whose name_status is not
 #                              'named', as % of est_pairs_explained (NA if that is 0)
@@ -827,7 +831,7 @@ for sample in samples:
     else:
         capped = "no"
     if sample in fixed_accuracy_samples:
-        read_accuracy = "fixed 99.5% (low depth)"
+        read_accuracy = "fixed 99.5% (high diversity for the depth)"
     else:
         read_accuracy = "automatic"
 
@@ -887,12 +891,12 @@ with open(sm.output.mqc, "w") as fh:
              "\"unassigned\" row of 03.abundance/sylph_table.tsv. Capped = the coverage "
              "estimates reached the whole sample, so sylph reports 100 %: the unknown share "
              "cannot be estimated, and every genome of that sample is scaled down by an "
-             "amount sylph does not report. Read accuracy \"fixed 99.5% (low depth)\" = the "
-             "genomes of that sample are covered too thinly for sylph to estimate it (common "
-             "in shallow and in very diverse samples); the fixed value moves every genome "
-             "and the unassigned share of that sample by one common factor, so compare "
-             "explained and unassigned shares only between samples with the same read "
-             "accuracy. Flagged genomes: see 03.abundance/sylph_genomes.tsv.'\n")
+             "amount sylph does not report. Read accuracy \"fixed 99.5% (high diversity for "
+             "the depth)\" = the genomes of that sample are covered too thinly for sylph to "
+             "estimate it (common in shallow and in very diverse samples); the fixed value "
+             "moves every genome and the unassigned share of that sample by one common "
+             "factor, so compare explained and unassigned shares only between samples with "
+             "the same read accuracy. Flagged genomes: see 03.abundance/sylph_genomes.tsv.'\n")
     fh.write("# plot_type: 'table'\n")
     fh.write("# pconfig:\n")
     fh.write("#     id: 'metaflux_sylph_table'\n")
