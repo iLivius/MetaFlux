@@ -16,22 +16,21 @@
 #                one closest to the *post-trim* mean read length parsed from
 #                the fastp JSON. Mis-using a 150 distrib on 100 bp reads biases
 #                the species-level redistribution.
-# kraken_biom        : assemble per-sample Bracken reports into one raw OTU table
-#                (BIOM HDF5, the standard Biological Observation Matrix
-#                container most microbiome tools read/write), one row per taxon
-#                at the rank Bracken re-estimated at (shotgun.bracken.tax_lev).
-# finalize_otu_table : normalise the taxonomy strings (unify to ';'-no-space and
-#                a Genus+species binomial, matching the amplicon tables), strip
-#                the "_report" suffix kraken-biom puts on sample names, and apply
-#                the optional rank-aware taxon keep/discard filter. Writes the
-#                final otu_table.biom + otu_table.tsv, kept consistent because
-#                both are rendered from the same filtered BIOM table.
+# finalize_otu_table : build the final OTU table straight from the per-sample
+#                Bracken reports: one row per taxon at the rank Bracken
+#                re-estimated at (shotgun.bracken.tax_lev), one column per
+#                sample, and a lineage of eight fixed slots d__ k__ p__ c__ o__
+#                f__ g__ s__ taken from the reports' own rank codes (a virus
+#                carries its realm in d__). Applies the optional rank-aware taxon
+#                keep/discard filter, then writes otu_table.biom (BIOM HDF5, the
+#                standard Biological Observation Matrix container most microbiome
+#                tools read/write) and otu_table.tsv from the same numbers.
 
 # Takes this sample's Kraken2 report (per-rank read counts, 35_kraken2.smk)
 # and its fastp JSON (post-trim read-length summary, 30_preprocess.smk) as
 # input; writes a re-estimated Bracken report plus a plain-text per-taxon
-# table. kraken_biom (below) assembles the reports across all samples into
-# one table.
+# table. finalize_otu_table (below) builds one table from the reports of all
+# samples.
 #
 # WHICH REPORT THIS READS. One of two files, decided once when the workflow is
 # parsed by shotgun.kmer_evidence.enabled (KMER_GATE_ENABLED, 00_common.smk):
@@ -49,8 +48,8 @@
 #                        Bracken runs.
 # Bracken itself runs either way — the gate filters Bracken's input, it does not
 # replace or bypass Bracken. The corrected counts therefore propagate through
-# kraken_biom into the final otu_table, which is the whole point of putting the
-# gate here rather than on the finished table.
+# finalize_otu_table into the final otu_table, which is the whole point of putting
+# the gate here rather than on the finished table.
 #
 # priority: 2, continuing the pipeline-order countdown started in
 # 30_preprocess.smk — see that file's header for why.
@@ -131,74 +130,57 @@ rule bracken:
         """
 
 
-# Assembles every sample's Bracken report (input.reports, from rule bracken
-# above) into ONE BIOM table — one row per taxon, one column per sample. This
-# raw table still carries kraken-biom's own sample-naming and taxonomy-string
-# conventions; finalize_otu_table (below) is what cleans those up into the
-# form the rest of MetaFlux (and its users) expect. Marked temp() because
-# only the finalized table is meant to be read further.
+# Builds the pipeline's final shotgun table, otu_table.tsv and otu_table.biom, straight
+# from every sample's Bracken report (rule bracken above). This is the shotgun
+# equivalent of the amplicon asv_table.txt / taxon_seq_table.txt: the last file a user
+# opens. The docstring of 45a_finalize_otu_table.py explains every rule; in short:
+#   rows     one per taxon at the Bracken rank (shotgun.bracken.tax_lev), one column
+#            per sample, counts = Bracken's re-estimated reads;
+#   lineage  eight fixed slots, d__ k__ p__ c__ o__ f__ g__ s__, taken from the rank
+#            codes of the reports themselves (D K P C O F G S), so every Kraken2 table
+#            has the same eight slots. On a GTDB database, which has no kingdom rank,
+#            k__ is empty. A virus has no domain: its d__ slot holds its realm, the top
+#            rank of virus taxonomy, or stays empty when the virus has none;
+#   species  the whole name the database gives it;
+#   filter   the optional keep/discard filter (shotgun.taxonomy_filter);
+#   checks   the job stops when the D or K codes of a report disagree with the
+#            database (reports of a Kraken2 older than 2.17, or of another database),
+#            and when one taxon has two lineages.
 #
-# WHICH ROWS END UP IN THE TABLE. kraken-biom keeps only taxa whose rank lies
-# between --max and --min. At the --min rank it takes the clade count (report
-# column 2: reads on the taxon plus everything below it); above --min it takes
-# only the reads placed directly on the taxon (column 3). Both flags are set to
-# the Bracken rank, so the table holds exactly the taxa Bracken re-estimated,
-# each with Bracken's estimate: the same numbers as {sample}_output.txt.
+# Up to MetaFlux v2.4.0 a separate rule ran kraken-biom here, and this rule cleaned its
+# output. kraken-biom dropped the kingdom rows, wrote the domain as k__, cut the genus
+# off species names, and, depending on which report it read first, could fill a slot
+# with a name from a neighbouring branch of the tree. Reading the reports directly
+# fixes all four, with the same counts: Bracken's estimates at the Bracken rank, as
+# kraken-biom took them.
 #
-# kraken-biom's defaults (--max O --min S) assume a species report. At S they
-# are harmless: Bracken writes 0 direct reads on every row above species, so the
-# extra ranks add nothing (otu_table.tsv is byte-identical either way). At any
-# other rank they failed without an error (MetaFlux v2.4.0 and earlier):
-#   G, F, O - the Bracken rank falls in the "direct reads" branch, and Bracken
-#             3.1 writes 0 there for every taxon with child rows in the Kraken2
-#             report (upstream Bracken issue #315): empty or near-empty table;
-#   C, P, D - above --max O, so nothing was kept. Raising only --min would stop
-#             kraken-biom with "Max and Min ranks are out of order", hence both.
-rule kraken_biom:
-    input:
-        reports = expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES),
-    output:
-        # Raw table straight from kraken-biom: sample ids still carry the
-        # "_report" suffix and taxonomy is kraken-biom's "; "-joined form.
-        # finalize_otu_table cleans both. Marked temp — only the final table ships.
-        raw_biom = temp(OUT / "03.abundance" / "otu_table.raw.biom"),
-    params:
-        # The same rank rule bracken was given (shotgun.bracken.tax_lev, one
-        # capital letter, checked when the workflow is parsed in 00_common.smk).
-        tax_lev = TAX_LEV,
-    threads: lambda wc: threads_for("kraken_biom")
-    resources:
-        mem_mb = lambda wc: mem_mb_for("kraken_biom"),
-    conda:
-        "../../envs/kraken-biom.yaml"
-    log:
-        LOGS / "kraken_biom.log"
-    priority: 1
-    shell:
-        # Kept on one line: in this plain (not r"...") string Python would remove a
-        # backslash line break before the shell ever saw it.
-        """
-        kraken-biom {input.reports} --max {params.tax_lev} --min {params.tax_lev} --fmt hdf5 -o {output.raw_biom} > {log} 2>&1
-        """
-
-
-# Cleans up kraken_biom's raw table and writes the pipeline's final OTU
-# table — both otu_table.biom and otu_table.tsv, rendered from the same
-# filtered in-memory table so the two never disagree. This is the shotgun
-# equivalent of the amplicon pipeline's asv_table.txt / taxon_seq_table.txt:
-# the last file a user actually opens. Sample-id cleanup, taxonomy-string
-# normalization (kraken-biom's bare species epithet -> a Genus+species
-# binomial where that's unambiguous), and the optional taxon keep/discard
-# filter (shotgun.taxonomy_filter in the config) all happen in
-# 45a_finalize_otu_table.py — see that script's own docstring for the exact
-# rules, including a documented limitation around viral strain names.
+# Inputs: the Bracken report of every sample (03.abundance/{sample}_report.txt), in the
+# order of SAMPLES. Kraken2 and Bracken are untouched by this rule: changing it re-runs
+# only this step.
+# Params: the sample names (the column order), the Bracken rank, what the Kraken2
+# database ranks as a domain, a kingdom or a virus realm (read from its taxo.k2d when
+# the workflow starts, KRAKEN2_RANK_SETS in 00_common.smk), and the
+# shotgun.taxonomy_filter settings.
+# Outputs: otu_table.biom and otu_table.tsv, final targets in _shotgun_targets()
+# (00_common.smk); nothing else in the pipeline reads them.
+# Runs in the biom env (envs/biom.yaml), which it shares with sylph_tables
+# (38_sylph.smk): python, numpy and biom-format, nothing else.
 rule finalize_otu_table:
     input:
-        raw_biom = OUT / "03.abundance" / "otu_table.raw.biom",
+        reports = expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES),
     output:
         biom = OUT / "03.abundance" / "otu_table.biom",
         tsv  = OUT / "03.abundance" / "otu_table.tsv",
     params:
+        samples        = SAMPLES,      # the column order, the same as input.reports
+        tax_lev        = TAX_LEV,      # the Bracken rank: the rank of every row
+        # {taxid: name} of what the Kraken2 database ranks as a domain, a kingdom and a
+        # virus realm, and of Viruses itself when the database ranks it superkingdom
+        # (built from NCBI taxonomy before 2025); empty dicts are possible.
+        domains        = KRAKEN2_RANK_SETS["domain"],
+        kingdoms       = KRAKEN2_RANK_SETS["kingdom"],
+        realms         = KRAKEN2_RANK_SETS["realm"],
+        virus_root     = KRAKEN2_RANK_SETS["virus_root"],
         filter_enabled = OTU_FILTER_ENABLED,
         filter_keep    = OTU_FILTER_KEEP,
         filter_discard = OTU_FILTER_DISCARD,
@@ -206,7 +188,7 @@ rule finalize_otu_table:
     resources:
         mem_mb = lambda wc: mem_mb_for("finalize_otu_table"),
     conda:
-        "../../envs/kraken-biom.yaml"
+        "../../envs/biom.yaml"
     log:
         LOGS / "finalize_otu_table.log"
     priority: 1

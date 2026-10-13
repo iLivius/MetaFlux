@@ -35,6 +35,7 @@ import hashlib
 import json
 import os
 import re
+import struct
 import sys
 import urllib.parse
 import urllib.request
@@ -426,6 +427,118 @@ def _as_taxon_list(v):
     if isinstance(v, str):
         return [v]
     return list(v)
+
+
+def _kraken2_rank_sets(taxo_path):
+    """Read which taxa a Kraken2 database ranks as a domain, a kingdom or a virus realm.
+
+    What it is for: rule finalize_otu_table (45_abundance.smk) fills the eight lineage
+    slots of otu_table.tsv from the rank codes of the Bracken reports (D, K, P, C, O,
+    F, G, S). Two things cannot be read from those codes, and come from the database's
+    own taxonomy instead:
+      - which nodes are virus realms. A virus has no domain; its d__ slot holds its
+        realm, the top rank of virus taxonomy (ICTV), which NCBI keeps in the same
+        "domain/realm" column as the domains of cellular life. Kraken2 has no code for
+        a realm and prints it as R2, the code it also gives other unranked nodes at
+        that depth ("unclassified viruses" is R2 too);
+      - whether the codes can be trusted. Kraken2 releases before 2.17 print NCBI's
+        2025 domains as R1/R2 instead of D, and reports made with another database
+        code other taxa D or K. finalize_otu_table checks every D and K code against
+        what this function returns, and stops when they disagree.
+
+    Why taxo.k2d: it is Kraken2's own copy of the database taxonomy, written by
+    kraken2-build and read at every classification, so every Kraken2 database has it.
+    nodes.dmp and names.dmp ship only with some prebuilt databases, and ktaxonomy.tsv
+    and inspect.txt hold only the report codes, in which a realm looks like any other
+    R2 node. Reading it takes well under a second.
+
+    The file layout (Kraken2 source, taxonomy.cc, Taxonomy::WriteToDisk). Every number
+    is an unsigned 8-byte integer, least significant byte first (little-endian):
+      - bytes 0-7: the text K2TAXDAT;
+      - bytes 8-31: three numbers: the number of nodes, the size of the name block,
+        the size of the rank block;
+      - one 56-byte record per node, seven numbers: its parent, its first child, its
+        number of children, where its name starts in the name block, where its rank
+        name starts in the rank block, its taxid, and one field not used here;
+      - the name block, then the rank block: texts, each one ended by a zero byte.
+    Node 0 is an empty placeholder (taxid 0) and is skipped.
+
+    Input: the path of taxo.k2d inside references.kraken_db. Stops the run if the file
+    is missing, or does not have this layout (a damaged copy, or a file written by a
+    future Kraken2 that changed it).
+    Returns four {taxid: name} dicts, the taxids as text, as the reports write them:
+      "domain"      nodes ranked "domain", or "superkingdom", the name NCBI gave this
+                    rank before 2025 (Kraken2 codes both D);
+      "kingdom"     nodes ranked "kingdom" (code K), the viral kingdoms included;
+      "realm"       nodes ranked "realm" (virus realms);
+      "virus_root"  Viruses (NCBI taxid 10239) when the database ranks it superkingdom
+                    or domain, as NCBI did before 2025. Empty on newer databases, where
+                    Viruses is an "acellular root". It is kept apart from the domains,
+                    because Viruses is never written as a domain: on old and new
+                    databases alike, a virus gets its realm in d__.
+    """
+    taxo_path = Path(taxo_path)
+    complete_db_hint = ("references.kraken_db must be a complete Kraken2 database "
+                        "(hash.k2d, opts.k2d and taxo.k2d).")
+    if not taxo_path.is_file():
+        sys.exit(f"[MetaFlux] {taxo_path} not found: {complete_db_hint}")
+    data = taxo_path.read_bytes()
+
+    # The header: the 8-byte tag, then the three sizes. In the struct format, "<" means
+    # little-endian and each "Q" one unsigned 8-byte number.
+    header_size = 32
+    record_size = 56
+    if len(data) < header_size or data[:8] != b"K2TAXDAT":
+        sys.exit(f"[MetaFlux] {taxo_path} is not a Kraken2 taxonomy file: {complete_db_hint}")
+    node_count, name_block_size, rank_block_size = struct.unpack_from("<QQQ", data, 8)
+
+    # Where the two text blocks start, and the file size this layout implies. A file of
+    # any other size is not in this layout, and its numbers cannot be trusted.
+    name_block_start = header_size + node_count * record_size
+    rank_block_start = name_block_start + name_block_size
+    expected_size = rank_block_start + rank_block_size
+    if expected_size != len(data):
+        sys.exit(f"[MetaFlux] {taxo_path} does not have the layout MetaFlux reads "
+                 f"({len(data)} bytes, {expected_size} expected from its header). Is the "
+                 f"copy complete? A database built with a Kraken2 newer than the one in "
+                 f"workflow/envs/kraken2.yaml may store its taxonomy differently.")
+
+    def text_at(position):
+        """The text that starts at byte `position` of the file, up to the next zero byte."""
+        end = data.index(b"\0", position)
+        return data[position:end].decode()
+
+    # The rank names kept, and the set each one goes into.
+    set_for_rank = {
+        "domain":       "domain",
+        "superkingdom": "domain",     # NCBI's name for the domain rank before 2025
+        "kingdom":      "kingdom",
+        "realm":        "realm",
+    }
+    rank_sets = {"domain": {}, "kingdom": {}, "realm": {}, "virus_root": {}}
+
+    # Go through the node records one by one (struct.iter_unpack cuts the block into
+    # 56-byte records and turns each into its seven numbers). A database uses only a
+    # few dozen rank names, so each one is read from the rank block once and remembered
+    # by its position there.
+    rank_name_at = {}
+    node_block = data[header_size:name_block_start]
+    for record in struct.iter_unpack("<7Q", node_block):
+        name_offset = record[3]
+        rank_offset = record[4]
+        taxid = record[5]
+        if taxid == 0:
+            continue                  # node 0, the empty placeholder
+        if rank_offset not in rank_name_at:
+            rank_name_at[rank_offset] = text_at(rank_block_start + rank_offset)
+        rank = rank_name_at[rank_offset]
+        if rank not in set_for_rank:
+            continue
+        which_set = set_for_rank[rank]
+        if which_set == "domain" and taxid == 10239:
+            which_set = "virus_root"  # Viruses, ranked superkingdom before 2025
+        rank_sets[which_set][str(taxid)] = text_at(name_block_start + name_offset)
+    return rank_sets
 
 
 # ────────────────────── Amplicon-only globals ──────────────────
@@ -1447,13 +1560,21 @@ else:  # MODE == "shotgun"
     KRAKEN2_THREADS  = sht_cfg["kraken"].get("threads") or threads_for("kraken2")
     TAX_LEV          = sht_cfg["bracken"]["tax_lev"]
 
-    # The rank Bracken re-estimates at (rule bracken), and the rank rule kraken_biom
-    # builds the OTU table at (both in 45_abundance.smk). Only these seven letters
-    # work end to end: Bracken matches the value against the rank codes in the
-    # Kraken2 report, and kraken-biom knows no others. Without this check a wrong
-    # value failed late or not at all: a lowercase letter crashed Bracken, but only
-    # after Kraken2 had finished, and "K" went through Bracken and then gave an
-    # empty table. Stop here instead, before anything runs.
+    # The rank Bracken re-estimates at (rule bracken), which is also the rank of every
+    # row of otu_table.tsv (rule finalize_otu_table; both in 45_abundance.smk). Bracken
+    # matches the value against the rank codes in the Kraken2 report. Without this
+    # check a wrong value failed late: a lowercase letter crashed Bracken, but only
+    # after Kraken2 had finished. Stop here instead, before anything runs.
+    # K (kingdom) is refused with its own reason. A kingdom-level table leaves out
+    # every taxon without a kingdom: all of a GTDB database, which has no kingdom rank,
+    # and most protists, which NCBI places in no kingdom. Its totals therefore do not
+    # match the sums of the species rows. The k__ slot of a table made at a lower rank
+    # gives the kingdom of every row instead.
+    if TAX_LEV == "K":
+        sys.exit("[MetaFlux] shotgun.bracken.tax_lev: K is not allowed. A kingdom-level "
+                 "table leaves out every taxon without a kingdom (all of a GTDB database, "
+                 "most protists), so its totals do not match the species sums. Use P or a "
+                 "lower rank; the k__ slot of otu_table.tsv gives the kingdom of each row.")
     if TAX_LEV not in ("D", "P", "C", "O", "F", "G", "S"):
         sys.exit(f"[MetaFlux] shotgun.bracken.tax_lev must be one of D, P, C, O, F, G, S "
                  f"(a single capital letter), got {TAX_LEV!r}")
@@ -1536,6 +1657,18 @@ else:  # MODE == "shotgun"
     OTU_FILTER_ENABLED = bool(_sht_filter.get("enabled", False))
     OTU_FILTER_KEEP    = _as_taxon_list(_sht_filter.get("keep"))
     OTU_FILTER_DISCARD = _as_taxon_list(_sht_filter.get("discard"))
+
+    # ── What the Kraken2 database ranks as a domain, a kingdom or a virus realm ──
+    # Read once, here, from the database's own taxonomy file (taxo.k2d), by
+    # _kraken2_rank_sets() near the top of this file, which explains why. Rule
+    # finalize_otu_table (45_abundance.smk) gets the four small {taxid: name} sets as
+    # params: it takes the realm of a virus for the d__ slot from them, and checks every
+    # D and K code of the Bracken reports against them. Only when Kraken2 runs: a
+    # sylph-only run builds no Kraken2 table, and may keep the template's placeholder
+    # kraken_db, so it reads nothing here.
+    KRAKEN2_RANK_SETS = {"domain": {}, "kingdom": {}, "realm": {}, "virus_root": {}}
+    if RUN_KRAKEN2:
+        KRAKEN2_RANK_SETS = _kraken2_rank_sets(KRAKEN_DB / "taxo.k2d")
 
     # The taxon filter acts on otu_table.tsv (Kraken2 + Bracken) only. The sylph tables
     # are written unfiltered, so that each column still adds up to the read pairs after

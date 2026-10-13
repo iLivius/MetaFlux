@@ -1,0 +1,21 @@
+name: biom
+channels: [conda-forge, bioconda]
+dependencies:
+  # The environment of the two rules that write a BIOM table: finalize_otu_table
+  # (otu_table.biom, 45_abundance.smk) and, with shotgun.profiler: sylph or both,
+  # sylph_tables (sylph_table.biom, 38_sylph.smk). Both run a Python script that
+  # uses these three packages directly: python runs it, numpy holds the count
+  # matrix, and biom-format writes the BIOM file from that matrix. biom-format
+  # would bring python and numpy along anyway; they are listed so that this file
+  # names everything the two scripts import, with the oldest Python they are
+  # written for (as in python_utils.yaml).
+  # All three were already installed with kraken-biom, the tool that built the
+  # Kraken2 OTU table up to MetaFlux v2.4.0; this environment is the same minus
+  # kraken-biom. Minimum versions, as before, not exact pins.
+  #
+  # Snakemake identifies this software environment by the full text of this file,
+  # comments included. ANY edit, even to a comment, counts as new software, and
+  # every finished folder runs both rules again (seconds each).
+  - python>=3.10
+  - biom-format>=2.1.15
+  - numpy

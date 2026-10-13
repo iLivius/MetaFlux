@@ -601,14 +601,17 @@ shotgun:
     never_prune_above_fraction: 0.01
 
   # OTU-table taxon filter — the shotgun counterpart of amplicon.taxonomy.filter.
-  # Uses the SAME rank-aware token machinery: each token (k__Bacteria, g__Homo,
-  # …) matches a whole segment of the OTU's taxonomy lineage; `keep` runs first,
-  # then `discard`. Empty list = that direction does nothing. Applied to the
-  # final otu_table after Bracken, so it never changes read classification, only
-  # which OTUs appear in the table. Default OFF (metagenomic sample types vary
-  # too much for a universal default). Common uses:
-  #   keep:    [k__Bacteria, k__Archaea]   # prokaryotes only (drop Eukaryota/Viruses)
-  #   discard: [g__Homo]                    # explicit host safety net
+  # Uses the SAME rank-aware token machinery: each token (d__Bacteria, g__Homo,
+  # …) matches a whole slot of the OTU's lineage, d__ k__ p__ c__ o__ f__ g__ s__
+  # (d__ is the domain; a virus has its realm there, e.g. d__Duplodnaviria);
+  # `keep` runs first, then `discard`. Empty list = that direction does nothing.
+  # Applied to the final otu_table after Bracken, so it never changes read
+  # classification, only which OTUs appear in the table. Default OFF (metagenomic
+  # sample types vary too much for a universal default). Common uses:
+  #   keep:    [d__Bacteria, d__Archaea]                # prokaryotes only
+  #   keep:    [d__Bacteria, d__Archaea, d__Eukaryota]  # everything but viruses
+  #   keep:    [d__Duplodnaviria, d__Riboviria]         # viruses of these realms only
+  #   discard: [g__Homo]                                # explicit host safety net
   taxonomy_filter:
     enabled: false
     keep:    []
@@ -678,7 +681,7 @@ resources:
     kraken2: 16
     kmer_evidence: 1                          # single-threaded text pass over one report
     bracken: 4
-    kraken_biom: 2
+    finalize_otu_table: 1                     # one pass over the Bracken reports
     extract_taxon_reads: 4
     compress_extracted: 6                     # pigz parallelism for extract_taxa outputs
     download_sra: 6                           # fasterq-dump parallelism; past ~8 the bottleneck is I/O, not CPU
@@ -731,7 +734,7 @@ resources:
     kraken2: 20000
     kmer_evidence: 2000                       # holds one parsed report in memory (~1-2 MB of text)
     bracken: 4000
-    kraken_biom: 2000
+    finalize_otu_table: 2000
     extract_taxon_reads: 2000
     # sylph (shotgun.profiler sylph | both)
     sylph_sketch: 4000                        # measured 54-64 MB for 4.7 M read pairs; deep soil

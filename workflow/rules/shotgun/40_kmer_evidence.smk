@@ -7,7 +7,7 @@
 #
 # It is a step BETWEEN the two, not an alternative to either. Switching the gate on
 # does not skip Bracken; it hands Bracken a cleaned report instead of the raw one.
-# Because the correction happens upstream, it flows through bracken -> kraken_biom ->
+# Because the correction happens upstream, it flows through bracken ->
 # finalize_otu_table, so the pipeline's ordinary otu_table.biom / otu_table.tsv become
 # the corrected tables. There is no separate "filtered" table to reconcile afterwards.
 #

@@ -290,11 +290,11 @@ rule sylph_taxprof:
 # Outputs: the five files listed in _shotgun_targets() (00_common.smk), plus the
 # MultiQC copy of the summary, which rule multiqc (90_report.smk) shows as a table.
 #
-# Runs in the kraken-biom env only because that is the MetaFlux env that already has
-# biom-format (the library that also writes otu_table.biom); the script needs nothing
-# else beyond the Python standard library and numpy. Reusing it adds no dependency. As
-# with every env file, any edit to envs/kraken-biom.yaml, even a comment, counts as new
-# software and re-runs both this step and the Kraken2 BIOM steps in finished runs.
+# Runs in the biom env (envs/biom.yaml), which it shares with finalize_otu_table, the
+# rule that writes otu_table.biom: both need biom-format, and this script needs nothing
+# else beyond the Python standard library and numpy. As with every env file, any edit
+# to envs/biom.yaml, even a comment, counts as new software and re-runs both this step
+# and finalize_otu_table in finished runs.
 rule sylph_tables:
     input:
         taxprof     = OUT / "02c.sylph" / "taxprof",
@@ -321,7 +321,7 @@ rule sylph_tables:
     resources:
         mem_mb = lambda wc: mem_mb_for("sylph_tables"),
     conda:
-        "../../envs/kraken-biom.yaml"
+        "../../envs/biom.yaml"
     log:
         LOGS / "sylph_tables.log"
     priority: 1
