@@ -985,8 +985,9 @@ if MODE == "amplicon":
     # (10_refdb.smk) tests every header of the reference against them before any
     # classification. They are checked here first, when the run starts, because a
     # mistake in them would not stop anything later: a rule on a misspelt rank
-    # ("Domian") would test no rank, and a misspelt kind ("oneof") would let every
-    # name pass, so the reference check would pass without checking what it should.
+    # ("Domian") would test no rank, and a misspelt kind ("oneof") or an empty list
+    # (one_of: []) would let every name pass, so the reference check would pass
+    # without checking what it should.
     # The rank names are those of the active method's rank model (sintax_tax_levels
     # under method sintax), the model the check reads the file with.
     #   in : PROFILE["reference_values"] (_check_pack_formats above made sure the
@@ -998,13 +999,20 @@ if MODE == "amplicon":
         """Mistakes in one entry of a rule, e.g. Domain: {one_of: [...]}, as sentences.
         The names must be a list of text: YAML reads a bare yes / no / 1.0 as a
         boolean or a number, and one name without brackets as plain text, which
-        Python would then search letter by letter."""
+        Python would then search letter by letter. The list must not be empty: the
+        check script reads an empty one_of or ends_with as "no rule", so
+        Kingdom: {one_of: []} would let every name pass. A rank that needs no rule
+        is simply left out of reference_values."""
         if kind not in _RULE_KINDS:
             return [f"the rule for {rank_name} has the entry {kind!r}; the only "
                     f"entries are {', '.join(_RULE_KINDS)}"]
         if not isinstance(names, list):
             return [f"{rank_name}: {kind} must be a list of names in brackets, e.g. "
                     f"{kind}: [Bacteria] (got: {names!r})"]
+        if not names:
+            return [f"{rank_name}: {kind} lists no names; give at least one name, or "
+                    f"remove the entry (a rank that needs no rule is left out of "
+                    f"reference_values)"]
         problems = []
         for name in names:
             if not isinstance(name, str):
