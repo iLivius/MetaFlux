@@ -22,6 +22,7 @@
 #                         ← convert_silva_train     (refdb/silva_drop_kingdom.py; SILVA 144 only)
 #           silva_sintax  ← convert_silva_sintax   (refdb/silva_to_sintax.py)
 #           rpob_frogs    ← convert_rpob_to_dada2   (refdb/frogs_rpob_to_dada2.py)
+#           pr2_sintax    ← convert_pr2_sintax      (refdb/pr2_utax_domain_first.py)
 #
 # PhiX is separate: it is a decontamination reference, not taxonomy — fetched and
 # bowtie2-indexed below.
@@ -252,12 +253,40 @@ rule convert_rpob_to_dada2:
 # SILVA-Euk is the probe substrate (in-silico primer recovery 96-97% vs 66-75%
 # on PR2); PR2 is the taxonomy reference. PR2 ships two files with DIFFERENT
 # rank depths — the DADA2 one (9 ranks) feeds the rdp path, the UTAX one
-# (8 ranks) feeds sintax — so both are fetched independently.
+# (8 ranks) feeds sintax after the conversion below — so both are fetched
+# independently.
 #
-# None of the three gets a bespoke rule here: all three are plain downloads
-# (no `archive` key in 18S.yaml), so they fall through to the generated fetch
-# loop at the bottom of this file (Tier 0), which builds fetch_silva_euk,
-# fetch_pr2_dada2 and fetch_pr2_utax automatically.
+# Three downloads plus one derived file. None of the three downloads gets a
+# bespoke rule here: they are plain files (no `archive` key in 18S.yaml), so they
+# fall through to the generated fetch loop at the bottom of this file (Tier 0),
+# which builds fetch_silva_euk, fetch_pr2_dada2 and fetch_pr2_utax automatically.
+# The derived file, pr2_sintax, is made from pr2_utax by rule convert_pr2_sintax
+# right below (Tier 2).
+
+# Rewrites PR2's UTAX file into the SINTAX file the 18S sintax path classifies
+# with. PR2 puts the domain under the SINTAX letter k: and the supergroup under
+# d:, but VSEARCH reads the letters as a fixed top-down order (d, k, p, c, ...)
+# and counts a rank's confidence only over the bootstrap rounds that agreed on
+# every rank above it. On the file as published the supergroup was therefore the
+# top rank, and an ASV lost its domain whenever its supergroup was uncertain. The
+# script swaps the two letters, headers only (sequences untouched), and stops on
+# any file without PR2 5.1.1's letter order or domain values, so a file can never
+# be swapped twice.
+#   in : PR2_UTAX   (pr2_utax, downloaded by the generated rule fetch_pr2_utax)
+#   out: PR2_SINTAX (pr2_sintax), read by rule assign_taxonomy (80_taxonomy.smk)
+#        on the sintax path. Built only when an 18S run uses method: sintax; the
+#        rdp path reads PR2's DADA2 file and never asks for it.
+rule convert_pr2_sintax:
+    input:
+        fasta = PR2_UTAX,
+    output:
+        fasta = PR2_SINTAX,
+    log:
+        LOGS / "refdb" / "convert_pr2_sintax.log",
+    conda:
+        "../../envs/python_utils.yaml"
+    script:
+        "../../scripts/refdb/pr2_utax_domain_first.py"
 
 
 # ── Generated reference fetches ───────────────────────────────────────────

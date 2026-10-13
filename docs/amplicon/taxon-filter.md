@@ -277,13 +277,14 @@ These are starting points, not defaults — nothing in the code applies them.
 |--------|--------|-----------|
 | 16S | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS | `[k__Fungi]` | `[]` |
-| 18S | `[d__Eukaryota]` — note this also drops ASVs left unclassified at Domain, which on some 18S datasets is a large fraction; see [18S rRNA](markers/18S.md) before applying it | `[]` |
+| 18S | `[d__Eukaryota]` — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S rRNA](markers/18S.md) | `[]` |
 | gyrB | *no recommended default* — see below | |
 | rpoB | *no recommended default* — see below | |
 
 **18S** uses `d__Eukaryota`, not `k__Eukaryota`: the taxonomy reference is PR2, whose
-top rank is Domain and is emitted with the `d__` prefix. The config template notes that
-a SILVA-Eukaryotic taxonomy reference would carry `k__` instead.
+top rank is Domain and is emitted with the `d__` prefix under both methods.
+SILVA-Eukaryotic only sizes the amplicon (the length probe) and never names an ASV, so its
+rank labels play no part in the filter.
 
 **gyrB** has no recommended keep/discard, but it does have a filter worth applying, of a
 different kind. The DD7RZ8 reference tags every entry's first rank as `gyrB` (the true

@@ -168,9 +168,10 @@ the abundance table by `asv_id`.
 
 The rank columns in `taxon_seq_table.txt` come from the marker pack, so they
 match the reference's actual depth: `Kingdom … Species` for 16S, ITS and rpoB,
-`Gene, Phylum … Species` for gyrB, and PR2's nine ranks
+`Gene, Phylum … Species` for gyrB, and for 18S PR2's nine ranks
 (`Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species`)
-for 18S.
+under `method: rdp`, or eight under `method: sintax`, where PR2's UTAX file joins
+Division and Subdivision into one `Division_Subdivision` column.
 
 !!! note "File format"
 

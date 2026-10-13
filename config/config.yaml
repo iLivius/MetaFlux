@@ -248,8 +248,7 @@ amplicon:
       # Recommended starting points:
       #   16S  : keep [k__Bacteria, k__Archaea]   discard [o__Chloroplast, f__Mitochondria]
       #   ITS  : keep [k__Fungi]                  discard []
-      #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__);
-      #                                                        # use k__Eukaryota with SILVA-Euk
+      #   18S  : keep [d__Eukaryota]              discard []   # PR2 ranks (d__)
       #   gyrB : no recommended default — the DD7RZ8 paralog tag (discard: [other])
       #          is a separate, structural filter; see docs/amplicon/markers/gyrb.md
       #   rpoB : no recommended default — FROGS RefSeq has no non-rpoB contamination

@@ -365,6 +365,7 @@ if MODE == "amplicon":
     UNITE_UCHIME_ITS2_FA = _ref_path("unite_uchime_ITS2", "unite", "uchime_its2")
     PR2_DADA2            = _ref_path("pr2_dada2",         "pr2",   "dada2")
     PR2_UTAX             = _ref_path("pr2_utax",          "pr2",   "utax")
+    PR2_SINTAX           = _ref_path("pr2_sintax",        "pr2",   "sintax")  # built, not downloaded
     SILVA_EUK            = _ref_path("silva_euk",         "silva_euk", "fasta")
     GYRB_DADA2           = _ref_path("gyrb_dada2",        "gyrb",  "dada2")
     RPOB_FROGS           = _ref_path("rpob_frogs",        "rpob",  "frogs")
@@ -380,6 +381,7 @@ if MODE == "amplicon":
         "unite_uchime_ITS2": UNITE_UCHIME_ITS2_FA,
         "pr2_dada2":         PR2_DADA2,
         "pr2_utax":          PR2_UTAX,
+        "pr2_sintax":        PR2_SINTAX,
         "silva_euk":         SILVA_EUK,
         "gyrb_dada2":        GYRB_DADA2,
         "rpob_frogs":        RPOB_FROGS,

@@ -41,7 +41,7 @@ set of ASVs carrying a similar fraction of reads.
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —
 and are judged on whether the output is coherent rather than against a known answer.
-For 18S that check is that 98.5% of reads classify as Eukaryota, splitting into TSAR
+For 18S that check is that 99.97% of reads classify as Eukaryota, splitting into TSAR
 (53%), Obazoa (28%) and Archaeplastida (14%), and that the observed ASV median length
 of 381 bp lands on the 381 bp median predicted by in-silico PCR against PR2. Defined
 18S mock communities are scarce; the ground-truth work is carried by the other three

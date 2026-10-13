@@ -379,6 +379,7 @@ the pack's declared filename. The full set of relocatable keys:
 | `silva_euk.fasta` | 18S | `silva_euk/silva_132.18s.dada2.fa.gz` |
 | `pr2.dada2` | 18S | `pr2/pr2_SSU_dada2.fasta.gz` |
 | `pr2.utax` | 18S | `pr2/pr2_SSU_UTAX.fasta.gz` |
+| `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only). A path given here is where MetaFlux writes the file it builds, so a file placed there is rebuilt whenever `pr2.utax` is newer |
 | `gyrb.dada2` | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` |
 | `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` (the converted DADA2 trainset) |
 
@@ -733,7 +734,7 @@ default: whatever is listed is exactly what is applied.
 |---|---|---|
 | 16S | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS | `[k__Fungi]` | `[]` |
-| 18S | `[d__Eukaryota]` (PR2 ranks; `k__Eukaryota` with SILVA-Euk) — note this also drops ASVs left unclassified at Domain, which on some 18S datasets is a large fraction; see [18S](../amplicon/markers/18S.md) before applying it | `[]` |
+| 18S | `[d__Eukaryota]` (PR2 ranks) — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S](../amplicon/markers/18S.md) | `[]` |
 | gyrB | no recommended default — paralogs are removed with `discard: [other]` on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter | |
 | rpoB | no recommended default — FROGS RefSeq has no equivalent contamination to remove | |
 

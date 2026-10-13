@@ -12,7 +12,8 @@ probe_stat_key:      18S
 
 taxonomy_refdb:      pr2_dada2        # rdp path
 taxonomy_species_db: null             # PR2 carries species in-line; no addSpecies step
-taxonomy_sintax_db:  pr2_utax         # sintax path
+taxonomy_sintax_db:  pr2_sintax       # sintax path: PR2's UTAX file with the domain
+                                      # moved to d: (rule convert_pr2_sintax)
 
 extractor:           none
 
@@ -20,19 +21,31 @@ extractor:           none
 #   dada2 file : 9 ranks  Domain;Supergroup;Division;Subdivision;Class;...;Species
 #   UTAX  file : 8 ranks  k:Domain,d:Supergroup,p:Division-Subdivision,c:Class,...
 # so the sintax path declares its own model below. Prefixes are keyed to rank
-# MEANING, not to the underlying letters, so one keep/discard token behaves the
-# same under either method (d__Eukaryota works for both).
+# MEANING, not to the underlying letters. d__, sg__ and c__ ... s__ tokens behave
+# the same under either method; dv__ holds the Division under rdp but the joined
+# "Division-Subdivision" under sintax, and sbd__ exists under rdp only.
 tax_levels:    [Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species]
 rank_letters:  [d, sg, dv, sbd, c, o, f, g, s]     # rdp path: unused
 rank_prefixes: [d__, sg__, dv__, sbd__, c__, o__, f__, g__, s__]
 prefix_style:  bare
 
+# SINTAX letters are not names for VSEARCH: it reads them as a fixed top-down order
+# (d, k, p, c, o, f, g, s) and counts a rank's confidence only over the bootstrap
+# rounds that agreed on every rank above it. So the letters must follow the ranks
+# top-down: the domain gets d:, the supergroup the next letter, k:, and so on.
+# PR2's own UTAX file has the domain under k: and the supergroup under d:, which
+# made VSEARCH treat the supergroup as the top rank and lose the domain whenever the
+# supergroup was uncertain. MetaFlux therefore classifies against a copy with the
+# two letters swapped (rule convert_pr2_sintax). The raw VSEARCH output,
+# 6.taxonomy/_sintax_raw.tsv, shows the supergroup as k:<supergroup>; the tables
+# write it as sg__ / Supergroup.
 sintax_tax_levels:    [Domain, Supergroup, Division_Subdivision, Class, Order, Family, Genus, Species]
-sintax_rank_letters:  [k, d, p, c, o, f, g, s]
+sintax_rank_letters:  [d, k, p, c, o, f, g, s]
 sintax_rank_prefixes: [d__, sg__, dv__, c__, o__, f__, g__, s__]
 
-# See 16S.yaml. All three 18S references are plain downloads, so this marker needs
-# no fetch code at all.
+# See 16S.yaml. The three downloads are plain files, so their fetch rules are
+# generated; the fourth file, pr2_sintax, is derived from pr2_utax by rule
+# convert_pr2_sintax (10_refdb.smk) and therefore has no url.
 references:
   silva_euk:
     file: silva_euk/silva_132.18s.dada2.fa.gz
@@ -43,3 +56,5 @@ references:
   pr2_utax:
     file: pr2/pr2_SSU_UTAX.fasta.gz
     url:  https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_UTAX.fasta.gz
+  pr2_sintax:
+    file: pr2/pr2_SSU_UTAX_domain-first.fasta.gz
