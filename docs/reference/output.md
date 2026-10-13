@@ -176,10 +176,12 @@ Division and Subdivision into one `Division_Subdivision` column.
 !!! note "File format"
 
     The four tables written by `assign_taxonomy` follow R's
-    `write.table(col.names = NA)` conventions, on both the rdp and the sintax path:
-    tab-separated, the header line starts with an empty cell for the row-name column,
-    and text values (row names, taxonomy strings, rank names) are wrapped in double
-    quotes; a missing `metaxa2_origin` is an unquoted `NA`, as R writes it.
+    `write.table(col.names = NA)` conventions, and the rdp and the sintax path write
+    them in exactly the same format: tab-separated, the header line starts with an
+    empty quoted cell (`""`) for the row-name column, and text values (row names,
+    taxonomy strings, rank names) are wrapped in double quotes. A missing value is an
+    unquoted `NA`, as R writes it: a rank the classifier did not reach in
+    `taxon_seq_table.txt`, and a missing `metaxa2_origin`.
     `read.table(..., sep = "\t", header = TRUE, row.names = 1)` in R and
     `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
     extra arguments, `NA` as a missing value. `taxonomy_lineage_full.tsv` is a plain

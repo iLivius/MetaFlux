@@ -57,6 +57,14 @@ sets pick up.
 
 All outputs use R write.table quoting conventions (character values double-quoted,
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
+They copy what the rdp path writes with R's write.table(col.names = NA), so the
+tables of both methods have the same format:
+  - the header line starts with an empty quoted cell ("") above the row names;
+  - a missing value is a bare NA, without quotes: a rank the classifier did not
+    reach (in taxon_seq_table.txt) or a missing metaxa2_origin.
+One reader therefore works for the tables of either method: the pipeline's own
+readers listed above, and the user's read.table in R or read_csv in pandas, which
+both read the bare NA as a missing value.
 """
 import gzip
 import subprocess
@@ -297,6 +305,8 @@ tax_strings: dict[str, str]            = {}
 for asv_id in shared_ids:
     ranks = sintax_result.get(asv_id, {})
     tax_strings[asv_id] = build_tax_string(ranks)
+    # A rank the classifier did not reach is "" here; write_taxon_table writes it
+    # to taxon_seq_table.txt as NA, R's missing value, as the rdp path does.
     rank_rows[asv_id] = {
         col: ranks.get(letter, "")
         for letter, col in zip(RANK_LETTERS, RANK_NAMES)
@@ -483,21 +493,37 @@ def q(s: str) -> str:
 
 def write_count_table(path: Path, row_ids: list[str], row_names: list[str]) -> None:
     """Write asv_table.txt or asv_table_seqs.txt.
-    Counts are unquoted integers; taxonomy is a quoted string."""
+    Counts are unquoted integers; taxonomy is a quoted string. The header starts
+    with an empty quoted cell ("") above the row names, as R's write.table writes
+    it on the rdp path."""
     with path.open("w") as fh:
-        fh.write("\t".join([""] + [q(s) for s in samples] + [q("taxonomy")]) + "\n")
+        fh.write("\t".join([q("")] + [q(s) for s in samples] + [q("taxonomy")]) + "\n")
         for asv_id, row_name in zip(row_ids, row_names):
             vals = counts.get(asv_id, ["0"] * len(samples))
             fh.write("\t".join([q(row_name)] + vals + [q(tax_strings[asv_id])]) + "\n")
 
 
 def write_taxon_table(path: Path, row_ids: list[str]) -> None:
-    """Write taxon_seq_table.txt — all rank + sequence values are quoted strings."""
+    """Write taxon_seq_table.txt: one row per ASV, one column per rank, then the
+    sequence. The header starts with an empty quoted cell (""), like the other
+    tables. A rank the classifier reached holds its name as a quoted string. A rank
+    it did not reach (confidence below sintax_cutoff, or the reference gives no name
+    at that rank) holds a bare NA, R's missing value, exactly as the rdp path's
+    write.table writes it. So is.na() in R and isna() in pandas find the unassigned
+    ranks in the same way for both methods. The sequence is quoted."""
     with path.open("w") as fh:
-        fh.write("\t".join([""] + [q(c) for c in RANK_NAMES] + [q("sequence")]) + "\n")
+        fh.write("\t".join([q("")] + [q(c) for c in RANK_NAMES] + [q("sequence")]) + "\n")
         for asv_id in row_ids:
             row  = rank_rows[asv_id]
-            vals = [q(row.get(col, "")) for col in RANK_NAMES]
+            vals = []
+            for col in RANK_NAMES:
+                name = row.get(col, "")
+                if name:
+                    # The classifier reached this rank: its name, quoted.
+                    vals.append(q(name))
+                else:
+                    # Not reached: R's missing value, unquoted.
+                    vals.append("NA")
             fh.write("\t".join([q(asv_id)] + vals + [q(fasta[asv_id])]) + "\n")
 
 
@@ -519,7 +545,7 @@ def write_unfiltered_table(path: Path, row_ids: list[str]) -> None:
     the step that removed the ASV). NA is written unquoted, as R's write.table
     writes a missing value, so read.table and pandas both read it as missing."""
     with path.open("w") as fh:
-        fh.write("\t".join([""] + [q(s) for s in samples]
+        fh.write("\t".join([q("")] + [q(s) for s in samples]
                            + [q("taxonomy"), q("metaxa2_origin"), q("filter_status")]) + "\n")
         for asv_id in row_ids:
             vals = counts.get(asv_id, ["0"] * len(samples))
