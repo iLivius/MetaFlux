@@ -43,8 +43,11 @@ WHAT IT REFUSES (the script stops with a message rather than guess)
 Together these make a second swap impossible: a file this script already wrote
 starts with d:, not k:, so feeding it back in stops at the letter check.
 
-INPUT  : input.fasta  = PR2's UTAX file exactly as downloaded (rule fetch_pr2_utax,
-         symbol pr2_utax in 18S.yaml).
+INPUT  : input.fasta  = PR2's UTAX file (symbol pr2_utax in 18S.yaml): the download,
+         gzipped as PR2 publishes it (rule fetch_pr2_utax), or the file a run config
+         pins with references.pr2.utax, which may also be plain text. Before this
+         step existed VSEARCH read that file directly, and VSEARCH reads either form,
+         so this script does too (open_utax below).
 OUTPUT : output.fasta = the domain-first SINTAX file (symbol pr2_sintax in 18S.yaml),
          read next by rule assign_taxonomy (VSEARCH --sintax, via
          80c_parse_sintax.py) when an 18S run uses taxonomy.method: sintax. The rdp
@@ -58,7 +61,8 @@ from pathlib import Path
 sm = snakemake  # noqa: F821 (injected by Snakemake)
 
 # Paths come from rule convert_pr2_sintax in 10_refdb.smk:
-#   input.fasta  = PR2's UTAX FASTA as downloaded (gzipped)
+#   input.fasta  = PR2's UTAX FASTA: gzipped as downloaded, or plain when the run
+#                  config pins an uncompressed copy (references.pr2.utax)
 #   output.fasta = the domain-first SINTAX FASTA this script writes (gzipped)
 #   log[0]       = a plain-text log for a human to check after the run; nothing
 #                  downstream reads it
@@ -79,6 +83,18 @@ DOMAIN_VALUES = {
     "Eukaryota:plas", "Eukaryota:mito", "Eukaryota:nucl",
     "Eukaryota:apic", "Eukaryota:chro",
 }
+
+
+def open_utax(path):
+    """Open PR2's UTAX file for reading as text, whether it is gzipped or not.
+    The choice is made by the file's first two bytes (every gzip file starts with
+    1f 8b), not by its name, as VSEARCH and check_reference_ranks.py do: a pinned
+    file may be plain even when its name ends in .gz, and the other way round."""
+    with open(path, "rb") as raw:
+        first_bytes = raw.read(2)
+    if first_bytes == b"\x1f\x8b":
+        return gzip.open(path, "rt")
+    return open(path)
 
 
 def stop(message, log, fo):
@@ -102,7 +118,7 @@ log_path.parent.mkdir(parents=True, exist_ok=True)
 
 # compresslevel=6 is gzip's usual level. Python's default, 9, makes this file only
 # marginally smaller and takes several times longer to write.
-with (gzip.open(in_path, "rt") as fi,
+with (open_utax(in_path) as fi,
       gzip.open(out_path, "wt", compresslevel=6) as fo,
       log_path.open("w") as log):
 
