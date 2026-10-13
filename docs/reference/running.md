@@ -195,11 +195,15 @@ consequences:
     removed by the other. A `discard` token is affected only when the best-hit check is
     switched off: with it on, an ASV whose best hit carries the token with at least
     `discard_min_support` support is removed whichever side of the cutoff its call falls. In a shotgun folder the Bracken environment is now pinned to
-    3.1p1, so `bracken` and the steps after it run again (Kraken2 does not, unless PhiX
-    or host removal was on).
+    3.1p1, so `bracken` and the steps after it run again.
     Species-level numbers do not change; at any other `tax_lev` the OTU table is now
     built correctly, see
     [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s).
+    The Kraken2 environment is now pinned to 2.17.1, so Kraken2 and every step after
+    it run again in every shotgun folder, and so does the adapter trimming before it:
+    Kraken2 reads the trimmed reads, which are temporary files. A folder whose Kraken2
+    was already 2.17.1 gets the same Kraken2 results back; with any other release the
+    results can differ.
     The BBTools environment is now pinned to bbmap 39.52, because newer releases crash
     or hang in PhiX removal on paired reads, trimmed ones above all. So in a folder made
     with PhiX or host removal on, those steps and every step after them run again,

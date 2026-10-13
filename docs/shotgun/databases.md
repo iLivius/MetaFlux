@@ -97,6 +97,24 @@ Two practical rules when choosing:
     (`shotgun.bracken.tax_lev: G`), and to treat species-level calls from a sparse index
     as hypotheses rather than identifications.
 
+## Kraken2 version
+
+MetaFlux runs one Kraken2 release, 2.17.1. It is pinned in the environment file
+`workflow/envs/kraken2.yaml`, so every install runs the same Kraken2; report it
+together with the dated build of the index. Kraken2 2.17.1 reads the catalog builds
+`k2_pluspf_20251015`, `k2_pluspf_20260626` and `k2_gtdb_genome_reps_20250609`.
+There are two reasons for one exact release:
+
+- **Kraken2 before 2.17 leaves the domain out.** Since 2025, NCBI's taxonomy gives
+  Bacteria, Archaea and Eukaryota the rank "domain", and GTDB's taxonomy uses the
+  same rank. Earlier Kraken2 releases give the report code `D` only to the older rank
+  name, "superkingdom", so they report these domains as unranked rows (`R1`, `R2`),
+  and the OTU table cannot get its domain from them.
+- **The defaults were measured with 2.17.1.** The k-mer evidence settings and the
+  automatic Bracken threshold come from benchmarks run with this release. Kraken2
+  2.17.2 changes how reads are classified and how minimizers are counted, so those
+  numbers would have to be measured again before moving to it.
+
 ## Downloading
 
 A single `wget` stream works but is slow on a ~100 GB file. A multi-connection

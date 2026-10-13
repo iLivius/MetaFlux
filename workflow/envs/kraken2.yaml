@@ -1,5 +1,31 @@
 name: kraken2
 channels: [conda-forge, bioconda]
 dependencies:
-  - kraken2>=2.1.3
+  # Kraken2 classifies the trimmed reads (rule kraken2, 35_kraken2.smk). pigz
+  # compresses the reads Kraken2 classified, and in rule compress_extracted
+  # (55_extract_taxa.smk) the reads pulled out for each requested taxon.
+  #
+  # One exact Kraken2 release, on purpose:
+  #   - At least 2.17: since 2025, NCBI's taxonomy gives Bacteria, Archaea and
+  #     Eukaryota the rank "domain", and GTDB's taxonomy uses the same rank.
+  #     Kraken2 releases before 2.17 give the report code D only to the older rank
+  #     name "superkingdom" (checked in 2.1.3 and 2.14), so they report these
+  #     domains as unranked rows (R1, R2). Their reports then hold no D row, and
+  #     the OTU table cannot get its domain from them.
+  #   - Exactly 2.17.1: the MetaFlux benchmarks, the automatic Bracken threshold
+  #     and the k-mer evidence defaults were all measured with it. 2.17.2 changes
+  #     how reads are classified and how minimizers are counted (the k-mer
+  #     evidence step reads those counts), so moving to it means measuring those
+  #     numbers again first.
+  # The Bracken environment also installs a Kraken2, because the bracken package
+  # depends on it, but the bracken rule never runs it.
+  #
+  # Snakemake identifies this software environment by the full text of this file,
+  # comments included. ANY edit, even to a comment, therefore counts as new
+  # software: every finished folder where Kraken2 ran then runs it again. The
+  # reads Kraken2 needs are temporary files, so they are made again first: the
+  # trimming runs again, and so do PhiX and host removal when they are on. Every
+  # step after them runs again too (the sylph steps as well, with profiler:
+  # both). Change this file only at a release.
+  - kraken2=2.17.1
   - pigz>=2.8
