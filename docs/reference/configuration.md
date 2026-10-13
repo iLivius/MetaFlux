@@ -1140,7 +1140,7 @@ so they are what a cluster executor turns into job requests.
 | `extract_taxon_reads` | shotgun | 4 | |
 | `compress_extracted` | shotgun | 6 | pigz parallelism for the extracted read files. |
 | `download_sra` | shotgun | 6 | `fasterq-dump` parallelism; past about 8 the bottleneck is disk, not CPU. |
-| `sylph_sketch` | shotgun | 1 | Only when sylph runs. **One thread is a reproducibility setting**: with two or more threads sylph removes duplicate k-mers in parallel and the sketch differs slightly from run to run, while one thread gives the same k-mer counts every time and still takes only seconds per sample. (With PhiX or host removal on, the reads can reach fastp in a different order from run to run, so the sketch file's bytes can still differ; no number in it does.) Snakemake sketches several samples at once. Like `phylo_tree`, it falls back to 1, not `threads_default`. |
+| `sylph_sketch` | shotgun | 1 | Only when sylph runs. **One thread is a reproducibility setting**: with two or more threads sylph removes duplicate k-mers in parallel and the sketch differs slightly from run to run, while one thread gives the same sketch every time and still takes only seconds per sample. Snakemake sketches several samples at once. Like `phylo_tree`, it falls back to 1, not `threads_default`. |
 | `sylph_profile` | shotgun | 16 | Only when sylph runs. One job for all samples and databases; the thread count changes no number. |
 | `sylph_taxprof` | shotgun | 1 | Only when sylph runs. sylph-tax uses one thread. |
 | `sylph_tables` | shotgun | 1 | Only when sylph runs. |

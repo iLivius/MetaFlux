@@ -274,11 +274,9 @@ after QC (with the one exception under [Reading the numbers](#reading-the-number
   figure printed at start-up plus what the Kraken2 jobs declare. A smaller cap does not
   stop the run: Snakemake lowers the job's request to the cap and runs it anyway.
 - **Reproducibility.** Sketches are made with one thread
-  (`resources.threads.sylph_sketch: 1`), because with more threads their k-mer counts
-  differ slightly from run to run; with one thread they are the same every time. With
-  PhiX or host removal on, the reads can come out of those steps in a different order
-  from run to run, so the sketch files themselves can differ while every number in them
-  stays the same. The thread count of `sylph_profile` changes no number. Genomes with
+  (`resources.threads.sylph_sketch: 1`), because with more threads they differ slightly
+  from run to run; with one thread they are the same every time, also with PhiX or host
+  removal on. The thread count of `sylph_profile` changes no number. Genomes with
   exactly the same abundance, common in mock communities, can come out in a different
   order from run to run in `sylph_profile.tsv` and in sylph-tax's files, so sort those
   before comparing two runs; the MetaFlux tables sort their own rows. Each sketch records

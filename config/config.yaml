@@ -684,10 +684,8 @@ resources:
                                               # threads sylph removes duplicate k-mers in parallel and the
                                               # sketch differs from run to run (Zymo at 8 threads:
                                               # 4,395,232 vs 4,395,237 k-mer counts; abundances moved in
-                                              # the 4th decimal). At 1 thread the k-mer counts are the same
-                                              # every time (the file's bytes too, unless PhiX or host
-                                              # removal reorders the reads; no number changes then) and it
-                                              # is still fast (~6 s for 4.7 M read pairs); Snakemake
+                                              # the 4th decimal). At 1 thread the sketch is byte-identical
+                                              # and still fast (~6 s for 4.7 M read pairs); Snakemake
                                               # sketches several samples at once. Delete this line and it
                                               # still falls back to 1.
     sylph_profile: 16                         # one job for ALL samples; no number depends on it

@@ -136,6 +136,17 @@ rule samples_manifest:
 # for this job; without it, bbduk.sh gives Java about 40 % of the machine's free
 # memory (close to 50 GB on a 250 GB server), whatever mem_mb says.
 #
+# ordered=t makes BBDuk write the reads it keeps in the order it read them. BBDuk
+# checks reads on several threads; without ordered=t it writes each batch of reads as
+# soon as its thread is done, so the kept reads come out in a different order from run
+# to run. Nothing is lost or duplicated, but every file made from these reads then
+# changes between two runs of the same data: the fastp reads, the insert-size
+# histogram in fastp's report and the sylph sketch files. With ordered=t they are
+# byte-identical from run to run (fastp's HTML report still differs in the time it
+# was made). Measured on two test samples of about 6 million read pairs each: the
+# same read pairs are kept as without it, with no reliable difference in run time and
+# a few MB more memory (out of about 2 GB).
+#
 # Output feeds fastp_upstream()/host_upstream() (00_common.smk), which route
 # decontam_host or trim_adapters to these _dephix_R1/R2 files whenever this
 # stage ran, instead of the raw FASTQs.
@@ -162,7 +173,7 @@ rule decontam_phix:
         xmx=$(( {resources.mem_mb} * 85 / 100 ))
         bbduk.sh ref=phix in1={input.r1} in2={input.r2} \
             out1={output.r1} out2={output.r2} stats={output.stats} \
-            k=31 hdist=1 threads={threads} overwrite=t -Xmx${{xmx}}m > {log} 2>&1
+            k=31 hdist=1 ordered=t threads={threads} overwrite=t -Xmx${{xmx}}m > {log} 2>&1
         """
 
 
@@ -267,6 +278,14 @@ rule build_host_index:
 # tool authors' own tested pattern, not a coincidence worth "cleaning up".
 # (quickmatch itself is a plain boolean toggle, not a macro, and does not
 # touch bwr/bw at all.)
+# ordered=t is MetaFlux's own addition, after those flags, and changes no alignment
+# setting: it makes BBMap write the reads it keeps in the order it read them. Like
+# BBDuk in decontam_phix, BBMap works on many threads and without ordered=t writes
+# each batch of reads as soon as its thread is done, so the kept reads, and every file
+# made from them, change from run to run; with ordered=t they are byte-identical.
+# bbmap.sh's help warns that ordered output is slower and uses more memory. Measured
+# on the same two test samples, with a small stand-in host genome: the same read pairs
+# are kept, with no measurable difference in run time or memory.
 # The surviving-pair count is written to stats for read-tracking (BBMap, unlike
 # BBDuk, emits no #Total/#Matched table, so we count the kept R1 records).
 # Feeds fastp_upstream() (00_common.smk), which routes trim_adapters to these
@@ -297,7 +316,7 @@ rule decontam_host:
             outu1={output.r1} outu2={output.r2} \
             minid={params.min_id} maxindel=3 bwr=0.16 bw=12 \
             quickmatch fast minhits=2 qtrim=rl trimq=10 untrim \
-            threads={threads} -Xmx${{xmx}}m > {log} 2>&1
+            ordered=t threads={threads} -Xmx${{xmx}}m > {log} 2>&1
         # Surviving (non-host) read PAIRS = R1 records in the kept output.
         kept=$(( $(zcat {output.r1} | wc -l) / 4 ))
         printf 'surviving_pairs\t%s\n' "$kept" > {output.stats}

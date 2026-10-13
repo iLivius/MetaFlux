@@ -59,13 +59,12 @@
 # reproducibility setting, not a speed one: with 2 or more threads sylph removes
 # duplicate k-mers in parallel and the sketch differs slightly from run to run
 # (measured on the Zymo mock at 8 threads: 4,395,232 vs 4,395,237 k-mer counts, and
-# abundances moved in the 4th decimal). At one thread the sketch holds the same k-mers
-# with the same counts every time, and it is still fast (about 6 s for 4.7 million
-# read pairs); Snakemake sketches several samples at once. The sketch FILE is
-# byte-identical only when the reads come in the same order: with PhiX or host
-# removal on, BBDuk and BBMap (which work in parallel) can write the reads in a
-# different order from run to run, so the file's bytes can differ while every k-mer
-# count, and so every number sylph reports, stays the same.
+# abundances moved in the 4th decimal). At one thread the sketch is identical every
+# time, and it is still fast (about 6 s for 4.7 million read pairs); Snakemake
+# sketches several samples at once. That holds with PhiX or host removal on too:
+# BBDuk and BBMap write the reads they keep in the order they read them (ordered=t in
+# 30_preprocess.smk), so the reads reach fastp, and then this rule, in the same order
+# on every run.
 # Two failures are turned into a stop with a plain message:
 #   - sylph cannot sketch (exit code not 0). The usual cause is a sample with no read
 #     pairs left after fastp: sylph cannot sketch an empty file.
