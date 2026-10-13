@@ -2,7 +2,7 @@
 
 Six situations come up often enough to be worth writing down: an automatic
 truncation length that throws away every read, a PhiX-removal step that stops on
-mis-paired FASTQs, a shotgun OTU table that comes out empty at a rank other than
+the read pairs, a shotgun OTU table that comes out empty at a rank other than
 species, small differences between two runs on the same data, a reference download
 that fails its md5 check, and YAML mistakes in the config. Each entry gives the
 symptom, the reason behind it, and what to change.
@@ -130,24 +130,31 @@ amplicon:
 Background on how the cut is chosen, and on the overlap constraint, is in
 [Amplicon length and truncation](amplicon/length-and-truncation.md).
 
-## Shotgun: BBDuk PhiX removal fails on mis-paired (pre-filtered) reads
+## Shotgun: BBDuk PhiX removal stops on the read pairs
 
 !!! warning "Symptom"
 
-    The shotgun run aborts at rule `decontam_phix` with:
+    The shotgun run aborts at rule `decontam_phix` with one of these two messages:
 
     ```text
-    java.lang.AssertionError: List size mismatch: 200 vs 195
+    java.lang.AssertionError:
+    There appear to be different numbers of reads in the paired input files.
+    The pairing may have been corrupted by an upstream process.  It may be fixable by running repair.sh.
     ```
 
-    The two FASTQs hold different numbers of records: the pairing **is** broken.
+    ```text
+    java.lang.AssertionError: List size mismatch: 600 vs 601
+    ```
+
+    The first means the pairing **is** broken. The second does not: it comes from a
+    newer bbmap than the one MetaFlux pins (see the end of this entry).
 
 **Cause.** BBDuk reads the R1 and R2 files in lockstep, one record from each at
 a time, and requires both files to hold the same number of records in the same
 order. Read length has nothing to do with it — ragged lengths, and mates of the
-same pair ending up different lengths, are processed normally. `List size
-mismatch: N vs M` means R1 and R2 contain different numbers of reads, which
-usually happens when reads were filtered before deposition and orphaned mates
+same pair ending up different lengths, are processed normally. "There appear to be
+different numbers of reads" means R1 and R2 contain different numbers of reads,
+which usually happens when reads were filtered before deposition and orphaned mates
 were left behind in one file. SRA and BioProject submissions are the common
 case. MetaFlux's own fetch can produce it as well: rule `download_sra` calls
 `fasterq-dump --split-files`, which writes a record to `_1` only for any spot
@@ -155,10 +162,8 @@ holding a single read (`--split-3` is the option that keeps the two files in
 step).
 
 The BBMap host-removal step (rule `decontam_host`) fails on the same input, for
-the same reason: BBMap reads the pair in lockstep too and makes the same
-requirement. BBMap's message names the fix outright — *"There appear to be
-different numbers of reads in the paired input files. The pairing may have been
-corrupted by an upstream process. It may be fixable by running repair.sh."*
+the same reason and with the same message: BBMap reads the pair in lockstep too and
+makes the same requirement. The message names the fix outright.
 
 **Fix — repair the pairing.** `repair.sh` ships in the same `bbmap` conda
 package MetaFlux already installs for these rules, so no extra tool is needed:
@@ -180,6 +185,20 @@ pre-trimmed input buys nothing.
     Switching PhiX removal off only moves the failure to BBMap, which stops on
     the same files. Switching host removal off as well moves it to fastp, which
     stops on unequal record counts too. Repair the files instead.
+
+**`List size mismatch` is a different problem.** MetaFlux pins bbmap 39.52, whose
+BBDuk and BBMap never print this message. It comes from the rewritten BBDuk that
+`bbduk.sh` runs in bbmap 39.76 to 40.02: its paired-read reader loses track of
+mates and stops with this message, or hangs, on correctly paired reads, above all on
+trimmed reads whose mates differ in length. It prints the same message on broken
+pairs too, so it says nothing about the pairing, and `repair.sh` does not help. The
+first lines of `logs/decontam_phix/{sample}.log` name the version that ran
+(`Version 39.52` for the pinned one).
+
+**Fix — run with MetaFlux's environment.** Start the run with `--sdm conda`, so that
+Snakemake installs and uses the pinned environment (`workflow/envs/bbtools.yaml`),
+and keep the pin if you edit that file. MetaFlux before v2.5.0 did not pin bbmap, so
+its environment could get one of these releases.
 
 More on host references and masking is in
 [Decontamination](shotgun/decontamination.md).

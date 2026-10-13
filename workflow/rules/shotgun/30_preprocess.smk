@@ -119,8 +119,12 @@ rule samples_manifest:
 # a lane as a sequencing control — real, but not part of the sample, so it
 # has no business being counted as an organism in the final results.
 #
-# BBDuk ships phix174_ill.ref.fa.gz inside the bbmap conda package, so
-# `ref=phix` works without any download/index-build step.
+# The bbmap conda package ships BBTools' own corrected copy of the PhiX genome
+# (resources/phix2.fa.gz: Illumina's phiX174 sequence with two bases corrected and
+# its first 74 bases repeated at the end, so that reads across the point where the
+# circular genome is opened still match), and `ref=phix` makes BBDuk load that file,
+# so this step needs no download and no index build. The package also holds
+# Illumina's own phix174_ill.ref.fa.gz, but ref=phix does not use it.
 # k=31 hdist=1 is the BBTools-recommended setting for PhiX (see their
 # decontamination guide): match on 31-mers, allowing up to 1 mismatch
 # (hdist = hamming distance) per k-mer. stats= produces a small text file

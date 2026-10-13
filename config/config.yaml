@@ -47,7 +47,7 @@ output:
 # ─────────────────────── References ─────────────────────────────
 # PhiX is used in both modes but consumed differently:
 #   amplicon → bowtie2 index built from the fetched FASTA
-#   shotgun  → BBDuk's bundled phix174_ill.ref.fa.gz (no download/index needed)
+#   shotgun  → BBDuk's bundled phix2.fa.gz (no download/index needed)
 # kraken_db (shotgun.profiler kraken2 | both) and sylph_databases + sylph_taxonomy_dir
 # (shotgun.profiler sylph | both) are shotgun-only and must be supplied separately.
 references:
@@ -446,7 +446,7 @@ shotgun:
   decontamination:
     # PhiX is still routinely spiked into Illumina runs — keep this on unless the
     # lab is known to have skipped the spike-in.
-    remove_phix: true                         # BBDuk vs bundled phix174_ill.ref.fa.gz; false = skip
+    remove_phix: true                         # BBDuk vs bundled phix2.fa.gz; false = skip
 
     # Host / contaminant removal with BBMap (alignment-based — more sensitive than
     # k-mer matching for host reads that diverge from the reference assembly; this

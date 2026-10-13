@@ -343,8 +343,8 @@ references:
 
 **PhiX is used by both modes, but differently.** In amplicon mode the FASTA above is
 fetched and indexed, and bowtie2 maps reads against it. In shotgun mode BBDuk uses
-the `phix174_ill.ref.fa.gz` reference bundled inside the BBTools conda package, so
-neither the download nor the index is needed there.
+`phix2.fa.gz`, BBTools' own corrected copy of the PhiX genome, bundled inside the
+BBTools conda package, so neither the download nor the index is needed there.
 
 ### Marker databases are declared by the marker packs, not here
 
@@ -928,7 +928,7 @@ shotgun:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `remove_phix` | BBDuk k-mer matching against the bundled `phix174_ill.ref.fa.gz`, at `k=31 hdist=1` | `true` | No download or index build is involved. Keep it on unless the lab is known to have skipped the spike-in. |
+| `remove_phix` | BBDuk k-mer matching against the bundled `phix2.fa.gz` (BBTools' corrected PhiX genome), at `k=31 hdist=1` | `true` | No download or index build is involved. Keep it on unless the lab is known to have skipped the spike-in. |
 | `host_genomes` | YAML list of local paths and/or URLs to host FASTA(.gz) references | `[]` | `[]` skips host removal. Multiple entries are concatenated and indexed once, so one BBMap index serves every sample. |
 | `host_min_id` | BBMap `minid` — the alignment identity above which a read is called host-derived | `0.95` | Reads that do not map are kept. |
 
@@ -955,17 +955,22 @@ authors recommend.
 
     Both tools read R1 and R2 in lockstep and require the two files to hold the
     same number of records in the same order. Read length is not the issue: ragged
-    reads, and mates of one pair with different lengths, are processed normally. A
-    crash reading `java.lang.AssertionError: List size mismatch: N vs M` (BBDuk) or
-    `There appear to be different numbers of reads in the paired input files`
-    (BBMap) means the pairing is broken — usually because reads were filtered
-    before deposition and orphaned mates were left in one file. Repair the FASTQs
-    with the tool shipped in the same conda package rather than skipping the step.
+    reads, and mates of one pair with different lengths, are processed normally.
+    With the bbmap release MetaFlux pins, a crash reading `There appear to be
+    different numbers of reads in the paired input files` (BBDuk or BBMap) means the
+    pairing is broken — usually because reads were filtered before deposition and
+    orphaned mates were left in one file. Repair the FASTQs with the tool shipped in
+    the same conda package rather than skipping the step.
 
     ```bash
     repair.sh in1=R1.fastq.gz in2=R2.fastq.gz \
         out1=fixed_R1.fastq.gz out2=fixed_R2.fastq.gz outs=singletons.fastq.gz
     ```
+
+    A crash reading `java.lang.AssertionError: List size mismatch: N vs M` is not a
+    pairing problem. It comes from newer bbmap releases (39.76 to 40.02), whose BBDuk
+    prints it on correctly paired reads too; run with MetaFlux's pinned environment
+    (`--sdm conda`) instead of repairing the files.
 
     See [troubleshooting](../troubleshooting.md) and
     [decontamination](../shotgun/decontamination.md).

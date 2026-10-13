@@ -131,10 +131,14 @@ host removal is off.
     BBDuk reads the two files in lockstep and requires them to hold the same number of
     records in the same order. Read length does not matter — ragged reads, and mates
     of a pair with different lengths, are processed normally. A crash with
-    `AssertionError: List size mismatch: N vs M` means the pairing is broken, usually
-    because reads were filtered before deposition and orphaned mates were left in one
-    file — common for SRA data. `repair.sh`, from the same BBTools package, puts the
-    files back in step. Details are in [Decontamination](decontamination.md).
+    `There appear to be different numbers of reads in the paired input files` means
+    the pairing is broken, usually because reads were filtered before deposition and
+    orphaned mates were left in one file — common for SRA data. `repair.sh`, from the
+    same BBTools package, puts the files back in step. A crash with
+    `AssertionError: List size mismatch: N vs M` is different: it comes from newer
+    bbmap releases (39.76 to 40.02), which print it on correctly paired reads too, and
+    the cure is MetaFlux's pinned environment, not `repair.sh`. Details are in
+    [Decontamination](decontamination.md).
 
 ## 3. Host and contaminant removal (optional)
 

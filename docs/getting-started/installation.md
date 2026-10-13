@@ -157,8 +157,9 @@ the reference differently:
   (`GCF_000819615.1`) to `refdb/phix/phix.fna` and `build_phix_index` builds the
   bowtie2 index next to it. Both run automatically on the first run with
   `amplicon.decontamination.remove_phix: true`.
-- **Shotgun** — nothing is downloaded. BBDuk ships `phix174_ill.ref.fa.gz` inside
-  its own conda package and MetaFlux uses that.
+- **Shotgun** — nothing is downloaded. BBDuk ships `phix2.fa.gz`, BBTools' own
+  corrected copy of the PhiX genome, inside its own conda package and MetaFlux uses
+  that.
 
 ### Kraken2 database (shotgun, required)
 

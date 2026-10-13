@@ -36,9 +36,13 @@ sequencing control. Those reads are genuine sequence and will not be classified 
 anything real, but removing them early stops them from inflating the denominator of
 every relative abundance computed downstream.
 
-BBDuk matches reads by k-mer against `phix174_ill.ref.fa.gz`, which ships inside the
-`bbmap` conda package. Nothing is downloaded and no index is built. The settings are
-BBTools' own recommendation for PhiX:
+BBDuk matches reads by k-mer against `phix2.fa.gz`, BBTools' own copy of the PhiX
+genome, which ships inside the `bbmap` conda package: Illumina's phiX174 sequence with
+two bases corrected and its first 74 bases repeated at the end, so that reads across
+the point where the circular genome is opened still match. `ref=phix` loads this file;
+the package also holds Illumina's own `phix174_ill.ref.fa.gz`, which `ref=phix` does
+not use. Nothing is downloaded and no index is built. The settings are BBTools' own
+recommendation for PhiX:
 
 ```bash
 bbduk.sh ref=phix in1=... in2=... out1=... out2=... stats=... k=31 hdist=1
@@ -189,35 +193,36 @@ heap. BBDuk is capped at 6 threads on purpose — it scales poorly past four to 
 workers on a 5 kb reference, so running several samples in parallel is the better use
 of cores.
 
-## Mis-paired FASTQs stop both steps
+## When BBDuk or BBMap stops on the read pairs
 
-BBDuk reads R1 and R2 in lockstep, one record from each at a time, and requires the
-two files to hold the same number of records in the same order. Read length is not
-part of that requirement: ragged read lengths, including mates of one pair ending up
-different lengths, are processed normally.
+BBDuk and BBMap read R1 and R2 in lockstep, one record from each at a time, and
+require the two files to hold the same number of records in the same order. Read
+length is not part of that requirement: ragged read lengths, including mates of one
+pair ending up different lengths, are processed normally.
 
-So a crash at `decontam_phix` reading
+### Different numbers of reads in R1 and R2
+
+With the bbmap release MetaFlux pins (39.52), two files that hold different numbers
+of reads stop `decontam_phix` with:
 
 ```text
-java.lang.AssertionError: List size mismatch: 200 vs 195
+java.lang.AssertionError:
+There appear to be different numbers of reads in the paired input files.
+The pairing may have been corrupted by an upstream process.  It may be fixable by running repair.sh.
 ```
 
-means the two files hold different numbers of reads — the pairing is broken. The
-usual cause is a library that was filtered before deposition, leaving orphaned mates
-behind in one file. SRA and BioProject submissions are where this turns up.
+The pairing is broken. The usual cause is a library that was filtered before
+deposition, leaving orphaned mates behind in one file. SRA and BioProject submissions
+are where this turns up.
 
 Turning PhiX removal off does not get round it. BBMap reads the pair in lockstep too
-and makes the same requirement, so `decontam_host` stops on the same input, and says
-so plainly:
+and makes the same requirement, so `decontam_host` stops on the same input with the
+same message. With both steps off the run stops at fastp instead, which requires the
+same thing of the two files:
 
 ```text
-There appear to be different numbers of reads in the paired input files.
-The pairing may have been corrupted by an upstream process.
-It may be fixable by running repair.sh.
+ERROR: input files don't contain identical amount of reads
 ```
-
-With both steps off the run stops at fastp instead, which requires the same thing of
-the two files.
 
 **Repair the pairing first.** `repair.sh` comes from the same `bbmap` conda package
 MetaFlux already installs for `decontam_phix` and `decontam_host`, so nothing new has
@@ -235,6 +240,25 @@ It re-syncs the two files on read name and writes the leftover single-ended read
 Where the raw, untrimmed reads are still available they are the better starting
 point — they are properly paired, and MetaFlux trims with fastp anyway, so
 pre-trimmed input buys nothing.
+
+### `List size mismatch`
+
+```text
+java.lang.AssertionError: List size mismatch: 600 vs 601
+```
+
+This message does not come from the pinned bbmap. It comes from the rewritten BBDuk
+that `bbduk.sh` runs in bbmap 39.76 to 40.02: its paired-read reader loses track of
+mates and stops with this message, or hangs, on correctly paired reads, above all on
+trimmed reads whose mates differ in length. It prints the same message on broken pairs
+too, so the message says nothing about the pairing, and `repair.sh` is no cure.
+
+It means that BBDuk did not come from MetaFlux's environment
+(`workflow/envs/bbtools.yaml`, which pins bbmap 39.52). The first lines of
+`logs/decontam_phix/{sample}.log` name the version that ran (`Version 39.52` for the
+pinned one). Start the run with `--sdm conda`, so that Snakemake installs and uses that
+environment, and keep the pin if you edit the file. MetaFlux before v2.5.0 did not pin
+bbmap, so its environment could get one of these releases.
 
 ## What to check afterwards
 

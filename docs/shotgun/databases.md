@@ -14,9 +14,9 @@ downloaded by the workflow.
 
 PhiX is worth a note: the `references.phix` block in the config is used by amplicon
 mode, which downloads the genome and builds a bowtie2 index from it. Shotgun mode
-uses BBDuk's own bundled `phix174_ill.ref.fa.gz` instead, so no shotgun rule uses
-that block. Keep it anyway: `references.phix.fasta` is read when the workflow is
-parsed, in both modes.
+uses BBDuk's own bundled `phix2.fa.gz` instead, so no shotgun rule uses that block.
+Keep it anyway: `references.phix.fasta` is read when the workflow is parsed, in both
+modes.
 
 ## Pointing MetaFlux at the database
 
