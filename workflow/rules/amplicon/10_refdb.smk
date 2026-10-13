@@ -24,6 +24,10 @@
 #           rpob_frogs    ← convert_rpob_to_dada2   (refdb/frogs_rpob_to_dada2.py)
 #           pr2_sintax    ← convert_pr2_sintax      (refdb/pr2_utax_domain_first.py)
 #
+# Whatever its tier, the one file the classifier reads is then checked against the
+# marker pack's ranks before any classification (rule check_taxonomy_reference,
+# refdb/check_reference_ranks.py).
+#
 # PhiX is separate: it is a decontamination reference, not taxonomy — fetched and
 # bowtie2-indexed below.
 
@@ -297,6 +301,83 @@ rule convert_pr2_sintax:
         "../../envs/python_utils.yaml"
     script:
         "../../scripts/refdb/pr2_utax_domain_first.py"
+
+
+# ── Check the taxonomy reference against the marker pack ──────────────────
+# A classifier never checks what a rank MEANS: assignTaxonomy names the columns of
+# its result from the pack's tax_levels in order, and VSEARCH reads the SINTAX
+# letters as a fixed top-down order. A reference with one rank more or less than the
+# pack declares, or with two ranks swapped, therefore puts every name in the wrong
+# column, and nothing errors. Counting ranks or letters is not enough either: PR2's
+# own UTAX file has the same eight letters as the domain-first copy, only in another
+# order, and a SILVA 138.2 SINTAX file read under the SILVA 144 model merely lacks
+# the letter k:, which the SINTAX parser (80c) skips without a word. So the script
+# also checks the NAMES in the ranks where a shift would show, with the rules the
+# pack declares (reference_values: one_of, ends_with, not_one_of; see 16S.yaml).
+#   in : the exact file the classifier reads — TAXONOMY_REFDB under method rdp,
+#        TAXONOMY_SINTAX_DB under method sintax — whether a rule above builds it,
+#        a generated rule below downloads it, or the run config pins its path
+#   out: stats/taxonomy_reference_check.json, a record of what was checked (records,
+#        ranks per record, the names seen in each checked rank). Rule
+#        assign_taxonomy (80_taxonomy.smk) takes it as an input, so classification
+#        never starts on a reference that failed; rule all asks for it too
+#        (_amplicon_targets in 00_common.smk says why).
+# A stop names the file, the rank and example headers. It means that the run config
+# pins a wrong file, or that the reference changed upstream; the fix is then the
+# right file, or a new release block in the marker pack.
+#
+# priority: 1. No other amplicon rule has a priority, so Snakemake starts this
+# small job (seconds to a minute) as soon as its reference exists, and a wrong
+# reference stops the run then, not after hours of denoising. It is deliberately
+# not made an input of the probe or of the denoising: that would rerun the
+# denoising in every existing output folder.
+#
+# The file, and the rank model it is read with, depend on the taxonomy method; under
+# sintax a marker may declare its own model (18S: PR2's UTAX file has 8 ranks, its
+# DADA2 file 9).
+if TAXONOMY_METHOD == "rdp":
+    _REFCHECK_FILE     = TAXONOMY_REFDB
+    _REFCHECK_FORMAT   = "dada2"
+    _REFCHECK_LEVELS   = TAX_LEVELS
+    _REFCHECK_LETTERS  = RANK_LETTERS
+    _REFCHECK_PREFIXES = RANK_PREFIXES
+else:
+    _REFCHECK_FILE     = TAXONOMY_SINTAX_DB
+    _REFCHECK_FORMAT   = "sintax"
+    _REFCHECK_LEVELS   = SINTAX_TAX_LEVELS
+    _REFCHECK_LETTERS  = SINTAX_RANK_LETTERS
+    _REFCHECK_PREFIXES = SINTAX_RANK_PREFIXES
+
+# How the messages name what the file was checked against, e.g. "the 16S marker
+# pack, release 144, method sintax".
+_REFCHECK_LABEL = f"the {AMPLICON_TYPE} marker pack"
+if PROFILE.get("release"):
+    _REFCHECK_LABEL += f", release {PROFILE['release']}"
+_REFCHECK_LABEL += f", method {TAXONOMY_METHOD}"
+
+rule check_taxonomy_reference:
+    input:
+        reference = _REFCHECK_FILE,
+    output:
+        report = OUT / "stats" / "taxonomy_reference_check.json",
+    params:
+        ref_format    = _REFCHECK_FORMAT,
+        tax_levels    = _REFCHECK_LEVELS,
+        rank_letters  = _REFCHECK_LETTERS,
+        rank_prefixes = _REFCHECK_PREFIXES,
+        prefix_style  = PREFIX_STYLE,
+        # 16S: the Species rank comes from addSpecies, so the training set stops at
+        # genus and the SINTAX file has no species letter.
+        species_from_addspecies = len(TAXONOMY_SPECIES_DB) > 0,
+        reference_values = REFERENCE_VALUES,
+        label         = _REFCHECK_LABEL,
+    log:
+        LOGS / "refdb" / "check_taxonomy_reference.log",
+    priority: 1
+    conda:
+        "../../envs/python_utils.yaml"
+    script:
+        "../../scripts/refdb/check_reference_ranks.py"
 
 
 # ── Generated reference fetches ───────────────────────────────────────────

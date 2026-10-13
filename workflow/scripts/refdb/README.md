@@ -1,9 +1,11 @@
 # Reference-database preparation scripts
 
 This folder holds the **database-specific transform logic** — one script per
-reference that MetaFlux cannot use as downloaded. Keeping them here (rather than
-inline in a Snakemake rule) means there is a single, obvious place to look when you
-ask *"how is each reference turned into a classifier-ready file?"*
+reference that MetaFlux cannot use as downloaded — and the check every taxonomy
+reference passes before classification (see [The reference check](#the-reference-check)).
+Keeping them here (rather than inline in a Snakemake rule) means there is a single,
+obvious place to look when you ask *"how is each reference turned into a
+classifier-ready file?"*
 
 The rules that call these live in [`workflow/rules/amplicon/10_refdb.smk`](../../rules/amplicon/10_refdb.smk),
 which also carries the full **reference preparation map** (which DB is a plain
@@ -15,6 +17,17 @@ download, which needs unpacking, which needs one of the scripts below).
 | `silva_to_sintax.py` | SILVA 16S DADA2 trainset (the ranks of the chosen release: 7 on 144, 6 on 138.2; stops on more ranks than letters) | VSEARCH SINTAX FASTA, one letter per rank from the 16S marker pack (`d,k,p,c,o,f,g` on 144, `d,p,c,o,f,g` on 138.2) | `convert_silva_sintax` |
 | `frogs_rpob_to_dada2.py` | FROGS rpoB release FASTA (an accession, `Root` and an `[id: N]` tag per rank in every header; the domain written `k__Bacteria`) | DADA2 assignTaxonomy trainset whose header is the 7-rank lineage, with the domain written `d__Bacteria`; stops on any other first rank; headers only | `convert_rpob_to_dada2` |
 | `pr2_utax_domain_first.py` | PR2 18S UTAX FASTA (domain under `k:`, supergroup under `d:`) | VSEARCH SINTAX FASTA with the domain under `d:` and the supergroup under `k:`, the order VSEARCH reads; headers only | `convert_pr2_sintax` |
+
+## The reference check
+
+`check_reference_ranks.py` (rule `check_taxonomy_reference`) changes no file. It
+reads the one file the classifier is about to use, downloaded, converted or pinned in
+the run config, and checks every header against the rank model of the marker pack:
+the number of ranks, the prefixes or SINTAX letters and their order, and the names
+allowed in the ranks the pack gives rules for (`reference_values`). When the file
+does not match, the run stops before any classification and the message names the
+rank and quotes example headers. When it matches, the script writes
+`stats/taxonomy_reference_check.json`, which `assign_taxonomy` waits for.
 
 ## Conventions
 

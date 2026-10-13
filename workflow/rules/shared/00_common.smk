@@ -174,6 +174,15 @@ def mem_mb_for(rule_name: str) -> int:
 #                                    the builder emits them verbatim (UNITE/ITS).
 #                       (rdp path only; the SINTAX path always normalises to
 #                       bare letters then re-adds rank_prefixes.)
+#   reference_values    what the taxonomy reference itself must hold, as rules per
+#                       rank name: one_of (allowed names), ends_with (allowed
+#                       endings), not_one_of (names that must never appear), e.g.
+#                       Domain: {one_of: [Bacteria, Archaea, Eukaryota]}. Rule
+#                       check_taxonomy_reference (amplicon/10_refdb.smk) checks the
+#                       reference against these rules and against the rank model
+#                       above before any classification. Required in every pack, at
+#                       its top level or in every release block (see
+#                       _check_pack_formats below); `{}` checks the rank model only.
 #
 # The contaminant keep/discard lists are NOT a pack field: they live only in
 # config (amplicon.taxonomy.filter.keep / .discard), documented per marker in
@@ -196,8 +205,13 @@ def _load_marker_packs():
     workflow/markers/*.yaml ships with the pipeline; config/markers/*.yaml is the
     user's own, shadowing a shipped pack of the same name. Adding a marker is a
     data-only change — no code edit.
+
+    Returns two dicts keyed by marker name: the packs, and the file each pack was
+    read from (for a shadowed marker, the file in config/markers/). The files are
+    only used to name a pack in a message (_check_pack_formats below).
     """
     packs = {}
+    pack_files = {}
     for d in (MARKERS_SHIPPED_DIR, MARKERS_USER_DIR):
         if not d.is_dir():
             continue
@@ -210,15 +224,105 @@ def _load_marker_packs():
             if not isinstance(pack, dict):
                 sys.exit(f"[MetaFlux] marker pack {f} must be a YAML mapping")
             packs[f.stem] = pack
+            pack_files[f.stem] = f
     if not packs:
         sys.exit(
             f"[MetaFlux] no marker packs found in {MARKERS_SHIPPED_DIR} "
             f"(or {MARKERS_USER_DIR}). The installation looks incomplete."
         )
-    return packs
+    return packs, pack_files
 
 
-MARKERS = _load_marker_packs()
+MARKERS, MARKER_PACK_FILES = _load_marker_packs()
+
+
+def _check_pack_formats(packs, pack_files):
+    """Stop the run, naming the files, when a marker pack has no reference_values.
+
+    Why: a pack in config/markers/ replaces the shipped pack of the same name
+    completely, so an old copy silently brings back everything the shipped pack has
+    fixed since (an 18S pack from v2.4.0 still classifies with PR2's original letter
+    order, which hides the domain). reference_values arrived with the reference
+    check (rule check_taxonomy_reference) in v2.5.0, so a pack without it was
+    written for an older MetaFlux, or, for a marker of one's own, before packs had to
+    declare what their reference holds.
+
+    Why every pack, whichever marker the run uses: the reference paths of all packs
+    are resolved on every amplicon run (the _PACK_REF_FILES loop below), so without
+    this check an old 18S pack stops a 16S run with "reference 'pr2_sintax' has no
+    path", a message that does not point at the real cause. This check runs first,
+    before releases are merged and before any path is resolved, and lists every
+    outdated pack in one stop.
+
+    Input : packs as loaded by _load_marker_packs() (release blocks not merged yet),
+            and the file each was read from.
+    Output: nothing when every pack declares reference_values, at its top level or
+            in every one of its release blocks; otherwise one sys.exit message with
+            one paragraph per pack.
+    """
+    paragraphs = []
+    for name in sorted(packs):
+        pack = packs[name]
+        pack_file = pack_files[name]
+        if "reference_values" in pack:
+            continue
+
+        # A pack with releases (16S) may declare the rules per release instead; then
+        # every release block must have them.
+        releases = pack.get("releases") or {}
+        releases_with = []
+        releases_without = []
+        for release_name, block in releases.items():
+            if isinstance(block, dict) and "reference_values" in block:
+                releases_with.append(str(release_name))
+            else:
+                releases_without.append(str(release_name))
+        if releases and not releases_without:
+            continue
+
+        # Some release blocks declare the rules and others do not: the pack is of
+        # this version, but incomplete.
+        if releases_with:
+            paragraphs.append(
+                f"{pack_file}: its release block(s) {', '.join(releases_without)} "
+                f"declare no reference_values, while {', '.join(releases_with)} do. "
+                f"Declare them in every release block, or once at the top level of "
+                f"the pack for all its releases."
+            )
+            continue
+
+        # No rules anywhere. Which of three cases: an old copy of a shipped pack, a
+        # pack for a marker of one's own, or a shipped pack that has been edited.
+        is_user_pack = pack_file.parent == MARKERS_USER_DIR
+        shipped_counterpart = MARKERS_SHIPPED_DIR / f"{name}.yaml"
+        if is_user_pack and shipped_counterpart.is_file():
+            paragraphs.append(
+                f"{pack_file} was written for an older MetaFlux: it has no "
+                f"reference_values. A pack in config/markers/ replaces the shipped one "
+                f"completely, so copy workflow/markers/{name}.yaml again and re-apply "
+                f"your change."
+            )
+        elif is_user_pack:
+            paragraphs.append(
+                f"{pack_file} has no reference_values. Since v2.5.0 every marker pack "
+                f"declares what its reference must hold, checked before classification "
+                f"(see workflow/markers/16S.yaml). Write `reference_values: {{}}` to "
+                f"check only the rank shape."
+            )
+        else:
+            paragraphs.append(
+                f"{pack_file} has no reference_values. Every shipped marker pack "
+                f"declares it, so this file is incomplete or was edited; restore it "
+                f"from your MetaFlux release."
+            )
+    if paragraphs:
+        sys.exit("[MetaFlux] " + "\n[MetaFlux] ".join(paragraphs))
+
+
+# Amplicon runs only: a shotgun run uses no marker pack, so an outdated one in
+# config/markers/ does not concern it.
+if MODE == "amplicon":
+    _check_pack_formats(MARKERS, MARKER_PACK_FILES)
 
 
 # ── SILVA '--other' handling (16S, SILVA 144 onwards) ──
@@ -804,6 +908,75 @@ if MODE == "amplicon":
         sys.exit(
             f"[MetaFlux] marker {AMPLICON_TYPE} has no SINTAX reference database, so "
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
+        )
+
+    # ── What the taxonomy reference must hold (reference_values) ──
+    # The active pack's rules for the names in its reference, per rank name (see
+    # "reference_values" in the Marker registry above). Rule check_taxonomy_reference
+    # (10_refdb.smk) tests every header of the reference against them before any
+    # classification. They are checked here first, when the run starts, because a
+    # mistake in them would not stop anything later: a rule on a misspelt rank
+    # ("Domian") would test no rank, and a misspelt kind ("oneof") would let every
+    # name pass, so the reference check would pass without checking what it should.
+    # The rank names are those of the active method's rank model (sintax_tax_levels
+    # under method sintax), the model the check reads the file with.
+    #   in : PROFILE["reference_values"] (_check_pack_formats above made sure the
+    #        pack declares it; {} or an empty entry means no name rules)
+    #   out: REFERENCE_VALUES, read by rule check_taxonomy_reference
+    _RULE_KINDS = ("one_of", "ends_with", "not_one_of")
+
+    def _rule_entry_problems(rank_name, kind, names):
+        """Mistakes in one entry of a rule, e.g. Domain: {one_of: [...]}, as sentences.
+        The names must be a list of text: YAML reads a bare yes / no / 1.0 as a
+        boolean or a number, and one name without brackets as plain text, which
+        Python would then search letter by letter."""
+        if kind not in _RULE_KINDS:
+            return [f"the rule for {rank_name} has the entry {kind!r}; the only "
+                    f"entries are {', '.join(_RULE_KINDS)}"]
+        if not isinstance(names, list):
+            return [f"{rank_name}: {kind} must be a list of names in brackets, e.g. "
+                    f"{kind}: [Bacteria] (got: {names!r})"]
+        problems = []
+        for name in names:
+            if not isinstance(name, str):
+                problems.append(f"{rank_name}: {kind} lists {name!r}, which YAML did not "
+                                f"read as text; put it in quotes")
+        return problems
+
+    def _reference_value_problems(rules, rank_names):
+        """Every mistake in a pack's reference_values, as sentences ([] if none).
+        rules = rank name -> rule; rank_names = the rank model the reference check
+        reads the file with."""
+        if not isinstance(rules, dict):
+            return [f"it must be a mapping of rank name -> rule, e.g. Domain: "
+                    f"{{one_of: [Bacteria, Archaea]}} (got: {rules!r})"]
+        problems = []
+        for rank_name, rule in rules.items():
+            if rank_name not in rank_names:
+                problems.append(f"it has a rule for the rank {rank_name!r}, which is not "
+                                f"in the rank model ({', '.join(rank_names)})")
+                continue
+            if not isinstance(rule, dict) or not rule:
+                problems.append(f"the rule for {rank_name} must give at least one of "
+                                f"{', '.join(_RULE_KINDS)} (got: {rule!r})")
+                continue
+            for kind, names in rule.items():
+                problems.extend(_rule_entry_problems(rank_name, kind, names))
+        return problems
+
+    if TAXONOMY_METHOD == "sintax":
+        _active_tax_levels = SINTAX_TAX_LEVELS
+    else:
+        _active_tax_levels = TAX_LEVELS
+    REFERENCE_VALUES = PROFILE.get("reference_values") or {}
+    _value_rule_problems = _reference_value_problems(REFERENCE_VALUES, _active_tax_levels)
+    if _value_rule_problems:
+        _pack_label = f"marker pack {AMPLICON_TYPE!r}"
+        if PROFILE.get("release"):
+            _pack_label += f", release {PROFILE['release']}"
+        sys.exit(
+            f"[MetaFlux] reference_values of the {_pack_label} (method "
+            f"{TAXONOMY_METHOD}) cannot be used:\n  - " + "\n  - ".join(_value_rule_problems)
         )
 
     # One line on every 16S run naming the SILVA release, the silva_other setting
@@ -1995,6 +2168,17 @@ def _amplicon_targets():
         OUT / "stats" / "dada2" / "asv_length_stats.json",
         OUT / "stats" / "dada2" / "asv_length_hist.png",
         # Taxonomy
+        # The report of the reference check (rule check_taxonomy_reference in
+        # 10_refdb.smk). assign_taxonomy already takes it as an input; it is asked for
+        # here as well because of --rerun-triggers mtime. Under that setting Snakemake
+        # makes a new file only when something asks for it, and an input of a rule
+        # whose outputs already exist is not enough: an output folder made before the
+        # check existed would then never run it, and would keep its old taxonomy
+        # tables without anyone noticing. The same holds, under any setting, for a
+        # folder whose Snakemake records are missing (one run from another checkout,
+        # for example). As a target, the report is made in every folder, and
+        # assign_taxonomy reruns once after it.
+        OUT / "stats" / "taxonomy_reference_check.json",
         OUT / "6.taxonomy" / "asv_table.txt",
         OUT / "6.taxonomy" / "asv_table_seqs.txt",
         OUT / "6.taxonomy" / "taxon_seq_table.txt",

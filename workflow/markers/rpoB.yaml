@@ -40,11 +40,21 @@ tax_levels:    [Domain, Phylum, Class, Order, Family, Genus, Species]
 rank_letters:  [d, p, c, o, f, g, s]              # SINTAX codes — unused (rdp-only)
 # rank_prefixes: under embedded style the taxonomy strings keep the names exactly as
 # the reference writes them, so these prefixes are never added to them. They are
-# still used, so they must match the reference's own prefixes: the best-hit check of
-# the discard filter finds the rank of a token by its prefix (d__Bacteria ->
-# Domain), and taxon_seq_table.txt removes them from its per-rank cells.
+# still used, so they must match the reference's own prefixes: the reference check
+# (rule check_taxonomy_reference) stops the run before classification when a name
+# does not start with its rank's prefix (the converted file of an older MetaFlux,
+# with k__Bacteria, stops there), the best-hit check of the discard filter finds the
+# rank of a token by its prefix (d__Bacteria -> Domain), and taxon_seq_table.txt
+# removes them from its per-rank cells.
 rank_prefixes: [d__, p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
+
+# What the converted file must hold, checked header by header before any
+# classification (rule check_taxonomy_reference; see 16S.yaml for the rule format).
+# This FROGS release holds bacteria only, so every lineage starts with the domain
+# Bacteria.
+reference_values:
+  Domain: {one_of: [Bacteria]}
 
 # The FROGS download is a .tar.gz bundling a FASTA, a BLAST index and an RDP tree,
 # with FROGS-specific headers (>ACC Root;k__X [id: N];...). It needs extraction AND a

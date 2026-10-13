@@ -53,6 +53,19 @@ prefix_style:  bare
 #
 # Each release keeps its own file names, so switching back and forth never
 # overwrites the other release's downloads or derived files.
+#
+# reference_values: what the reference file itself must hold, checked header by
+# header before any classification (rule check_taxonomy_reference, 10_refdb.smk),
+# on the file the active method classifies with. Per rank, by name:
+#   one_of     = the names allowed in this rank;
+#   ends_with  = allowed endings (a name passes if it matches one_of or ends_with);
+#   not_one_of = names that must never appear in this rank.
+# The file must also have exactly the ranks of the release's rank model. A file
+# that does not match (the other release's file, SILVA's own download with its
+# "--other" kingdoms, a future release with another rank) stops the run there,
+# before any name can land in the wrong column. Every pack declares
+# reference_values, at its top level or in every release block; a pack for a
+# marker of your own may write `reference_values: {}` to check the ranks only.
 release_selector: silva            # the run config reads references.<this>.release
 default_release:  "144"
 
@@ -68,6 +81,13 @@ releases:
     tax_levels:    [Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species]
     rank_letters:  [d, k, p, c, o, f, g, s]
     rank_prefixes: [d__, k__, p__, c__, o__, f__, g__, s__]
+    reference_values:
+      Domain:  {one_of: [Bacteria, Archaea, Eukaryota]}
+      # Prokaryote kingdom names end in -ati (Bacillati, Pseudomonadati, ...);
+      # "Incertae Sedis" holds the few phyla SILVA places in no named kingdom.
+      # A phylum in this rank means a file without the kingdom; "--other" in it
+      # means SILVA's download itself, not the training set MetaFlux builds.
+      Kingdom: {ends_with: [ati], one_of: [Incertae Sedis]}
     references:
       # The file exactly as SILVA publishes it: 7 ranks per lineage
       # (Domain;Kingdom;Phylum;Class;Order;Family;Genus). It is never classified
@@ -106,6 +126,8 @@ releases:
     tax_levels:    [Domain, Phylum, Class, Order, Family, Genus, Species]
     rank_letters:  [d, p, c, o, f, g, s]
     rank_prefixes: [d__, p__, c__, o__, f__, g__, s__]
+    reference_values:
+      Domain: {one_of: [Bacteria, Archaea, Eukaryota]}
     references:
       silva_train:
         file: silva/silva_nr99_v138.2_toGenus_trainset.fa.gz

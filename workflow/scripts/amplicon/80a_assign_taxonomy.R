@@ -284,6 +284,10 @@ taxa_unique <- apply_min_boot(best_hit, best_boot, min_boot)
 # built from it. For 16S the last slot (Species) is filled later by addSpecies, so
 # the training set itself must stop one rank short of the full model; every other
 # marker's reference covers all of its ranks.
+# Rule check_taxonomy_reference (10_refdb.smk) has already checked the whole file,
+# rank by rank and name by name, before this step. This test stays as the last
+# guard, on what assignTaxonomy actually returned (it fires, for example, when the
+# file was replaced after the check had run).
 species_db_list <- snakemake@input[["species_db"]]
 expected_ranks  <- length(tax_levels) - if (length(species_db_list) > 0L) 1L else 0L
 if (ncol(taxa_unique) != expected_ranks) {
@@ -293,7 +297,10 @@ if (ncol(taxa_unique) != expected_ranks) {
        if (length(species_db_list) > 0L) " (the Species slot comes from addSpecies)" else "",
        ". The names would land on the wrong ranks. The reference file and the marker ",
        "pack's rank model do not match: check a reference path pinned in the run config ",
-       "(references:), and for 16S the SILVA release chosen with references.silva.release.")
+       "(references:), and for 16S the SILVA release chosen with references.silva.release. ",
+       "Rule check_taxonomy_reference checks this file before classification (its report ",
+       "is stats/taxonomy_reference_check.json); if the file was replaced after that ",
+       "check, run it again with -R check_taxonomy_reference.")
 }
 
 # addSpecies for 16S only; species_db is an empty list for every other marker

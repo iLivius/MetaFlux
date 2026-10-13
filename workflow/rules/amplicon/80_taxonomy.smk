@@ -12,7 +12,9 @@
 #                         the marker pack's rank model, i.e. the ranks of the
 #                         marker's reference (16S: those of the chosen SILVA
 #                         release, Domain, Kingdom, Phylum ... on SILVA 144 and
-#                         Domain, Phylum ... on SILVA 138.2).
+#                         Domain, Phylum ... on SILVA 138.2). Either path starts
+#                         only once rule check_taxonomy_reference (10_refdb.smk)
+#                         has found that the reference holds exactly those ranks.
 # aggregate_read_counts : joins all per-stage read-count sources into one wide
 #                         TSV (one row per sample, one column per stage).
 
@@ -32,6 +34,12 @@ if TAXONOMY_METHOD == "rdp":
             seqtab_names = _seqtab_for_taxonomy,
             refdb        = TAXONOMY_REFDB,
             species_db   = TAXONOMY_SPECIES_DB,    # addSpecies for 16S only; empty list for all other markers (ITS, 18S, gyrB, rpoB)
+            # The report of the reference check (check_taxonomy_reference,
+            # 10_refdb.smk), written only when refdb holds the ranks the marker pack
+            # declares. The script does not read it: it is listed so that
+            # classification waits for the check and never starts on a reference
+            # that failed it.
+            reference_check = OUT / "stats" / "taxonomy_reference_check.json",
             # Metaxa2's origin call per ASV (target_extract), for the organelle filter
             # and the metaxa2_origin column. Only when Metaxa2 runs (16S with extraction
             # on); for every other marker the rule's inputs are unchanged.
@@ -78,6 +86,8 @@ else:  # sintax
             seqs         = _seqs_for_taxonomy,
             seqtab_names = _seqtab_for_taxonomy,
             refdb        = TAXONOMY_SINTAX_DB,
+            # The report of the reference check — same as the rdp rule above.
+            reference_check = OUT / "stats" / "taxonomy_reference_check.json",
             # Metaxa2's origin call per ASV — same as the rdp rule above.
             **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
         output:

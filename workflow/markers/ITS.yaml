@@ -20,6 +20,19 @@ rank_letters:  [d, p, c, o, f, g, s]
 rank_prefixes: [k__, p__, c__, o__, f__, g__, s__]
 prefix_style:  embedded
 
+# What the UNITE files must hold, checked header by header before any classification
+# (rule check_taxonomy_reference; see 16S.yaml for the rule format). UNITE has no
+# domain rank: its top rank is the kingdom (Fungi, Viridiplantae, Metazoa, and the
+# protist groups and placeholders UNITE files there, such as Alveolata, Rhizaria
+# or unidentified). A domain name in this rank would mean that UNITE added a domain
+# above the kingdom, and every name would then land one column off (Fungi in the
+# Phylum column).
+# UNITE's SINTAX file stores this kingdom under the letter d: (rank_letters above).
+# MetaFlux reads it as the Kingdom and writes it k__, and never turns it into a
+# domain.
+reference_values:
+  Kingdom: {not_one_of: [Bacteria, Archaea, Eukaryota]}
+
 # See 16S.yaml. unite_fasta (.tgz) and unite_uchime_ITS1/ITS2 (.zip) need archive
 # extraction, so they keep bespoke rules in 10_refdb.smk rather than appearing here.
 

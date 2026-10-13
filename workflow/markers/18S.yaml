@@ -43,6 +43,20 @@ sintax_tax_levels:    [Domain, Supergroup, Division_Subdivision, Class, Order, F
 sintax_rank_letters:  [d, k, p, c, o, f, g, s]
 sintax_rank_prefixes: [d__, sg__, dv__, c__, o__, f__, g__, s__]
 
+# What the PR2 files must hold, checked header by header before any classification
+# (rule check_taxonomy_reference; see 16S.yaml for the rule format). The rules apply
+# to the file of the active method: the DADA2 file (rdp) or the domain-first SINTAX
+# file (sintax), which both start with the domain and the supergroup. PR2's domain
+# rank also carries its organelle tags (Eukaryota:plas for plastids, :mito, :nucl,
+# :apic, :chro). Together the two rules catch PR2's own UTAX file pinned in place of
+# the domain-first copy: it uses the same letters, but holds the supergroups under
+# d:, which this pack reads as the domain, and the domain under k:.
+reference_values:
+  Domain:     {one_of: [Eukaryota, Bacteria, Archaea, "Eukaryota:plas", "Eukaryota:mito",
+                        "Eukaryota:nucl", "Eukaryota:apic", "Eukaryota:chro"]}
+  Supergroup: {not_one_of: [Eukaryota, Bacteria, Archaea, "Eukaryota:plas", "Eukaryota:mito",
+                            "Eukaryota:nucl", "Eukaryota:apic", "Eukaryota:chro"]}
+
 # See 16S.yaml. The three downloads are plain files, so their fetch rules are
 # generated; the fourth file, pr2_sintax, is derived from pr2_utax by rule
 # convert_pr2_sintax (10_refdb.smk) and therefore has no url.
