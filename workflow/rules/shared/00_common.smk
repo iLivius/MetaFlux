@@ -1565,19 +1565,63 @@ else:  # MODE == "shotgun"
     # matches the value against the rank codes in the Kraken2 report. Without this
     # check a wrong value failed late: a lowercase letter crashed Bracken, but only
     # after Kraken2 had finished. Stop here instead, before anything runs.
-    # K (kingdom) is refused with its own reason. A kingdom-level table leaves out
-    # every taxon without a kingdom: all of a GTDB database, which has no kingdom rank,
-    # and most protists, which NCBI places in no kingdom. Its totals therefore do not
-    # match the sums of the species rows. The k__ slot of a table made at a lower rank
-    # gives the kingdom of every row instead.
-    if TAX_LEV == "K":
-        sys.exit("[MetaFlux] shotgun.bracken.tax_lev: K is not allowed. A kingdom-level "
-                 "table leaves out every taxon without a kingdom (all of a GTDB database, "
-                 "most protists), so its totals do not match the species sums. Use P or a "
-                 "lower rank; the k__ slot of otu_table.tsv gives the kingdom of each row.")
-    if TAX_LEV not in ("D", "P", "C", "O", "F", "G", "S"):
-        sys.exit(f"[MetaFlux] shotgun.bracken.tax_lev must be one of D, P, C, O, F, G, S "
-                 f"(a single capital letter), got {TAX_LEV!r}")
+    #
+    # D (domain) and K (kingdom) are refused, each with its own message. Both reasons
+    # come from the way Bracken files the rows of a report (est_abundance.py): reading
+    # from top to bottom, it counts every row below the target rank towards the LAST
+    # row of the target rank it has read, whether or not that row is its ancestor. For
+    # a taxon that has the target rank that row is its own ancestor, because a Kraken2
+    # report lists every branch right after its parent. A taxon without the rank is
+    # counted towards whichever row of that rank happens to come before it. At D and K
+    # whole groups of taxa lack the rank. Measured with the pinned Bracken 3.1p1 on two
+    # Kraken2 reports made with an NCBI database built in 2025, the Zymo D6331 gut mock
+    # (SRR29240428) and a soil sample:
+    #   D  Viruses have no domain in NCBI's taxonomy since 2025, and their branch comes
+    #      after all cellular organisms. Their reads, and the share of the reads left
+    #      at the root that Bracken attributes to them, go to the domain listed last.
+    #      Kraken2 lists sister rows by read count, largest first, so that is the
+    #      domain with the fewest reads, usually Archaea. Zymo mock: Archaea 6,415
+    #      reads at phylum level, 14,028 at D. Soil: 2,612 at phylum level (2,400
+    #      summed from its species), 35,636 at D, from only 71 viral reads plus the
+    #      root reads attributed to them. Without the viral rows the D count falls back
+    #      to the phylum sum, within a few reads (Zymo 6,415; soil 2,617); with Archaea
+    #      moved above Eukaryota in the report, Eukaryota gets the extra reads instead.
+    #      D is refused on every database, a GTDB one included (it holds no viruses):
+    #      one rule is simpler to explain, and the d__ slot gives the domain of every
+    #      row on any database.
+    #   K  Most protists have no kingdom in NCBI's taxonomy, and a GTDB database has
+    #      no kingdom rank at all. Soil: the protists' reads went to Fungi, the kingdom
+    #      listed just before them, 12,001 reads at K against 7,957 summed from the
+    #      fungal phyla. On a GTDB database Bracken finds no kingdom row and stops
+    #      ("no reads found"), but only after Kraken2 has run.
+    # The d__ and k__ slots of a table made at a lower rank give the domain and the
+    # kingdom of every row instead. At lower ranks the same filing can hit the taxa
+    # that lack the rank: in the Zymo mock at O, phages without an order went to the
+    # archaeal order Methanobacteriales (6,415 -> 13,484 reads). P to S stay allowed;
+    # at S, the default, it cannot happen, because every row below a species row is a
+    # strain of that species.
+    #
+    # Only when Kraken2 runs (profiler: kraken2 or both). A sylph-only run never runs
+    # Bracken and ignores the whole shotgun.bracken block, so its value is not checked.
+    if RUN_KRAKEN2:
+        if TAX_LEV == "D":
+            sys.exit("[MetaFlux] shotgun.bracken.tax_lev: D is not allowed. Viruses have "
+                     "no domain in NCBI's taxonomy (since 2025), and at this rank Bracken "
+                     "adds their reads, with a share of the reads left at the root, to "
+                     "the domain the Kraken2 report lists last (usually Archaea). Use P "
+                     "or a lower rank. To compare domains, add up the rows of "
+                     "otu_table.tsv by their d__ slot; that sum counts the reads Bracken "
+                     "placed at the table's rank, not every read of the domain.")
+        if TAX_LEV == "K":
+            sys.exit("[MetaFlux] shotgun.bracken.tax_lev: K is not allowed. Most protists "
+                     "have no kingdom, and a GTDB database has no kingdom rank at all. At "
+                     "this rank Bracken adds the reads of a taxon without a kingdom to the "
+                     "kingdom the Kraken2 report lists just before it, and on a GTDB "
+                     "database it stops after Kraken2. Use P or a lower rank; the k__ slot "
+                     "of otu_table.tsv gives the kingdom of each row.")
+        if TAX_LEV not in ("P", "C", "O", "F", "G", "S"):
+            sys.exit(f"[MetaFlux] shotgun.bracken.tax_lev must be one of P, C, O, F, G, S "
+                     f"(a single capital letter), got {TAX_LEV!r}")
 
     # Bracken's minimum-read threshold. Either a fixed integer, or the string "auto",
     # in which case the rule works it out per sample from that sample's own classified

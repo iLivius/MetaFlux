@@ -1,12 +1,12 @@
 # Troubleshooting
 
-Seven situations come up often enough to be worth writing down: an automatic
+Eight situations come up often enough to be worth writing down: an automatic
 truncation length that throws away every read, a PhiX-removal step that stops on
 the read pairs, a shotgun OTU table that comes out empty at a rank other than
-species, a shotgun taxon filter that removes every taxon, small differences between
-two runs on the same data, a reference download that fails its md5 check, and YAML
-mistakes in the config. Each entry gives the symptom, the reason behind it, and what
-to change.
+species, a Bracken rank that MetaFlux refuses, a shotgun taxon filter that removes
+every taxon, small differences between two runs on the same data, a reference
+download that fails its md5 check, and YAML mistakes in the config. Each entry gives
+the symptom, the reason behind it, and what to change.
 
 ## Amplicon: automatic `truncLen` can drop all reads on very clean runs
 
@@ -234,6 +234,61 @@ run used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force
 ```bash
 snakemake --sdm conda --cores 4 --configfile <your config> -R kraken_biom
 ```
+
+A config with `tax_lev: D` stops at start-up from v2.5.0 on; see the next entry.
+
+## Shotgun: the run refuses `tax_lev: D` or `K`
+
+!!! warning "Symptom"
+
+    A run with Kraken2 (`profiler: kraken2` or `both`) stops before any step starts,
+    with one of these messages (wrapped here):
+
+    ```text
+    [MetaFlux] shotgun.bracken.tax_lev: D is not allowed. Viruses have no domain in
+    NCBI's taxonomy (since 2025), and at this rank Bracken adds their reads, with a
+    share of the reads left at the root, to the domain the Kraken2 report lists last
+    (usually Archaea). Use P or a lower rank. To compare domains, add up the rows of
+    otu_table.tsv by their d__ slot; that sum counts the reads Bracken placed at the
+    table's rank, not every read of the domain.
+    ```
+
+    ```text
+    [MetaFlux] shotgun.bracken.tax_lev: K is not allowed. Most protists have no
+    kingdom, and a GTDB database has no kingdom rank at all. At this rank Bracken adds
+    the reads of a taxon without a kingdom to the kingdom the Kraken2 report lists just
+    before it, and on a GTDB database it stops after Kraken2. Use P or a lower rank;
+    the k__ slot of otu_table.tsv gives the kingdom of each row.
+    ```
+
+**Cause.** Bracken reads a Kraken2 report from top to bottom and counts every row
+below the target rank towards the last row of that rank it has read. For a taxon that
+has the target rank, that row is its own ancestor, because the report lists every
+branch right after its parent. A taxon without the rank is counted towards whichever
+row of that rank comes before it. At domain and kingdom level whole groups of taxa
+lack the rank:
+
+- **Domain.** Viruses have no domain in NCBI's taxonomy since 2025, and their branch
+  comes after all cellular organisms. Their reads, and the share of the root's reads
+  that Bracken attributes to them, go to the domain listed last. Kraken2 lists sister
+  rows by read count, largest first, so this is the domain with the fewest reads,
+  usually Archaea. In a soil sample, Archaea had 2,612 reads at phylum level and 35,636
+  at domain level, from only 71 viral reads and the root reads attributed to them. In a
+  sample of the ZymoBIOMICS Gut Microbiome Standard (D6331), Archaea went from 6,415
+  reads at phylum level to 14,028 at domain level.
+- **Kingdom.** Most protists have no kingdom in NCBI's taxonomy, and GTDB has no
+  kingdom rank at all. The protists' reads go to the kingdom listed just before them:
+  in the same soil sample, Fungi had 7,957 reads in its phyla but 12,001 at kingdom
+  level. On a GTDB database Bracken finds no kingdom and stops with "no reads found",
+  after Kraken2 has run.
+
+**Fix.** Set `tax_lev` to `S` (the default) or another rank from `P` to `G`. Domain
+and kingdom totals can be read from any of these tables: add up the rows of
+`otu_table.tsv` by their `d__` or `k__` slot. That sum counts the reads Bracken placed
+at the table's rank, not every read of the domain or kingdom: reads that Kraken2 left
+above that rank, and that Bracken could not push down, are in no row (see
+[Bracken abundance re-estimation](shotgun/overview.md#6-bracken-abundance-re-estimation)).
+With `profiler: sylph` Bracken does not run, and `tax_lev` is not checked.
 
 ## Shotgun: the taxon filter removed every taxon
 

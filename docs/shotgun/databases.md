@@ -209,7 +209,7 @@ Bracken uses the same database directory. Its two settings:
 
 | Key | Default | What it does |
 |---|---|---|
-| `shotgun.bracken.tax_lev` | `S` | rank the abundances are re-estimated at — `D`, `P`, `C`, `O`, `F`, `G` or `S` |
+| `shotgun.bracken.tax_lev` | `S` | rank the abundances are re-estimated at — `P`, `C`, `O`, `F`, `G` or `S`; `D` and `K` stop the run at start-up |
 | `shotgun.bracken.threshold` | `auto` | minimum number of reads Kraken2 must already have put in a taxon's clade for it to enter the re-estimation; `auto` works it out from each sample's depth, an integer fixes it |
 
 `tax_lev: S` is the usual choice and gives a species-level table. Drop it to `G` when

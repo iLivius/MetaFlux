@@ -247,7 +247,7 @@ distributions, giving abundances at a chosen rank.
 ```yaml
 shotgun:
   bracken:
-    tax_lev: S            # D | P | C | O | F | G | S
+    tax_lev: S            # P | C | O | F | G | S (D and K are refused)
     threshold: auto       # auto = scaled to each sample's depth; or a fixed read count
 ```
 
