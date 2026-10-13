@@ -256,8 +256,12 @@ after QC (with the one exception under [Reading the numbers](#reading-the-number
   The trimmed reads of the finished run were deleted after use, so `both` in the same
   folder would make them again and run Kraken2 again. MetaFlux stops and says so.
 - **Lineages must start with a domain.** Among the built-in taxonomies, only GlobDB r226
-  has genomes without one (`d__Unclassified`); a sample in which sylph detects one of
-  them stops at `sylph_tables`. GlobDB r232 places every genome in a domain.
+  has genomes without one: 754 of them have `Unclassified` as their first rank
+  (`d__Unclassified`). MetaFlux therefore refuses GlobDB r226 at start-up: its taxonomy
+  (`GlobDB_r226`, or its lineage table given by its path), and a database whose file name
+  says GlobDB r226 unless it is paired with a lineage table of your own. Use GlobDB r232,
+  which places every genome in a domain. A lineage table of your own whose first rank is
+  not a domain stops the run at `sylph_tables`, once sylph detects one of its genomes.
 - **Memory.** sylph holds every database in memory, in a single `sylph_profile` job for
   all samples. MetaFlux asks for 1.2 times the size of the database files plus 4 GB; set
   `resources.mem_mb.sylph_profile` to a number to override it, for example on a cluster,

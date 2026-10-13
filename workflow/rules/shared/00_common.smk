@@ -1840,6 +1840,34 @@ else:  # MODE == "shotgun"
                          f"kingdom, ...) do not fit the seven d__..s__ slots (domain ... species) of the "
                          f"sylph tables. Viral sylph databases are not supported yet; remove {_db.name} "
                          f"from references.sylph_databases")
+            # Why: GlobDB r226 cannot fill the domain slot. Its lineage table
+            # (globdb_r226_sylph_tax.tsv.gz) gives 754 of its genomes 'Unclassified' as
+            # their first rank instead of a domain (Bacteria or Archaea). MetaFlux writes
+            # the domain in the first slot of every sylph table, so rule sylph_tables
+            # stops as soon as sylph has detected one of these genomes in a sample, which
+            # is known only after every sample has been sketched and profiled. GlobDB
+            # r232 places every genome in a domain. So GlobDB r226 is refused here, before
+            # anything runs and before the lineage-table checks below (so that nobody
+            # downloads the table only to be told it cannot be used):
+            #   - its lineage table, by the built-in name GlobDB_r226, or by a path whose
+            #     file name is the built-in one (with or without .gz);
+            #   - a database whose file name says GlobDB r226 (globdb_r226_...), unless
+            #     it is paired with a lineage table of your own. With any other built-in
+            #     taxonomy the release check further down would stop the run too, but
+            #     with the advice to use GlobDB_r226; this message says what works.
+            _tax_file_name = Path(_tax).name       # the table's file name when _tax is a path
+            _tax_is_globdb_r226 = (_tax == "GlobDB_r226"
+                                   or _sylph_taxonomy_of_table(_tax_file_name) == "GlobDB_r226")
+            _tax_is_own_table = (_tax not in SYLPH_TAX_FILES
+                                 and _sylph_taxonomy_of_table(_tax_file_name) is None)
+            _db_is_globdb_r226 = (_sylph_taxonomy_of_database(_db.name) == "GlobDB_r226")
+            if _tax_is_globdb_r226 or (_db_is_globdb_r226 and not _tax_is_own_table):
+                sys.exit(f"[MetaFlux] {_where} ({_db.name}, taxonomy {_tax}): GlobDB r226 cannot be used. "
+                         f"Its lineage table gives 754 genomes no domain (their first rank is "
+                         f"'Unclassified'), and MetaFlux writes the domain in the first slot of every "
+                         f"sylph table, so a run that detects one of them would stop at sylph_tables, "
+                         f"after profiling. Use GlobDB r232 instead, which places every genome in a "
+                         f"domain: the database globdb_r232_sylph_c200.syldb with taxonomy: GlobDB_r232")
 
             if _tax in SYLPH_TAX_FILES:
                 # A built-in name: its table lives in references.sylph_taxonomy_dir.

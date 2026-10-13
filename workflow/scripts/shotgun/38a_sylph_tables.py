@@ -282,7 +282,8 @@ if named_gtdb_releases and gtdb_releases_in_profile and named_gtdb_releases != g
 # from, rather than putting something that is not a domain in the domain column.
 # GlobDB r226 is the one built-in taxonomy known to hit this: it writes
 # d__Unclassified for 754 genomes it could not place in any domain (GlobDB r232 has
-# no such genomes).
+# no such genomes). 00_common.smk therefore refuses GlobDB r226 before the run starts,
+# so here this check catches such lineages only in a lineage table of your own.
 # The other names are not touched: GTDB's _A/_B suffixes and placeholder names stay
 # exactly as GTDB writes them. Two quirks are accepted: a rank the taxonomy leaves
 # empty stays a bare prefix (c__), and a rank letter followed by a single underscore
