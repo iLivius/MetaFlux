@@ -81,7 +81,8 @@ references:
   #   gtdb-r232-c200-dbv1.syldb                ->  GTDB_r232
   #   gtdb-r226-c200-dbv1.syldb                ->  GTDB_r226
   #   fungi-refseq-2025-10-11-c200-dbv1.syldb  ->  FungiRefSeq-latest
-  # GlobDB r226 (GlobDB_r226) is refused at start-up: its lineage table gives 754 genomes
+  # GlobDB r226 is refused at start-up, as a taxonomy (GlobDB_r226) and as a database
+  # file named globdb_r226_..., whatever its taxonomy: its lineage table gives 754 genomes
   # no domain. Use GlobDB r232, which places every genome in a domain:
   #   globdb_r232_sylph_c200.syldb             ->  GlobDB_r232 (from the GlobDB website)
   # All databases are profiled in ONE sylph run, so within a sample an organism present

@@ -2034,17 +2034,25 @@ else:  # MODE == "shotgun"
             #     compared without regard to capitals: a misspelt globdb_r226 would
             #     otherwise reach the near-match check further down, whose advice
             #     ('did you mean GlobDB_r226?') points to the very name refused here;
-            #   - a database whose file name says GlobDB r226 (globdb_r226_...), unless
-            #     it is paired with a lineage table of your own. With any other built-in
-            #     taxonomy the release check further down would stop the run too, but
-            #     with the advice to use GlobDB_r226; this message says what works.
+            #   - a database whose file name says GlobDB r226 (globdb_r226_..., read as
+            #     _sylph_taxonomy_of_database reads it: any capitals, with '-', '_' or
+            #     nothing between 'globdb' and 'r226'), whatever taxonomy it is paired
+            #     with. Paired with another built-in taxonomy, the release check further
+            #     down would stop the run too, but with the advice to use GlobDB_r226;
+            #     this message says what works. Paired with a lineage table of your own,
+            #     the run would start, and a renamed copy of the r226 table counts as a
+            #     table of your own: the same 754 genomes would have no domain and stop
+            #     the run at sylph_tables, after profiling. GlobDB r232 replaces r226, so
+            #     nothing is lost by refusing the r226 database itself.
+            # Left out: a database renamed so that its name no longer says r226 (such as
+            # my_globdb.syldb), paired with a table of your own. Nothing in the config
+            # shows what it is; if sylph detects a genome that the table gives no domain,
+            # rule sylph_tables stops on it (38a_sylph_tables.py).
             _tax_file_name = Path(_tax).name       # the table's file name when _tax is a path
             _tax_is_globdb_r226 = (_tax.lower() == "globdb_r226"
                                    or _sylph_taxonomy_of_table(_tax_file_name) == "GlobDB_r226")
-            _tax_is_own_table = (_tax not in SYLPH_TAX_FILES
-                                 and _sylph_taxonomy_of_table(_tax_file_name) is None)
             _db_is_globdb_r226 = (_sylph_taxonomy_of_database(_db.name) == "GlobDB_r226")
-            if _tax_is_globdb_r226 or (_db_is_globdb_r226 and not _tax_is_own_table):
+            if _tax_is_globdb_r226 or _db_is_globdb_r226:
                 sys.exit(f"[MetaFlux] {_where} ({_db.name}, taxonomy {_tax}): GlobDB r226 cannot be used. "
                          f"Its lineage table gives 754 genomes no domain (their first rank is "
                          f"'Unclassified'), and MetaFlux writes the domain in the first slot of every "
