@@ -182,7 +182,9 @@ def mem_mb_for(rule_name: str) -> int:
 #                       reference against these rules and against the rank model
 #                       above before any classification. A rule for a rank that only
 #                       one method's rank model has (18S: Division, rdp only) is
-#                       tested only under that method. Required in every pack, at
+#                       tested only under that method. A rule for the rank that
+#                       addSpecies fills (16S: Species) stops the run: no file the
+#                       check reads has that rank. Required in every pack, at
 #                       its top level or in every release block (see
 #                       _check_pack_formats below); `{}` checks the rank model only.
 #
@@ -1001,9 +1003,15 @@ if MODE == "amplicon":
     # reads the file with. So an 18S rule for Division is tested under method rdp,
     # and left out under method sintax, with one line saying so. A rank that is in
     # neither model is a mistake and stops the run.
+    # So is a rule for the rank that addSpecies fills (16S: Species). addSpecies takes
+    # the species from a file of its own, after the classification, so the training
+    # set and the SINTAX file built from it stop one rank above, under either method.
+    # The check reads only those two files, so such a rule would see no name at all
+    # and pass without testing anything.
     #   in : PROFILE["reference_values"] (_check_pack_formats above made sure the
-    #        pack declares it; {} or an empty entry means no name rules), and the two
-    #        rank models (TAX_LEVELS, SINTAX_TAX_LEVELS above)
+    #        pack declares it; {} or an empty entry means no name rules), the two
+    #        rank models (TAX_LEVELS, SINTAX_TAX_LEVELS above) and TAXONOMY_SPECIES_DB
+    #        (not empty when addSpecies runs)
     #   out: REFERENCE_VALUES, the rules for the ranks of the active method's model,
     #        read by rule check_taxonomy_reference
     _RULE_KINDS = ("one_of", "ends_with", "not_one_of")
@@ -1034,13 +1042,15 @@ if MODE == "amplicon":
         return problems
 
     def _reference_value_problems(rules, active_method, active_rank_names,
-                                  other_method, other_rank_names):
+                                  other_method, other_rank_names, addspecies_rank):
         """Every mistake in a pack's reference_values, as sentences ([] if none).
         rules = rank name -> rule; active_rank_names = the rank model the reference
         check reads the file with in this run (method active_method);
-        other_rank_names = the rank model of the other method. A rule for a rank of
-        either model is checked in full, so a mistake in it stops the runs of both
-        methods; a rank that is in neither model is a mistake itself."""
+        other_rank_names = the rank model of the other method; addspecies_rank = the
+        rank that addSpecies fills (16S: Species), or None when the pack runs no
+        addSpecies. A rule for a rank of either model is checked in full, so a
+        mistake in it stops the runs of both methods. A rank that is in neither
+        model is a mistake itself, and so is the rank addSpecies fills."""
         if not isinstance(rules, dict):
             return [f"it must be a mapping of rank name -> rule, e.g. Domain: "
                     f"{{one_of: [Bacteria, Archaea]}} (got: {rules!r})"]
@@ -1058,6 +1068,18 @@ if MODE == "amplicon":
                                     f"in neither rank model of the pack (method "
                                     f"{active_method}: {', '.join(active_rank_names)}; "
                                     f"method {other_method}: {', '.join(other_rank_names)})")
+                continue
+            if rank_name == addspecies_rank:
+                # The rank is in the model, but only addSpecies fills it, from its own
+                # file: neither file the check reads has a name for it to test.
+                problems.append(f"it has a rule for the rank {rank_name!r}, which the "
+                                f"reference check cannot test: the pack fills that rank "
+                                f"with addSpecies (taxonomy_species_db), from a file of "
+                                f"its own, so the training set and the SINTAX file that "
+                                f"the check reads stop one rank above it. Remove the rule "
+                                f"(a rule for that rank works only in a pack without "
+                                f"taxonomy_species_db, whose own reference carries the "
+                                f"species)")
                 continue
             if not isinstance(rule, dict) or not rule:
                 problems.append(f"the rule for {rank_name} must give at least one of "
@@ -1077,10 +1099,19 @@ if MODE == "amplicon":
         _active_tax_levels = TAX_LEVELS
         _other_method      = "sintax"
         _other_tax_levels  = SINTAX_TAX_LEVELS
+    # The rank that addSpecies fills: the last rank of the model (16S: Species), in a
+    # pack that names an addSpecies file (taxonomy_species_db). This is the same test
+    # as the check rule's species_from_addspecies (10_refdb.smk), and the same rank
+    # the check script leaves out of its depth test. None for every other marker,
+    # whose reference carries its species itself.
+    if len(TAXONOMY_SPECIES_DB) > 0:
+        _addspecies_rank = _active_tax_levels[-1]
+    else:
+        _addspecies_rank = None
     _pack_value_rules = PROFILE.get("reference_values") or {}
     _value_rule_problems = _reference_value_problems(
         _pack_value_rules, TAXONOMY_METHOD, _active_tax_levels,
-        _other_method, _other_tax_levels,
+        _other_method, _other_tax_levels, _addspecies_rank,
     )
     if _value_rule_problems:
         _pack_label = f"marker pack {AMPLICON_TYPE!r}"
