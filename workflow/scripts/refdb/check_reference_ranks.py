@@ -56,9 +56,11 @@ WHAT IS CHECKED, on every header of the file
         not_one_of - names that must never appear in this rank.
       A name fails when it is in not_one_of. Otherwise, when one_of or ends_with is
       given, it must be in one_of or end with one of the endings. When the run
-      starts, 00_common.smk has already checked that the active pack's rules name
-      ranks of this rank model and use only these three kinds, each a list of at
-      least one name.
+      starts, 00_common.smk has already checked every rule of the active pack (it
+      names a rank of the pack's rdp or sintax rank model and uses only these three
+      kinds, each a list of at least one name), and it passes on only the rules for
+      the ranks of this rank model: a rule for a rank that only the other method's
+      reference has (18S: Division, in the DADA2 file only) is not tested here.
 
 INPUT (rule check_taxonomy_reference, 10_refdb.smk):
   input.reference = the exact file the classifier reads (rdp: the DADA2 training
@@ -225,9 +227,10 @@ def strip_pack_prefix(name):
 
 # ── Rules by rank name -> by position ─────────────────────────────────────────
 # The pack names its rules by rank (Domain, Kingdom ...); the checks below walk a
-# lineage by position. 00_common.smk has already stopped the run if a rule names a
-# rank this model does not have; the test is repeated here so the script never
-# silently skips a rule when it is run with other settings.
+# lineage by position. 00_common.smk passes on only the rules for ranks of this model
+# (and stops the run on a rule for a rank in neither of the pack's models); the test
+# is repeated here so the script never silently skips a rule it was given, when it is
+# run with other settings.
 for rank_name in value_rules:
     if rank_name not in tax_levels:
         sys.exit(

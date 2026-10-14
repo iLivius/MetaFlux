@@ -51,6 +51,9 @@ sintax_rank_prefixes: [d__, sg__, dv__, c__, o__, f__, g__, s__]
 # :apic, :chro). Together the two rules catch PR2's own UTAX file pinned in place of
 # the domain-first copy: it uses the same letters, but holds the supergroups under
 # d:, which this pack reads as the domain, and the domain under k:.
+# A rule for a rank that only one of the two files has (Division and Subdivision:
+# the DADA2 file; Division_Subdivision: the SINTAX file) is tested only under that
+# method.
 reference_values:
   Domain:     {one_of: [Eukaryota, Bacteria, Archaea, "Eukaryota:plas", "Eukaryota:mito",
                         "Eukaryota:nucl", "Eukaryota:apic", "Eukaryota:chro"]}

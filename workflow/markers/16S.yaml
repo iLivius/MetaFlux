@@ -61,6 +61,9 @@ prefix_style:  bare
 #   one_of     = the names allowed in this rank;
 #   ends_with  = allowed endings (a name passes if it matches one_of or ends_with);
 #   not_one_of = names that must never appear in this rank.
+# A rule names a rank of the pack's rank model. In a pack whose rdp and sintax files
+# have different ranks (18S), a rule for a rank that only one of them has is tested
+# only under that method; a rank in neither model stops the run when it starts.
 # The file must also have exactly the ranks of the release's rank model. A file
 # that does not match (the other release's file, SILVA's own download with its
 # "--other" kingdoms, a future release with another rank) stops the run there,

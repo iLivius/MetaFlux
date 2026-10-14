@@ -180,7 +180,9 @@ def mem_mb_for(rule_name: str) -> int:
 #                       Domain: {one_of: [Bacteria, Archaea, Eukaryota]}. Rule
 #                       check_taxonomy_reference (amplicon/10_refdb.smk) checks the
 #                       reference against these rules and against the rank model
-#                       above before any classification. Required in every pack, at
+#                       above before any classification. A rule for a rank that only
+#                       one method's rank model has (18S: Division, rdp only) is
+#                       tested only under that method. Required in every pack, at
 #                       its top level or in every release block (see
 #                       _check_pack_formats below); `{}` checks the rank model only.
 #
@@ -989,11 +991,21 @@ if MODE == "amplicon":
     # ("Domian") would test no rank, and a misspelt kind ("oneof") or an empty list
     # (one_of: []) would let every name pass, so the reference check would pass
     # without checking what it should.
-    # The rank names are those of the active method's rank model (sintax_tax_levels
-    # under method sintax), the model the check reads the file with.
+    # A pack has two rank models, one per taxonomy method: tax_levels for the rdp
+    # path, which reads the DADA2 file, and sintax_tax_levels for the sintax path,
+    # which reads the SINTAX file. They are the same list for every marker but 18S,
+    # where PR2's DADA2 file has Division and Subdivision and its SINTAX file one
+    # joined rank, Division_Subdivision. A rule applies only where its rank exists:
+    # every rule is checked here for mistakes, whichever method runs, but the check
+    # gets only the rules for the ranks of the active method's model, the model it
+    # reads the file with. So an 18S rule for Division is tested under method rdp,
+    # and left out under method sintax, with one line saying so. A rank that is in
+    # neither model is a mistake and stops the run.
     #   in : PROFILE["reference_values"] (_check_pack_formats above made sure the
-    #        pack declares it; {} or an empty entry means no name rules)
-    #   out: REFERENCE_VALUES, read by rule check_taxonomy_reference
+    #        pack declares it; {} or an empty entry means no name rules), and the two
+    #        rank models (TAX_LEVELS, SINTAX_TAX_LEVELS above)
+    #   out: REFERENCE_VALUES, the rules for the ranks of the active method's model,
+    #        read by rule check_taxonomy_reference
     _RULE_KINDS = ("one_of", "ends_with", "not_one_of")
 
     def _rule_entry_problems(rank_name, kind, names):
@@ -1021,18 +1033,31 @@ if MODE == "amplicon":
                                 f"read as text; put it in quotes")
         return problems
 
-    def _reference_value_problems(rules, rank_names):
+    def _reference_value_problems(rules, active_method, active_rank_names,
+                                  other_method, other_rank_names):
         """Every mistake in a pack's reference_values, as sentences ([] if none).
-        rules = rank name -> rule; rank_names = the rank model the reference check
-        reads the file with."""
+        rules = rank name -> rule; active_rank_names = the rank model the reference
+        check reads the file with in this run (method active_method);
+        other_rank_names = the rank model of the other method. A rule for a rank of
+        either model is checked in full, so a mistake in it stops the runs of both
+        methods; a rank that is in neither model is a mistake itself."""
         if not isinstance(rules, dict):
             return [f"it must be a mapping of rank name -> rule, e.g. Domain: "
                     f"{{one_of: [Bacteria, Archaea]}} (got: {rules!r})"]
         problems = []
         for rank_name, rule in rules.items():
-            if rank_name not in rank_names:
-                problems.append(f"it has a rule for the rank {rank_name!r}, which is not "
-                                f"in the rank model ({', '.join(rank_names)})")
+            in_active_model = rank_name in active_rank_names
+            in_other_model = rank_name in other_rank_names
+            if not in_active_model and not in_other_model:
+                if list(active_rank_names) == list(other_rank_names):
+                    # One model for both methods (every marker but 18S): name it once.
+                    problems.append(f"it has a rule for the rank {rank_name!r}, which is "
+                                    f"not in the rank model ({', '.join(active_rank_names)})")
+                else:
+                    problems.append(f"it has a rule for the rank {rank_name!r}, which is "
+                                    f"in neither rank model of the pack (method "
+                                    f"{active_method}: {', '.join(active_rank_names)}; "
+                                    f"method {other_method}: {', '.join(other_rank_names)})")
                 continue
             if not isinstance(rule, dict) or not rule:
                 problems.append(f"the rule for {rank_name} must give at least one of "
@@ -1042,12 +1067,21 @@ if MODE == "amplicon":
                 problems.extend(_rule_entry_problems(rank_name, kind, names))
         return problems
 
+    # The rank model of each method: the active one, which the check reads the file
+    # with in this run, and the other one.
     if TAXONOMY_METHOD == "sintax":
         _active_tax_levels = SINTAX_TAX_LEVELS
+        _other_method      = "rdp"
+        _other_tax_levels  = TAX_LEVELS
     else:
         _active_tax_levels = TAX_LEVELS
-    REFERENCE_VALUES = PROFILE.get("reference_values") or {}
-    _value_rule_problems = _reference_value_problems(REFERENCE_VALUES, _active_tax_levels)
+        _other_method      = "sintax"
+        _other_tax_levels  = SINTAX_TAX_LEVELS
+    _pack_value_rules = PROFILE.get("reference_values") or {}
+    _value_rule_problems = _reference_value_problems(
+        _pack_value_rules, TAXONOMY_METHOD, _active_tax_levels,
+        _other_method, _other_tax_levels,
+    )
     if _value_rule_problems:
         _pack_label = f"marker pack {AMPLICON_TYPE!r}"
         if PROFILE.get("release"):
@@ -1055,6 +1089,32 @@ if MODE == "amplicon":
         sys.exit(
             f"[MetaFlux] reference_values of the {_pack_label} (method "
             f"{TAXONOMY_METHOD}) cannot be used:\n  - " + "\n  - ".join(_value_rule_problems)
+        )
+
+    # The rules the check of this run gets: those for a rank of the active method's
+    # model, in the pack's order. A rule for a rank that only the other method's
+    # model has is left out, and one line says so. No shipped pack has such a rule,
+    # so for them REFERENCE_VALUES holds every rule of the pack.
+    REFERENCE_VALUES = {}
+    _rules_left_out = []
+    for _rank_name, _rule in _pack_value_rules.items():
+        if _rank_name in _active_tax_levels:
+            REFERENCE_VALUES[_rank_name] = _rule
+        else:
+            _rules_left_out.append(_rank_name)
+    if _rules_left_out:
+        if len(_rules_left_out) == 1:
+            _left_out_text = (f"a rule for {_rules_left_out[0]}, a rank that only the "
+                              f"{_other_method} rank model has; this run's check does "
+                              f"not test it")
+        else:
+            _left_out_text = (f"rules for {', '.join(_rules_left_out)}, ranks that only "
+                              f"the {_other_method} rank model has; this run's check "
+                              f"does not test them")
+        sys.stderr.write(
+            f"[MetaFlux] reference check: the reference_values of marker pack "
+            f"{AMPLICON_TYPE!r} give {_left_out_text} (method {TAXONOMY_METHOD} reads "
+            f"the reference with the ranks {', '.join(_active_tax_levels)}).\n"
         )
 
     # One line on every 16S run naming the SILVA release, the silva_other setting
