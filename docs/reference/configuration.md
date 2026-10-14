@@ -1093,7 +1093,8 @@ Each name must be exactly the name of one row in the sample's Kraken2 report
 appears, so a broad group (`Bacteria`) and a single species (`Escherichia coli`) are
 named the same way. KrakenTools then extracts every read under that taxid, including
 its children, strains among them. A name found in several rows of a report
-stops the run, and a single species gives only an approximate read set; the read
+stops the run, unless the rows are a genus and a subgenus of the same name (then the
+genus is extracted), and a single species gives only an approximate read set; the read
 extraction page explains both.
 Output files are named after a slug of the taxon (lower-case, spaces to
 underscores). A taxon absent from a sample yields empty files rather than a failure.

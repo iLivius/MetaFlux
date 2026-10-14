@@ -2,8 +2,9 @@
 #
 # wildcards.taxon is the slug (e.g. "bacteria"); we map it back to the real
 # scientific name via params.target so we can look up its NCBI taxid in the
-# sample's Kraken2 report. The name must be exactly the name of one report row (the
-# comment above rule extract_taxon_reads says why). It is matched at WHATEVER
+# sample's Kraken2 report. The name must be exactly the name of one report row, or of
+# a genus and a subgenus of the same name, which count as the genus (the comment above
+# rule extract_taxon_reads says why). It is matched at WHATEVER
 # rank it appears in the report (domain, genus, species, ...) — there is no rank
 # restriction, so extract_taxa names a broad group (Bacteria) and a single
 # species (Escherichia coli) the same way. --include-children then pulls every
@@ -73,16 +74,36 @@ EXTRACT_TAXON_PATTERN = "|".join(_extract_taxon_choices)
 #                          else-branch of the shell command);
 #   several matching rows  one name at two ranks (a genus and a subgenus of the same
 #                          name, such as Plasmodium; a GTDB placeholder name used for
-#                          a family and a genus) or two taxa that share a name.
-#                          MetaFlux cannot tell which one is meant, so the lookup
-#                          writes a message listing them to the terminal and to the
-#                          log, and exits with an error. Bash strict mode, which
+#                          an order, a family and a genus) or two taxa that share a
+#                          name. One case is resolved, the genus with a subgenus of its
+#                          own name: exactly one matching row has a plain rank code
+#                          (one letter, G), and every other matching row has that
+#                          letter with a number (G1, G2, ...) and lies inside the plain
+#                          row's branch of the report (it is listed after it, before
+#                          the next row at the plain row's level or above). Kraken2
+#                          codes a node without a standard rank by the standard rank
+#                          above it plus its distance from it, so G1 is a child of a
+#                          genus: Plasmodium is G 5820 with G1 418103 below it, and
+#                          Leishmania G 5658 with G1 38568. The plain row is then
+#                          taken: --include-children extracts every row of its branch,
+#                          the sub-rank rows with their reads among them. The lookup
+#                          writes a note on this to the log. In the 331 Kraken2 reports
+#                          MetaFlux was tested on (NCBI and GTDB databases), only
+#                          Plasmodium and Leishmania are resolved this way, and the
+#                          987 other names found on several rows still stop.
+#                          Every other case stops: MetaFlux cannot tell which row is
+#                          meant (taking the outermost row would silently turn a GTDB
+#                          placeholder name into an order or family extraction). The
+#                          lookup writes a message listing the rows to the terminal and
+#                          to the log, and exits with an error. Bash strict mode, which
 #                          Snakemake always switches on, then ends the job before any
 #                          read file is written.
 # The lookup runs in the Python that the krakentools env already contains (KrakenTools
 # is a set of Python scripts), not in the host's awk, so it does not depend on the
 # machine. Its code must contain no curly braces (Snakemake would read them as
-# placeholders) and no single quotes (they would end the bash string that holds it).
+# placeholders), no single quotes (they would end the bash string that holds it) and
+# no three double quotes in a row (they would end the shell string of the rule, so
+# its functions are explained in comments, not docstrings).
 rule extract_taxon_reads:
     wildcard_constraints:
         sample = EXTRACT_SAMPLE_PATTERN,
@@ -108,6 +129,10 @@ rule extract_taxon_reads:
     shell:
         r"""
         target="{params.target}"
+        # Start the log empty. The lookup below may add a line to it (the note on a
+        # genus taken together with its subgenus, or the message of a stop), and every
+        # line after that is added below it.
+        : > {log}
         # Find the NCBI taxid of the requested name in this sample's Kraken2 report:
         # the row whose name is exactly that name (the comment above the rule says why,
         # and what happens when no row or several rows carry it).
@@ -118,8 +143,11 @@ target = sys.argv[1]
 report_path = sys.argv[2]
 log_path = sys.argv[3]
 
-# Every report row whose name, without its indentation, is the requested name,
-# kept as (rank code, taxid).
+# Read the report once, top to bottom. For every row keep its depth in the
+# taxonomy tree (the name is indented by two spaces per level), in report order;
+# a row whose name, without that indentation, is the requested name is also kept
+# as (row number, depth, rank code, taxid).
+row_depths = []
 matching_rows = []
 with open(report_path) as report:
     for line in report:
@@ -130,36 +158,99 @@ with open(report_path) as report:
         # eight-column report Kraken2 writes here and in the standard six-column one.
         rank_code = fields[-3]
         row_taxid = fields[-2]
-        row_name = fields[-1].strip()
+        name_field = fields[-1]
+        row_name = name_field.strip()
+        depth = (len(name_field) - len(name_field.lstrip(" "))) // 2
+        row_number = len(row_depths)
+        row_depths.append(depth)
         if row_name == target:
-            matching_rows.append((rank_code, row_taxid))
+            matching_rows.append((row_number, depth, rank_code, row_taxid))
+
+
+# For a name found on several rows: the row to extract, or None to stop.
+# A row is returned only when exactly one of the rows has a plain rank code (one
+# letter, such as G) and every other row has that same letter with a number (G1,
+# G2, ...) and lies inside the branch of the plain row: it comes after the plain
+# row and before the first later row at the depth of the plain row or above.
+# That is a genus with a subgenus of the same name (Plasmodium: G 5820 with G1
+# 418103 inside it). Extracting the plain row with its children then includes
+# the reads of the other rows. (No docstring here: its three double quotes would
+# end the shell string of the rule.)
+def plain_row_holding_the_others(matching_rows, row_depths):
+    plain_rows = []
+    numbered_rows = []
+    for row in matching_rows:
+        if len(row[2]) == 1:
+            plain_rows.append(row)
+        else:
+            numbered_rows.append(row)
+    if len(plain_rows) != 1:
+        return None
+    plain_number, plain_depth, plain_code, plain_taxid = plain_rows[0]
+    # Where the branch of the plain row ends: the first later row at its depth or
+    # above it, or the end of the report.
+    branch_end = len(row_depths)
+    for later_number in range(plain_number + 1, len(row_depths)):
+        if row_depths[later_number] <= plain_depth:
+            branch_end = later_number
+            break
+    for row_number, depth, rank_code, row_taxid in numbered_rows:
+        same_rank = rank_code[0] == plain_code and rank_code[1:].isdigit()
+        inside_branch = plain_number < row_number < branch_end
+        if not same_rank or not inside_branch:
+            return None
+    return plain_rows[0]
+
 
 # Exactly one row: print its taxid, which the shell keeps as the taxid to extract.
 if len(matching_rows) == 1:
-    only_rank_code, only_taxid = matching_rows[0]
-    print(only_taxid)
+    print(matching_rows[0][3])
 
-# Several rows: say which rows they are and what to do instead, then stop.
+# Several rows: take the plain row when it holds all the others, or stop.
 if len(matching_rows) > 1:
     row_list = []
-    for rank_code, row_taxid in matching_rows:
+    other_codes = []
+    for row_number, depth, rank_code, row_taxid in matching_rows:
         row_list.append("rank " + rank_code + " taxid " + row_taxid)
-    message = (
-        "[MetaFlux] extract_taxa: " + repr(target) + " is the name of "
-        + str(len(matching_rows)) + " rows in " + report_path
-        + " (" + ", ".join(row_list) + "), so MetaFlux cannot tell which taxon to"
-        + " extract. Remove the name from shotgun.extract_taxa, and extract the taxon"
-        + " you mean by hand with KrakenTools (extract_kraken_reads.py -t TAXID), as"
-        + " the read extraction page of the docs describes."
-    )
-    with open(log_path, "w") as log_file:
-        log_file.write(message + "\n")
-    sys.stderr.write(message + "\n")
-    sys.exit(1)
+        if len(rank_code) > 1:
+            other_codes.append(rank_code)
+    rows_text = ", ".join(row_list)
+    taken_row = plain_row_holding_the_others(matching_rows, row_depths)
+
+    # The plain row holds the others: note it in the log, and print its taxid.
+    if taken_row is not None:
+        taken_code = taken_row[2]
+        taken_taxid = taken_row[3]
+        note = (
+            "[MetaFlux] extract_taxa: " + repr(target) + " is the name of "
+            + str(len(matching_rows)) + " rows in " + report_path + " (" + rows_text
+            + "). Every other row (rank " + ", ".join(other_codes) + ") lies inside"
+            + " the rank " + taken_code + " row, as a subgenus lies inside its genus,"
+            + " so MetaFlux extracts the rank " + taken_code + " row (taxid "
+            + taken_taxid + "), whose children include the other rows."
+        )
+        with open(log_path, "a") as log_file:
+            log_file.write(note + "\n")
+        print(taken_taxid)
+
+    # Any other case: say which rows they are and what to do instead, then stop.
+    if taken_row is None:
+        message = (
+            "[MetaFlux] extract_taxa: " + repr(target) + " is the name of "
+            + str(len(matching_rows)) + " rows in " + report_path
+            + " (" + rows_text + "), so MetaFlux cannot tell which taxon to"
+            + " extract. Remove the name from shotgun.extract_taxa, and extract the taxon"
+            + " you mean by hand with KrakenTools (extract_kraken_reads.py -t TAXID), as"
+            + " the read extraction page of the docs describes."
+        )
+        with open(log_path, "a") as log_file:
+            log_file.write(message + "\n")
+        sys.stderr.write(message + "\n")
+        sys.exit(1)
 
 # No matching row: nothing is printed, so the taxid stays empty.
 ' "$target" {input.report} {log})
-        echo "{wildcards.sample}: taxon='$target' taxid=$taxid" > {log}
+        echo "{wildcards.sample}: taxon='$target' taxid=$taxid" >> {log}
         if [ -n "$taxid" ]; then
             extract_kraken_reads.py -k {input.kraken} \
                 -1 {input.r1} -2 {input.r2} \

@@ -66,13 +66,18 @@ empty.
     `coli` does not match *Escherichia coli*, and `Prevotella` finds the genus, not
     the family Prevotellaceae listed above it. Write the full scientific name.
 
-    Some names occur in more than one row of a report: a genus and a subgenus of the
-    same name (*Plasmodium* and *Leishmania*, for instance), or a placeholder name that
-    GTDB gives to a family and to a genus alike. MetaFlux cannot tell which of them is
-    meant, so the run stops with a message that lists the rows, with their rank codes
-    and taxids. Remove the name from `extract_taxa`, and extract the taxon you mean by
-    hand with KrakenTools (the bioconda package `krakentools`), giving it the taxid
-    from the message:
+    Some names occur in more than one row of a report. A genus and a subgenus of the
+    same name, such as *Plasmodium* and *Leishmania*, are resolved: the subgenus row
+    (rank code `G1`) lies inside the genus row (`G`), so MetaFlux extracts the genus,
+    whose reads include those of the subgenus, and writes a note in the log. The rule
+    is narrow: exactly one of the rows has a plain rank code, and every other row has
+    that letter with a number and lies inside it. In any other case, such as a
+    placeholder name that GTDB gives to an order, a family and a genus alike, or two
+    taxa that share a name, MetaFlux cannot tell which of them is meant, so the run
+    stops with a message that lists the rows, with their rank codes and taxids. Remove
+    the name from `extract_taxa`, and extract the taxon you mean by hand with
+    KrakenTools (the bioconda package `krakentools`), giving it the taxid from the
+    message:
 
     ```bash
     extract_kraken_reads.py -t <taxid> --include-children \
