@@ -498,7 +498,9 @@ shotgun:
   # Target rank: P | C | O | F | G | S (one capital letter). D and K stop the run
   # at start-up: at those ranks Bracken counts the reads of viruses (D) or of
   # protists (K) towards a neighbouring domain or kingdom, and on GTDB it finds no
-  # kingdom at all. Drop to G for a shallow DB. The OTU table then has one row per
+  # kingdom at all. P, C, O and F print a warning at start-up: Bracken can add the
+  # reads of taxa that lack the rank to a row they do not belong to; S or G is
+  # recommended. Drop to G for a shallow DB. The OTU table then has one row per
   # taxon at exactly this rank; the lineage below it is left empty (e.g.
   # ...;g__Bacteroides;s__).
   bracken:

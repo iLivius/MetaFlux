@@ -1602,6 +1602,14 @@ else:  # MODE == "shotgun"
     # archaeal order Methanobacteriales (6,415 -> 13,484 reads). P to S stay allowed;
     # at S, the default, it cannot happen, because every row below a species row is a
     # strain of that species.
+    # P, C, O and F also print a warning (not a stop). The groups that lack one of
+    # these ranks are many, from protists without a phylum to phages without an
+    # order, and in the measured samples one row could gain several times its own
+    # reads: soil, Oomycota 56 -> 1,095 reads at P and Nevskiales 1,393 -> 6,237 at
+    # O; Zymo mock, Methanobacteriales 6,415 -> 13,484 at O. G prints nothing: it is
+    # the documented choice for a shallow database, and few taxa lack a genus.
+    # docs/troubleshooting.md explains the filing and gives these numbers (entry
+    # "the run refuses tax_lev D or K"); the warning points there.
     #
     # Only when Kraken2 runs (profiler: kraken2 or both). A sylph-only run never runs
     # Bracken, so tax_lev is not checked; the threshold keys below are still read and
@@ -1625,6 +1633,16 @@ else:  # MODE == "shotgun"
         if TAX_LEV not in ("P", "C", "O", "F", "G", "S"):
             sys.exit(f"[MetaFlux] shotgun.bracken.tax_lev must be one of P, C, O, F, G, S "
                      f"(a single capital letter), got {TAX_LEV!r}")
+        # Why: allowed, but Bracken can put reads on the wrong row at these ranks (the
+        # comment above says how much), so say so before the run starts.
+        if TAX_LEV in ("P", "C", "O", "F"):
+            sys.stderr.write(f"[MetaFlux] warning: shotgun.bracken.tax_lev is {TAX_LEV}. At P, C, O "
+                             f"and F, Bracken adds the reads of a taxon that lacks this rank to "
+                             f"whichever row of this rank the Kraken2 report lists before it, so "
+                             f"some rows of otu_table.tsv can gain the reads of taxa that do not "
+                             f"belong to them (the Troubleshooting page of the docs explains it, "
+                             f"under 'Shotgun: the run refuses tax_lev: D or K'). S, the default, "
+                             f"or G is recommended.\n")
 
     # Bracken's minimum-read threshold. Either a fixed integer, or the string "auto",
     # in which case the rule works it out per sample from that sample's own classified
