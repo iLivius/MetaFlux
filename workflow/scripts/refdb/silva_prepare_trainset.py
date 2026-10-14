@@ -41,8 +41,9 @@ INPUT (rule convert_silva_train):
   params.strip_other = True when amplicon.taxonomy.silva_other is "strip"
 OUTPUT:
   output.fasta       = the 7-rank training set (gzip). Used by assignTaxonomy (rdp
-                       path), the amplicon probe (in-silico PCR, which only reads
-                       the sequences) and convert_silva_sintax (sintax path).
+                       path) and convert_silva_sintax (sintax path). The amplicon
+                       probe reads SILVA's download instead (probe_ref in 16S.yaml),
+                       so a rebuild of this file leaves the probe result alone.
   log[0]             = plain-text summary for a human; nothing reads it back.
 
 Sequence lines are never altered — only the FASTA headers change, so the ASVs are

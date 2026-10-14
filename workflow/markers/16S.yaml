@@ -9,9 +9,10 @@ probe_mode:          pcr              # pcr | direct — see 40a_amplicon_probe.
                                       # only "pcr" gets its own branch; any other
                                       # value (including a typo) takes the direct
                                       # path (raw lengths, no primer trimming).
-probe_ref:           silva_train
+probe_ref:           silva_train      # SILVA 138.2; the SILVA 144 block sets its own
 probe_stat_key:      16S              # which amplicon.probe_length_stat.<key> the pcr path reads
-# probe_ref_tag is release-specific — see `releases` below.
+# probe_ref_tag is release-specific, and so is probe_ref for SILVA 144 — see
+# `releases` below.
 # Reference lineages the probe leaves out of its length statistics. Chloroplast and
 # mitochondrial SSU (and the few eukaryote outgroup sequences) are amplified in
 # silico by bacterial primers too, often with long insertions; they are not what a
@@ -77,6 +78,20 @@ releases:
   # to SILVA 145 when that comes out; md5 values are the ones SILVA publishes next
   # to each file.
   "144":
+    # The length probe (expected_length: auto) cuts the amplicons out of SILVA's
+    # own download (silva_train_raw below), not out of the training set MetaFlux
+    # builds from it. Both files hold the same sequences, because the build
+    # rewrites headers only, and the probe leaves out the same organelle and
+    # eukaryote records in both (its test ignores "--other"), so the probe result
+    # is the same. The difference is how often each file changes: the download only
+    # when this pack names another SILVA file (or the download step itself changes),
+    # the training set whenever its script is newer than the file (a fresh clone, an
+    # update of the script). If the probe read the training set, each such rebuild
+    # would rewrite the probe result, and every 16S folder with expected_length: auto
+    # would then rerun its trunc-length pick and its whole denoising; the verbatim
+    # and the strip training set differ as well, so folders with the two settings
+    # would rewrite each other's probe.
+    probe_ref:     silva_train_raw
     probe_ref_tag: silva_v144_toGenus
     tax_levels:    [Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species]
     rank_letters:  [d, k, p, c, o, f, g, s]
@@ -91,8 +106,9 @@ releases:
     references:
       # The file exactly as SILVA publishes it: 7 ranks per lineage
       # (Domain;Kingdom;Phylum;Class;Order;Family;Genus). It is never classified
-      # against directly — convert_silva_train (10_refdb.smk) reads it and writes
-      # the training set below.
+      # against directly: convert_silva_train (10_refdb.smk) reads it and writes
+      # the training set below, and the length probe reads it as it is (probe_ref
+      # above).
       silva_train_raw:
         file: silva/silva_nr99_v144_toGenus_trainset.fa.gz
         url:  https://www.arb-silva.de/fileadmin/silva_databases/release_144/DADA2/1.36.0/SSU/silva_nr99_v144_toGenus_trainset.fa.gz

@@ -58,8 +58,8 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 
 | Marker | Symbol | File under `refdb/` | Role | Run-config key that relocates it |
 |---|---|---|---|---|
-| 16S | `silva_train_raw` | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` | SILVA 144 training set as published (seven ranks) | `silva.train_raw` |
-| 16S | `silva_train` | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` | probe substrate + `rdp` trainset — *converted* from `silva_train_raw` (Kingdom rank removed) | `silva.train` |
+| 16S | `silva_train_raw` | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` | probe substrate; SILVA 144 training set as published (seven ranks) | `silva.train_raw` |
+| 16S | `silva_train` | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` | `rdp` trainset — *converted* from `silva_train_raw` (Kingdom rank removed) | `silva.train` |
 | 16S | `silva_kingdom_map` | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` | phylum → kingdom table, used to put the Kingdom back in `taxonomy_lineage_full.tsv` — *converted* with `silva_train` | `silva.kingdom_map` |
 | 16S | `silva_species` | `silva/silva_v144_assignSpecies.fa.gz` | DADA2 `addSpecies` (16S only) | `silva.species` |
 | 16S | `silva_sintax` | `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | `sintax` database — *converted* from `silva_train` | `silva.sintax` |

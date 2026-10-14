@@ -38,7 +38,8 @@ rule pick_trunclen:
         ),
         # probe_json is conditionally included: only when expected_length="auto",
         # so pick_trunclen depends on amplicon_probe, which in turn depends on that
-        # marker's probe reference — e.g. fetch_silva_train (16S) or fetch_uchime (ITS).
+        # marker's probe reference — e.g. fetch_silva_train_raw (16S on SILVA 144) or
+        # fetch_uchime (ITS).
         # Otherwise [] = no dependency.
         probe_json = [PROBE_JSON] if WANTS_PROBE else [],
     output:

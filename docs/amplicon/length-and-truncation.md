@@ -349,8 +349,10 @@ The `amplicon_probe` rule (`workflow/scripts/amplicon/40a_amplicon_probe.py`) ru
 **only** when `amplicon.expected_length: auto`. With a manual length there is nothing to
 measure, so the rule never runs. Whether that also saves a download depends on the
 marker: for ITS and 18S the probe substrate (UNITE UCHIME, SILVA-Eukaryotic) is used by
-nothing else and is not fetched; for 16S, gyrB and rpoB the probe substrate is the same
-file as the taxonomy reference, so it is downloaded either way.
+nothing else and is not fetched; for 16S, gyrB and rpoB it is downloaded either way. For
+gyrB, rpoB and 16S on SILVA 138.2 the probe substrate is the taxonomy reference itself;
+for 16S on SILVA 144 it is SILVA's own download, from which MetaFlux builds the training
+set.
 
 Its job is to answer one question: given *these* primers and *this* reference database,
 how long is the amplicon, and how much does that length vary? It answers it in one of

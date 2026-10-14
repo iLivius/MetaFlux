@@ -130,9 +130,12 @@ rule fetch_unite:
 #     (verbatim keeps it, strip removes it, before any classifier sees the names;
 #     the output file names carry the setting).
 #   in : SILVA_TRAIN_RAW (silva_train_raw, downloaded and md5-checked by the
-#        generated rule fetch_silva_train_raw below)
-#   out: SILVA_TRAIN (silva_train), the file assign_taxonomy (rdp path), the
-#        amplicon probe and convert_silva_sintax (sintax path) read
+#        generated rule fetch_silva_train_raw below). The amplicon probe reads this
+#        download too, not the training set (probe_ref in 16S.yaml)
+#   out: SILVA_TRAIN (silva_train), the file assign_taxonomy (rdp path) and
+#        convert_silva_sintax (sintax path) read. Because the probe does not read
+#        it, a rebuild of this file reruns the reference check and the taxonomy of
+#        the 16S folders, but never their length probe or their denoising
 #
 # Defined only when the active SILVA release ships a raw file to prepare (144).
 # Under 138.2 the trainset is a plain download and this rule does not exist, so two

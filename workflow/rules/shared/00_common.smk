@@ -362,10 +362,10 @@ def _select_pack_releases(packs):
     The run config picks one with references.<release_selector>.release (for 16S:
     references.silva.release); without it the pack's default_release is used. The
     chosen block's fields are copied over the pack's top-level fields — for SILVA:
-    probe_ref_tag, the rank model (tax_levels, rank_letters, rank_prefixes, which
-    differ between 144 and 138.2), reference_values and `references` — so every
-    later line of this file sees one ordinary pack and does not need to know
-    releases exist.
+    probe_ref_tag, probe_ref (SILVA 144 only: its probe reads SILVA's download), the
+    rank model (tax_levels, rank_letters, rank_prefixes, which differ between 144
+    and 138.2), reference_values and `references` — so every later line of this file
+    sees one ordinary pack and does not need to know releases exist.
 
     "{other}" in a reference file name is filled with the silva_other tag above.
 
