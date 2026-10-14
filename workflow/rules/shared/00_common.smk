@@ -2148,21 +2148,37 @@ else:  # MODE == "shotgun"
                      f"picks one copy of each shared genome arbitrarily and sylph-tax keeps only one release's "
                      f"names. Keep one (the family is read from each taxonomy or, for a lineage table of "
                      f"your own, from the database file name)")
-        # Why: allowed, but a genome held by both databases can be split over two rows of
-        # the tables, and the pair costs about twice the memory, so say so. GlobDB holds
-        # every genome of the GTDB database, with the same lineage, under its accession
-        # without the version suffix; the two copies tie, and which one sylph reports can
-        # change from sample to sample.
+        # Why: GTDB and GlobDB are refused in the same run. GlobDB is built on GTDB: it
+        # holds every genome of the GTDB database (GTDB's species representatives),
+        # with the same lineage, under its accession without the version suffix
+        # (GCF_003096595 in GlobDB is GTDB's GCF_003096595.1), and adds genomes from
+        # MAG catalogues. Listing both therefore loads each GTDB genome twice. The two
+        # copies are identical, so sylph reports one of them, and which one can change
+        # from sample to sample: the genome then ends up on two rows of
+        # sylph_table.tsv, each with zeros where the other copy was reported, and
+        # genome-level counts, prevalence and diversity are wrong. The pair also needs
+        # more memory and finds no extra species, since GlobDB alone covers GTDB
+        # (measured: 40.5 GB for GlobDB r232 alone, 66.4 GB with GTDB r232 c200 added,
+        # so about 26 GB more; a c1000 GTDB build would add about a fifth of that). So
+        # the run stops here, before any job, and the message says what to list instead.
+        # What it reads: _syl_families, filled in the loop above. Each entry's family is
+        # taken from its taxonomy (a built-in name, or a lineage table given by its path
+        # under a built-in table's file name), or, for a lineage table of your own, from
+        # the database file name (_sylph_family_of_database). So the check holds however
+        # the taxonomy is given. It compares families, not releases, so any GTDB release
+        # with any GlobDB release is refused.
+        # Still allowed: a fungal database (FungiRefSeq) next to either one, since it is
+        # a family of its own; and a database you named yourself with a table of your
+        # own, which shows no family and is left out of this check.
         if "GTDB" in _syl_families and "GlobDB" in _syl_families:
-            sys.stderr.write("[MetaFlux] warning: references.sylph_databases lists both a GTDB and a GlobDB "
-                             "database. GlobDB already holds the GTDB genomes, with the same lineage, under "
-                             "accessions without the version suffix (GCF_003096595 for GTDB's GCF_003096595.1). "
-                             "sylph reports each such genome from one database or the other, and which one can "
-                             "change from sample to sample, so one genome can end up on two rows of "
-                             "sylph_table.tsv, each with zeros where the other copy was reported: genome-level "
-                             "counts, prevalence and diversity are then wrong. The pair also roughly doubles the "
-                             "memory (measured 40.5 -> 66.4 GB) without adding species. GlobDB alone covers "
-                             "GTDB; keep one.\n")
+            sys.exit("[MetaFlux] references.sylph_databases lists both a GTDB and a GlobDB database, and "
+                     "the two cannot be used together. GlobDB already contains the GTDB genomes, so listing "
+                     "both loads each GTDB genome twice: sylph then reports such a genome from one copy or "
+                     "the other, which can split it over two rows of sylph_table.tsv, and the run needs more "
+                     "memory for no extra species (about 26 GB more with GTDB r232 at c 200). List GlobDB "
+                     "alone (it covers GTDB), or GTDB alone. A fungal database (FungiRefSeq) can stay next "
+                     "to either one. (GTDB and GlobDB are recognised from each taxonomy or, for a lineage "
+                     "table of your own, from the database file name)")
 
     # What rule sylph_taxprof passes before the word taxprof: the lineage-table folder,
     # or nothing when every taxonomy is a table path of your own.

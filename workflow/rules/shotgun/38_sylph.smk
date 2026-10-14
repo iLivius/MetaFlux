@@ -122,8 +122,8 @@ rule sylph_sketch:
 # being counted twice. That holds within a sample. When two databases hold the SAME
 # genome (GlobDB holds every GTDB genome, under its accession without the version
 # suffix), the two copies tie, and which one sylph reports can change from sample to
-# sample: the genome then ends up on two rows of the tables. 00_common.smk warns when
-# GTDB and GlobDB are listed together.
+# sample: the genome then ends up on two rows of the tables. So 00_common.smk refuses
+# GTDB and GlobDB in the same run, before any job starts.
 #
 # -u (estimate unknown) is always on. Without it, sylph stretches each sample's
 # Sequence_abundance to add up to 100 %, as if the database explained every read.

@@ -74,14 +74,18 @@ index. The pre-built ones are listed on sylph's
   sample, so MetaFlux stops on it.
 - **File types.** Both `.syldb` and the two-stage `.syl2db` files work.
 - **One database per family.** Two GTDB releases, or the c 200 and c 1000 builds of one
-  release, share genomes and names, and listing both stops the run. GTDB and GlobDB
-  together are allowed, with a warning, but best avoided. GlobDB already holds every
-  genome of the GTDB database, with the same lineage, under its accession without the
-  version suffix (`GCF_003096595` for GTDB's `GCF_003096595.1`). sylph reports such a
-  genome from one database or the other, and which one can change from sample to
-  sample, so one genome can end up on two rows, each with zeros where the other copy was
-  reported. Genome-level counts, prevalence and diversity are then wrong. The pair also
-  roughly doubles the memory without adding species; use GlobDB alone instead.
+  release, share genomes and names, and listing both stops the run.
+- **GTDB or GlobDB, not both.** GlobDB already holds every genome of the GTDB database,
+  with the same lineage, under its accession without the version suffix
+  (`GCF_003096595` for GTDB's `GCF_003096595.1`), and adds genomes from MAG catalogues.
+  Listed together, each GTDB genome would be loaded twice. sylph would report it from one
+  copy or the other, and which one can change from sample to sample, so one genome could
+  end up on two rows, each with zeros where the other copy was reported: genome-level
+  counts, prevalence and diversity would be wrong. The pair would also need more memory
+  without adding a species, about 26 GB more with GTDB r232 at c 200. MetaFlux therefore
+  stops before the first job when both are listed, whether their taxonomies are given by
+  name or by path. List GlobDB alone (it covers GTDB) or GTDB alone; a fungal database
+  such as FungiRefSeq can go next to either.
 - **No viral databases.** IMG/VR and UHGV use viral ranks that do not fit the table
   and are refused.
 

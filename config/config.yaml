@@ -85,11 +85,13 @@ references:
   # no domain. Use GlobDB r232, which places every genome in a domain:
   #   globdb_r232_sylph_c200.syldb             ->  GlobDB_r232 (from the GlobDB website)
   # All databases are profiled in ONE sylph run, so within a sample an organism present
-  # in two of them is counted once, by its closer genome. Do not pair GTDB with GlobDB:
-  # GlobDB holds every GTDB genome too (under its accession without the version suffix),
-  # and sylph may report a genome from either copy, differently per sample, which splits
-  # it over two rows; GlobDB alone covers GTDB. Use builds made at c 200 (best for thin
-  # communities) or c 1000 (about 5x less memory). A c 100 build cannot be used:
+  # in two of them is counted once, by its closer genome. GTDB and GlobDB together are
+  # refused at start-up: GlobDB holds every GTDB genome too (under its accession without
+  # the version suffix), so each would be loaded twice, sylph could report a genome from
+  # either copy, differently per sample, which splits it over two rows, and the run would
+  # need more memory (about 26 GB more with GTDB r232 c200). List GlobDB alone (it covers
+  # GTDB) or GTDB alone; FungiRefSeq can go with either. Use builds made at c 200 (best
+  # for thin communities) or c 1000 (about 5x less memory). A c 100 build cannot be used:
   # MetaFlux sketches the reads at c 200. .syldb and two-stage .syl2db files both work.
   # Memory: sylph holds the files in memory; measured peak 1.01-1.11 x their size on
   # disk (GTDB r232 c200 + fungi: 26.66 GB of files, peak 26.9-29.7 GB).
