@@ -98,12 +98,26 @@ EXTRACT_TAXON_PATTERN = "|".join(_extract_taxon_choices)
 #                          to the log, and exits with an error. Bash strict mode, which
 #                          Snakemake always switches on, then ends the job before any
 #                          read file is written.
-# The lookup runs in the Python that the krakentools env already contains (KrakenTools
-# is a set of Python scripts), not in the host's awk, so it does not depend on the
-# machine. Its code must contain no curly braces (Snakemake would read them as
+# The log of each job (logs/extract_taxon_reads/{sample}_{taxon}.log) gets the lookup's
+# note or stop message, the taxid line, and what extract_kraken_reads.py prints, cut to
+# its summary lines. KrakenTools 1.2.1 updates a progress counter for every 10,000
+# lines of Kraken2's per-read output, every 1,000 reads of each FASTQ and every read it
+# writes out. Each update starts with a carriage return, so on a terminal it overwrites
+# the previous one, but in a file all of them stay: the log of a Bacteria extraction
+# from a gut mock sample (5.1 million read pairs) reached 530 MB. A small filter between
+# KrakenTools and the log keeps, for every line, only the text after its last carriage
+# return, which is what a terminal shows when the line is done: the report parsed, the
+# number of taxa searched, the per-read output lines read, the read IDs saved and found
+# in R1 and in R2, the reads written, the files and the start and end times. Any error
+# message passes through unchanged. Only the log changes: the reads go from KrakenTools
+# straight to the output files. Bash strict mode (pipefail) still ends the job when
+# KrakenTools fails.
+# The lookup and the filter run in the Python that the krakentools env already contains
+# (KrakenTools is a set of Python scripts), not in the host's awk, so they do not depend
+# on the machine. Their code must contain no curly braces (Snakemake would read them as
 # placeholders), no single quotes (they would end the bash string that holds it) and
 # no three double quotes in a row (they would end the shell string of the rule, so
-# its functions are explained in comments, not docstrings).
+# their functions are explained in comments, not docstrings).
 rule extract_taxon_reads:
     wildcard_constraints:
         sample = EXTRACT_SAMPLE_PATTERN,
@@ -252,11 +266,43 @@ if len(matching_rows) > 1:
 ' "$target" {input.report} {log})
         echo "{wildcards.sample}: taxon='$target' taxid=$taxid" >> {log}
         if [ -n "$taxid" ]; then
+            # Extract the reads, and pass what KrakenTools prints through a small
+            # filter on its way to the log (the comment above the rule says why). The
+            # reads go straight to the output files and never through the filter.
             extract_kraken_reads.py -k {input.kraken} \
                 -1 {input.r1} -2 {input.r2} \
                 -t "$taxid" --include-children --fastq-output \
                 -o {output.r1} -o2 {output.r2} \
-                -r {input.report} >> {log} 2>&1
+                -r {input.report} 2>&1 | python -c '
+import sys
+
+# Bytes in, bytes out: read as text, Python would turn every carriage return into
+# a newline, and the progress counter would become one line per update.
+source = sys.stdin.buffer
+target = sys.stdout.buffer
+carriage_return = b"\r"
+newline = b"\n"
+
+# Read the stream in blocks of 1 MiB, so that a progress line of several hundred
+# MB is never held in memory whole. For every finished line, write only the text
+# after its last carriage return: the final count. The unfinished end of the
+# current line is cut the same way after every block, so it stays short.
+unfinished = b""
+while True:
+    block = source.read(1048576)
+    if not block:
+        break
+    pieces = (unfinished + block).split(newline)
+    unfinished = pieces.pop()
+    for piece in pieces:
+        final_text = piece.rsplit(carriage_return, 1)[-1]
+        target.write(final_text + newline)
+    unfinished = unfinished.rsplit(carriage_return, 1)[-1]
+
+# A last line without a newline (an error message, say) is kept too.
+if unfinished:
+    target.write(unfinished + newline)
+' >> {log}
         else
             # Taxon absent from this sample — emit empty files to satisfy the DAG.
             echo "no taxid found for '$target'" >> {log}
