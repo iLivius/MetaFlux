@@ -152,92 +152,171 @@ other than a parent's direct count ever changes.
 
 ## Choosing a threshold
 
-There is published guidance, and it is worth reading before inventing a number.
+Three published sources give thresholds for this kind of filter, all expressed in
+KrakenUniq's unique k-mers:
 
-| Source | Recommendation |
+| Source | What it reports |
 |---|---|
-| [KrakenUniq](https://link.springer.com/article/10.1186/s13059-018-1568-0) (Breitwieser & Salzberg, 2018) | ~2,000 unique k-mers per million reads; 1,000 for pathogen discovery in patient samples |
-| [Oskolkov (2026)](https://doi.org/10.3389/fmicb.2026.1603339), *Front. Microbiol.* 17:1603339 | ~1,000 unique k-mers optimal by F1 across three ancient-metagenome dataset types; filtering on unique k-mers **alone** was sufficient, with no read-count filter needed; suggests scaling with depth, ~200 unique k-mers per 100,000 reads |
-| [aMeta](https://link.springer.com/article/10.1186/s13059-023-03083-9) (Pochon et al., 2023) | Ships 1,000 unique k-mers **and** 200 assigned reads as user-configurable defaults |
+| [KrakenUniq](https://link.springer.com/article/10.1186/s13059-018-1568-0) (Breitwieser, Baker & Salzberg, 2018) | On a synthetic mix of reads from bacterial isolates (1–34 million read pairs), the best threshold (highest recall at a false discovery rate of 5 % or less) rose by about 2,000 unique k-mers per million reads sequenced: about 3,700 at 1 million, 21,000 at 10 million. For ten patient biopsies, mostly host DNA, a fixed 1,000 unique k-mers together with at least 10 reads removed the background calls and kept every confirmed pathogen. |
+| [Oskolkov (2026)](https://doi.org/10.3389/fmicb.2026.1603339), *Front. Microbiol.* 17:1603339 | Simulated ancient metagenomes (fragments of about 42 bases, 0.1–0.7 million reads): about 1,000 unique k-mers gave the best F1, and a read-count filter added nothing. The best value rose with depth, by about 200 unique k-mers per 100,000 reads, a trend the paper calls relatively weak. Run on the same data, Kraken2 needed two to three times more distinct minimizers than KrakenUniq needed unique k-mers. |
+| [aMeta](https://link.springer.com/article/10.1186/s13059-023-03083-9) (Pochon et al., 2023) | Defaults of 1,000 unique k-mers and 200 assigned reads, set from more than 1,200 ancient libraries; users are invited to try 500–1,500 k-mers depending on depth. The 2026 study above comes from the same group and reuses aMeta's simulated data. |
 
 !!! warning "Those numbers are k-mers. Kraken2 reports minimizers. Not the same unit."
 
-    Minimizers are a *sample* of the k-mers, so the same amount of matched reference
-    sequence yields a much smaller number.
+    **In plain terms.** Kraken2 reads a sequence as overlapping 35-base k-mers, but it
+    does not look each one up. For every k-mer it picks one 31-base piece inside it, the
+    *minimizer*, and stores and counts only that. Neighbouring k-mers usually pick the
+    same piece, so a stretch of genome gives about three times fewer distinct minimizers
+    than distinct k-mers. The studies above counted unique k-mers and settled on about
+    1,000. In a Kraken2 report the same amount of sequence shows up as about **333**
+    distinct minimizers, and that conversion is where the default comes from. It was not
+    tuned on MetaFlux's own test data, and it is a cautious value rather than an
+    equivalent: when Oskolkov (2026) ran both tools on the same simulated data, the best
+    Kraken2 floor was two to three times *higher* than the best KrakenUniq one, and
+    MetaFlux's own benchmark finds useful floors in the thousands (see
+    [Scaling the floor with depth](#scaling-the-floor-with-depth)).
 
-    How much smaller depends on the database's `k` and `l`. Each k-mer of length `k`
+    **The arithmetic**, for a database built with other settings. How many k-mers share
+    a minimizer depends on the database's `k` and `l`. Each k-mer of length `k`
     spans `w = k − l + 1` candidate minimizer positions of length `l`, and the standard
     expected density of selected minimizers is `2 / (w + 1)`. For the usual nucleotide
     settings (`k = 35`, `l = 31`) that is `w = 5` and a density of `1/3` — roughly **one
     distinct minimizer per three k-mers**.
 
-    So a published *1,000 unique k-mers* is about **333** here. Applying the published
-    number directly to the minimizer column makes the filter roughly three times harsher
-    than its authors intended.
+    So, counting sequence alone, a published *1,000 unique k-mers* corresponds to about
+    **333** distinct minimizers here.
 
     Check `k` and `l` on the first line of your database's `inspect.txt` and recompute if
     they differ. (The `2/(w+1)` density is the expectation for a random minimizer scheme;
     Kraken2's spaced-seed masking shifts it slightly, so treat 333 as an order-of-
     magnitude conversion, not a precise one.)
 
-### What that does to real data
+### What it does on real data
 
-Four wastewater-enrichment metagenomes (naproxen-degrading consortia from a treatment plant), 2,312 species calls pooled. **Read the denominators** — most reads
-in a metagenome stop at genus or above and are never candidates for a species-level
-filter, so the two columns differ by a factor of ~30:
+The numbers below come from the four metagenomes of BioProject
+[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1477390) (runs
+SRR39106521–SRR39106524), microbial consortia enriched on naproxen from wastewater
+treatment plants. They were processed with the default settings and the PlusPF index
+`k2_pluspf_20260626`, once with the gate off and once with it on. The floor
+is `min_distinct_minimizers`: the number of distinct minimizers a species needs in the
+Kraken2 report to stay in the table.
 
-| Threshold | Species kept | % of species-rank reads kept | % of all classified reads kept |
-|---|--:|--:|--:|
-| none | 2312 (100%) | 100.0% | 100.00% |
-| ≥ 200 | 1050 (45.4%) | 99.6% | 99.85% |
-| **≥ 333** (converted, **default**) | **754 (32.6%)** | **98.7%** | **99.54%** |
-| ≥ 500 | 541 (23.4%) | 97.8% | 99.20% |
-| ≥ 1000 (published number, unconverted) | 345 (14.9%) | 96.4% | 98.70% |
+| | SRR39106521 | SRR39106522 | SRR39106523 | SRR39106524 |
+|---|--:|--:|--:|--:|
+| Species in `otu_table.tsv`, gate off | 99 | 80 | 116 | 120 |
+| Species, gate on (floor 333) | 84 | 65 | 93 | 101 |
+| Genera, gate off → on | 39 → 34 | 31 → 28 | 46 → 39 | 52 → 43 |
+| Read pairs moved to another species | 4.9 % | 1.6 % | 5.8 % | 2.1 % |
+| Change in total read pairs | −0.01 % | +0.01 % | −0.01 % | −0.09 % |
+| Genomes detected by sylph in the same reads | 10 | 9 | 14 | 16 |
 
-Only 36.5% of classified reads reach species rank at all. The converted threshold has the
-shape a useful filter should have: it drops two thirds of the species *names* while
-keeping 98.7% of the reads that carried a species label.
+- **The gate removes 15 to 23 species per sample and almost no reads.** The reads of a
+  removed species go back to its parent taxon, and Bracken shares them among the
+  relatives that passed.
+- **The removed species are not only rare ones.** Bracken spreads the reads that Kraken2
+  could only place at genus level or above over the species below, and it had given the
+  removed species 11 to 27 times more reads than Kraken2 assigned to them. In every
+  sample one of the 20 most abundant species is removed. The largest case is
+  *Pseudomonas* sp. JS425 in SRR39106521: 372 read pairs from Kraken2, carrying 182
+  distinct minimizers, raised by Bracken to 69,992 read pairs, the eighth most abundant
+  species in the sample. Its read count passes the Bracken threshold; only the
+  distinct-minimizer count shows how little of its genome is behind it (more
+  [below](#but-no-change-in-f1-is-not-no-change-in-the-table)).
+- **Fewer species is the right direction for these samples.** sylph, run by MetaFlux on
+  the same reads in `both` mode, detects 9 to 16 genomes per sample.
+- **The gate does not bring the list down to that size.** Most of what remains is a
+  database problem. The most abundant organism in SRR39106521 and SRR39106523,
+  *Pusillimonas noertemannii*, has no genome in PlusPF, and its reads are reported under
+  several *Achromobacter* species, each with tens of thousands of distinct minimizers
+  (see the warning on missing organisms in [Databases](databases.md#choosing-an-index)).
+  A k-mer floor cannot correct that.
 
-### What it does to the final table
+The same four samples at other floors: species left in `otu_table.tsv`, and the share of
+the gate-off table held by the species that the floor removes.
 
-The same four samples, gate off versus on:
+| Floor | SRR39106521 | SRR39106522 | SRR39106523 | SRR39106524 | Read pairs held by removed species |
+|---|--:|--:|--:|--:|--:|
+| none (gate off) | 99 | 80 | 116 | 120 | 0 |
+| 200 | 92 | 73 | 105 | 112 | 0.9–4.7 % |
+| **333 (default)** | **84** | **65** | **93** | **101** | **1.6–5.8 %** |
+| 1,000 | 55 | 44 | 61 | 80 | 8–21 % |
+| 3,000 | 29 | 26 | 31 | 54 | 13–42 % |
 
-| | Gate off | Gate on |
-|---|--:|--:|
-| Rows in `otu_table.tsv` | 357 | 233 |
-| Total counts | 9,287,679 | 9,271,415 (−0.18%) |
-| Genera represented | 121 | 71 |
+A lower floor keeps the species with 200 to 333 distinct minimizers, 8 to 12 more per
+sample. These samples have no known composition, so they cannot show whether those
+species are real. A higher floor removes many more species but also moves a large share
+of the table: at 3,000, 13 to 42 % of the read pairs end up under a different species. On
+benchmark communities of known composition, a fixed floor of 10,000 already removed true
+species from some samples, and lower fixed floors did the same once shallower sequencing
+was modelled (3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to the depth of
+the sample avoids this; see the next section.
 
-Bray–Curtis dissimilarity between the two profiles is **0.026–0.098** at species level and
-**0.005–0.031** at genus level. The genus-level picture barely moves, which is what a
-filter that corrects *names* rather than *biology* should look like.
+### Scaling the floor with depth
 
-!!! danger "It is not only a tail-trim — check before you believe it"
+A species that is really present leaves more distinct minimizers the deeper a sample is
+sequenced, and so, up to a limit, does a spurious call that borrows sequence from an
+abundant relative. A fixed floor is therefore lenient on deep samples and strict on
+shallow ones. KrakenUniq reported the same for unique k-mers (table above), but neither
+publication gives a rule for Kraken2.
 
-    The per-sample log reports the pruned reads using Kraken2's own counts. Bracken
-    redistributes higher-rank reads down onto species, so a pruned taxon may have been
-    holding far more of the **final** table than it holds in the Kraken2 report — on the
-    test data, **6–19× more**. Two or three of every sample's top 20 species disappear.
+MetaFlux's benchmark was used to fit one. It covers 42 samples of known composition: one
+real mock community (ZymoBIOMICS D6331, SRA run SRR38976715) and 41 simulated CAMI II
+samples from the marine, rhizosphere and strain-madness sets, with 2.6–6.5 million
+classified read pairs each, classified with three Kraken2 indices: `k2_pluspf_20260626`
+(at confidence 0.15 and 0.20), `k2_gtdb_genome_reps_20250609` (GTDB r226 representative
+genomes) and `k2_NCBI_reference_20251007` (one genome per NCBI species). A floor of **one
+distinct minimizer per 1,000 classified read pairs** gave the best result that was safe
+everywhere:
 
-    The clearest case, and the reason to keep this gate on even though the [depth-scaled
-    Bracken threshold](confidence-and-threshold.md) does most of the precision work
-    elsewhere: *Pseudomonas* sp. JS425 had 373 Kraken2 reads on 189 distinct minimizers
-    (each position hit ~62 times) — comfortably above any sane *read-count* floor — and
-    Bracken inflated it to **64,961 reads, 3% of the sample and rank 9 in the community**.
-    A 174× amplification of a thinly-evidenced call that a threshold on read count alone
-    cannot see, because the read count itself looked fine. This is a narrow failure mode,
-    not the typical one, but when it happens it is large.
+- species-level F1 rose by 0.064 on average (0.029 with PlusPF), against 0.0025 for the
+  fixed 333 (0.0004 with PlusPF);
+- it removed 2,286 of 13,114 false species calls and 6 of 13,419 true ones (none with
+  PlusPF), and lowered no sample's F1;
+- it stayed safe when shallower sequencing was modelled, down to 1 % of the reads, while
+  every fixed floor from 333 to 10,000 lowered some samples' F1 at some depth.
 
-    Run once with the gate off, once with it on, and compare `03.abundance` before
-    committing to a threshold.
+This is the same order of magnitude as KrakenUniq's slope (about 670 distinct minimizers
+per million read pairs once converted), but the number itself comes from MetaFlux's
+benchmark. As a starting point:
 
-!!! danger "The depth-scaling rule does not extrapolate"
+| Classified read pairs in the shallowest sample, host excluded | `min_distinct_minimizers` |
+|--:|--:|
+| 500,000 | 500 |
+| 1 million | 1,000 |
+| 2 million | 2,000 |
+| 5 million | 5,000 |
+| 6.5 million or more | 6,500 |
 
-    The published thresholds come from ancient-DNA and clinical-pathogen work, mostly at
-    shallower depth than a modern shotgun run. The depth-scaling suggestion in particular
-    should be treated with caution: extrapolated to a multi-million-pair sample it implies
-    a threshold roughly ten times the fixed one, far outside the range it was fitted on.
-    MetaFlux uses the fixed converted value and leaves the scaling to you.
+Each sample's classified count is in `stats/read_tracking.txt` (column `classified`) and
+in its Bracken log (`[bracken] auto threshold: 5e-05 x N classified read pairs`).
+MetaFlux applies one floor to every sample in a run, so size it on the shallowest sample;
+the deeper samples then get a more lenient floor than they could take. Below about
+500,000 classified pairs the gate changes little, whatever the floor.
+
+Limits of this rule:
+
+- **It rests on limited data.** Three quarters of the F1 gain came from the one real mock
+  community; on the simulated CAMI samples it was 0.01–0.03. The shallower depths were
+  modelled from the observed counts, not sequenced.
+- **Do not go above 1.5 per 1,000 pairs.** At that rate rare true species start to be
+  removed (92 of 13,419 true calls), and from 2 per 1,000 the F1 falls.
+- **Do not go above 6,500 for deeper samples.** The benchmark stops at 6.5 million
+  classified pairs. A floor that keeps growing with depth eventually exceeds what a real
+  species with a small species-specific part of its genome can reach; in the model this
+  began at about 10 million pairs.
+- **Exclude host reads.** PlusPF contains the human genome and host removal is off by
+  default, so host reads would raise the floor without adding any microbial evidence.
+  Subtract the read pairs Kraken2 assigned to the host (for human, the *Homo sapiens*
+  row of the report), or remove the host first ([Decontamination](decontamination.md#host-removal)).
+- **Library layout.** The rule assumes paired 2×150 bp Illumina reads with little mate
+  overlap and few duplicates. Shorter reads, single-end data, overlapping mates and
+  duplicate-rich libraries give fewer distinct minimizers per read pair, so the same
+  floor is stricter for them; use a lower value.
+- **It changes the table more than 333 does.** On the test dataset above (1.7–3.5 million
+  classified pairs), a floor of 1,674 sized on the shallowest sample keeps 33–68 species
+  per sample, against 65–101 at 333, and the species it removes hold 10–33 % of the read
+  pairs, which move to relatives. That is still well above the 9–16 genomes sylph finds.
+  Compare `otu_table.tsv` with the gate off and on before relying on it.
 
 ## Why the default is `enabled: false`
 
@@ -262,26 +341,24 @@ The two filters ask different questions. The threshold asks *how many reads*; th
 asks *how much distinct sequence*. A taxon can pass one and fail the other, and an
 aggregate score of 250+ species barely notices when a single one flips.
 
-*Pseudomonas* sp. JS425, in four real wastewater samples, with the threshold already
-scaled by `alpha = 5e-05`:
+*Pseudomonas* sp. JS425 in the four test samples, with the Bracken threshold scaled to
+depth (`threshold_alpha` 5×10⁻⁵):
 
-| Sample | classified pairs | auto `-t` | JS425 reads | distinct minimizers | passes `-t`? | gate |
-|---|--:|--:|--:|--:|:--|:--|
-| 21 | 2,178,755 | 109 | 373 | 189 | **yes** | prune |
-| 22 | 3,417,552 | 171 | 103 | 188 | no | prune |
-| 23 | 1,603,408 | 80 | 302 | 188 | **yes** | prune |
-| 24 | 2,114,321 | 106 | 123 | 190 | **yes** | prune |
+| Sample | Classified pairs | Bracken `-t` | Kraken2 pairs | Distinct minimizers | Passes `-t` | After Bracken, gate off | Gate |
+|---|--:|--:|--:|--:|:--|--:|:--|
+| SRR39106521 | 2,268,774 | 113 | 372 | 182 | yes | 69,992 | removed |
+| SRR39106522 | 3,458,847 | 173 | 103 | 181 | no | – | removed |
+| SRR39106523 | 1,673,810 | 84 | 301 | 181 | yes | 51,418 | removed |
+| SRR39106524 | 2,177,429 | 109 | 123 | 181 | yes | 8,935 | removed |
 
-373 reads is an unremarkable count that clears any sensible floor. 189 distinct
-minimizers, each hit some 62 times, is not — and Bracken amplified that call to 64,961
-reads, 3% of the sample and rank 9 in the community. A correctly tuned threshold keeps it
-in three samples of four; the gate removes it in all four. Note also what the threshold
-alone produces here: the same taxon present in three samples and absent from the fourth,
-purely because the cut-off landed differently — a presence/absence pattern that is an
-artefact, and one that can survive into a figure.
+In SRR39106521 the 372 read pairs pass the threshold, but they rest on 182 distinct
+minimizers, each hit about 60 times, and Bracken raises the call to 3 % of the sample.
+The threshold keeps JS425 in three samples and drops it from the fourth only because the
+cut-off falls differently there; in a presence/absence plot that would look like a real
+difference between samples. The gate removes it from all four.
 
-Those samples have no ground truth, so they contributed no F1 at all. That is precisely
-why the benchmark shows +0.0009 and the gate is still worth having.
+These samples have no known composition, so they do not enter the F1 scores above. That
+is why the benchmark shows almost no gain from the gate while the table changes.
 
 **When to turn it on:** environmental or otherwise poorly-covered communities, where reads
 from organisms absent from the database have to land somewhere. For gut, clinical, or
@@ -468,6 +545,6 @@ just removes the bottom few percent of *any* sample. Worse, because the line is 
 sample, the same species can fall on opposite sides of it in different samples of one
 study.
 
-The lesson driving the design: use an **absolute** threshold, so a species gets the same
-verdict in every run, and treat the trend line as a *ranking for the eye* rather than a
-test.
+The conclusion for the design: use one fixed floor for every sample of a run, so a
+species gets the same verdict in every sample, and treat the trend line as a *ranking for
+the eye* rather than a test.
