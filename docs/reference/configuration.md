@@ -41,9 +41,7 @@ ignored entirely.
 
 ## Which file a setting actually comes from
 
-Four kinds of file get mentioned across this site, and only three of them decide
-anything. It is worth being explicit about which is which, because they are easy to
-confuse once you are reading the documentation and the config side by side.
+Four kinds of file are mentioned on this site; three of them can change a run:
 
 | File | Where | Read by | Can it change a run? |
 |---|---|---|---|
@@ -59,10 +57,8 @@ confuse once you are reading the documentation and the config side by side.
     on these pages are illustrations of what to put in your own config — they are not
     in force anywhere, and they cannot override or be overridden by anything.
 
-    So the question "if two pages disagree, which one wins?" has no winner: neither
-    does. A disagreement between two documentation pages is simply a documentation
-    bug. The file that decides is `config/config.yaml` plus whatever you merge on top
-    of it.
+    If two pages disagree, the documentation is wrong. What applies is
+    `config/config.yaml` plus whatever you merge on top of it.
 
 ### The config layers
 
@@ -101,7 +97,7 @@ This is an **overlay, not a complete run config**: it inherits the template's
 `/path/to/...` placeholders for `input.fastq_dir` and `amplicon.primers`, which still
 have to be replaced before anything runs.
 
-!!! warning "The merge recurses only through blocks"
+!!! warning "Only blocks are merged key by key"
 
     Key-by-key merging happens as long as what you write at each level is itself a
     block. Write a key with a list, a scalar, or **no value at all**, and it replaces
@@ -120,14 +116,6 @@ have to be replaced before anything runs.
     error. Same for `max_ee: [1]`, which replaces `[2, 5]` outright rather than merging
     element-wise. If you do not intend to change a block, leave it out entirely.
 
-!!! tip "The flip side, and why `keep`/`discard` ship commented out"
-
-    Because the template is *always* underneath, a concrete value left in it silently
-    applies to any run that does not set its own. Harmless for a thread count; not
-    harmless for `amplicon.taxonomy.filter.keep`, where a 16S `[d__Bacteria, d__Archaea]`
-    left in the template would discard nearly every ASV of an 18S run. That is why those
-    two lines ship commented out — see the warning above.
-
 ### Marker packs live beside the config, not inside it
 
 A marker pack holds *facts about the marker*: which database the classifier uses, which
@@ -135,11 +123,10 @@ reference the amplicon-length probe measures, whether a region extractor exists,
 slots the marker's rank model has. A run config holds *choices about this
 experiment*: primers, expected length, truncation, taxon filter, paths.
 
-The two are kept in genuinely separate namespaces. A pack is read into `MARKERS[type]`
-and never merged into `config`, so a setting cannot silently arrive from both places.
-This is enforced by construction rather than convention: across all five shipped packs,
-**no pack key appears anywhere under `amplicon:` in the config template**. The only name
-the two share at all is `references`, handled below.
+The two are kept apart: a pack is read into `MARKERS[type]` and never merged into
+`config`, so a setting cannot come from both places. No key of the five shipped packs
+appears under `amplicon:` in the config template; the only name they share is
+`references`, described below.
 
 If you genuinely need a different pack — another database release, a different rank
 model — put a file of the same name in `config/markers/`. That is a whole-file
@@ -155,7 +142,7 @@ re-apply your change.
 
 ### Where a pack and the config do interact
 
-Two directions, and they are not symmetrical.
+They interact in two ways, handled differently.
 
 **A config entry overriding a pack** happens in one place: database locations.
 Every pack declares a default filename and download URL for each database it owns, and
@@ -168,23 +155,19 @@ references:
     species: /shared/dbs/silva_v144_assignSpecies.fa.gz
 ```
 
-A **non-empty** `references.*` entry wins; the pack default is used otherwise. The test
-is truthiness, so an entry left `null` or blank counts as absent and falls back to the
-pack silently rather than erroring. The key that relocates each database is listed in
-[Markers](../amplicon/markers/index.md).
+A **non-empty** `references.*` entry wins. An entry left `null` or empty counts as
+absent, so the pack default is used, without an error. The key that relocates each
+database is listed in [Markers](../amplicon/markers/index.md).
 
 Two 16S settings do not override the pack but choose between variants it declares:
 `references.silva.release` picks the SILVA release (`144` or `138.2`), and
 `amplicon.taxonomy.silva_other` picks which build of the SILVA 144 files is used
 (`other-verbatim` or `other-stripped` in their names).
 
-**A pack overriding the config** is the other direction, and it is the one case where
-the workflow does not do what your config literally said. It is worth knowing about,
-because if you copy a config between markers you will meet it.
-
-It happens when a setting asks for something that does not exist *for the marker you
-chose* — not something unwise, something genuinely unavailable. There are two such
-cases, and they behave differently on purpose:
+**A pack overriding the config** is the other direction, and the one case where the
+workflow does not do what the config says. It happens when a setting asks for something
+that does not exist for the chosen marker, typically in a config copied from another
+marker. There are two such cases, handled differently on purpose:
 
 | You asked for | On these markers | What happens |
 |---|---|---|
@@ -208,8 +191,8 @@ setting off itself and tells you on stderr:
 ignoring amplicon.extraction.enabled: true (no extraction step will run)
 ```
 
-Note this one is a **warning** — the run proceeds. If you adapted a 16S config for an
-18S run, extraction quietly not happening is the correct outcome, not a fault to chase.
+This one is a **warning**: the run continues without extraction, which is the intended
+result for a 16S config reused for 18S.
 
 #### SINTAX classification
 
@@ -224,14 +207,9 @@ alternative:
 amplicon.taxonomy.method: sintax is not available for it. Use method: rdp.
 ```
 
-This one errors rather than falling back, and the asymmetry with the case above is
-deliberate. Switching off a step that could not have run costs you nothing you could
-otherwise have had. Silently classifying with a different algorithm than the one you
-asked for would change your results without telling you — so it refuses instead.
-
-Neither case is really the pack "winning an argument". Nothing is being weighed against
-anything: the config asked for a tool that does not exist for that marker, and the pack
-is simply where that fact happens to be written down.
+This case stops the run instead of falling back. Switching off a step that could not
+run changes no result; classifying with a method other than the one requested would
+change the results without notice.
 
 ## The five settings that define a run
 
@@ -256,7 +234,7 @@ mode: amplicon          # amplicon | shotgun
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `mode` | Chooses which set of rules is built into the workflow graph | `amplicon` | Case-insensitive. Anything other than `amplicon` or `shotgun` stops the run at parse time. |
+| `mode` | Chooses which set of rules is built into the workflow graph | `amplicon` | Case-insensitive. Anything other than `amplicon` or `shotgun` stops the run at start-up. |
 
 The mode is chosen here, never auto-detected from the data. Amplicon mode requires
 primer FASTAs; shotgun mode supports fetching reads from an NCBI BioProject and
@@ -297,8 +275,8 @@ there is rejected rather than half-processed, while a mismatched R2 extension is
 not caught, so the whole directory is best kept consistent.
 
 Sample names are taken from the part of the filename before `_R1`/`_1`. Names
-containing any of `* # @ % ^ / ! ? & : ; | < >` or a space are rejected at parse
-time, since Snakemake treats those characters specially. Underscores are fine.
+containing any of `* # @ % ^ / ! ? & : ; | < >` or a space are rejected at
+start-up, since Snakemake treats those characters specially. Underscores are fine.
 
 **BioProject mode.** When `bioproject` is set, MetaFlux queries NCBI e-utils,
 keeps only runs whose library layout is `PAIRED`, and caches the run table as
@@ -492,7 +470,7 @@ reads are not part of the sample and would be carried into ASV inference.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `fwd` | FASTA with the forward primer sequence | placeholder | Must exist — amplicon mode stops at parse time if either file is missing. |
+| `fwd` | FASTA with the forward primer sequence | placeholder | Must exist — amplicon mode stops at start-up if either file is missing. |
 | `rev` | FASTA with the reverse primer sequence | placeholder | Reverse complements of both are generated by the `revcomp_primers` rule; nothing needs to be supplied pre-complemented. |
 | `orientation` | Whether R1 always carries the forward primer (`fixed`) or reads may come in either orientation (`mixed`) | `fixed` | `mixed` runs a second Cutadapt pass with the primers swapped, reverse-complements its output so both passes agree, and concatenates the two. Anything other than `fixed`/`mixed` stops the run. |
 
@@ -536,7 +514,7 @@ already cut to amplicon length are measured directly.
 
 !!! warning "Keep all three `probe_length_stat` keys"
 
-    For every marker except ITS, MetaFlux checks at parse time that the key its
+    For every marker except ITS, MetaFlux checks at start-up that the key its
     pack names is present in `probe_length_stat`, whatever `expected_length` is set
     to, and exits with the missing key name if it is not. gyrB reads the `16S`
     key — that is a deliberate reuse, not a typo. Deleting any of the three
@@ -544,11 +522,13 @@ already cut to amplicon length are measured directly.
 
 !!! warning "18S V9 must be sized manually"
 
-    V4 primer pairs work with `auto`: the measured window is wide (roughly
-    380–595 bp of core amplicon, depending on the pair). V9 (1391F/EukBr) does not,
-    because EukBr sits at the 3′ terminus and most references are truncated before
-    it — only 24–41% are recovered in silico, so `auto` would size the window from
-    a biased minority. Set it manually, for example `expected_length: [115, 150]`.
+    V4 primer pairs work with `auto`: in silico against SILVA-Euk, the probe
+    reference, the median core amplicon ranges from 381 bp (TAReuk454FWD1 /
+    TAReukREV3) to 596 bp (566F / 1200R, Hadziavdic et al. 2014). V9 (1391F/EukBr)
+    does not, because EukBr sits at the 3′ end of the gene, where most references are
+    truncated: only 41% of SILVA-Euk references (24% of PR2's) give a product, so
+    `auto` would size the window from a biased minority. Set it manually, for example
+    `expected_length: [115, 150]`.
 
 An integer must be between 50 and 10000 bp; a `[min, max]` pair must have exactly
 two positive numbers with `min <= max`. Out-of-range or malformed values are
@@ -587,10 +567,10 @@ low-quality bases it needs in order to learn the quality-to-error relationship.
     manual_r2:                  # e.g. 240
 ```
 
-`truncLen` is one length per read direction; everything past it is discarded. It is
-pulled two ways: cutting shorter removes the low-quality 3′ tail the error model
-dislikes, but cutting too short stops R1 and R2 from reaching each other, and a pair
-that cannot merge is lost entirely.
+`truncLen` is one length per read direction; everything past it is discarded. A shorter
+cut removes more of the low-quality 3′ tail, which would otherwise degrade the error
+model; a cut that is too short leaves R1 and R2 without overlap, and a pair that cannot
+merge is lost.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
@@ -606,22 +586,23 @@ that cannot merge is lost entirely.
 
     Falco reports a quality bin for every position up to the **longest** read in a
     file, however few reads reach it. `filterAndTrim` **discards** any read shorter
-    than `truncLen` rather than padding it, so a cut placed where only a handful of
-    reads reach does not trim a few bases — it throws away the library. On a run whose
-    quality never drops below `q_threshold`, nothing else stops the cut landing there.
+    than `truncLen` instead of padding it, so a cut placed where only a few reads
+    reach discards almost the whole library. On a run whose quality never drops below
+    `q_threshold`, nothing else stops the cut landing there.
 
     Before quality is looked at, each sample's bins are therefore cut off at the length
     `min_read_coverage_pct` of its reads still reach. On the 18S
     [test dataset](../about/test-datasets.md) this moves the R1 ceiling from 288 bp to
-    271 bp, which is the difference between retaining 9 read pairs out of 908,768 and
-    retaining 90.9% of the library.
+    271 bp. At 288 / 239, the cut MetaFlux v2.1.0 and earlier chose there, only 9 of the
+    908,768 primer-trimmed read pairs are long enough to pass; at 271 / 239, 90.9% of
+    the raw read pairs reach the final table.
 
-    Mind the direction: the value is a guarantee about reads, so raising it asks for a
-    position more reads reach and therefore gives a **shorter** cut with fewer reads
-    discarded. Lowering it gives a longer cut and discards more. Between about 80 and 99
-    it barely moves, because read lengths cluster. `100` is a cliff rather than an off
-    switch — it demands every read reach the cut, collapsing the ceiling onto the single
-    shortest read in the file. No value disables the guard.
+    The value is a guarantee about reads: raising it asks for a position that more
+    reads reach, which gives a **shorter** cut that discards fewer reads; lowering it
+    gives a longer cut that discards more. Between about 80 and 99 the cut barely
+    moves, because read lengths cluster. `100` does not switch the guard off: it
+    requires every read to reach the cut, which puts the ceiling at the shortest read
+    in the file. No value disables the guard.
     `logs/pick_trunclen.log` prints each sample's longest read next to the length the
     requested percentage reaches, and emits a `NOTE` when the two differ by 10 bp or
     more.
@@ -686,7 +667,7 @@ empty table.
     `type: ITS` with `length_filter.mode: auto` also requires
     `expected_length: 'auto'`, since ITS never resolves an expected length through
     the truncation picker and the fallback would have nothing to size from.
-    MetaFlux catches this combination at parse time, before the expensive DADA2
+    MetaFlux catches this combination at start-up, before the expensive DADA2
     run, and the message offers two fixes: set `expected_length: 'auto'`, or
     switch to `length_filter.mode: manual` with an explicit `range`.
 
@@ -795,7 +776,7 @@ The full treatment is on
     max_ee: [2, 5]
     trunc_q: 2
     filter:
-      min_len: 50
+      min_len: 20
       min_len_stat: null
       max_len: null
     learn_errors:
@@ -811,6 +792,8 @@ The full treatment is on
 | `filter.min_len` | Per-read length floor after trimming | `20` | DADA2's own `filterAndTrim` default. Used for every marker; for ITS it is the fallback when `min_len_stat` is unset. |
 | `filter.min_len_stat` | Optionally derives `min_len` from the probe distribution instead | `null` | **ITS only, opt-in.** Left `null`, every marker uses `filter.min_len`. Setting a statistic (e.g. `q1`) puts the floor near 175 bp, above ~24% of the UNITE reference — see [ITS](../amplicon/markers/its.md). The other markers never take this path: their probe measures the full amplicon, which exceeds read length. |
 | `filter.max_len` | Per-read length ceiling | `null` | `null` means no upper limit. |
+| `learn_errors.nbases` | Bases sampled to train the error model | `1e8` | The DADA2 default. Reads are drawn in random order, seeded by `amplicon.seed`. |
+| `learn_errors.max_consist` | Maximum self-consistency iterations of the error model | `999` | Effectively unlimited; the model normally converges long before. |
 
 !!! note "`truncQ` runs before `truncLen`, and the leftovers are discarded rather than kept short"
 
@@ -825,8 +808,6 @@ The full treatment is on
     `truncLen`, check the filtering columns in `stats/read_tracking.txt` and consider
     whether a lower `trunc_q` is the real cause — particularly on a run whose 3′ quality
     degrades early.
-| `learn_errors.nbases` | Bases sampled to train the error model | `1e8` | The DADA2 default. Reads are drawn in random order, seeded by `amplicon.seed`. |
-| `learn_errors.max_consist` | Maximum self-consistency iterations of the error model | `999` | Effectively unlimited; the model normally converges long before. |
 
 ### DADA2 — tier 2, advanced tuning
 
@@ -849,8 +830,13 @@ The full treatment is on
 | `dada.omega_a` | `OMEGA_A` — how strong the evidence must be before a sequence is called a new ASV rather than an error of an existing one | `1e-40` | The DADA2 default. A lower value is stricter; a higher one yields more ASVs. |
 | `merge.min_overlap` | `mergePairs` minimum overlap, in bp, enforced at runtime | `12` | DADA2's default. This is the one that actually decides whether a pair merges; `amplicon.min_overlap` is the design constraint used earlier when choosing truncation lengths. |
 | `merge.max_mismatch` | Mismatches tolerated inside the overlap | `0` | DADA2's default, and deliberate: after denoising, a mismatch in the overlap is evidence the pair should not merge rather than a sequencing error. |
+| `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so `length_filter.mode: auto` is no longer sizing a meaningful window — switch to `manual` with an explicit `range` sized for the concatenated length. |
+| `merge.trim_overhang` | Trims bases that read past the far end of the amplicon | `true` | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
+| `chimera.method` | `removeBimeraDenovo` method | `consensus` | Chimeras are called per sample and the verdicts pooled. |
+| `chimera.min_fold_parent` | How much more abundant a parent must be than its suspected chimera | `4` | DADA2's `minFoldParentOverAbundance`, raised above the package default. Higher is **more permissive**: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the note below. |
+| `chimera.allow_one_off` | Also flags sequences one mismatch or indel away from an exact chimera | `false` (DADA2's own default) | With `false`, only exact chimeras of two parents are flagged. `true` also flags sequences one mismatch or indel away from an exact chimera, so more sequences are removed. |
 
-!!! note "What these two cost in practice"
+!!! note "What the `min_overlap` and `max_mismatch` defaults cost in practice"
 
     Looser values, such as 10 and 2, merge more pairs, but the extra pairs mostly turn
     into distinct, low-abundance ASVs, so the stricter defaults cost far more rare ASVs
@@ -860,40 +846,33 @@ The full treatment is on
     page. Loosening them recovers those ASVs, at the cost of accepting overlap
     disagreements that DADA2 treats as evidence against merging.
 
-    **ITS is the exception worth knowing about.** ITS2 length varies widely between
-    fungi, so with 2×300 reads the longer amplicons overlap by only a little — exactly
-    the pairs a 10 → 12 bp requirement drops, and their short overlap sits in the
+    **ITS loses much more.** ITS2 length varies widely between fungi, so with 2×300
+    reads the longer amplicons overlap by only a little — exactly the pairs a
+    10 → 12 bp requirement drops, and their short overlap sits in the
     low-quality 3′ tails where `max_mismatch: 0` then removes more. On an ITS run the
     two settings together can cost a large share of the merged reads, so for ITS on a
     variable community `min_overlap: 10` with `max_mismatch: 2` is a defensible
     setting.
-| `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so `length_filter.mode: auto` is no longer sizing a meaningful window — switch to `manual` with an explicit `range` sized for the concatenated length. |
-| `merge.trim_overhang` | Trims bases that read past the far end of the amplicon | `true` | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
-| `chimera.method` | `removeBimeraDenovo` method | `consensus` | Chimeras are called per sample and the verdicts pooled. |
-| `chimera.min_fold_parent` | How much more abundant a parent must be than its suspected chimera | `4` | DADA2's `minFoldParentOverAbundance`, raised above the package default. Higher is **more permissive**: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the note below. |
-| `chimera.allow_one_off` | Also flags sequences one mismatch away from a perfect chimera | `false` (DADA2's own default) | `false` is the **stricter** setting, not a relaxed one — near-miss sequences get flagged as chimeric alongside exact matches, so more real variants risk being removed. Setting it `true` is what relaxes this: only exact bimera matches are flagged, and near-misses are kept. |
 
 !!! tip "Where to look before changing the chimera settings"
 
     `min_fold_parent: 4` is a deliberate departure from the DADA2 default, in the
-    direction of removing fewer sequences. The reasoning, and the range of values the
-    DADA2 authors and community have discussed for pooled and amplicon-specific data
-    (typically 4 to 8), is set out in the upstream discussions — worth reading before
-    changing it, since the right value depends on the marker and on how samples were
-    pooled:
+    direction of removing fewer sequences. The reasoning, and the values DADA2's
+    authors and users have discussed for pooled and amplicon-specific data (typically
+    4 to 8), are in these DADA2 issues; the right value depends on the marker and on
+    how samples were pooled:
 
     - [DADA2 issue: Questions about chimera filtering](https://github.com/benjjneb/dada2/issues/2030)
     - [DADA2 issue: High loss of reads following chimera removal](https://github.com/benjjneb/dada2/issues/1715)
     - [DADA2 issue: Remove chimeras, consensus vs. pooled](https://github.com/benjjneb/dada2/issues/1368)
 
-    A large chimeric fraction is more often a symptom than a parameter problem: check
-    that primers were fully removed first, since residual primer sequence is a common
-    cause of apparent chimeras.
+    Before changing these settings, check that primers were fully removed: residual
+    primer sequence is a common cause of apparent chimeras.
 
 ### Phylogeny (16S)
 
 `amplicon.phylogeny`. Off by default, and 16S only — enabling it for any other marker is
-forced off with a warning at parse time. Builds a tree from the contaminant-filtered ASVs
+forced off with a warning at start-up. Builds a tree from the contaminant-filtered ASVs
 in `06.taxonomy/` for phylogenetic-diversity analysis you perform yourself; MetaFlux
 computes no diversity statistics. The full discussion, including why the other markers are
 excluded and how to use the tree in R, is on the
@@ -901,12 +880,12 @@ excluded and how to use the tree in R, is on the
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `enabled` | Master switch | `false` | With it off, no phylogeny rules exist at all — the DAG is identical to a run before this module existed, and no phylogeny conda environment is built. |
+| `enabled` | Master switch | `false` | With it off, the workflow has no phylogeny steps and builds no phylogeny conda environment. |
 | `backend` | Which tree program runs | `iqtree` | `iqtree` (full ML, model selection available) \| `fasttree` (approximate ML, much faster, no model selection) \| `raxml-ng` (full ML alternative). All three produce the same canonical outputs. |
 | `aligner_strategy` | Which MAFFT strategy | `auto` | `auto`: <200 ASVs → L-INS-i, ≥200 → FFT-NS-2, at MAFFT's own documented ceiling for its accuracy strategies. `linsi` / `fftns2` force one — useful to keep runs of different sizes comparable. MAFFT's own `--auto` is never used: its thresholds are unpublished and size-dependent. The resolved choice is recorded in `phylogeny.params.json`. |
 | `model` | Substitution model | `auto` | `auto` → `GTR+F+G4` (iqtree), `GTR+Γ` (fasttree, raxml-ng). Pinned rather than searched because IQ-TREE's own `-m MFP` default makes runtime data-dependent and re-decides on every run. Model **selection** is still reachable: `MFP` (IQ-TREE ModelFinder) or `DNA` (RAxML-NG MOOSE), and what it picks is recorded. FastTree has no model selection — only `gtr` or `jc` are accepted, anything else is a hard error rather than a silently ignored value. |
 | `support` | Branch support values | `false` | Off because neither UniFrac nor Faith's PD uses them and they dominate runtime. `true` → `-B 1000 --alrt 1000` (iqtree) or FastTree's SH-like local supports (0–1, **not** bootstrap). Not available for `raxml-ng`: forced off with a warning. Raise `mem_mb.phylo_tree` if you enable it. |
-| `extra_args.{mafft,iqtree,fasttree,raxml_ng}` | Verbatim passthrough | `""` | Appended to the tool's command line and recorded in `phylogeny.params.json`. **Not validated** — this is the one route by which machine-dependent behaviour MetaFlux otherwise blocks (`-T AUTO`, `--threads auto`) can re-enter a run. An unknown key here is a parse-time error, so a typo cannot silently do nothing. |
+| `extra_args.{mafft,iqtree,fasttree,raxml_ng}` | Verbatim passthrough | `""` | Appended to the tool's command line and recorded in `phylogeny.params.json`. **Not validated** — this is the one route by which machine-dependent behaviour MetaFlux otherwise blocks (`-T AUTO`, `--threads auto`) can re-enter a run. An unknown key here stops the run at start-up, so a typo cannot silently do nothing. |
 
 The seed is `amplicon.seed`, shared with the rest of the amplicon path — there is no
 separate phylogeny seed.
@@ -914,16 +893,15 @@ separate phylogeny seed.
 There is deliberately **no rooting option**: the tree is exported unrooted, only. You
 will prune it in R (decontam, abundance filtering) before computing any metric, and a
 root placed on the full ASV set stops being valid at the first pruned tip. A `root:` key
-is rejected at parse time with a pointer to the docs rather than silently ignored.
+is rejected at start-up with a pointer to the docs rather than silently ignored.
 
-!!! warning "Reproducible at the shipped defaults — and easy to give up"
-    Two complete runs of the same data produce the same tree byte for byte, which took
-    three settings working together: `--reorder` on the phiX step, an alignment built
-    from a sequence-sorted FASTA, and `phylo_tree: 1`. Raise `phylo_tree` and you trade
-    that away: on several threads, two runs of the *identical* alignment can end on
-    different, equally good trees. The taxonomy step that decides which ASVs reach the tree needs no
-    such setting: with a fixed `amplicon.seed` it gives the same result at any thread
-    count (`sintax` from v2.5.0 on; `rdp` apart from DADA2's rare random tie-breaks, see
+!!! warning "The tree is reproducible at the shipped settings"
+    Two runs on the same data give byte-identical trees when three settings are kept:
+    `--reorder` on the phiX step, an alignment built from a sequence-sorted FASTA, and
+    `phylo_tree: 1`. With more `phylo_tree` threads, two runs on the same alignment can
+    end on different trees of about equal likelihood. The taxonomy step that decides
+    which ASVs reach the tree needs no such setting: with a fixed `amplicon.seed` it
+    gives the same result at any thread count (`sintax` from v2.5.0 on; `rdp` apart from DADA2's rare random tie-breaks, see
     the seed note above). Details in the
     [Reproducibility](../amplicon/phylogeny.md#reproducibility) section of the
     Phylogeny page.
@@ -943,7 +921,7 @@ shotgun:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `profiler` | Which profiler turns the cleaned reads into taxon tables | `kraken2` | `kraken2`: Kraken2 + Bracken, `03.abundance/otu_table.tsv`. `sylph`: sylph + sylph-tax instead, `03.abundance/sylph_table.tsv`, read pairs estimated from genome coverage plus an `unassigned` row. `both`: the two side by side on the same reads, never merged. Anything else stops the run at parse time. |
+| `profiler` | Which profiler turns the cleaned reads into taxon tables | `kraken2` | `kraken2`: Kraken2 + Bracken, `03.abundance/otu_table.tsv`. `sylph`: sylph + sylph-tax instead, `03.abundance/sylph_table.tsv`, read pairs estimated from genome coverage plus an `unassigned` row. `both`: the two side by side on the same reads, never merged. Anything else stops the run at start-up. |
 
 The PhiX, host and fastp steps below are the same for all three. Under `sylph`,
 `extract_taxa` (it needs Kraken2's per-read output) and `kmer_evidence` (it filters the
@@ -1049,7 +1027,7 @@ alongside the report.
 
 !!! note "Memory mapping decides how much RAM a Kraken2 job asks for"
 
-    Kraken2's memory request is computed at parse time, not taken from the
+    Kraken2's memory request is computed at start-up, not taken from the
     `resources.mem_mb.kraken2` entry, which is not read.
 
     - **`memory_mapping: true`** — the kernel pages the database on demand and
@@ -1077,8 +1055,8 @@ alongside the report.
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `tax_lev` | Rank at which abundance is re-estimated: `P`, `C`, `O`, `F`, `G` or `S` | `S` | Read only when Kraken2 runs (`profiler: kraken2` or `both`). Drop to `G` for a shallow database, where species-level calls are not supported by the reference content. The OTU table then has one row per taxon at this rank, and the lineage below it is left empty (`…;g__Bacteroides;s__`). `D` and `K` stop the run at start-up: at those ranks Bracken counts the reads of viruses (`D`) or of protists (`K`) towards a neighbouring domain or kingdom, and on a GTDB database it finds no kingdom at all. For domain or kingdom totals, add up a lower-rank table by its `d__` or `k__` slot; see [Troubleshooting](../troubleshooting.md#shotgun-the-run-refuses-tax_lev-d-or-k). `P`, `C`, `O` and `F` print a warning at start-up: at those ranks Bracken can add the reads of taxa that lack the rank to a row they do not belong to (same Troubleshooting entry), so `S` or `G` is recommended. Up to v2.4.0, any value other than `S` gave an empty or nearly empty table; see [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s). |
-| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this and why the historic fixed default of 10 costs up to 0.34 F1 on real data. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
-| `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Benchmark-fitted; the optimum is a broad plateau, so this rarely needs adjusting — see the threshold page for what moving it costs. |
+| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this and why the historic fixed default of 10 costs up to 0.34 F1 on the CAMI II benchmark samples. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
+| `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Fitted on the [benchmark data](../about/test-datasets.md#benchmark-data): the ZymoBIOMICS D6331 standard and the CAMI II marine, rhizosphere and strain-madness samples. The optimum is a broad plateau, so this rarely needs adjusting; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md#how-firmly-alpha-is-established). |
 | `threshold_min` | Floor for the auto-computed threshold | `10` | Prevents a near-zero threshold on a very shallow or heavily filtered sample. Also Bracken's own historic default. |
 
 Bracken redistributes the reads Kraken2 assigned to internal nodes down to the
@@ -1224,20 +1202,20 @@ so they are what a cluster executor turns into job requests.
 | `aggregate_read_counts` | shared | 2000 | Present in the config template but not read — the rule declares no `mem_mb`; see the note below. |
 | `phylo_input` | amplicon | 2000 | Two small text tables in, one FASTA out. |
 | `phylo_align` | amplicon | 4000 | |
-| `phylo_tree` | amplicon | 8000 | Sized for the most demanding backend. FastTree is measured at ~181 MB for 10,000 ASVs; RAxML-NG estimates ~3.3 GB at 30,000 ASVs by its own formula and prints its estimate in the `phylo_tree` log; IQ-TREE is not separately measured but its likelihood vectors scale comparably. Raise this if you set `support: true`, which was not part of that sizing. |
+| `phylo_tree` | amplicon | 8000 | Sized for the most demanding backend. FastTree was measured at ~181 MB on a 10,000-sequence, 400-column alignment, one thread; RAxML-NG estimates ~3.3 GB at 30,000 ASVs by its own formula and prints its estimate in the `phylo_tree` log; IQ-TREE is not separately measured but its likelihood vectors scale comparably. Raise this if you set `support: true`, which was not part of that sizing. |
 | `phylo_export` | amplicon | 2000 | |
 | `phylo_qc` | amplicon | 2000 | |
 | `decontam_phix` | shotgun | 4000 | |
 | `build_host_index` | shotgun | 30000 | BBMap index build for the host reference; a masked human genome needs roughly 24–28 GB. |
 | `decontam_host` | shotgun | 30000 | Mapping against that index. |
 | `fastp` | shotgun | 8000 | Read by the `trim_adapters` rule. |
-| `kraken2` | shotgun | 20000 | Not read — the real figure is computed at parse time from `memory_mapping` and the actual `hash.k2d` size. |
+| `kraken2` | shotgun | 20000 | Not read — the real figure is computed at start-up from `memory_mapping` and the actual `hash.k2d` size. |
 | `kmer_evidence` | shotgun | 2000 | Only when Kraken2 runs. Holds one sample's Kraken2 report and draws its evidence plot. |
 | `bracken` | shotgun | 4000 | |
 | `finalize_otu_table` | shotgun | 2000 | |
 | `extract_taxon_reads` | shotgun | 2000 | |
 | `sylph_sketch` | shotgun | 4000 | Only when sylph runs. Making a sketch uses a few tens of MB of memory for a few million read pairs (the sketch file itself is a few MB); deep libraries need more, hence the headroom. |
-| `sylph_profile` | shotgun | `null` | Only when sylph runs. `null` means worked out at parse time: 1.2 × the size of the database files plus 4096 MB, because sylph holds every database in memory (about 34,600 MB for GTDB r232 c200 with the fungal database). The start-up line prints the figure. A number here overrides it, for example on a cluster. |
+| `sylph_profile` | shotgun | `null` | Only when sylph runs. `null` means worked out at start-up: 1.2 × the size of the database files plus 4096 MB, because sylph holds every database in memory (about 34,600 MB for GTDB r232 c200 with the fungal database). The start-up line prints the figure. A number here overrides it, for example on a cluster. |
 | `sylph_taxprof` | shotgun | 2000 | Only when sylph runs. |
 | `sylph_tables` | shotgun | 2000 | Only when sylph runs. |
 | `sylph_read_tracking` | shotgun | 2000 | Only with `profiler: sylph`. |
@@ -1259,9 +1237,8 @@ so they are what a cluster executor turns into job requests.
 
     One more special case: `threads.phylo_tree` is read by the `iqtree` and
     `raxml-ng` backends but **ignored by `fasttree`**, which is pinned to a single
-    thread in the rule itself. That is not an oversight — FastTree's parallel build
-    is documented non-deterministic both run-to-run and against the serial binary,
-    and its speedup does not reach the maximum-likelihood phase beyond about three
-    cores, so there is nothing to gain and reproducibility to lose. The pin also
-    keeps Snakemake from reserving cores the job cannot use. `mem_mb.phylo_tree`
-    applies to all three backends normally.
+    thread in the rule itself. This is deliberate: FastTree's parallel build is
+    documented as non-deterministic, both between runs and against the serial build,
+    and it does not speed up the maximum-likelihood phase beyond about three cores.
+    The pin also keeps Snakemake from reserving cores the job cannot use.
+    `mem_mb.phylo_tree` applies to all three backends normally.

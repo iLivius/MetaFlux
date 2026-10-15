@@ -1,7 +1,7 @@
 # Troubleshooting
 
-These situations come up often enough to be worth writing down: an automatic
-truncation length that throws away every read, a PhiX-removal step that stops on
+This page covers these problems: an automatic truncation length that throws away
+every read, a PhiX-removal step that stops on
 the read pairs, a shotgun OTU table that comes out empty at a rank other than
 species, a Bracken rank that MetaFlux refuses, a shotgun table step that stops on the
 codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgun
@@ -30,37 +30,38 @@ the cut keeps the last cycle still at or above it. If quality never
 drops that far, and clean MiSeq runs often stay high to the last cycle,
 `truncLen` lands on the ceiling instead.
 
-Where that ceiling sits is the whole question. Falco reports a quality bin for every
-position up to the **longest** read in a file, however few reads reach it — so a
-ceiling taken from the quality table alone describes the longest reads, not typical
-ones. On a library where a few reads run to full length and most stop a little short,
-a cut placed there discards nearly everything.
+Falco reports a quality bin for every position up to the **longest** read in a file,
+however few reads reach it — so a ceiling taken from the quality table alone describes
+the longest reads, not typical ones. On a library where a few reads run to full length
+and most stop a little short, a cut placed there discards nearly everything.
 
 MetaFlux guards against this by default: `amplicon.trunc_len.min_read_coverage_pct`
 (95) caps each sample at the length that percentage of its reads still reach, before
-quality is considered at all. **If you are hitting this error on a default config, the
-guard is already on, so the cause is one of the two edge cases below, not a missing
-guard** — check them first.
+quality is considered at all. With the default config the guard is on, so the cause is
+one of the two cases below.
 
-That is the trap. After primer trimming most reads end a little earlier than the
-full read length, and DADA2's `filterAndTrim` **discards any read shorter than
-`truncLen`** rather than padding it. So a cut placed at the very end of the read
-removes almost everything, and DADA2 has nothing left to work with.
+After primer trimming most reads end a little before the full read length, and
+DADA2's `filterAndTrim` **discards any read shorter than `truncLen`** rather than
+padding it. So a cut placed at the very end of the read removes almost everything,
+and DADA2 has nothing left to work with.
 
 !!! example "What it looks like on a real library without the guard"
 
-    The 18S set in [test datasets](about/test-datasets.md) shows it. Its R1 quality
-    never falls below Q20, so without the guard `auto` puts the R1 cut on the ceiling
-    and returns `truncLen = 288 / 239`. After primer trimming the reads themselves are:
+    The 18S test dataset (PRJDB12231; see [test datasets](about/test-datasets.md))
+    shows it. Its R1 quality never falls below Q20, so without the guard (MetaFlux
+    v2.1.0 and earlier) `auto` puts the R1 cut on the ceiling and returns
+    `truncLen = 288 / 239`. After primer trimming the reads themselves are:
 
     | | min | p05 | median | max |
     |---|--:|--:|--:|--:|
     | R1 | 78 | 271 | 281 | 289 |
     | R2 | 54 | 282 | 282 | 298 |
 
-    The ceiling comes out at 288 because one sample contains R1 reads that long. Half
-    the reads stop at 281. Since `filterAndTrim` discards anything shorter than
-    `truncLen`, the cut keeps 9 of 908,768 pairs and DADA2 finishes with 3 ASVs.
+    The ceiling comes out at 288 because the strictest sample sets it: its longest R1
+    read is 288 bp, while the other three reach 289. Most R1 reads (70%) stop at
+    exactly 281. Since `filterAndTrim` discards anything shorter than `truncLen`, only
+    9 of 908,768 pairs are long enough for the cut, and MetaFlux v2.1.0, which had no
+    cap, finished with 3 ASVs.
 
     Retention against the R1 cut, measured on this library:
 
@@ -68,7 +69,7 @@ removes almost everything, and DADA2 has nothing left to work with.
     |---|--:|--:|--:|--:|
     | pairs retained | 0.0% | 70.3% | 92.4% | 100.0% |
 
-    Eighteen base pairs separate "loses everything" from "loses nothing".
+    Moving the R1 cut from 288 to 270 bp raises retention from 0% to 100%.
 
     With the 95% read-coverage cap the R1 ceiling comes in at 271 instead of 288, and
     `auto` returns 271 / 239 on this library with no manual intervention. It carries
@@ -112,9 +113,8 @@ amplicon:
 !!! tip "Pick the R1 and R2 cuts separately"
 
     Only the read whose quality stayed flat is stuck on the ceiling. In the example
-    above R2 *did* degrade, so `auto` found a genuine cut for it at 239 and that value
-    was kept unchanged; only R1 needed moving. Overriding both to the same round
-    number would have thrown away 30 bp of good R2 sequence for nothing.
+    above R2 *did* degrade, so `auto` found a quality-based cut for it at 239. Only R1
+    needed a new value; R2 kept the cut that `auto` found.
 
 !!! tip "Retrying is cheap"
 
@@ -269,24 +269,23 @@ taxa lack the rank:
   comes after all cellular organisms. Their reads, and the share of the root's reads
   that Bracken attributes to them, go to the domain listed last. Kraken2 lists sister
   rows by read count, largest first, so this is the domain with the fewest reads,
-  usually Archaea. In a soil sample, Archaea had 2,612 reads at phylum level and 35,636
-  at domain level, from only 71 viral reads and the root reads attributed to them. In a
-  sample of the ZymoBIOMICS Gut Microbiome Standard (D6331), Archaea went from 6,415
-  reads at phylum level to 14,028 at domain level.
+  usually Archaea. In a saltmarsh rhizosphere sample (SRR6394731, BioProject
+  PRJNA422917) classified with the Kraken2 index `k2_NCBI_reference_20251007`, Archaea
+  had 2,612 reads at phylum level and 35,636 at domain level, from only 71 viral reads
+  and the root reads attributed to them.
 - **Kingdom.** Most protists have no kingdom in NCBI's taxonomy, and GTDB has no
   kingdom rank at all. The protists' reads go to the kingdom listed just before them:
-  in the same soil sample, Fungi had 7,957 reads in its phyla but 12,001 at kingdom
+  in the same rhizosphere sample, Fungi had 7,957 reads in its phyla but 12,001 at kingdom
   level. On a GTDB database Bracken finds no kingdom and stops with "no reads found",
   after Kraken2 has run.
 
 **Fix.** Set `tax_lev` to `S`, the default. It is the only rank where this cannot
 happen, because every row below a species row is a strain of that species. At `P` to
 `G` it hits only the few taxa that lack that rank, but one row can still gain several
-times its own reads: in the soil sample, protists without a phylum took Oomycota from
-56 to 1,095 reads at `P`, and bacteria without an order took Nevskiales from 1,393 to
-6,237 at `O`; in the gut standard sample, phages without an order took
-Methanobacteriales from 6,415 to 13,484 at `O`. At these ranks, compare a surprising
-row with the species-level table.
+times its own reads: in the rhizosphere sample, protists without a phylum took
+Oomycota from 56 to 1,095 reads at `P`, and bacteria without an order took Nevskiales
+from 1,393 to 6,237 at `O`. At these ranks, compare a surprising row with the
+species-level table.
 
 Domain and kingdom totals can be read from any of these tables: add up the rows of
 `otu_table.tsv` by their `d__` or `k__` slot. That sum counts the reads Bracken placed
@@ -410,9 +409,9 @@ handful of ASVs or taxonomy calls sitting near a decision threshold can flip
 between two runs. This is expected DADA2/VSEARCH behaviour — not a bug, and not
 corrupted data.
 
-One source of run-to-run difference used to have nothing to do with a random draw, and
-the seed did not touch it: the order of the reads. Bowtie2 removes phiX on several
-threads and wrote the surviving pairs in whatever order they finished, so every run
+Before v2.4.0 the order of the reads also differed between runs, and the seed had no
+effect on it: bowtie2 removed phiX on several threads and wrote the surviving pairs in
+whatever order they finished, so every run
 handed DADA2 the same reads in a different sequence (pairing was never broken, and
 cutadapt and `filterAndTrim` only drop reads, they never reorder). DADA2 numbers ASVs by
 decreasing abundance and keeps the input order for ties, so two ASVs with exactly the
@@ -442,9 +441,10 @@ then no longer changes the result:
   DADA2's `assignTaxonomy` breaks exact ties between equally good reference lineages at
   random, outside the seed, so a few bootstrap values can differ between identical runs;
   `sintax`, the default, is not affected. Now and then such a tie flips an ASV's whole
-  lineage between two identical runs, even its kingdom (an ITS ASV whose best hit is a
-  plant in one run and a fungus in the next), so a keep/discard token such as
-  `keep: [k__Fungi]` can keep that ASV in one run and drop it in the next.
+  lineage between two identical runs, even its kingdom: on the ITS test set
+  ([PRJNA862334](about/test-datasets.md)), ASV_16 had an orchid as best hit in 8 of 11
+  identical runs and *Saccharomyces* in the other 3, so `keep: [k__Fungi]` removed it
+  in some runs and kept it in others.
 
 ## Amplicon: an outdated marker pack in `config/markers/` stops the run
 

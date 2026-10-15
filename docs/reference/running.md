@@ -26,9 +26,9 @@ snakemake --sdm conda --cores 16 --configfile config/config.yaml
 ```
 
 A dry run (`--dry-run`, or `-n`) builds the job list and prints it without running
-anything or writing any file. It is worth the ten seconds every time, because
-MetaFlux does most of its validation while the workflow is being read — before any
-job starts. A dry run therefore catches, among others:
+anything or writing any file. Do one before every run: MetaFlux does most of its
+checks while the workflow is read, before any job starts. A dry run therefore
+catches, among others:
 
 - `mode` set to something other than `amplicon` or `shotgun`;
 - an `amplicon.type` that matches no marker pack;
@@ -39,7 +39,7 @@ job starts. A dry run therefore catches, among others:
 - a marker pack in `config/markers/` written for an older MetaFlux;
 - ITS combined with `length_filter.mode: auto` but a manual `expected_length`, which would otherwise crash *after* the full DADA2 run.
 
-The same parse step prints a banner line to stderr:
+While reading the workflow, MetaFlux also prints a banner line to stderr:
 
 ```text
 [MetaFlux v2.5.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
@@ -176,8 +176,7 @@ consequences:
   keep/discard lists reach `assign_taxonomy` as rule parameters, editing them
   re-runs the taxonomy step alone and leaves the denoising untouched. Adding
   `--rerun-triggers mtime` restricts the comparison to timestamps only.
-- **A dry run answers the question directly.** `-n` prints exactly which jobs a
-  re-run would execute, which is faster than reasoning about it.
+- **A dry run shows what would run.** `-n` prints the jobs a re-run would execute.
 
 !!! note "Re-running an output folder made with v2.4.0"
 
@@ -212,11 +211,14 @@ consequences:
       species names are whole, and in `otu_table.biom` the sample `Id` is the plain
       sample name (it was `<sample>_report`).
     - 16S on SILVA 138.2: the length probe now leaves chloroplast, mitochondrial and
-      eukaryote references out. With the usual primer pairs this changes neither
-      `truncLen` nor the denoised ASVs and counts, but the `auto` ASV length window can
-      move by a base (for 799F/1175R its lower edge moves from 324 to 325 bp).
+      eukaryote references out. For 799F/1175R, 515F/806R and 341F/805R the probe's p95
+      does not change, so neither do `truncLen` and the denoised ASVs and counts; the
+      `auto` ASV length window can move by a base (for 799F/1175R, the primers of the
+      16S [test dataset](../about/test-datasets.md), its lower edge moves from 324 to
+      325 bp).
     - 18S with `sintax`: almost every ASV whose taxonomy was empty now carries its
-      domain, nearly always `d__Eukaryota`; this fix changes nothing below the domain.
+      domain, nearly always `d__Eukaryota` (158 of 159 on the 18S
+      [test dataset](../about/test-datasets.md)).
     - ITS with `rdp`: the species reads `Genus_epithet`, as with `sintax`. All taxonomy
       tables have one format under both methods (`""` as first header cell, `NA` for a
       rank not reached), and the rank cells of `taxon_seq_table.txt` hold bare names.
