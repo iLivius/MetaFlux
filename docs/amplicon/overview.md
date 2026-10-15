@@ -383,7 +383,7 @@ The window logic is covered in full on the
 | `sintax` | `vsearch --sintax` | `sintax_cutoff` (default `0.8`, roughly equivalent to `min_boot: 80`) | 16S, ITS, 18S |
 
 gyrB and rpoB are RDP-only: their reference releases ship a DADA2 training set and no
-SINTAX build, so `method: sintax` is rejected at startup with a clear message rather than
+SINTAX build, so `method: sintax` is rejected at start-up with a clear message rather than
 failing later.
 
 The reference database follows from the marker — SILVA for 16S, UNITE for ITS, PR2 for 18S,

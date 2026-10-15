@@ -164,8 +164,7 @@ ceiling and flags when the gate did real work:
 [pick_trunclen] NOTE: R1 read-coverage cap pulled the ceiling in by 18 bp. Without it the cut could have landed above most reads.
 ```
 
-The `NOTE` fires when the gap is 10 bp or more, and is worth reading rather than
-skipping. A large gap means the read lengths are ragged — normal after primer trimming,
+The `NOTE` fires when the gap is 10 bp or more; read it rather than skip it. A large gap means the read lengths are ragged — normal after primer trimming,
 and extreme for markers whose amplicons genuinely vary in length: on the ITS test set
 ([PRJNA862334](../about/test-datasets.md)) the gap is 89 bp (run SRR20648167: longest
 read 298 bp, 95% of its reads reach 209 bp).
@@ -599,7 +598,7 @@ What this means in practice:
     Because the ITS branch always writes `expected_length: null` to
     `stats/trunclen.json`, the length filter's fallback route (priority 3 above) has
     nothing to read. Without `expected_length: auto` there is no probe JSON either, so
-    neither route works. MetaFlux catches this combination at startup rather than after
+    neither route works. MetaFlux catches this combination at start-up rather than after
     the full DADA2 run: either set `expected_length: auto`, or set
     `length_filter.mode: manual` with an explicit `length_filter.range`.
 

@@ -269,7 +269,7 @@ input:
 `{sample}_R2.fastq.gz` and stops with a clear message if it finds SRA-style
 `{sample}_1/_2` naming instead. Shotgun mode accepts either convention and detects
 which one is in use. The reads themselves must be `.fastq.gz` or the uncompressed
-`.fastq`: `fq` and `fq.gz` pass the startup check but are not resolved by the
+`.fastq`: `fq` and `fq.gz` pass the start-up check but are not resolved by the
 rules afterwards. The extension check only looks at the R1 files — a mixture
 there is rejected rather than half-processed, while a mismatched R2 extension is
 not caught, so the whole directory is best kept consistent.
@@ -710,7 +710,7 @@ still runs either way.
 
     The DD7RZ8 and FROGS releases ship a DADA2 trainset with no SINTAX build, so
     those packs declare no SINTAX reference. `method: sintax` for either marker is
-    refused at startup with a message naming the marker, rather than failing later
+    refused at start-up with a message naming the marker, rather than failing later
     on a missing path.
 
 ### Taxon filter

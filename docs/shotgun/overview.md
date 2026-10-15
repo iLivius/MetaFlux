@@ -416,7 +416,7 @@ The concatenated host reference, `refs/host_combined.fna.gz`, is temporary as we
 it is deleted once the index has been built, which is why a URL in `host_genomes`
 is fetched again on every fresh run.
 
-`stats/read_tracking.txt` is the one file worth reading first after a run. One row
+Read `stats/read_tracking.txt` first after a run. One row
 per sample, counts in read **pairs** throughout, columns in pipeline order:
 
 ```text

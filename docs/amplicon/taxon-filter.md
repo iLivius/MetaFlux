@@ -485,7 +485,7 @@ the token names, rather than the ASVs being genuinely off-target.
 
     Earlier versions used regular expressions, `include_pattern` and `exclude_pattern`,
     which carried per-marker defaults. Those keys are gone. A config that still contains
-    either of them stops the run at startup with a message showing the keep/discard
+    either of them stops the run at start-up with a message showing the keep/discard
     equivalent, rather than running with the filter silently disabled.
 
 ## The shotgun counterpart

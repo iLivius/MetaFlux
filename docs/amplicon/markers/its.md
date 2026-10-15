@@ -59,7 +59,7 @@ amplicon:
     `length_filter.mode: auto` and a manual `expected_length` cannot be combined for
     ITS. The ITS branch never resolves an expected length (see below), so the automatic
     length window has nothing to size itself from unless the probe has run. MetaFlux
-    checks this combination at startup and exits with a message; either keep
+    checks this combination at start-up and exits with a message; either keep
     `expected_length: auto`, or set `length_filter.mode: manual` with an explicit
     `length_filter.range`.
 

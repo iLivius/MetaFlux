@@ -194,7 +194,7 @@ Model selection is still available, and whatever it picks is recorded in
   and GTR, so only `gtr` (the default) and `jc` are accepted; anything else is a hard
   error rather than a silently ignored setting.
 
-!!! info "Worth knowing about FastTree elsewhere"
+!!! info "FastTree in other pipelines"
     QIIME 2 invokes FastTree with no model flags at all, so the default 16S tree from
     QIIME 2 and ampliseq is a **Jukes-Cantor** tree, and there is no supported way to
     change it there. MetaFlux passes `-gtr` explicitly.
@@ -535,8 +535,7 @@ stopifnot(is.rooted(tree))
 # ── 7. Even out sequencing depth: rarefaction, done properly ────────────────
 # Sequencing depth is not biology. A sample sequenced ten times deeper shows more
 # lineages, so UniFrac (especially unweighted) and Faith's PD both track depth
-# unless you account for it. There are three defensible positions, and it is
-# worth knowing which one this code takes:
+# unless you account for it. There are three defensible positions:
 #
 #   1. Do not rarefy; normalise instead (DESeq2/edgeR-style, or CSS). Argued by
 #      McMurdie & Holmes (2014). Their target was RARE-FYING — one subsample,
@@ -876,8 +875,7 @@ byte-identical.
   thread count from v2.5.0 on.
 - **Metaxa2's own taxonomy file** (`05.dada2/metaxa2/seqs.taxonomy.txt`) can shift
   slightly between runs. MetaFlux never reads it, and the extracted sequences and table
-  do not change, so it is a by-product worth knowing about, not something that feeds a
-  result. The organelle filter reads Metaxa2's final origin call instead (collected
+  do not change, so it is a by-product; nothing in the results is read from it. The organelle filter reads Metaxa2's final origin call instead (collected
   from the per-origin FASTA files into `05.dada2/metaxa2_origin.tsv`), and that call is
   stable from run to run.
 

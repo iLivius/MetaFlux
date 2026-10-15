@@ -116,8 +116,8 @@ because BioProject mode downloads into it, so a mistyped path produces the
 mates are matched from R1 only — a missing R2 is reported later by Snakemake as a
 missing input file, not by MetaFlux.
 
-The dry-run also prints a one-line summary of what MetaFlux understood, which is
-worth reading before committing cores to a run:
+The dry-run also prints a one-line summary of what MetaFlux understood; read it before
+committing cores to a run:
 
 ```text
 [MetaFlux v2.5.0] mode=amplicon, input=local, 24 sample(s) in /path/to/fastq_dir
