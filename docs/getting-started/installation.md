@@ -19,7 +19,7 @@ The clone is the working copy. Four places in it matter:
 |------|---------------|
 | `config/config.yaml` | The configuration template — every parameter of a run |
 | `workflow/rules/` | The rule files, split into `shared/`, `amplicon/`, `shotgun/` |
-| `workflow/envs/` | One conda environment specification per tool stack |
+| `workflow/envs/` | One conda environment specification per tool stack, each with its pin file for Linux |
 | `workflow/markers/` | One file per amplicon marker (`16S`, `ITS`, `18S`, `gyrB`, `rpoB`), declaring that marker's reference databases and download URLs |
 
 A fifth directory, `refdb/`, appears on the first run: it is where downloaded
@@ -57,14 +57,39 @@ git-ignored.
 
 Two practical consequences:
 
-- **The first run is slow before it is even doing science.** Solving and downloading
-  several conda environments takes minutes; afterwards they are already on disk and
-  the workflow starts immediately.
+- **The first run is slow before it is even doing science.** Downloading and
+  installing several conda environments takes minutes; afterwards they are already on
+  disk and the workflow starts immediately.
 - **Tools never have to coexist.** The R/DADA2 stack, Cutadapt, Kraken2 and MultiQC
   each get their own environment, so an upgrade to one cannot break another. The
-  software set is declared in the repository, but only partly pinned: some tools
-  are fixed to an exact version, others only to a minimum, and a few are left to
-  the solver.
+  yaml files fix some tools to an exact version and others only to a minimum; on
+  Linux, the pin files described next fix every package build.
+
+**Pinned environments on Linux.** Next to every `workflow/envs/<tool>.yaml` sits a
+`<tool>.linux-64.pin.txt`: the exact package builds, each with its download address
+and checksum, of the environment MetaFlux was tested with. On a Linux machine
+(x86-64) Snakemake finds that file by itself and installs the environment from it,
+without solving, so two installations of the same MetaFlux version run the same
+software down to the build. On other platforms (macOS, or Linux on ARM) there is no
+pin file and Snakemake solves the environment from the yaml, as before: the versions
+the yaml fixes still hold, the packages around them may differ. If a pinned build can
+no longer be downloaded, Snakemake warns and falls back to the yaml.
+
+**Refreshing the pins** (maintainers, after editing a yaml). Delete the old pin file
+first: as long as it exists, Snakemake installs the old builds from it and never
+reads the edit. Then build the environment from the yaml once, for example with
+`snakemake --sdm conda --conda-create-envs-only --cores 1 --configfile <a config
+that uses it>`, find its folder under `.snakemake/conda/` (the `<hash>_` whose
+`<hash>_.yaml` is a copy of the edited yaml) and export it:
+
+```bash
+conda list --explicit --md5 -p .snakemake/conda/<hash>_ > workflow/envs/<tool>.linux-64.pin.txt
+```
+
+`snakedeploy pin-conda-envs workflow/envs/<tool>.yaml` does the same in one step.
+Snakemake treats a new or changed pin file like a changed yaml: in output folders made
+before the change, the steps that use that environment run again, and the steps after
+them.
 
 !!! note
 
