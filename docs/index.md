@@ -14,11 +14,11 @@ family of pipelines.
 |                     | `amplicon`                                                                                                          | `shotgun`                                                                                       |
 |---------------------|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
 | **Input**           | PCR products from one marker gene                                                                                     | untargeted whole-genome sequencing reads                                                          |
-| **Core tools**      | [DADA2](https://benjjneb.github.io/dada2/)                                                                            | [Kraken2](https://github.com/DerrickWood/kraken2) + [Bracken](https://github.com/jenniferlu717/Bracken) |
+| **Core tools**      | [DADA2](https://benjjneb.github.io/dada2/)                                                                            | [Kraken2](https://github.com/DerrickWood/kraken2) + [Bracken](https://github.com/jenniferlu717/Bracken), or [sylph](https://github.com/bluenote-1577/sylph) (`shotgun.profiler`) |
 | **Markers**         | 16S rRNA, ITS, 18S rRNA, gyrB, rpoB                                                                                   | not applicable                                                                                    |
 | **Main steps**      | PhiX removal, primer trimming, exact ASV inference, optional marker-region extraction, length filtering, taxonomy      | decontamination, quality trimming, read classification, abundance re-estimation, OTU-table construction |
-| **Reference data**  | SILVA (16S), UNITE (ITS), PR2 (18S), DD7RZ8 (gyrB), FROGS (rpoB) — fetched automatically on first use                  | a Kraken2 database, supplied by the user                                                          |
-| **Final table**     | `06.taxonomy/asv_table.txt`                                                                                           | `03.abundance/otu_table.tsv`                                                                      |
+| **Reference data**  | SILVA (16S), UNITE (ITS), PR2 (18S), DD7RZ8 (gyrB), FROGS (rpoB) — fetched automatically on first use                  | a Kraken2 database (`profiler: kraken2`), sylph databases and their lineage tables (`sylph`), or both (`both`), supplied by the user |
+| **Final table**     | `06.taxonomy/asv_table.txt`                                                                                           | `03.abundance/otu_table.tsv` (Kraken2) or `03.abundance/sylph_table.tsv` (sylph)                  |
 
 **Amplicon mode** resolves sequences exactly rather than clustering them at an
 arbitrary similarity threshold: DADA2 infers amplicon sequence variants (ASVs), which
@@ -28,7 +28,9 @@ marker. See the [amplicon overview](amplicon/overview.md) and the
 
 **Shotgun mode** skips amplification altogether and assigns whole-genome reads directly
 against a Kraken2 index, with Bracken re-estimating abundances at the chosen taxonomic
-level. See the [shotgun overview](shotgun/overview.md).
+level. With `shotgun.profiler: sylph`, sylph profiles the same reads against sketches of
+reference genomes instead, and with `both` the two run side by side. See the
+[shotgun overview](shotgun/overview.md) and [sylph](shotgun/sylph.md).
 
 ## One command, one config, one report
 
@@ -51,10 +53,12 @@ statistics and a single [MultiQC](https://multiqc.info/) report under
 
     Amplicon runs need only the primer FASTAs: the marker reference databases download
     themselves the first time they are needed and are cached under `refdb/`. Shotgun
-    runs need a Kraken2 database on disk before the first launch — these are large and
-    version-sensitive, so MetaFlux never fetches one automatically. See
-    [Installation](getting-started/installation.md) and
-    [Reference databases](shotgun/databases.md).
+    runs need their databases on disk before the first launch: a Kraken2 database with
+    the default `shotgun.profiler: kraken2`, sylph databases and their lineage tables
+    with `sylph`, and both with `both`. These are large and version-sensitive, so
+    MetaFlux never fetches them automatically. See
+    [Installation](getting-started/installation.md),
+    [Reference databases](shotgun/databases.md) and [sylph](shotgun/sylph.md).
 
 ## Where to go next
 
@@ -64,7 +68,7 @@ statistics and a single [MultiQC](https://multiqc.info/) report under
 | [Quick start](getting-started/quick-start.md)                | the shortest path from a clone to a finished run                            |
 | [Choosing a mode](getting-started/choosing-a-mode.md)        | which mode a given dataset belongs in, and what happens if the wrong one is set |
 | [Amplicon mode](amplicon/overview.md)                        | the DADA2 path step by step, marker by marker                               |
-| [Shotgun mode](shotgun/overview.md)                          | the Kraken2 + Bracken path step by step                                     |
+| [Shotgun mode](shotgun/overview.md)                          | the Kraken2 + Bracken and sylph paths step by step                          |
 | [Configuration](reference/configuration.md)                  | every config key, what consumes it, and its default                         |
 | [Output files](reference/output.md)                          | what each output directory holds and which files are the deliverables       |
 | [Running MetaFlux](reference/running.md)                     | dry runs, resuming, cluster execution                                       |

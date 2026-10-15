@@ -27,7 +27,7 @@ v2.5.0
 | [Amplicon mode](https://iLivius.github.io/MetaFlux/amplicon/overview/) | the DADA2 pipeline, step by step |
 | [Markers](https://iLivius.github.io/MetaFlux/amplicon/markers/) | 16S · ITS · 18S · gyrB · rpoB, one page each |
 | [Phylogeny (16S)](https://iLivius.github.io/MetaFlux/amplicon/phylogeny/) | optional ASV tree, exported unrooted, for Faith's PD and UniFrac in R |
-| [Shotgun mode](https://iLivius.github.io/MetaFlux/shotgun/overview/) | Kraken2 + Bracken profiling |
+| [Shotgun mode](https://iLivius.github.io/MetaFlux/shotgun/overview/) | Kraken2 + Bracken or sylph profiling |
 | [Configuration reference](https://iLivius.github.io/MetaFlux/reference/configuration/) | every key, default and trade-off |
 | [Output files](https://iLivius.github.io/MetaFlux/reference/output/) | what each run writes, and what reads it |
 | [Troubleshooting](https://iLivius.github.io/MetaFlux/troubleshooting/) | the failures worth knowing about in advance |
@@ -49,8 +49,9 @@ runs in one of two modes, selected by a single config key:
   filtering, and taxonomic assignment against SILVA (16S), UNITE (ITS), PR2 (18S),
   DD7RZ8 (gyrB), or FROGS (rpoB).
 - **`shotgun`** — a [Kraken2](https://github.com/DerrickWood/kraken2) +
-  [Bracken](https://github.com/jenniferlu717/Bracken) pipeline for shotgun
-  metagenomic taxonomic profiling: decontamination, quality trimming, read
+  [Bracken](https://github.com/jenniferlu717/Bracken) pipeline (or
+  [sylph](https://github.com/bluenote-1577/sylph), chosen with `shotgun.profiler`) for
+  shotgun metagenomic taxonomic profiling: decontamination, quality trimming, read
   classification, abundance re-estimation, and OTU-table construction.
 
 Both modes run from the same command and the same config file, and produce a single
@@ -121,7 +122,9 @@ Full details in the [configuration reference](https://iLivius.github.io/MetaFlux
 ## Reference databases
 
 Amplicon reference databases download automatically the first time they are needed and
-are cached under `refdb/`. Shotgun mode needs a Kraken2 index supplied by hand.
+are cached under `refdb/`. Shotgun mode needs, supplied by hand, a Kraken2 index
+(`shotgun.profiler: kraken2`, the default), sylph databases with their lineage tables
+(`sylph`), or both (`both`).
 
 | Database | Mode | Provisioning |
 |---|---|---|
@@ -131,11 +134,14 @@ are cached under `refdb/`. Shotgun mode needs a Kraken2 index supplied by hand.
 | PR2 (DADA2 + UTAX) + SILVA-Euk | amplicon (18S) | auto-fetched on first run |
 | DD7RZ8 (DADA2 trainset) | amplicon (gyrB) | auto-fetched on first run |
 | FROGS RefSeq (converted to DADA2) | amplicon (rpoB) | auto-fetched and converted on first run |
-| **Kraken2 / Bracken index** | shotgun | **user-supplied** |
+| **Kraken2 / Bracken index** | shotgun (`kraken2` or `both`) | **user-supplied** |
+| **sylph databases + sylph-tax lineage tables** | shotgun (`sylph` or `both`) | **user-supplied** |
 | Host genome(s) | shotgun (optional) | user-supplied, path or URL |
 
 Choosing and downloading a Kraken2 index, and the memory it needs, are covered in
-[reference databases](https://iLivius.github.io/MetaFlux/shotgun/databases/).
+[reference databases](https://iLivius.github.io/MetaFlux/shotgun/databases/); the sylph
+databases and their lineage tables in
+[sylph](https://iLivius.github.io/MetaFlux/shotgun/sylph/#databases-and-lineage-tables-set-up-once).
 
 ## Citation
 

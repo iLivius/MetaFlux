@@ -17,11 +17,11 @@ did not, it is shotgun data.
 | | `amplicon` | `shotgun` |
 |---|---|---|
 | What was sequenced | One marker region, PCR-amplified | Whole DNA, no amplification |
-| Core method | DADA2 exact ASV inference | Kraken2 classification + Bracken re-estimation |
-| Reference | Marker database, fetched automatically (SILVA, UNITE, PR2, DD7RZ8, FROGS) | A Kraken2 index, supplied by the user |
+| Core method | DADA2 exact ASV inference | Kraken2 classification + Bracken re-estimation, or sylph (`shotgun.profiler`) |
+| Reference | Marker database, fetched automatically (SILVA, UNITE, PR2, DD7RZ8, FROGS) | A Kraken2 index, sylph databases with their lineage tables, or both, supplied by the user |
 | Primers | Required — `amplicon.primers.fwd` / `.rev` | Not used |
-| Main result | `06.taxonomy/asv_table.txt` — ASVs × samples, with taxonomy | `03.abundance/otu_table.tsv` — taxa × samples, plus the BIOM version |
-| Resolution | Exact sequence variants of one gene | Whatever the index supports, down to species with Bracken |
+| Main result | `06.taxonomy/asv_table.txt` — ASVs × samples, with taxonomy | `03.abundance/otu_table.tsv` (Kraken2) or `sylph_table.tsv` (sylph) — taxa × samples, plus the BIOM version |
+| Resolution | Exact sequence variants of one gene | Whatever the index supports, down to species with Bracken; genomes at about species level with sylph |
 | Input naming | `{sample}_R1` / `{sample}_R2` only | `{sample}_R1/_R2` or SRA-style `{sample}_1/_2` |
 | Can fetch its own reads | No | Yes — from an NCBI BioProject accession |
 
@@ -131,9 +131,14 @@ Per-marker detail is in the [markers section](../amplicon/markers/index.md).
 
 **Shotgun** needs:
 
-- `references.kraken_db` — the directory of a Kraken2 index. It is not fetched
-  automatically and the run stops at once if the path does not exist. See
-  [reference databases](../shotgun/databases.md).
+- With `shotgun.profiler: kraken2` (the default) or `both`: `references.kraken_db`, the
+  directory of a Kraken2 index. It is not fetched automatically, and the run stops at
+  once if the path does not exist. See [reference databases](../shotgun/databases.md).
+- With `sylph` or `both`: `references.sylph_databases`, the sylph database files, and
+  the lineage tables that name their genomes (usually sylph-tax's, in
+  `references.sylph_taxonomy_dir`). They are not fetched either, and are checked before
+  the first job starts. A sylph-only run needs no Kraken2 database. See
+  [sylph](../shotgun/sylph.md#databases-and-lineage-tables-set-up-once).
 - Optionally `shotgun.decontamination.host_genomes` — one or more host references
   for read removal, e.g. a masked human genome. See
   [decontamination](../shotgun/decontamination.md).
