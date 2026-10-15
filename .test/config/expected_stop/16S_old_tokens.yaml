@@ -1,0 +1,24 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: filter tokens written the
+# way MetaFlux up to v2.4.0 wrote the domain (k__Bacteria). Since v2.5.0 the domain slot
+# is d__, and the start-up check names the token to write instead. The runner
+# (.test/run_dry_runs.sh) expects the message fragment on the next line.
+# EXPECT: write d__Bacteria
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S
+output:
+  out_dir: .test/out/expected_stop_16S_old_tokens
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [k__Bacteria, k__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]

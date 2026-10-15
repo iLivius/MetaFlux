@@ -1,0 +1,16 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: Bracken at the domain rank
+# (tax_lev: D), which MetaFlux refuses because Bracken files the reads of taxa without a
+# domain (viruses) under the wrong domain. The runner (.test/run_dry_runs.sh) expects the
+# message fragment on the next line.
+# EXPECT: tax_lev: D is not allowed
+mode: shotgun
+input:
+  fastq_dir: .test/data/shotgun
+output:
+  out_dir: .test/out/expected_stop_shotgun_tax_lev_D
+references:
+  kraken_db: .test/stubs/kraken2_db
+shotgun:
+  profiler: kraken2
+  bracken:
+    tax_lev: D

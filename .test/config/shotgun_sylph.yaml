@@ -1,0 +1,20 @@
+# Dry-run config of the CI matrix: shotgun, sylph only (two databases with their sylph-tax lineage tables).
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. The databases under .test/stubs/ are
+# stand-ins that satisfy the start-up checks of a dry run and nothing more; see
+# .test/README.md.
+mode: shotgun
+input:
+  fastq_dir: .test/data/shotgun
+output:
+  out_dir: .test/out/shotgun_sylph
+references:
+  sylph_databases:
+    - path: .test/stubs/sylph/gtdb-r232-c200-dbv1.syldb
+      taxonomy: GTDB_r232
+    - path: .test/stubs/sylph/fungi-refseq-2025-10-11-c200-dbv1.syldb
+      taxonomy: FungiRefSeq-latest
+  sylph_taxonomy_dir: .test/stubs/sylph_taxonomy
+shotgun:
+  profiler: sylph

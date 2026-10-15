@@ -1,0 +1,30 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: method sintax on gyrB,
+# whose reference (DD7RZ8) has no SINTAX build. The runner (.test/run_dry_runs.sh)
+# expects the message fragment on the next line.
+# EXPECT: method: sintax is not available
+mode: amplicon
+input:
+  fastq_dir: .test/data/gyrB
+output:
+  out_dir: .test/out/expected_stop_gyrB_sintax
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: gyrB
+  primers:
+    fwd: .test/primers/gyrB/fwd_primer.fasta
+    rev: .test/primers/gyrB/rev_primer.fasta
+  expected_length: 247
+  trunc_len:
+    mode: manual
+    manual_r1: 210
+    manual_r2: 170
+  length_filter:
+    mode: manual
+    range: [220, 280]
+  extraction:
+    enabled: false
+  taxonomy:
+    method: sintax

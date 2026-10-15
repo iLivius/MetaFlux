@@ -1,0 +1,3 @@
+placeholder for the CI dry runs: not a sylph database. MetaFlux only checks that this
+file exists and reads its name and size when a run starts; sylph never runs on it.
+See .test/README.md.

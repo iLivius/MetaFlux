@@ -1,0 +1,22 @@
+# Dry-run config of the CI matrix: shotgun, Kraken2 + Bracken, with the k-mer evidence gate, the taxon filter and read extraction.
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. The databases under .test/stubs/ are
+# stand-ins that satisfy the start-up checks of a dry run and nothing more; see
+# .test/README.md.
+mode: shotgun
+input:
+  fastq_dir: .test/data/shotgun
+output:
+  out_dir: .test/out/shotgun_kraken2
+references:
+  kraken_db: .test/stubs/kraken2_db
+shotgun:
+  profiler: kraken2
+  kmer_evidence:
+    enabled: true
+  taxonomy_filter:
+    enabled: true
+    keep: []
+    discard: [g__Homo]
+  extract_taxa: [Escherichia coli]

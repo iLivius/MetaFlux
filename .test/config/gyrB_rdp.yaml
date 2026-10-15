@@ -1,0 +1,34 @@
+# Dry-run config of the CI matrix: gyrB, method rdp (the only method for this marker), fixed amplicon length and truncation.
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. A dry run creates nothing: out_dir and
+# refdb_root never come into being. See .test/README.md.
+mode: amplicon
+input:
+  fastq_dir: .test/data/gyrB
+output:
+  out_dir: .test/out/gyrB_rdp
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: gyrB
+  primers:
+    fwd: .test/primers/gyrB/fwd_primer.fasta
+    rev: .test/primers/gyrB/rev_primer.fasta
+  expected_length: 247
+  trunc_len:
+    mode: manual
+    manual_r1: 210
+    manual_r2: 170
+  length_filter:
+    mode: manual
+    range: [220, 280]
+  extraction:
+    enabled: false
+  taxonomy:
+    method: rdp
+    filter:
+      keep: []
+      discard: [other]

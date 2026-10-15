@@ -1,0 +1,26 @@
+# Dry-run config of the CI matrix: 18S, method rdp (PR2 taxonomy; no region extractor).
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. A dry run creates nothing: out_dir and
+# refdb_root never come into being. See .test/README.md.
+mode: amplicon
+input:
+  fastq_dir: .test/data/18S
+output:
+  out_dir: .test/out/18S_rdp
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 18S
+  primers:
+    fwd: .test/primers/18S/fwd_primer.fasta
+    rev: .test/primers/18S/rev_primer.fasta
+  extraction:
+    enabled: false
+  taxonomy:
+    method: rdp
+    filter:
+      keep: [d__Eukaryota]
+      discard: []
