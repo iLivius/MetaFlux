@@ -15,6 +15,7 @@ v2.5.0
 ![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A59.0-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22876451.svg)](https://doi.org/10.5281/zenodo.22876451)
+[![CI](https://github.com/iLivius/MetaFlux/actions/workflows/ci.yml/badge.svg)](https://github.com/iLivius/MetaFlux/actions/workflows/ci.yml)
 
 ## 📖 Documentation
 
@@ -154,10 +155,25 @@ That DOI always resolves to the newest release. To cite the exact version you ra
 its own DOI instead — v2.4.0 is
 [10.5281/zenodo.22876452](https://doi.org/10.5281/zenodo.22876452) — and give the version
 number in the reference, because results can depend on it.
+[CITATION.cff](CITATION.cff) carries the same information in a form GitHub shows under
+"Cite this repository".
 
 MetaFlux is a wrapper around published tools and reference databases, and those do the
 actual work — cite them too. The full reference list is on the
 [citation page](https://iLivius.github.io/MetaFlux/about/citation/).
+
+## Contributing, support and changes
+
+- [CHANGELOG.md](CHANGELOG.md) says what changed in each release, what runs again in
+  an output folder made with the previous release, and what to edit in an old config.
+- [SUPPORT.md](SUPPORT.md) says where to ask a question or report a problem;
+  [CONTRIBUTING.md](CONTRIBUTING.md) how to report a bug, propose a change, run the
+  checks and write code and comments the way this repository does.
+  [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every interaction here.
+- Every push runs the checks of `.github/workflows/ci.yml`: the unit tests under
+  `tests/`, a dry run of every marker, method, SILVA release and shotgun profiler on
+  the tiny data under `.test/` (its README says what the stand-in databases are), and a
+  strict build of the documentation.
 
 ## Acknowledgements
 
