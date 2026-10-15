@@ -34,9 +34,9 @@ out_dir/
 ├── 06.taxonomy/      # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
 │                     # asv_table_unfiltered.txt (every ASV, removed ones included)
 │                     # (+ _sintax_raw.tsv on the sintax path)
-│                     # (+ taxonomy_lineage_full.tsv for 16S on SILVA 144)
 ├── 07.phylogeny/     # alignment + unrooted tree  (only when phylogeny.enabled: true)
-├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
+├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/,
+│                     # taxonomy_reference_check.json
 │                     # (+ phylogeny/ when phylogeny.enabled: true)
 ├── multiqc/          # multiqc_report.html + multiqc_data/
 ├── logs/             # per-rule logs
@@ -48,8 +48,7 @@ Three files carry the result of an amplicon run: `06.taxonomy/asv_table.txt`
 (ASV × sample counts plus a taxonomy string), `05.dada2/seqs_lenfilt.fasta` (the
 sequences those ASV IDs refer to), and `stats/read_tracking.txt` (how many reads
 survived each stage, per sample). Next to them, `06.taxonomy/asv_table_unfiltered.txt`
-is the same table before the taxon filter, with the step that removed each ASV, and a
-16S run on SILVA 144 adds `06.taxonomy/taxonomy_lineage_full.tsv` with the Kingdom rank.
+is the same table before the taxon filter, with the step that removed each ASV.
 Everything else is intermediate data or QC.
 
 ### Reads: `01.reads/` → `04.filtered/`
@@ -145,27 +144,6 @@ compare how many organelle reads two primer pairs pick up — see
 [keeping and discarding taxa](../amplicon/taxon-filter.md#the-table-with-everything-asv_table_unfilteredtxt).
 Nothing in the pipeline reads it; the tree and every other table use the filtered set.
 
-For 16S on SILVA 144 there is one more file, `taxonomy_lineage_full.tsv`, written
-by `restore_kingdom` after the three filtered tables (which it does not change). SILVA 144
-added a Kingdom rank between Domain and Phylum; MetaFlux removes it before
-classifying, so the three tables keep their usual shape with `k__` holding the domain,
-and puts it back here, looked up from each ASV's phylum in a table built from the same
-reference. One row per ASV, same ASVs as `asv_table.txt`:
-
-| Column | Contents |
-|---|---|
-| `asv_id` | `ASV_#`, as in the other tables |
-| `Domain` | what the other tables call `Kingdom` (Bacteria, Archaea) |
-| `Kingdom` | SILVA 144's kingdom (*Bacillati*, *Pseudomonadati*, …); `Incertae Sedis` for the few phyla SILVA places in no named kingdom; or empty (see below) |
-| `Phylum` … `Genus`, `Species` | copied from `taxon_seq_table.txt` |
-| `lineage` | the SILVA-style path, `Bacteria;Pseudomonadati;Pseudomonadota;…;Genus;`, down to the deepest assigned rank; a rank left empty in the middle keeps an empty slot (`;;`) |
-| `kingdom_note` | why the kingdom is empty, or a remark about it |
-
-The kingdom is empty for ASVs classified to domain only (the kingdom comes from the
-phylum), for the placeholder phylum *Incertae Sedis* (it sits under more than one
-kingdom) and for eukaryotes (the DADA2 file has no eukaryote kingdom). Join the file to
-the abundance table by `asv_id`.
-
 The rank columns in `taxon_seq_table.txt` come from the marker pack, so they
 match the reference's actual depth: `Domain, Kingdom, Phylum … Species` for 16S on
 SILVA 144, `Domain, Phylum … Species` for 16S on SILVA 138.2 and for rpoB,
@@ -173,7 +151,9 @@ SILVA 144, `Domain, Phylum … Species` for 16S on SILVA 138.2 and for rpoB,
 nine ranks
 (`Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species`)
 under `method: rdp`, or eight under `method: sintax`, where PR2's UTAX file joins
-Division and Subdivision into one `Division_Subdivision` column.
+Division and Subdivision into one `Division_Subdivision` column. The same column can
+therefore sit at a different position from one marker or release to the next: pick the
+columns by name (see [reading the tables in R](#reading-the-tables-in-r)).
 
 !!! note "File format"
 
@@ -232,6 +212,7 @@ Two things to know about what is and is not here:
 | `2.nophix_reads.counts` | Same, after PhiX removal. Only when `remove_phix: true`. |
 | `3.stripped_reads.counts` | Same, after primer trimming. |
 | `trunclen.json` | The truncation decision: what `truncLen` was chosen for R1 and R2 and how. See [amplicon length and truncation](../amplicon/length-and-truncation.md). |
+| `taxonomy_reference_check.json` | What the reference check saw in the file the classifier reads: the file, the number of records, the ranks per record, the SINTAX letters (under `sintax`) and the names found in each rank the marker pack has a rule for. Written by `check_taxonomy_reference` before any classification, and only when the file passes; `assign_taxonomy` waits for it, and nothing reads its content. See [the reference check](../amplicon/markers/index.md#the-reference-check-reference_values). |
 | `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix`, `stripped`), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. |
 | `cutadapt/{sample}.passA_5prime.cutadapt.json` and `.passA_3prime.` | Cutadapt's own report for the 5' and 3' trimming passes. These feed MultiQC. The extra swap pass run under `orientation: mixed` writes no JSON and does not appear in MultiQC. |
 | `phylogeny/phylogeny_qc.json` | Only when `phylogeny.enabled: true`. Tip accounting, alignment shape, and the long-branch report — or a record of why no tree was built. Written on every enabled run, including a skipped one. Nothing reads it back; it is for you. See [Phylogeny](../amplicon/phylogeny.md#the-long-branch-report). |
@@ -388,12 +369,15 @@ at higher ranks.
 | `otu_table.biom` | Cross-sample abundance table in BIOM (HDF5) format. |
 | `otu_table.tsv` | The same table as tab-separated text. |
 
-The two OTU tables are rendered from the same filtered table by
-`finalize_otu_table`, so they always agree. That rule also tidies up what
-`kraken-biom` produces: it strips the `_report` suffix from sample names,
-normalises the taxonomy strings (see below), and applies the optional
-`shotgun.taxonomy_filter` keep/discard lists. The untidied intermediate
-`otu_table.raw.biom` is temporary and does not survive the run.
+Rule `finalize_otu_table` builds both OTU tables straight from the per-sample Bracken
+reports, from the same rows and numbers, so they always agree. Each row is one taxon at
+`tax_lev`, each column one sample, and each value is the clade count of that taxon's row
+in the sample's Bracken report (0 where the sample does not have it). Each row carries
+a lineage of eight slots taken from the reports' own rank codes (see
+[below](#taxonomy-strings-in-the-final-tables)). Rows come in the order the taxa are
+first met, reading the samples in the order of the sample sheet. The rule then applies
+the optional `shotgun.taxonomy_filter` keep/discard lists. In the BIOM file the sample
+metadata field `Id` holds the plain sample name.
 
 ### With `shotgun.profiler: sylph` or `both`
 
@@ -453,17 +437,73 @@ has no Kraken2 or Bracken sections.
 
 ## Taxonomy strings in the final tables
 
-Both modes write taxonomy the same way structurally: ranks joined by `;` with no
-space, each rank carrying its prefix (`k__`, `p__`, `c__`, `o__`, `f__`, `g__`,
-`s__`; 18S uses the PR2 rank set, `d__`, `sg__`, `dv__` and so on). Ranks the
-classifier could not resolve are simply left out, so a string can end early.
-Shotgun tables are the exception: kraken-biom always writes all seven slots, and
-leaves empty any rank it has no name for and every rank below
-`shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level table).
+Both modes write taxonomy the same way: ranks joined by `;` with no space, each rank
+carrying its prefix. Which ranks a table has follows one rule, the same for every marker
+and every profiler:
+
+- **`d__` is always the domain slot and `k__` always the kingdom slot.** A table has a
+  kingdom only where its reference defines one; MetaFlux never makes one up.
+- **Kraken2 tables follow Kraken2's report codes**: always eight slots,
+  `d__ k__ p__ c__ o__ f__ g__ s__`, on any database.
+- **Amplicon tables and sylph tables follow their reference files.**
+
+| Output | Slots | Count |
+|---|---|--:|
+| 16S, SILVA 144 | `d__ k__ p__ c__ o__ f__ g__ s__` (`s__` from `addSpecies`, so under `method: rdp` only) | 8 |
+| 16S, SILVA 138.2 | `d__ p__ c__ o__ f__ g__ s__` | 7 |
+| ITS, UNITE | `k__ p__ c__ o__ f__ g__ s__` (UNITE has no domain) | 7 |
+| 18S, PR2, `method: rdp` | `d__ sg__ dv__ sbd__ c__ o__ f__ g__ s__` | 9 |
+| 18S, PR2, `method: sintax` | `d__ sg__ dv__ c__ o__ f__ g__ s__` (`dv__` holds Division and Subdivision joined by `-`) | 8 |
+| gyrB, DD7RZ8 | the gene tag (`gyrB` or `other`, no prefix), then `p__ c__ o__ f__ g__ s__` | 7 |
+| rpoB, FROGS | `d__ p__ c__ o__ f__ g__ s__` | 7 |
+| Kraken2 (`otu_table`), any database | `d__ k__ p__ c__ o__ f__ g__ s__` (`k__` empty on a GTDB database, which has no kingdom rank, and for taxa without a kingdom, most protists among them) | 8 |
+| sylph (`sylph_table`) | `d__ p__ c__ o__ f__ g__ s__` (GTDB has no kingdom) | 7 |
+
+In the amplicon tables, ranks the classifier could not resolve are simply left out, so a
+string can end early (`d__Bacteria;k__Pseudomonadati;p__Pseudomonadota`). The shotgun
+tables always write every slot and leave empty any slot they have no name for, and every
+slot below `shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level table).
+
+**Values in `d__` that are not domains.** Three kinds:
+
+- **A virus realm, in the Kraken2 table.** A virus has no domain. ICTV, which names virus
+  taxa, made the realm the top rank of virus taxonomy, in place of the domain, and NCBI
+  keeps domains and realms in one field of its taxonomy, so the realm sits where a
+  cellular organism's domain sits, with the viral kingdom in `k__`:
+  `d__Duplodnaviria;k__Heunggongvirae;p__Uroviricota;c__Caudoviricetes;o__;f__Peduoviridae;g__Peduovirus;s__Peduovirus P37`.
+  A virus that NCBI places in no realm keeps an empty `d__`, and so does anything else
+  without a domain, plasmids for example. Realm names follow the NCBI taxonomy the
+  database was built with. `d__Viruses` never appears, also on a database built when
+  NCBI still ranked Viruses a superkingdom.
+- **`d__Unassigned`**, on the `unassigned` row of the sylph table.
+- **PR2's organelle tags**, in 18S tables: `d__Eukaryota:plas` (plastid), `:mito`,
+  `:nucl` (nucleomorph), `:apic` (apicoplast) and `:chro` (chromatophore).
+
+**`k__` in ITS tables** holds whatever UNITE files at its top rank: kingdoms
+(`k__Fungi`, `k__Viridiplantae`, `k__Metazoa`), protist groups (`k__Alveolata`,
+`k__Stramenopila`, `k__Rhizaria`, …) and placeholders (`k__Protista`, `k__unidentified`,
+`k__Eukaryota_kgd_Incertae_sedis`).
+
+**With `shotgun.profiler: both`** the same organism reads differently in the two tables:
+`otu_table.tsv` has eight slots and `sylph_table.tsv` seven, and the two databases can
+name a taxon differently. From one run:
+
+```text
+otu_table.tsv    d__Archaea;k__Methanobacteriati;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanobrevibacter;s__Methanobrevibacter smithii
+sylph_table.tsv  d__Archaea;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanocatella;s__Methanocatella smithii
+```
+
+No MetaFlux step joins the two tables. Compare them by rank name, not by column
+position.
+
+**Other tools** may write the same lineage another way: kraken-biom and MetaPhlAn, for
+example, put the domain under `k__` (`k__Bacteria`). Filter tokens and scripts written
+for their tables need the `d__` prefix in MetaFlux's.
 
 With SILVA 144 and `silva_other: verbatim` (the default) a 16S rank name can end in
 `--other` (`g__Bradyrhizobium--other`); the species slot is still written with the plain
-genus (`g__Lactobacillus--other;s__Lactobacillus iners`). See
+genus (`g__Lactobacillus--other;s__Lactobacillus iners`). The kingdom never carries the
+suffix. See
 [16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other).
 
 The exact form of the species slot follows the reference database, not the
@@ -471,22 +511,73 @@ pipeline:
 
 | Source | Species slot | Example |
 |---|---|---|
-| SILVA / 16S via `rdp` | `s__Genus species` (a binomial, space-separated) | `s__Bacillus subtilis` |
-| UNITE / ITS | UNITE's own `s__Genus_species` (underscore), emitted verbatim | `s__Genus_species` |
-| Shotgun `otu_table` | the same binomial reconstruction as SILVA, where the reference supplies a bare epithet | `s__Bacillus subtilis` |
+| 16S, SILVA via `rdp` (`addSpecies`) | `s__Genus species` (a binomial, space-separated) | `s__Bacillus subtilis` |
+| 16S via `sintax` | none: SILVA's SINTAX file stops at genus | — |
+| ITS, UNITE, both methods | UNITE's own `s__Genus_species` (underscore) | `s__Agaricus_bisporus` |
+| 18S, PR2 | PR2's own `s__Genus_species` | `s__Unruhdinium_kevei` |
+| gyrB (DD7RZ8), rpoB (FROGS) | the reference's own `s__Genus_species` | `s__Staphylococcus_simiae` |
+| Shotgun `otu_table` | the whole species name, as the Kraken2 database writes it | `s__Escherichia coli`, `s__Peduovirus P37`, `s__uncultured Martelella sp.` |
 | Shotgun `sylph_table` | the GTDB species name exactly as GTDB writes it, placeholders included | `s__Escherichia coli_E`, `s__JABGUH01 sp018646675` |
-| `sintax` path | whatever label the SINTAX database carries | — |
 
-The binomial is only assembled when the reference hands back a bare, lowercase
-epithet (`subtilis`). A reference that already returns a complete name — PR2's
-`Unruhdinium_kevei`, for instance — is passed through untouched, so the genus is
-never glued on twice.
+In the amplicon tables the binomial is only assembled when the reference hands back a
+bare, lowercase epithet (`subtilis`, from `addSpecies`; or, under `rdp`, the epithet
+that DADA2 cuts out of UNITE's species, see [ITS](../amplicon/markers/its.md)). A
+reference that already returns a complete name — PR2's `Unruhdinium_kevei`, for
+instance — is passed through untouched, so the genus is never glued on twice.
 
-The sylph tables always have seven slots, the GTDB ranks `d__` to `s__`. The first
-holds the domain and is always written `d__` (`d__Bacteria`, `d__Archaea`,
-`d__Eukaryota`, and `d__Unassigned` on the `unassigned` row): GTDB has no kingdom rank,
-and a lineage table that writes the domain as `k__` is rewritten to `d__`. See
+In the sylph table, a lineage table that writes the domain as `k__` (FungiRefSeq's
+`k__Eukaryota`) is rewritten to `d__`, so every row uses the same seven prefixes. See
 [sylph](../shotgun/sylph.md#what-you-get).
+
+## Reading the tables in R
+
+The tables follow the ranks of their reference (above), so one rank can sit in a
+different column from one marker, release or profiler to the next: `tax[, 2]` is the
+kingdom on SILVA 144 and the phylum on SILVA 138.2. Pick ranks by name,
+`tax[, "Phylum"]`, which is the same column in every table that has a phylum.
+
+**Amplicon tables.** `taxon_seq_table.txt` has one column per rank, already named after
+it, so it is the taxonomy table to hand to phyloseq, mia or any other package; there is
+no need to parse the `taxonomy` strings. A rank column with no value in any row comes
+into R as `logical` rather than as text, because `read.table` sees only `NA` in it;
+`Species` on 16S under `sintax` is always such a column. `colClasses = "character"`
+reads every column as text:
+
+```r
+tax <- read.table("06.taxonomy/taxon_seq_table.txt", sep = "\t", header = TRUE,
+                  row.names = 1, colClasses = "character")
+tax[, "Phylum"]
+```
+
+Do not parse the taxonomy strings with phyloseq's `parse_taxonomy_greengenes`. It knows
+only the one-letter prefixes `k__` to `s__`, so it names the `d__` column `Rank1`, and it
+misreads the longer 18S prefixes: `sg__TSAR` comes out as a column named `Species`
+holding `sTSAR`.
+
+**Shotgun BIOM files** (`otu_table.biom`, `sylph_table.biom`):
+
+- phyloseq's `import_biom()` with `parse_taxonomy_greengenes` names the first column
+  `Rank1`, for the same reason; rename it:
+
+    ```r
+    library(phyloseq)
+    ps <- import_biom("03.abundance/otu_table.biom",
+                      parseFunction = parse_taxonomy_greengenes)
+    colnames(tax_table(ps))[1] <- "Domain"
+    ```
+
+- mia names the columns after the prefixes itself (`domain`, `kingdom`, `phylum`, …)
+  when asked to:
+
+    ```r
+    tse <- mia::importBIOM("03.abundance/otu_table.biom",
+                           rank.from.prefix = TRUE, prefix.rm = TRUE)
+    ```
+
+- ampvis2 accepts a `Domain` or a `Kingdom` column, but stops with "Cannot have both
+  Domain and Kingdom columns at the same time in taxonomy." on a table that has both, as
+  every Kraken2 table and every 16S table on SILVA 144 does. Drop one of the two columns
+  before loading.
 
 ---
 

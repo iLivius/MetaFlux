@@ -24,7 +24,7 @@ snakemake --sdm conda --cores 16 --configfile config/config.local.yaml --dry-run
     Because the template is always loaded underneath the run config, any concrete
     value left in it silently applies to runs that do not set their own. That is
     harmless for a thread count and destructive for
-    `amplicon.taxonomy.filter.keep`: a 16S `keep: [k__Bacteria, k__Archaea]`
+    `amplicon.taxonomy.filter.keep`: a 16S `keep: [d__Bacteria, d__Archaea]`
     leaking into an 18S run would discard every eukaryotic ASV. The `keep` and
     `discard` lines are therefore commented out in the template, so unset they
     resolve to `[]` and match nothing, which fails safe. (`filter.organelles` ships
@@ -124,9 +124,9 @@ have to be replaced before anything runs.
 
     Because the template is *always* underneath, a concrete value left in it silently
     applies to any run that does not set its own. Harmless for a thread count; not
-    harmless for `amplicon.taxonomy.filter.keep`, where a 16S `[k__Bacteria, k__Archaea]`
-    left in the template would discard every ASV of an 18S run. That is why those two
-    lines ship commented out — see the warning above.
+    harmless for `amplicon.taxonomy.filter.keep`, where a 16S `[d__Bacteria, d__Archaea]`
+    left in the template would discard nearly every ASV of an 18S run. That is why those
+    two lines ship commented out — see the warning above.
 
 ### Marker packs live beside the config, not inside it
 
@@ -144,7 +144,14 @@ the two share at all is `references`, handled below.
 If you genuinely need a different pack — another database release, a different rank
 model — put a file of the same name in `config/markers/`. That is a whole-file
 replacement, not a per-key merge: your file supersedes the shipped pack entirely, so it
-must declare everything the pack needs, not just the part you wanted to change.
+must declare everything the pack needs, not just the part you wanted to change. That
+includes `reference_values`, the rules the reference check tests the reference file
+against before any classification; a pack for a marker of your own may write
+`reference_values: {}` to have only the rank shape checked (see
+[the reference check](../amplicon/markers/index.md#the-reference-check-reference_values)).
+A copy made for an older MetaFlux has no `reference_values` and stops every amplicon run
+at start-up, naming the file, so after an upgrade copy the shipped pack again and
+re-apply your change.
 
 ### Where a pack and the config do interact
 
@@ -226,20 +233,18 @@ Neither case is really the pack "winning an argument". Nothing is being weighed 
 anything: the config asked for a tool that does not exist for that marker, and the pack
 is simply where that fact happens to be written down.
 
-## The four lines that define a run
+## The five settings that define a run
 
-Most of the file is tuning that can stay at its defaults. Four settings describe
-what the analysis actually is:
+Most of the file is tuning that can stay at its defaults. Five settings describe
+what the analysis actually is, the ones the box at the top of the template lists:
 
 | Setting | Choices |
 |---|---|
 | `mode` | `amplicon` or `shotgun` |
 | `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB`, `rpoB` (amplicon mode only) |
+| `shotgun.profiler` | `kraken2` (the default), `sylph` or `both` (shotgun mode only; see [Profiler](#profiler) below) |
 | `input.fastq_dir` | where the paired FASTQs are |
 | `output.out_dir` | where results go |
-
-In shotgun mode one more line chooses the profiler, `shotgun.profiler`: `kraken2` (the
-default), `sylph` or `both` (see [Profiler](#profiler) below).
 
 ---
 
@@ -368,10 +373,9 @@ the pack's declared filename. The full set of relocatable keys:
 | Config key | Marker | Default location under `refdb_root` |
 |---|---|---|
 | `silva.train_raw` | 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz` (SILVA 144 as published, seven ranks) |
-| `silva.train` | 16S | `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz` (built from `train_raw`, Kingdom rank removed) |
-| `silva.kingdom_map` | 16S | `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv` (built with `train`) |
+| `silva.train` | 16S | `silva/silva_nr99_v144_toGenus_7rank_other-verbatim_trainset.fa.gz` (built from `train_raw`: the same seven ranks, with the kingdom names written without `--other`; a built file, see below) |
 | `silva.species` | 16S | `silva/silva_v144_assignSpecies.fa.gz` |
-| `silva.sintax` | 16S | `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` (derived from the trainset, not downloaded) |
+| `silva.sintax` | 16S | `silva/silva_nr99_v144_7rank_other-verbatim_sintax.fa.gz` (built from the trainset, not downloaded; see below) |
 | `unite.fasta` | ITS | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta` |
 | `unite.sintax` | ITS | `unite/utax_reference_dataset_all_19.02.2025.fasta.gz` |
 | `unite.uchime_its1` | ITS | `unite/uchime_its1.fasta` |
@@ -379,12 +383,28 @@ the pack's declared filename. The full set of relocatable keys:
 | `silva_euk.fasta` | 18S | `silva_euk/silva_132.18s.dada2.fa.gz` |
 | `pr2.dada2` | 18S | `pr2/pr2_SSU_dada2.fasta.gz` |
 | `pr2.utax` | 18S | `pr2/pr2_SSU_UTAX.fasta.gz` |
-| `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only). A path given here is where MetaFlux writes the file it builds, and MetaFlux rebuilds that file whenever `pr2.utax` or the conversion script is newer than it (a fresh clone, or an update that changes the script), or when the conversion step's input or software changes. So never keep a file of your own at this path; a write-protected file there stops the run as soon as MetaFlux wants to rebuild it. If you pin `pr2.utax`, pin `pr2.sintax` to a path of its own too: otherwise the default file is rebuilt from your `pr2.utax`, or an older build from another `pr2.utax` is reused |
+| `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only; see below) |
 | `gyrb.dada2` | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` |
-| `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` (the converted DADA2 trainset) |
+| `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` (the DADA2 trainset converted from the FROGS archive, with the domain written `d__`; see below) |
 
 The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 `silva_other: strip`, `other-verbatim` becomes `other-stripped`.
+
+#### Reference files MetaFlux builds itself
+
+Four of these keys point at files MetaFlux builds rather than downloads: `silva.train`
+(on SILVA 144), `silva.sintax`, `pr2.sintax` and `rpob.frogs`. A path given for one of
+them is where MetaFlux writes the file it builds, and MetaFlux rebuilds that file
+whenever its input (`silva.train_raw`, the SILVA training set, `pr2.utax` and the FROGS
+archive, in that order) or the conversion script is newer than it (a fresh clone, or an update that
+changes the script), or when the conversion step's input or software changes. So never
+keep a file of your own at such a path; a write-protected file there stops the run as
+soon as MetaFlux wants to rebuild it. If you pin the input of a built file, pin the
+built file to a path of its own too (`pr2.sintax` next to `pr2.utax`, say): otherwise
+the default file is rebuilt from your input, or an older build from another input is
+reused. Whichever path the classifier reads, the reference check tests that very file
+before any classification (see
+[the reference check](../amplicon/markers/index.md#the-reference-check-reference_values)).
 
 A reference that has neither a config entry nor a pack default stops the run with a
 message naming both places it could be fixed.
@@ -399,7 +419,7 @@ references:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `06.taxonomy/taxonomy_lineage_full.tsv`. SILVA 138.2 has no Kingdom rank, so nothing is removed and that file is not written. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
+| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have seven ranks, with a Kingdom between Domain and Phylum, and MetaFlux classifies on all of them: the 16S tables have the slots Domain, Kingdom, Phylum … Species. SILVA 138.2 has no kingdom, so its tables have Domain, Phylum … Species. See [16S rRNA](../amplicon/markers/16S.md#domain-and-kingdom). |
 
 ---
 
@@ -697,7 +717,7 @@ still runs either way.
 | `min_boot` | RDP bootstrap confidence a rank must reach to be reported | `80` | Read only by the `rdp` path. Range 0–100. |
 | `sintax_cutoff` | SINTAX confidence a rank must reach to be reported | `0.8` | Read only by the `sintax` path. Range 0–1; 0.8 is roughly equivalent to `min_boot: 80`. |
 | `try_rc` | Also tries the reverse complement of each ASV during classification | `true` | Read only by the `rdp` path. The `sintax` path always searches both strands. |
-| `silva_other` | What to do with SILVA 144's `X--other` names (a clade that does not contain the type of taxon X but belongs to it) | `verbatim` | `verbatim` keeps the names; the filter and `addSpecies` then treat `X--other` as `X`. `strip` removes the suffix before training, so the two become one taxon. No effect with SILVA 138.2 or other markers. See [16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other). |
+| `silva_other` | What to do with SILVA 144's `X--other` names (a clade that does not contain the type of taxon X but belongs to it) | `verbatim` | `verbatim` keeps the names; the filter and `addSpecies` then treat `X--other` as `X`. `strip` removes the suffix before training, so the two become one taxon. The kingdom is always written without the suffix, whichever value is set. No effect with SILVA 138.2 or other markers. See [16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other). |
 
 !!! warning "gyrB and rpoB are rdp-only"
 
@@ -711,7 +731,7 @@ still runs either way.
 ```yaml
     filter:
       enabled: true
-      keep:    #[k__Bacteria, k__Archaea]
+      keep:    #[d__Bacteria, d__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
       discard_min_support: 50
       organelles: metaxa2   # metaxa2 | off; acts on 16S only
@@ -726,13 +746,23 @@ still runs either way.
 | `organelles` | Also removes the ASVs that Metaxa2 calls mitochondria or chloroplast | `metaxa2` | 16S only, and only with `extraction.enabled: true`, since Metaxa2 has to have run; for every other marker it is inactive and the run prints one info line. Runs after `keep`, `discard` and the best-hit check, and catches plant mitochondria the classifier reports as bacteria (e.g. *Enterobacterales*), which no token can match. Metaxa2's other calls (domains, eukaryota, uncertain) remove nothing. `off` (or `null`) switches it off; any other value stops the run at start-up. Every ASV, organelles included, is still listed in `06.taxonomy/asv_table_unfiltered.txt`. See [the organelle filter](../amplicon/taxon-filter.md#the-organelle-filter-organelles). |
 
 Each token is matched against a whole segment of the taxonomy string
-(`k__Bacteria`, `o__Chloroplast`, `g__Ralstonia`), so it targets exactly one rank
-and never matches loosely somewhere else in the lineage. There is no built-in
-default: whatever is listed is exactly what is applied.
+(`d__Bacteria`, `o__Chloroplast`, `g__Ralstonia`), so it targets exactly one rank
+and never matches loosely somewhere else in the lineage. `d__` is always the domain and
+`k__` always the kingdom, where the marker's reference has one: on 16S with SILVA 144,
+and on ITS, whose top rank is the kingdom. There is no built-in default: whatever is
+listed is exactly what is applied.
+
+The tokens are checked when the run starts, before any step, also with
+`enabled: false`. A token that can never match this run's taxonomy strings stops the run,
+and the message names the token to write instead where there is one: a prefix the
+strings never have (`k__` on SILVA 138.2, `d__` on ITS, `s__` on 16S under `sintax`), a
+domain under `k__` (`k__Bacteria`, written `d__Bacteria`), or a name that the marker's
+reference cannot hold in that slot (`k__Fungi` on 16S). See
+[when MetaFlux refuses a token at start-up](../amplicon/taxon-filter.md#when-metaflux-refuses-a-token-at-start-up).
 
 | Marker | Suggested `keep` | Suggested `discard` |
 |---|---|---|
-| 16S | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
+| 16S | `[d__Bacteria, d__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS | `[k__Fungi]` | `[]` |
 | 18S | `[d__Eukaryota]` (PR2 ranks) — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S](../amplicon/markers/18S.md) | `[]` |
 | gyrB | no recommended default — paralogs are removed with `discard: [other]` on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter | |
@@ -1063,13 +1093,21 @@ distribution to 100 bp reads biases the redistribution.
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `enabled` | Master switch | `false` | Off by default: metagenomic sample types vary too much for a universal default to be safe. |
-| `keep` | Tokens defining what survives | `[]` | e.g. `[d__Bacteria, d__Archaea]` for prokaryotes only. |
+| `keep` | Tokens defining what survives | `[]` | e.g. `[d__Bacteria, d__Archaea]` for prokaryotes only; this drops viruses too, because a virus carries its realm in `d__` (`d__Duplodnaviria`), or nothing there. |
 | `discard` | Tokens pruning what `keep` left | `[]` | e.g. `[g__Homo]` as an explicit host safety net. |
 
 This is the shotgun counterpart of `amplicon.taxonomy.filter` and uses the same
 rank-aware token matching: `keep` first, then `discard`, empty list means that
 direction does nothing. It is applied to the final OTU table after Bracken, so it
-changes which OTUs appear in the table and never how reads were classified.
+changes which OTUs appear in the table and never how reads were classified. A token
+must equal one whole slot of the table's eight, `d__ k__ p__ c__ o__ f__ g__ s__`.
+
+When Kraken2 runs, the tokens are checked at start-up, also with `enabled: false`,
+against those slots and against the Kraken2 database: a wrong prefix, a domain under
+`k__`, `Viruses` under any prefix, a virus realm under `k__`, and (with the filter on) a
+`keep` list that no row of this database can match stop the run; a token this database
+merely lacks, such as any `k__` token on a GTDB database, gives a warning. See
+[keeping and discarding taxa](../amplicon/taxon-filter.md#the-shotgun-counterpart).
 
 If the filter removes every taxon from a table that had some, rule `finalize_otu_table`
 stops with an error that names the tokens and lists the `d__` values the table holds,
@@ -1153,7 +1191,7 @@ so they are what a cluster executor turns into job requests.
 | `fastp` | shotgun | 16 | Read by the `trim_adapters` rule. fastp scales poorly past about 16 threads. |
 | `kraken2` | shotgun | 16 | Overridden by `shotgun.kraken.threads` when that is not `null`. |
 | `bracken` | shotgun | 4 | |
-| `kraken_biom` | shotgun | 2 | |
+| `finalize_otu_table` | shotgun | 1 | One pass over the Bracken reports, building `otu_table.tsv` and `otu_table.biom`. |
 | `extract_taxon_reads` | shotgun | 4 | |
 | `compress_extracted` | shotgun | 6 | pigz parallelism for the extracted read files. |
 | `download_sra` | shotgun | 6 | `fasterq-dump` parallelism; past about 8 the bottleneck is disk, not CPU. |
@@ -1188,7 +1226,7 @@ so they are what a cluster executor turns into job requests.
 | `fastp` | shotgun | 8000 | Read by the `trim_adapters` rule. |
 | `kraken2` | shotgun | 20000 | Not read — the real figure is computed at parse time from `memory_mapping` and the actual `hash.k2d` size. |
 | `bracken` | shotgun | 4000 | |
-| `kraken_biom` | shotgun | 2000 | |
+| `finalize_otu_table` | shotgun | 2000 | |
 | `extract_taxon_reads` | shotgun | 2000 | |
 | `sylph_sketch` | shotgun | 4000 | Only when sylph runs. Making a sketch uses a few tens of MB of memory for a few million read pairs (the sketch file itself is a few MB); deep libraries need more, hence the headroom. |
 | `sylph_profile` | shotgun | `null` | Only when sylph runs. `null` means worked out at parse time: 1.2 × the size of the database files plus 4096 MB, because sylph holds every database in memory (about 34,600 MB for GTDB r232 c200 with the fungal database). The start-up line prints the figure. A number here overrides it, for example on a cluster. |
@@ -1204,12 +1242,10 @@ so they are what a cluster executor turns into job requests.
     the `trim_adapters` rule — there is no rule called `fastp`, and a
     `trim_adapters` key here is ignored. Rules that declare no `threads` or
     `mem_mb` at all — `link_reads`, `count_reads_*`, `revcomp_primers`, the
-    `fetch_*` and `convert_*` reference rules, `restore_kingdom`, `samples_manifest`
-    and `aggregate_read_counts` — take Snakemake's own defaults and ignore any entry
-    of the same name. Adding a key for a rule that does not look it up has no
-    effect. Conversely, `finalize_otu_table` does look its resources up but has
-    no entry in the template, so it runs on `threads_default` and
-    `mem_mb_default`. Two keys break the other way: `phylo_tree` and `sylph_sketch`
+    `fetch_*` and `convert_*` reference rules, `check_taxonomy_reference`,
+    `samples_manifest` and `aggregate_read_counts` — take Snakemake's own defaults and
+    ignore any entry of the same name. Adding a key for a rule that does not look it up
+    has no effect. Two keys break the other way: `phylo_tree` and `sylph_sketch`
     fall back to **1**, not `threads_default`, because there the thread count changes
     the result itself (the tree, the sketch) and not just how long it takes.
 

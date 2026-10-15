@@ -342,17 +342,26 @@ prefixes on top. The SINTAX path reaches the same place from the other direction
 strips any prefix the database embedded, then re-adds the pack's own, so the rank
 prefixes come out identical whichever method ran.
 
+UNITE has no domain rank: its top rank is the kingdom, so an ITS string starts at `k__`
+and has no `d__` slot. The UTAX file (`sintax`) stores that kingdom under the SINTAX
+letter `d:` (`tax=d:Fungi,p:Ascomycota,…`); MetaFlux reads it as the kingdom, writes it
+`k__`, and never turns it into a domain. The kingdom slot holds whatever UNITE puts at
+that rank: the kingdoms (`k__Fungi`, `k__Viridiplantae`, `k__Metazoa`), protist groups
+(`k__Alveolata`, `k__Stramenopila`, `k__Rhizaria` …) and placeholders (`k__Protista`,
+`k__unidentified`, `k__Eukaryota_kgd_Incertae_sedis`).
+
 The prefixes belong to the taxonomy strings. In `taxon_seq_table.txt`, where each rank
 has its own column, the cells hold the bare names — `Fungi`, `Basidiomycota`, …,
 `Agaricus_bisporus` — under either method.
 
-The visible consequence is in the species slot. UNITE writes its binomial with an
-underscore and MetaFlux keeps it as it is, where the SILVA/16S path builds
-`s__Genus species` with a space:
+Two differences from a 16S string are visible side by side. The ITS string starts at
+the kingdom, where the 16S one starts at the domain (`d__`; on SILVA 144 the kingdom
+`k__` follows it). And UNITE writes its binomial with an underscore, which MetaFlux keeps
+as it is, where the SILVA/16S path builds `s__Genus species` with a space:
 
 ```text
 ITS   k__Fungi;p__Basidiomycota;c__Agaricomycetes;o__Agaricales;f__Agaricaceae;g__Agaricus;s__Agaricus_bisporus
-16S   k__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Bacillaceae;g__Bacillus;s__Bacillus subtilis
+16S   d__Bacteria;k__Bacillati;p__Bacillota;c__Bacilli;o__Bacillales;f__Bacillaceae;g__Bacillus;s__Bacillus subtilis
 ```
 
 Filter tokens must be written the way the lineage writes them, underscore included.
@@ -412,12 +421,19 @@ so non-fungal eukaryotic ITS can reach this stage. Nothing is recommended
 for `discard` by default; lab or kit contaminants revealed by a negative control can
 be added there as genus tokens.
 
+With `method: rdp`, DADA2 breaks ties between equally good references at random, and
+now and then that flips an ASV's whole lineage between two identical runs, even its
+kingdom (an ASV whose best hit is a plant in one run and a fungus in the next), so
+`keep: [k__Fungi]` can keep such an ASV in one run and drop it in the next; `sintax`
+gives the same answer every time.
+
 Each token is matched against a whole rank segment of the taxonomy string, so
 `g__Fusarium` matches a genus named exactly that and never a substring elsewhere in
-the lineage. If the filter removes every ASV, MetaFlux stops with an error rather than
-writing an empty table — with ITS that almost always means a 16S keep list
-(`[k__Bacteria, k__Archaea]`) was left in the config. Full behaviour on
-[Keeping and discarding taxa](../taxon-filter.md).
+the lineage. A 16S keep list left in the config stops the run at start-up, before any
+step: ITS has no domain rank, so `d__Bacteria` can never match, and `k__Bacteria` puts a
+domain where ITS has its kingdom. If the filter removes every ASV after the
+classification, MetaFlux stops with an error rather than writing an empty table. Full
+behaviour on [Keeping and discarding taxa](../taxon-filter.md).
 
 ## What an ITS run produces
 

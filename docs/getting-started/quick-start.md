@@ -14,7 +14,7 @@ conda create -n snakemake -c conda-forge -c bioconda snakemake
 conda activate snakemake
 
 # 3. Edit config/config.yaml — set `mode`, input/output paths, and references
-#    (amplicon: primer FASTAs; shotgun: a Kraken2 database)
+#    (amplicon: primer FASTAs; shotgun: a Kraken2 database, or sylph databases)
 
 # 4. Dry-run to check the plan, then execute
 snakemake --sdm conda --cores 16 --configfile config/config.yaml --dry-run
@@ -28,21 +28,26 @@ from, not against the config file. Absolute paths are safest.
 Steps 1 and 2 are covered in more detail under [installation](installation.md),
 including where the reference databases come from and what `--sdm conda` builds.
 
-## Step 3 in detail — the four lines that define a run
+## Step 3 in detail — the five settings that define a run
 
 `config/config.yaml` is long, but most of it is tuning that can stay as shipped.
-Four settings decide what the run actually is:
+Five settings decide what the run actually is; the box at the top of the template
+lists the same ones:
 
 | Setting | What it decides |
 |---------|-----------------|
 | `mode` | `amplicon` or `shotgun` — see [choosing a mode](choosing-a-mode.md) |
 | `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB` or `rpoB` (amplicon runs only) |
+| `shotgun.profiler` | `kraken2` (the default), `sylph` or `both` (shotgun runs only) — see [sylph](../shotgun/sylph.md) |
 | `input.fastq_dir` | The directory holding the paired FASTQ files |
 | `output.out_dir` | Where every result is written |
 
-Then whatever the chosen mode needs before it can start: the two primer FASTA files
-for amplicon (`amplicon.primers.fwd` / `.rev`), or the Kraken2 database directory
-for shotgun (`references.kraken_db`).
+Then whatever the chosen mode needs before it can start, and MetaFlux downloads none
+of it: the two primer FASTA files for amplicon (`amplicon.primers.fwd` / `.rev`). For
+shotgun, the Kraken2 database directory (`references.kraken_db`) with `kraken2` or
+`both`, and the sylph databases (`references.sylph_databases`, with their lineage
+tables in `references.sylph_taxonomy_dir`) with `sylph` or `both`; a sylph-only run
+needs no Kraken2 database.
 
 Input files are found by pattern, not listed by hand. MetaFlux globs `fastq_dir` for
 `{sample}_R1` / `{sample}_R2` pairs — shotgun also accepts the SRA-style
@@ -87,7 +92,13 @@ dry-run exercises it. What is checked before the first job starts:
   `taxonomy.method` is available for that marker (`gyrB` and `rpoB` have no SINTAX
   reference, so only `rdp` works for them); the statistic the length probe needs is
   present in `probe_length_stat`.
-- Shotgun: the `kraken_db` directory exists.
+- Shotgun: the `kraken_db` directory exists when Kraken2 runs, and the sylph databases
+  and their lineage tables are in place when sylph runs.
+- Both modes (in shotgun mode when Kraken2 runs): every keep/discard token of the
+  taxon filter can match the run's taxonomy strings. A token written for MetaFlux
+  v2.4.0 or earlier, such as
+  `k__Bacteria`, stops the run with the token to write instead (`d__Bacteria`); see
+  [keeping and discarding taxa](../amplicon/taxon-filter.md#when-metaflux-refuses-a-token-at-start-up).
 
 Failures are reported plainly, for example:
 

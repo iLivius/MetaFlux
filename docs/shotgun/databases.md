@@ -39,12 +39,33 @@ The key points at the *directory*, not at a file. A Kraken2 database directory h
 |---|---|---|
 | `hash.k2d` | Kraken2 | the k-mer → taxon hash — by far the largest file, and the one that sets the memory requirement |
 | `opts.k2d` | Kraken2 | the options the index was built with |
-| `taxo.k2d` | Kraken2 | the taxonomy tree |
+| `taxo.k2d` | Kraken2, and MetaFlux when the run starts | the taxonomy tree |
 | `*.kmer_distrib` | Bracken | per-read-length k-mer distributions, one file per supported read length |
 
 Bracken is pointed at the same directory, which is why the `.kmer_distrib` files must
 be present alongside the index. Pre-built downloads from the catalog below include
 them.
+
+MetaFlux reads `taxo.k2d` itself too, once, when the run starts. It is Kraken2's own
+copy of the database taxonomy, written when the index is built and read at every
+classification, so every Kraken2 database has it. From it MetaFlux takes which taxa
+the database ranks as a domain, a kingdom or a virus realm. The OTU table needs that:
+its lineage has eight fixed slots, `d__ k__ p__ c__ o__ f__ g__ s__`, filled from the
+rank codes of the Bracken reports, but Kraken2 has no code for a virus realm (it prints
+a realm as an unranked `R2` row, like other unranked nodes), and the domain and kingdom
+codes of the reports are checked against the database (see
+[OTU table](overview.md#7-otu-table)). A directory without a readable `taxo.k2d` stops
+the run at start-up:
+
+```text
+[MetaFlux] /path/to/db/k2_pluspf/taxo.k2d not found: references.kraken_db must be a complete Kraken2 database (hash.k2d, opts.k2d and taxo.k2d).
+```
+
+What the database's taxonomy has shows in the table. A GTDB database has domains but no
+kingdom rank and no viruses, so `k__` stays empty in every row; an NCBI database fills
+`k__` for most bacteria and archaea, the fungi, plants and animals, but not for most
+protists, which NCBI places in no kingdom. Realm names follow the NCBI taxonomy the
+database was built with.
 
 ## Choosing an index
 
@@ -109,7 +130,9 @@ There are two reasons for one exact release:
   Bacteria, Archaea and Eukaryota the rank "domain", and GTDB's taxonomy uses the
   same rank. Earlier Kraken2 releases give the report code `D` only to the older rank
   name, "superkingdom", so they report these domains as unranked rows (`R1`, `R2`),
-  and the OTU table cannot get its domain from them.
+  and the OTU table cannot get its domain from them. The table step checks every `D`
+  and `K` code against `taxo.k2d` and stops on such reports (see
+  [Troubleshooting](../troubleshooting.md#shotgun-the-table-step-stops-on-a-report-code)).
 - **The defaults were measured with 2.17.1.** The k-mer evidence settings and the
   automatic Bracken threshold come from benchmarks run with this release. Kraken2
   2.17.2 changes how reads are classified and how minimizers are counted, so those

@@ -160,6 +160,20 @@ A lineage whose first rank is not a domain stops the run with a message that nam
 lineage table. The lineage of the Kraken2 table is described on the
 [output files](../reference/output.md#taxonomy-strings-in-the-final-tables) page.
 
+With `profiler: both` the two tables do not line up column by column. `otu_table.tsv`
+has eight slots on any Kraken2 database, `d__ k__ p__ c__ o__ f__ g__ s__`, and this
+table seven, without `k__`; and the two databases can name the same organism
+differently. The same archaeon in one run, Kraken2 (PlusPF) above and sylph (GTDB r232)
+below:
+
+```text
+d__Archaea;k__Methanobacteriati;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanobrevibacter;s__Methanobrevibacter smithii
+d__Archaea;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanocatella;s__Methanocatella smithii
+```
+
+No MetaFlux step joins the two tables. Compare them by rank name, not by column
+position.
+
 ## Reading the numbers
 
 - **Estimated read pairs, not counted ones.** A value in `sylph_table.tsv` is sylph's

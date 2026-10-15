@@ -112,7 +112,7 @@ shotgun:
 ### Where it acts
 
 ```text
-kraken2  →  kmer_evidence  →  bracken  →  kraken-biom  →  finalize_otu_table
+kraken2  →  kmer_evidence  →  bracken  →  finalize_otu_table
 ```
 
 The gate sits **between** Kraken2 and Bracken. It does not replace or skip Bracken — it

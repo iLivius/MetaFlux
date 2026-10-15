@@ -83,12 +83,13 @@ by hand.
 | Database                           | Mode               | Provisioning                                                           |
 |------------------------------------|--------------------|------------------------------------------------------------------------|
 | PhiX                               | both               | **Auto-fetched** (NCBI) for amplicon; BBDuk's bundled copy for shotgun |
-| SILVA 144 (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched + converted** — toGenus and species from SILVA (md5-checked), Kingdom rank removed and SINTAX built locally; SILVA 138.2 (from Zenodo) when the run config sets `references.silva.release: "138.2"` |
+| SILVA 144 (toGenus + species + SINTAX) | amplicon (16S) | **Auto-fetched + converted** — toGenus and species from SILVA (md5-checked); the training set keeps its seven ranks, kingdom included, with the kingdom names written without SILVA's `--other` suffix, and the SINTAX file is built locally; SILVA 138.2 (from Zenodo) when the run config sets `references.silva.release: "138.2"` |
 | UNITE (general + UCHIME + SINTAX)  | amplicon (ITS)     | **Auto-fetched** from PlutoF on first run                              |
 | PR2 (DADA2 + UTAX) + SILVA-Euk     | amplicon (18S)     | **Auto-fetched** from GitHub/Zenodo on first run                       |
 | DD7RZ8 (DADA2 trainset)            | amplicon (gyrB)    | **Auto-fetched** from Recherche Data Gouv                              |
 | FROGS RefSeq (converted to DADA2)  | amplicon (rpoB)    | **Auto-fetched + converted** on first run                              |
-| Kraken2 database                   | shotgun            | **User-supplied** (see below)                                          |
+| Kraken2 database                   | shotgun (`profiler: kraken2` or `both`) | **User-supplied** (see below)                     |
+| sylph databases + lineage tables   | shotgun (`profiler: sylph` or `both`) | **User-supplied** (see [sylph](../shotgun/sylph.md#databases-and-lineage-tables-set-up-once)) |
 | Host genome(s)                     | shotgun (optional) | **User-supplied** (path or URL)                                        |
 
 ### Marker databases (fetched automatically)
@@ -104,11 +105,11 @@ does not pull UNITE or PR2.
 
 | Marker | Files created under `refdb_root` | Where they come from |
 |--------|----------------------------------|----------------------|
-| 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz`, `silva/silva_v144_assignSpecies.fa.gz`, plus three built files: `silva/silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz`, `silva/silva_nr99_v144_kingdom_map_other-verbatim.tsv`, `silva/silva_nr99_v144_6rank_other-verbatim_sintax.fa.gz` | SILVA's `release_144` DADA2 folder, md5-checked; the six-rank trainset and kingdom table are built by `convert_silva_train`, the SINTAX file by `convert_silva_sintax`. With `references.silva.release: "138.2"`: `silva_nr99_v138.2_toGenus_trainset.fa.gz` and `silva_v138.2_assignSpecies.fa.gz` from Zenodo (md5-checked), and `silva_nr99_v138.2_sintax.fa.gz` built from the trainset. With either release the species file is fetched only for `method: rdp`, and the SINTAX file is built only for `method: sintax` |
+| 16S | `silva/silva_nr99_v144_toGenus_trainset.fa.gz`, `silva/silva_v144_assignSpecies.fa.gz`, plus two built files: `silva/silva_nr99_v144_toGenus_7rank_other-verbatim_trainset.fa.gz`, `silva/silva_nr99_v144_7rank_other-verbatim_sintax.fa.gz` | SILVA's `release_144` DADA2 folder, md5-checked; the seven-rank trainset is built by `convert_silva_train`, the SINTAX file by `convert_silva_sintax`. With `references.silva.release: "138.2"`: `silva_nr99_v138.2_toGenus_trainset.fa.gz` and `silva_v138.2_assignSpecies.fa.gz` from Zenodo (md5-checked), and `silva_nr99_v138.2_sintax.fa.gz` built from the trainset. With either release the species file is fetched only for `method: rdp`, and the SINTAX file is built only for `method: sintax` |
 | ITS | `unite/sh_general_release_dynamic_s_all_19.02.2025.fasta`, `unite/utax_reference_dataset_all_19.02.2025.fasta.gz`, `unite/uchime_its1.fasta`, `unite/uchime_its2.fasta` | PlutoF; the general release arrives as a `.tgz` and the UCHIME subregions as a `.zip`, both unpacked by `fetch_unite` / `fetch_uchime` |
 | 18S | `silva_euk/silva_132.18s.dada2.fa.gz`, `pr2/pr2_SSU_dada2.fasta.gz`, `pr2/pr2_SSU_UTAX.fasta.gz`, plus one built file: `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` | Zenodo (SILVA-Euk v132) and the PR2 v5.1.1 GitHub release; the built file is the UTAX file with its domain moved to the SINTAX letter `d:`, made by `convert_pr2_sintax` and only for `method: sintax` |
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
-| rpoB | `rpob/rpob_refseq_cc_20240707_dada2.fa.gz` | FROGS rpoB databank (INRAE Toulouse); downloaded as a `.tar.gz` and rewritten into a DADA2 trainset by `convert_rpob_to_dada2` |
+| rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | FROGS rpoB databank (INRAE Toulouse); downloaded as a `.tar.gz` and rewritten into a DADA2 trainset, with the domain written `d__`, by `convert_rpob_to_dada2` |
 
 `refdb_root` defaults to `refdb`, i.e. inside the clone:
 
@@ -179,6 +180,12 @@ the path does not exist, MetaFlux stops before any job runs, with:
 ```text
 [MetaFlux] mode=shotgun requires kraken_db but not found: /path/to/db/k2_pluspf
 ```
+
+MetaFlux also reads `taxo.k2d` itself when the run starts, to build the lineages of
+the OTU table, so a directory without a readable `taxo.k2d` stops the run there too
+(see [reference databases](../shotgun/databases.md#pointing-metaflux-at-the-database)).
+A run with `shotgun.profiler: sylph` needs no Kraken2 database at all: it reads sylph
+databases instead (see [sylph](../shotgun/sylph.md#databases-and-lineage-tables-set-up-once)).
 
 Pre-built indexes, with sizes, build dates and md5 checksums, are listed in Ben
 Langmead's [catalog](https://benlangmead.github.io/aws-indexes/k2). A standard

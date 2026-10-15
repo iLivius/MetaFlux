@@ -37,10 +37,10 @@ in pipeline order under `out_dir`, so the directory listing reads like the workf
 | 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `07.phylogeny/`, `stats/phylogeny/` |
 
 Two more rules close the run: `aggregate_read_counts` builds `stats/read_tracking.txt`,
-and `multiqc` builds `multiqc/multiqc_report.html`. A 16S run on SILVA 144 (the default
-reference) adds a third, `restore_kingdom`, which writes
-`06.taxonomy/taxonomy_lineage_full.tsv`, the lineage with SILVA's kingdom rank put back
-(see [16S rRNA](markers/16S.md)).
+and `multiqc` builds `multiqc/multiqc_report.html`. One small rule runs before any of the
+taxonomy: `check_taxonomy_reference` checks the reference the classifier will read
+against the marker pack and writes `stats/taxonomy_reference_check.json` (see
+[step 9](#9-taxonomy-assignment)).
 
 Stage 10 is off by default and runs only for 16S. It takes the contaminant-filtered ASVs
 from `06.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity
@@ -387,16 +387,25 @@ SINTAX build, so `method: sintax` is rejected at startup with a clear message ra
 failing later.
 
 The reference database follows from the marker — SILVA for 16S, UNITE for ITS, PR2 for 18S,
-DD7RZ8 for gyrB, FROGS RefSeq for rpoB — and is fetched on first use. Two of them arrive
-by way of a local conversion step rather than a plain download: for 16S, SILVA 144's
-training set has its Kingdom rank removed by `convert_silva_train` and the SINTAX database
-is built from the result by `convert_silva_sintax`, and the rpoB reference is rebuilt
-from the FROGS release by `convert_rpob_to_dada2`. See the
-[marker pages](markers/index.md) for what each one contains.
+DD7RZ8 for gyrB, FROGS RefSeq for rpoB — and is fetched on first use. Some of them arrive
+by way of a local conversion step rather than a plain download: for 16S,
+`convert_silva_train` writes SILVA 144's training set with its kingdom names without
+SILVA's `--other` suffix and `convert_silva_sintax` builds the SINTAX database from it;
+for 18S under `sintax`, `convert_pr2_sintax` moves the domain of PR2's UTAX file to the
+SINTAX letter `d:`; and the rpoB reference is rebuilt from the FROGS release by
+`convert_rpob_to_dada2`. See the [marker pages](markers/index.md) for what each one
+contains.
+
+Before any classification, `check_taxonomy_reference` reads the exact file the
+classifier will use and checks it against the marker pack: the number of ranks (or the
+SINTAX letters and their order), the rank prefixes, and the names in the top ranks. A
+wrong file, such as another SILVA release's training set pinned in the run config,
+stops the run there, before a name can land in the wrong column. A file that passes
+gets a record, `stats/taxonomy_reference_check.json`, and only then does
+`assign_taxonomy` start. See [the reference check](markers/index.md#the-reference-check-reference_values).
 
 Both paths write the same four tables; the `sintax` path additionally leaves
-`_sintax_raw.tsv`, the raw VSEARCH output, for troubleshooting, and a 16S run on SILVA
-144 adds `taxonomy_lineage_full.tsv` with the Kingdom rank put back.
+`_sintax_raw.tsv`, the raw VSEARCH output, for troubleshooting.
 
 | File | Rows | Columns |
 |------|------|---------|
@@ -405,13 +414,18 @@ Both paths write the same four tables; the `sintax` path additionally leaves
 | `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank + the sequence |
 | `asv_table_unfiltered.txt` | `ASV_#` IDs, every ASV that reached the filter | per-sample counts + taxonomy + `metaxa2_origin` + `filter_status` |
 
-The taxonomy string is built from the marker's rank model, so it has the right depth for
-the reference in use — the Linnaean seven for 16S, ITS and rpoB, and nine ranks for
-PR2/18S under `method: rdp` (PR2's UTAX file merges Division and Subdivision into one
-field, so `method: sintax` yields eight). gyrB is seven ranks deep too, but its first rank
-is the DD7RZ8 paralog tag — `gyrB` for the true gene, `other` for a co-amplified paralog —
-rather than a kingdom, so a gyrB lineage carries no `k__` segment at all. See the
-[gyrB page](markers/gyrb.md).
+The taxonomy string is built from the marker's rank model, which follows the ranks of
+the reference in use: `d__` is always the domain and `k__` always the kingdom, and a
+string has a kingdom only where the reference defines one. So 16S on SILVA 144 has eight
+ranks (Domain, Kingdom, Phylum … Species) and on SILVA 138.2 seven, with no kingdom; ITS
+has seven starting at the kingdom, because UNITE has no domain; rpoB has seven starting
+at the domain; 18S has PR2's nine ranks under `method: rdp` and eight under
+`method: sintax`, where PR2's UTAX file merges Division and Subdivision into one field.
+gyrB is seven ranks deep too, but its first rank is the DD7RZ8 paralog tag — `gyrB` for
+the true gene, `other` for a co-amplified paralog — so a gyrB lineage has no domain or
+kingdom at all. See the [gyrB page](markers/gyrb.md), and
+[taxonomy strings in the final tables](../reference/output.md#taxonomy-strings-in-the-final-tables)
+for every marker's slots side by side.
 
 The last thing the step does is apply the keep/discard contaminant filter
 (`amplicon.taxonomy.filter`), which matches whole rank segments of each ASV's lineage.
@@ -419,8 +433,11 @@ The last thing the step does is apply the keep/discard contaminant filter
 order or family call fell under the cutoff can still be removed
 (`filter.discard_min_support`). The filter has no built-in default for the lists: left
 unset, both resolve to `[]` and match nothing.
-The lists have to match the marker being run — a 16S keep list applied to an 18S run would
-discard every ASV. For 16S the filter also removes, by default, the ASVs that Metaxa2
+The lists have to match the marker being run. A token that this run's strings can never
+contain (`k__Bacteria`, or any `d__` token on ITS) stops the run at start-up, before any
+step; a token that the marker does have but the study does not want, such as a 16S
+`keep: [d__Bacteria, d__Archaea]` on an 18S run, passes and removes nearly every ASV.
+For 16S the filter also removes, by default, the ASVs that Metaxa2
 called mitochondria or chloroplast in step 7 (`filter.organelles`), whatever the lists say;
 every ASV, removed ones included, stays listed in `asv_table_unfiltered.txt`. It is
 described on the [keeping and discarding taxa](taxon-filter.md) page.

@@ -48,11 +48,16 @@ reads the filter removed, per sample.
 ## How matching works
 
 Each ASV's taxonomy string is a lineage with ranks joined by `;` (no space), each rank
-carrying its own prefix:
+carrying its own prefix. Which ranks a string has follows the marker's reference: a 16S
+string on SILVA 144, for example, reads
 
 ```text
-k__…;p__…;c__…;o__…;f__…;g__…;s__…
+d__…;k__…;p__…;c__…;o__…;f__…;g__…;s__…
 ```
+
+while on SILVA 138.2 it has no `k__` slot and on ITS no `d__` slot. The slots of every
+marker are listed under
+[taxonomy strings in the final tables](../reference/output.md#taxonomy-strings-in-the-final-tables).
 
 A token in `keep` or `discard` is compared against **whole rank segments** of that
 string — the pieces between the semicolons — not against the string as a whole. A token
@@ -73,8 +78,8 @@ label as the token. See [16S rRNA](markers/16S.md#the-other-suffix-amplicontaxon
 An ASV passes the filter as follows:
 
 - **`keep` runs first and defines what survives.** An ASV is kept only if at least one
-  of its ranks matches a `keep` token. `keep: [k__Bacteria, k__Archaea]` therefore keeps
-  prokaryotes and drops both eukaryotic hits and anything left unclassified at kingdom
+  of its ranks matches a `keep` token. `keep: [d__Bacteria, d__Archaea]` therefore keeps
+  prokaryotes and drops both eukaryotic hits and anything left unclassified at domain
   level — an ASV with an empty lineage matches nothing, so it does not survive a
   non-empty `keep`.
 - **`discard` then prunes what remains.** An ASV is removed if any of its ranks matches
@@ -95,7 +100,7 @@ amplicon:
   taxonomy:
     filter:
       enabled: true
-      keep:    [k__Bacteria, k__Archaea]
+      keep:    [d__Bacteria, d__Archaea]
       discard: [o__Chloroplast, f__Mitochondria]
       discard_min_support: 50
       organelles: metaxa2
@@ -120,18 +125,20 @@ Two consequences worth spelling out, because they are easy to conflate:
   error.
 - `enabled: false` with populated lists ignores those lists completely, and switches
   the organelle filter off as well. It is the quick way to test what the filter was
-  actually costing.
+  actually costing. The tokens are still checked when the run starts, so that they are
+  right on the run that switches the filter back on (see
+  [when MetaFlux refuses a token at start-up](#when-metaflux-refuses-a-token-at-start-up)).
 
 ### Why the shipped config has the values commented out
 
 `config/config.yaml` is always loaded as a base layer underneath the `--configfile`
 given on the command line. Any concrete value written there would silently apply to
 every run that does not override it — 16S tokens leaking into an 18S run, for instance,
-where `keep: [k__Bacteria, k__Archaea]` would discard every eukaryotic ASV. So the
+where `keep: [d__Bacteria, d__Archaea]` would discard every eukaryotic ASV. So the
 template ships the recommended values commented out:
 
 ```yaml
-      keep:    #[k__Bacteria, k__Archaea]
+      keep:    #[d__Bacteria, d__Archaea]
       discard: #[o__Chloroplast, f__Mitochondria]
 ```
 
@@ -166,7 +173,7 @@ reported lineage (the species from `addSpecies` has no support value). Each ASV 
 this way gets its own log line:
 
 ```text
-[assign_taxonomy]   ASV_19: best hit f__Mitochondria at 70% support (reported as k__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria)
+[assign_taxonomy]   ASV_19: best hit f__Mitochondria at 70% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
 [assign_taxonomy] Discard filter, best-hit check (support >= 50%): 5 more ASV(s) removed
 ```
 
@@ -234,7 +241,7 @@ and every ASV that only Metaxa2 caught (numbers illustrative):
 [assign_taxonomy/sintax] Organelle filter (Metaxa2 origin): 29 ASV(s), 2984 reads, called mitochondria (29) or chloroplast (0)
 [assign_taxonomy/sintax]   already removed above by the tokens or the best-hit check: 26 ASV(s), 2977 reads (keep 0, discard 20, best-hit check 6)
 [assign_taxonomy/sintax]   removed only by the organelle filter: 3 ASV(s), 7 reads
-[assign_taxonomy/sintax]     ASV_199: mitochondria by Metaxa2, 3 reads (reported as k__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Hyphomicrobiales--other)
+[assign_taxonomy/sintax]     ASV_199: mitochondria by Metaxa2, 3 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria;o__Hyphomicrobiales--other)
 ```
 
 ### The table with everything: `asv_table_unfiltered.txt`
@@ -275,16 +282,16 @@ These are starting points, not defaults — nothing in the code applies them.
 
 | Marker | `keep` | `discard` |
 |--------|--------|-----------|
-| 16S | `[k__Bacteria, k__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
+| 16S | `[d__Bacteria, d__Archaea]` | `[o__Chloroplast, f__Mitochondria]` |
 | ITS | `[k__Fungi]` | `[]` |
 | 18S | `[d__Eukaryota]` — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S rRNA](markers/18S.md) | `[]` |
 | gyrB | *no recommended default* — see below | |
 | rpoB | *no recommended default* — see below | |
 
-**18S** uses `d__Eukaryota`, not `k__Eukaryota`: the taxonomy reference is PR2, whose
-top rank is Domain and is emitted with the `d__` prefix under both methods.
-SILVA-Eukaryotic only sizes the amplicon (the length probe) and never names an ASV, so its
-rank labels play no part in the filter.
+**16S and 18S** start with the domain, written `d__` under both methods; ITS starts with
+the kingdom, `k__`, because UNITE has no domain rank. For 18S the taxonomy reference is
+PR2: SILVA-Eukaryotic only sizes the amplicon (the length probe) and never names an ASV,
+so its rank labels play no part in the filter.
 
 **gyrB** has no recommended keep/discard, but it does have a filter worth applying, of a
 different kind. The DD7RZ8 reference tags every entry's first rank as `gyrB` (the true
@@ -314,28 +321,29 @@ database spells them. The reliable way to get that right is to copy the name fro
 `taxonomy` column of `06.taxonomy/asv_table_unfiltered.txt`, which lists every ASV of a
 run, the removed ones included.
 
-The rank prefixes for the Linnaean seven ranks (16S, ITS, gyrB from phylum down, rpoB):
+The rank prefixes, and the markers whose strings have each rank:
 
-| Rank | Prefix |
-|------|--------|
-| Kingdom | `k__` |
-| Phylum | `p__` |
-| Class | `c__` |
-| Order | `o__` |
-| Family | `f__` |
-| Genus | `g__` |
-| Species | `s__` |
+| Rank | Prefix | Markers |
+|------|--------|---------|
+| Domain | `d__` | 16S, 18S, rpoB |
+| Kingdom | `k__` | 16S on SILVA 144, ITS |
+| Phylum | `p__` | 16S, ITS, gyrB, rpoB |
+| Class | `c__` | all five |
+| Order | `o__` | all five |
+| Family | `f__` | all five |
+| Genus | `g__` | all five |
+| Species | `s__` | all five; on 16S under `rdp` only |
 
-18S is the exception, because PR2 has more ranks: Domain `d__`, Supergroup `sg__`,
-Division `dv__`, Subdivision `sbd__`, then Class, Order, Family, Genus, Species with the
-usual prefixes. The `sintax` path for 18S merges Division and Subdivision into a single
-`dv__` field, so a subdivision-level token only exists on the `rdp` path.
+gyrB's first slot is its gene tag, `gyrB` or `other`, with no prefix. 18S has PR2's own
+ranks between the domain and the class: Supergroup `sg__`, Division `dv__`, Subdivision
+`sbd__`. The `sintax` path for 18S merges Division and Subdivision into a single `dv__`
+field, so a subdivision-level token only exists on the `rdp` path.
 
 Species-level tokens need extra care, because the exact form follows the reference and
 not the pipeline: SILVA (16S) via `rdp` yields a binomial with a space, e.g.
-`s__Bacillus subtilis`, while UNITE (ITS), the GTDB-derived gyrB reference and the
-NCBI RefSeq-derived rpoB reference use an underscore, e.g. `s__Staphylococcus_simiae`.
-The `sintax` path emits whatever label its database carries. Copy, do not retype.
+`s__Bacillus subtilis`, while UNITE (ITS, under both methods), PR2 (18S), the
+GTDB-derived gyrB reference and the NCBI RefSeq-derived rpoB reference use an
+underscore, e.g. `s__Staphylococcus_simiae`. Copy, do not retype.
 
 !!! tip
 
@@ -346,21 +354,73 @@ The `sintax` path emits whatever label its database carries. Copy, do not retype
     discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
     ```
 
+## When MetaFlux refuses a token at start-up
+
+A token that no taxonomy string of the run can contain would remove every ASV in
+`keep`, or nothing in `discard`, and the run would only find out after the denoising and
+the classification. So the tokens are checked when the workflow is read, before any step
+runs, against the slots of the strings this run writes: the marker's ranks, for the
+taxonomy method and, for 16S, the SILVA release in use. One stop lists every problem and,
+where there is one, the token to write instead. The check runs also with
+`enabled: false`, so a wrong token is caught when it is written, not on the run that
+switches the filter on.
+
+A token stops the run when:
+
+| Problem | Examples |
+|---|---|
+| its prefix is one this run's strings never have | `k__…` on 16S with SILVA 138.2, or on rpoB; `d__…` on ITS; `sbd__…` on 18S under `sintax`; `s__…` on 16S under `sintax` |
+| it has no prefix (gyrB's gene tag excepted), or no name after the prefix | `Bacteria`, `d__` |
+| it puts a domain under `k__`, also where the strings have a `k__` slot | `k__Bacteria`, which stops with "write d__Bacteria" |
+| its name can never stand in that slot of the marker's reference | `d__Fungi` on 16S; `k__Fungi` or `k__Bacteroidota` on 16S with SILVA 144; `sg__Eukaryota` on 18S; `Other` on gyrB; `d__Archaea` on rpoB |
+| it is not text: YAML reads a bare `yes`, `no`, `null` or a number as something else | `keep: [yes]` |
+
+The last-but-one row uses the marker pack's `reference_values`, the rules the reference
+file itself has to pass before any classification (see
+[the reference check](markers/index.md#the-reference-check-reference_values)). A trailing
+`--other` is dropped from a name before the check, as the filter itself drops it. The
+rules cover the top ranks only, and an `ends_with` rule checks only the ending: on SILVA
+144 any name ending in `ati` passes as a kingdom, a misspelt `k__Bacilati` included.
+
+A typical stop, for a 16S config written for MetaFlux v2.4.0 or earlier:
+
+```text
+[MetaFlux] these amplicon.taxonomy.filter tokens can never match a taxonomy string of this run (16S, method sintax, release 144), so the run stops before any step:
+  - amplicon.taxonomy.filter.keep: 'k__Bacteria' puts a domain under k__, which holds kingdoms in this table. Bacteria is a domain: write d__Bacteria.
+  - amplicon.taxonomy.filter.keep: 'k__Archaea' puts a domain under k__, which holds kingdoms in this table. Archaea is a domain: write d__Archaea.
+A token must equal one whole slot of the taxonomy string, prefix included. Since v2.5.0 the domain is always written d__, and k__ is the kingdom where the reference has one.
+```
+
+Where a prefix belongs to the marker but not to this run's taxonomy method, the message
+says why: an `s__` token on 16S under `sintax` gets "16S under method: sintax writes no
+species", an `sbd__` token on 18S under `sintax` "Under method sintax it is part of
+Division_Subdivision, written dv__".
+
+What the check cannot see, because the names themselves are not checked there:
+
+- a misspelt name in a slot without a rule — a genus, a family, a species — passes and
+  then matches nothing;
+- a 16S species written with an underscore: 16S writes `s__Escherichia coli`, with a
+  space, so `s__Escherichia_coli` passes under `rdp` and matches nothing;
+- on 18S, a `dv__` name in the other method's form: under `sintax` PR2 joins Division and
+  Subdivision with "-" (`dv__Opisthokonta-Fungi`), so `dv__Opisthokonta` matches nothing
+  there, and under `rdp` the joined form matches nothing (see
+  [18S rRNA](markers/18S.md#pr2-ships-two-rank-depths)).
+
 ## When the filter empties the table
 
 If the filter removes 100% of ASVs, the run stops with an error instead of writing a
-header-only table. In practice that outcome almost always means the lists do not match
-the marker — 16S keep tokens on an ITS run, or `k__Eukaryota` on an 18S run classified
-against PR2, where the top rank is `d__`. A silent empty table would be discovered much
-later, in R, with no clue as to why.
+header-only table. Tokens that can never match stop the run at start-up already (above),
+so at this point the tokens fit the marker's strings but not the run: a token the marker
+has but the study does not want (an 18S `d__Eukaryota` left in a 16S config, where SILVA
+holds a few eukaryote records), a misspelt genus or family, or a taxon the samples simply
+do not hold. A silent empty table would be discovered much later, in R, with no clue as
+to why.
 
 The error names the marker and the number of ASVs lost (numbers below are illustrative):
 
 ```text
-the keep/discard filter removed ALL 1843 ASVs (amp_type=ITS). The keep/discard lists
-likely do not match this marker: for ITS use keep: [k__Fungi]; for 16S use keep:
-[k__Bacteria, k__Archaea]. Fix amplicon.taxonomy.filter, or set
-amplicon.taxonomy.filter.enabled: false.
+the keep/discard filter removed ALL 1843 ASVs (amp_type=ITS). The keep/discard lists likely do not match this marker: for 16S use keep: [d__Bacteria, d__Archaea]; for 18S keep: [d__Eukaryota]; for ITS keep: [k__Fungi]. Fix amplicon.taxonomy.filter, or set amplicon.taxonomy.filter.enabled: false.
 ```
 
 If the organelle filter removed some of them, the message ends with how many, and that
@@ -372,15 +432,18 @@ run that produced no ASVs at all fails earlier and for its own reasons.
 
 What to check, in order:
 
-1. The rank prefix. Does the marker's reference use `k__` or `d__` at the top?
-2. The marker itself — is `amplicon.type` what the tokens were written for?
-3. The spelling, against the `taxonomy` column of a run made with `enabled: false`.
+1. The marker itself — is `amplicon.type` what the tokens were written for?
+2. The spelling, against the `taxonomy` column of a run made with `enabled: false`.
+3. Whether the samples hold the taxon at all, in `06.taxonomy/asv_table_unfiltered.txt`
+   of that run.
 
 !!! note "Run-to-run reproducibility of the filtered set"
     With a fixed `amplicon.seed`, the confidence values the filter reads come out the
     same at any thread count (`sintax` from v2.5.0 on), and so does the filtered ASV
-    set. With `rdp`, DADA2's random tie-breaking can still move a bootstrap value by a
-    point between identical runs (see [Troubleshooting](../troubleshooting.md)).
+    set. With `rdp`, DADA2's random tie-breaking can still move a bootstrap value
+    between identical runs, and now and then flip an ASV's whole lineage, so that a
+    token keeps or removes that ASV from one run to the next (see
+    [Troubleshooting](../troubleshooting.md#amplicon-asv-counts-or-taxonomy-calls-differ-between-identical-re-runs)).
 
 ## Seeing what the filter did
 
@@ -388,7 +451,7 @@ Both classifier paths log their counts to `logs/assign_taxonomy.log`, one line p
 step that say exactly how many ASVs each direction cost:
 
 ```text
-[assign_taxonomy] Keep filter (k__Bacteria,k__Archaea): 1620 / 1843 ASVs retained
+[assign_taxonomy] Keep filter (d__Bacteria,d__Archaea): 1620 / 1843 ASVs retained
 [assign_taxonomy] Discard filter (o__Chloroplast,f__Mitochondria): 47 ASV(s) removed
 [assign_taxonomy] Discard filter, best-hit check (support >= 50%): 3 more ASV(s) removed
 [assign_taxonomy] Organelle filter (Metaxa2 origin): 61 ASV(s), 8210 reads, called mitochondria (40) or chloroplast (21)
@@ -428,6 +491,31 @@ One difference from the amplicon side: it ships **off** (`enabled: false`). Meta
 sample types vary too much for a universal starting point; common uses are
 `keep: [d__Bacteria, d__Archaea]` for prokaryotes only, or `discard: [g__Homo]` as an
 explicit host safety net.
+
+The OTU table always has eight slots, `d__ k__ p__ c__ o__ f__ g__ s__`, on any Kraken2
+database. A virus has no domain: its `d__` slot holds its realm (`d__Duplodnaviria`) or
+stays empty, so `keep: [d__Bacteria, d__Archaea]` also drops every virus, and so does
+`[d__Bacteria, d__Archaea, d__Eukaryota]`, together with anything else without a domain
+(plasmids). To keep viruses, list their realms. Realm names follow the NCBI taxonomy the
+database was built with (the realm called Monodnaviria in older builds is Floreoviria in
+newer ones).
+
+When Kraken2 runs, these tokens are checked at start-up as well, against the eight slots
+and against the database itself, whose domains, kingdoms and realms MetaFlux reads from
+its `taxo.k2d` file:
+
+- the run stops on a token with a wrong or missing prefix, a domain under `k__`
+  (`k__Bacteria`), `Viruses` under any prefix (no slot holds it; the message lists the
+  database's realms instead), a realm under `k__` (`k__Duplodnaviria`, write
+  `d__Duplodnaviria`) and, with the filter on, a `keep` list none of whose tokens can
+  match a row of this database;
+- it only warns about a well-formed token that this database gives no row: any `k__`
+  token on a GTDB database, which has no kingdom rank, or a domain, realm or kingdom
+  the database does not have. One config can serve several databases, so this alone
+  does not stop the run.
+
+With `profiler: sylph` the tokens are not checked, because the filter acts on
+`otu_table.tsv` only and sylph's tables are written unfiltered.
 
 Like the amplicon filter, it stops the run when it removes every OTU, instead of
 writing an empty table. The error names the tokens and lists the `d__` values the table

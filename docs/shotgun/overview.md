@@ -36,8 +36,8 @@ both for `profiler: both`. See [Reference databases](databases.md).
 ## The chain
 
 ```text
-raw R1/R2 ──▶ BBDuk PhiX* ──▶ BBMap host* ──▶ fastp ──▶ Kraken2 ──▶ Bracken ──▶ kraken-biom
-                _dephix         _dehost        _trim      report      report     otu_table
+raw R1/R2 ──▶ BBDuk PhiX* ──▶ BBMap host* ──▶ fastp ──▶ Kraken2 ──▶ Bracken ──▶ OTU table
+                _dephix         _dehost        _trim      report      report     .tsv + .biom
                                                             │
                                                             └──▶ KrakenTools per-taxon reads*
 
@@ -58,7 +58,7 @@ whatever ran before it — the chain closes up on its own, and no placeholder fi
 produced.
 
 The rules carry descending Snakemake priorities (`download_sra` 10 down to
-`kraken_biom` 1), so when many jobs are ready at once the scheduler works through the
+`finalize_otu_table` 1), so when many jobs are ready at once the scheduler works through the
 early stages first rather than starting classification while reads are still being
 fetched.
 
@@ -268,7 +268,8 @@ come from the clade counts and are the same with either build.
 
 Input: the Kraken2 report plus the fastp JSON. Output, in `03.abundance/`:
 `{sample}_report.txt` (Bracken's re-estimated report) and `{sample}_output.txt`
-(the per-taxon abundance table). Consumed by kraken-biom and by MultiQC.
+(the per-taxon abundance table). The reports are consumed by the OTU-table step and by
+MultiQC.
 
 !!! tip "Drop to genus on a shallow database"
 
@@ -298,19 +299,51 @@ Input: the Kraken2 report plus the fastp JSON. Output, in `03.abundance/`:
 
 ## 7. OTU table
 
-*Rules `kraken_biom` and `finalize_otu_table`.*
+*Rule `finalize_otu_table`.*
 
-[kraken-biom](https://github.com/smdabdoub/kraken-biom) merges every sample's Bracken
-report into one taxon × sample table in BIOM (HDF5) format. That raw table is then
-tidied in a second step, which:
+MetaFlux builds the OTU table itself, straight from the per-sample Bracken reports: one
+row per taxon at `shotgun.bracken.tax_lev`, one column per sample, and in each cell
+Bracken's re-estimated read count for that taxon (the clade count of its row in the
+sample's report). Taxa appear in the order they are first met, reading the samples in
+the order of the sample sheet.
 
-- strips the `_report` suffix that kraken-biom copies from the filenames onto the
-  sample IDs;
-- rebuilds the species field into a `Genus species` binomial (kraken-biom emits a
-  bare epithet, e.g. `s__denitrificans`), so shotgun and amplicon tables carry the
-  same kind of lineage string — ranks joined by `;` with no space, each prefixed
-  `k__ p__ c__ o__ f__ g__ s__`;
-- applies the optional taxon filter.
+Every row carries a lineage of eight fixed slots, one for each rank code Kraken2 prints
+in its reports, on any database:
+
+```text
+d__ k__ p__ c__ o__ f__ g__ s__      domain, kingdom, phylum, class, order, family, genus, species
+```
+
+- **Where the names come from.** A slot takes the name of the row, on the path from the
+  report's root down to the taxon, whose code is exactly the slot's letter (`D`, `K`,
+  `P` …). Rows with a numbered code (`K1`, `P3`, `R2` …) are in-between nodes and get no
+  slot.
+- **Empty slots.** A rank that the lineage does not have leaves its slot empty: `k__` is
+  empty in every row on a GTDB database, which has no kingdom rank, and on NCBI
+  databases for the taxa NCBI places in no kingdom, most protists among them; at
+  `tax_lev: G` the `s__` slot is empty.
+- **Viruses carry their realm in `d__`.** A virus has no domain. Its `d__` slot holds
+  its realm, the top rank of virus taxonomy, and its viral kingdom sits in `k__`, on
+  every NCBI database. Kraken2 has no rank code for a realm, so MetaFlux recognises
+  realms by their rank in the database's own taxonomy file, `taxo.k2d` (see
+  [Reference databases](databases.md#pointing-metaflux-at-the-database)). A virus
+  without a realm keeps an empty `d__`, as do plasmids. Viruses itself is never written
+  as a domain, also on a database built when NCBI still ranked it a superkingdom.
+- **Species names are whole**, exactly as the database writes them.
+
+```text
+d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__Escherichia coli
+d__Eukaryota;k__Fungi;p__Ascomycota;c__Pichiomycetes;o__Serinales;f__Debaryomycetaceae;g__Candida;s__Candida albicans
+d__Duplodnaviria;k__Heunggongvirae;p__Uroviricota;c__Caudoviricetes;o__;f__Peduoviridae;g__Peduovirus;s__Peduovirus P37
+```
+
+While it builds the table, the step also checks the reports and stops on two things it
+cannot trust: a `D` or `K` code that disagrees with the database (reports written by a
+Kraken2 older than 2.17, which codes NCBI's domains `R1` or `R2`, or reports made with
+another database), and one taxon with two different lineages. See
+[Troubleshooting](../troubleshooting.md#shotgun-the-table-step-stops-on-a-report-code).
+
+Then it applies the optional taxon filter:
 
 ```yaml
 shotgun:
@@ -325,15 +358,20 @@ must match a whole segment of the lineage, never a loose substring — and it ru
 the final table only, after Bracken. It therefore changes which OTUs appear in the
 table, never how a read was classified. It is off by default because metagenomic
 sample types vary too much for a sensible universal setting. Common uses are keeping
-prokaryotes (`keep: [d__Bacteria, d__Archaea]`) and dropping residual host
-(`discard: [g__Homo]`). If the filter would remove every taxon, the step stops with an
+prokaryotes (`keep: [d__Bacteria, d__Archaea]`, which drops viruses too, since their
+`d__` slot holds a realm) and dropping residual host (`discard: [g__Homo]`). The tokens
+are checked against the eight slots and the Kraken2 database when the run starts, so a
+token that can never match (`k__Bacteria`, now `d__Bacteria`) stops the run before
+Kraken2 does any work. If the filter would remove every taxon, the step stops with an
 error that names the tokens and lists the `d__` values in the table, rather than
 writing an empty table. The machinery is described in full under
-[Keeping and discarding taxa](../amplicon/taxon-filter.md).
+[Keeping and discarding taxa](../amplicon/taxon-filter.md#the-shotgun-counterpart).
 
-Output: `03.abundance/otu_table.biom` and `03.abundance/otu_table.tsv`. Both are
-rendered from the same filtered table, so they always agree. These are the main
-deliverable of a shotgun run.
+Output: `03.abundance/otu_table.biom` and `03.abundance/otu_table.tsv`, written from the
+same rows and numbers, so they always agree. These are the main deliverable of a
+shotgun run. With `profiler: both` the sylph table next to them has seven slots and no
+`k__`, so compare the two by rank name (see
+[taxonomy strings in the final tables](../reference/output.md#taxonomy-strings-in-the-final-tables)).
 
 ## 8. Per-taxon read extraction (optional)
 

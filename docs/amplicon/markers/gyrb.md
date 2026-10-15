@@ -209,7 +209,10 @@ amplicon:
 Filter tokens are matched against whole segments of the taxonomy string, so `other` matches
 the gene tag and only the gene tag — never a substring somewhere inside a species name.
 Because the tag carries no rank prefix, the token is written bare, unlike the prefixed
-tokens (`k__Bacteria`, `o__Chloroplast`) used for the rRNA markers. See
+tokens (`d__Bacteria`, `o__Chloroplast`) used for the rRNA markers. A gyrB lineage has
+no domain or kingdom slot: its first slot is the gene tag, then come `p__` to `s__`. So
+a `d__` or `k__` token stops the run at start-up, and so does a bare token other than
+the two tags (`Other` or `Bacteria`, say). See
 [Keeping and discarding taxa](../taxon-filter.md).
 
 `discard: [other]` drops the paralogs, and `keep: [gyrB]` is not an equivalent way of

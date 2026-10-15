@@ -1,12 +1,14 @@
 # Troubleshooting
 
-Eight situations come up often enough to be worth writing down: an automatic
+These situations come up often enough to be worth writing down: an automatic
 truncation length that throws away every read, a PhiX-removal step that stops on
 the read pairs, a shotgun OTU table that comes out empty at a rank other than
-species, a Bracken rank that MetaFlux refuses, a shotgun taxon filter that removes
-every taxon, small differences between two runs on the same data, a reference
-download that fails its md5 check, and YAML mistakes in the config. Each entry gives
-the symptom, the reason behind it, and what to change.
+species, a Bracken rank that MetaFlux refuses, a shotgun table step that stops on the
+codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgun
+taxon filter that removes every taxon, small differences between two runs on the same
+data, an outdated marker pack in `config/markers/`, a reference file that fails the
+reference check, a reference download that fails its md5 check, and YAML mistakes in
+the config. Each entry gives the symptom, the reason behind it, and what to change.
 
 ## Amplicon: automatic `truncLen` can drop all reads on very clean runs
 
@@ -224,22 +226,11 @@ neither were species-level runs.
 
 **Fix.** Update to v2.5.0 and run the same command again, from the same MetaFlux
 folder. v2.5.0 builds the table with rule `finalize_otu_table` straight from the Bracken
-reports, and pins Bracken 3.1p1, Kraken2 2.17.1 and bbmap 39.52 (see
-[What happens on a re-run](reference/running.md#what-happens-on-a-re-run)). The
-trimming, Kraken2, the k-mer evidence step, `bracken`, `finalize_otu_table`, read
-tracking (`aggregate_read_counts`) and MultiQC run again, and so do PhiX removal, host
-removal and per-taxon read extraction when they are on. Kraken2 cannot be kept from
-the earlier run: from v2.5.0 its files are written to `02.classification/kraken2/`, so
-an older folder gets them anew. A dry run (`-n`) lists the jobs before
-anything runs. If `finalize_otu_table` is not among them, for example because the run
-used `--rerun-triggers mtime` or the `.snakemake/` folder was deleted, force it:
-
-```bash
-snakemake --sdm conda --cores 4 --configfile <your config> -R finalize_otu_table
-```
-
-It builds the table again from the Bracken reports already in `03.abundance/`, from
-their clade counts, which plain Bracken 3.1 also wrote correctly.
+reports, from their clade counts, and pins Bracken 3.1p1. In a folder made with an
+earlier version every step runs again, Kraken2 included, because the output folders
+have new names (see
+[What happens on a re-run](reference/running.md#what-happens-on-a-re-run)), so nothing
+has to be forced.
 
 A config with `tax_lev: D` stops at start-up from v2.5.0 on; see the next entry.
 
@@ -304,6 +295,72 @@ above that rank, and that Bracken could not push down, are in no row (see
 [Bracken abundance re-estimation](shotgun/overview.md#6-bracken-abundance-re-estimation)).
 With `profiler: sylph` Bracken does not run, and `tax_lev` is not checked.
 
+## Shotgun: the table step stops on a report code
+
+!!! warning "Symptom"
+
+    The run stops at rule `finalize_otu_table` with a message like this one (wrapped
+    here):
+
+    ```text
+    [finalize_otu_table] SRR123_report.txt: Eukaryota (taxid 2759) is a domain in the
+    Kraken2 database set as references.kraken_db, but the report codes it R2, not D.
+    Kraken2 releases before 2.17 write reports like this (they do not know the rank name
+    'domain'), and so do reports made with another database. Run Kraken2 again on
+    references.kraken_db with the release MetaFlux pins (workflow/envs/kraken2.yaml), for
+    example with -R kraken2.
+    ```
+
+    Its relatives say that a taxon "is coded D, but it is not a domain", that a kingdom is
+    not coded `K` (or a `K` row is not a kingdom), or that one taxon "has two lineages".
+    No table is written.
+
+**Cause.** The OTU table takes its domain and kingdom slots from the rank codes of the
+Bracken reports, and MetaFlux checks every `D` and `K` code against the taxonomy of the
+database named in `references.kraken_db`, its `taxo.k2d` file. The two disagree when the
+Kraken2 reports were written by a Kraken2 older than 2.17, which codes NCBI's domains
+`R1` or `R2` (a run started without `--sdm conda` uses whatever Kraken2 is on the
+`PATH`), or when they were made with another database than the one the config names
+now. Reports of two databases can also give one taxon two lineages. A table built from
+such reports would have an empty `d__` slot in every row, or slots filled from another
+taxonomy, with no other sign that anything is wrong.
+
+**Fix.** Run Kraken2 again with MetaFlux's pinned environment (`--sdm conda`), against
+the database the config names; `-R kraken2` forces it when Snakemake sees nothing to
+redo. If instead the reports are right and the config names the wrong database, point
+`references.kraken_db` back at the database they were made with.
+
+## Start-up: the run refuses a keep/discard token
+
+!!! warning "Symptom"
+
+    The run stops before any step starts, with a message like this one (an amplicon
+    run; in a shotgun run the message names `shotgun.taxonomy_filter` and the Kraken2
+    database):
+
+    ```text
+    [MetaFlux] these amplicon.taxonomy.filter tokens can never match a taxonomy string of this run (16S, method sintax, release 144), so the run stops before any step:
+      - amplicon.taxonomy.filter.keep: 'k__Bacteria' puts a domain under k__, which holds kingdoms in this table. Bacteria is a domain: write d__Bacteria.
+      - amplicon.taxonomy.filter.keep: 'k__Archaea' puts a domain under k__, which holds kingdoms in this table. Archaea is a domain: write d__Archaea.
+    A token must equal one whole slot of the taxonomy string, prefix included. Since v2.5.0 the domain is always written d__, and k__ is the kingdom where the reference has one.
+    ```
+
+**Cause.** The taxon filter compares each token with whole slots of the taxonomy
+strings, so a token that no string of the run can contain would remove every ASV or
+taxon in `keep`, or nothing in `discard`, and the run would only find out at its end.
+MetaFlux therefore checks the tokens when it starts, also with the filter switched off.
+The usual cause is a config written for MetaFlux v2.4.0 or earlier, which wrote the
+domain under `k__` (`k__Bacteria`); since v2.5.0 `d__` is always the domain and `k__`
+always the kingdom. The message names the other causes too: a prefix the marker, method
+or SILVA release never writes (`k__` on SILVA 138.2 or rpoB, `d__` on ITS, `s__` on 16S
+under `sintax`), a name that cannot stand in that slot of the reference (`k__Fungi` on
+16S), and in a shotgun run `Viruses`, or a virus realm under `k__`.
+
+**Fix.** Write the token the message names (`d__Bacteria` for `k__Bacteria`) and run the
+same command again; nothing has run yet, so nothing is lost. The rules, and what the
+check cannot see, are under
+[when MetaFlux refuses a token at start-up](amplicon/taxon-filter.md#when-metaflux-refuses-a-token-at-start-up).
+
 ## Shotgun: the taxon filter removed every taxon
 
 !!! warning "Symptom"
@@ -313,7 +370,7 @@ With `profiler: sylph` Bracken does not run, and `tax_lev` is not checked.
 
     ```text
     [finalize_otu_table] shotgun.taxonomy_filter removed every taxon of the table
-    (111 taxa; keep: [k__Bacteria], discard: []). The d__ values in this table are:
+    (111 taxa; keep: [p__Firmicutes], discard: []). The d__ values in this table are:
     d__Archaea (1 taxon), d__Bacteria (107 taxa), d__Eukaryota (3 taxa). A token must
     equal one whole slot of the lineage, prefix included (d__ k__ p__ c__ o__ f__ g__
     s__). Check the tokens, or set shotgun.taxonomy_filter.enabled: false.
@@ -322,12 +379,14 @@ With `profiler: sylph` Bracken does not run, and `tax_lev` is not checked.
     No `otu_table.tsv` or `otu_table.biom` is written.
 
 **Cause.** `shotgun.taxonomy_filter` compares each token with whole slots of the
-lineage, so a token with the wrong prefix or a misspelt name matches nothing. A `keep`
-list in which no token matches removes every row, and so does a `discard` list that
-covers every row. An empty table would look like a finished run, so MetaFlux stops
-instead, as the amplicon filter does. A common cause is a token written for another
-table: in MetaFlux's shotgun tables `d__` holds the domain (`d__Bacteria`) and `k__` the
-kingdom (`k__Pseudomonadati`), so `k__Bacteria` matches nothing.
+lineage, so a token with a name the table does not have matches nothing. A `keep` list
+in which no token matches removes every row, and so does a `discard` list that covers
+every row. An empty table would look like a finished run, so MetaFlux stops instead, as
+the amplicon filter does. Tokens that can never match any table (a wrong prefix, a
+domain under `k__`) stop the run at start-up already (see
+[the entry above](#start-up-the-run-refuses-a-keepdiscard-token)), but names below the
+kingdom are not checked there, so a misspelt name, or one the database does not use,
+gets this far: NCBI's taxonomy names the phylum `p__Bacillota`, not `p__Firmicutes`.
 
 **Fix.** Compare the tokens with the `d__` values the message lists, or with the
 `taxonomy` column of a run made with `shotgun.taxonomy_filter.enabled: false`, correct
@@ -382,7 +441,73 @@ then no longer changes the result:
 - **`assignTaxonomy` (rdp): reproducible at any thread count, with one exception.**
   DADA2's `assignTaxonomy` breaks exact ties between equally good reference lineages at
   random, outside the seed, so a few bootstrap values can differ between identical runs;
-  `sintax`, the default, is not affected.
+  `sintax`, the default, is not affected. Now and then such a tie flips an ASV's whole
+  lineage between two identical runs, even its kingdom (an ITS ASV whose best hit is a
+  plant in one run and a fungus in the next), so a keep/discard token such as
+  `keep: [k__Fungi]` can keep that ASV in one run and drop it in the next.
+
+## Amplicon: an outdated marker pack in `config/markers/` stops the run
+
+!!! warning "Symptom"
+
+    Every amplicon run stops before any step starts, whichever marker it uses, with:
+
+    ```text
+    [MetaFlux] config/markers/18S.yaml was written for an older MetaFlux: it has no reference_values. A pack in config/markers/ replaces the shipped one completely, so copy workflow/markers/18S.yaml again and re-apply your change.
+    ```
+
+**Cause.** A pack in `config/markers/` replaces the shipped pack of the same name
+completely, so an old copy would bring back everything the shipped pack has changed
+since: an 18S pack from MetaFlux v2.4.0 would classify against PR2's own letter order,
+which hides the domain of many ASVs. Since v2.5.0 every pack declares
+`reference_values`, the rules its reference file is checked against before
+classification, so a pack without them was written for an older MetaFlux. Every pack in
+`config/markers/` is checked on every amplicon run, which is why an outdated 18S pack
+stops a 16S run too. A pack for a marker of your own without `reference_values` gets a
+message of its own, which says what to add.
+
+**Fix.** Copy the shipped pack (`workflow/markers/<marker>.yaml`) to `config/markers/`
+again and re-apply your change, or delete the copy if the shipped pack now does what
+you need. For a marker of your own, add `reference_values` with rules for its top
+ranks, or `reference_values: {}` to have only the rank shape checked (see
+[the reference check](amplicon/markers/index.md#the-reference-check-reference_values)).
+An 18S pack that does declare `reference_values` but keeps PR2's original SINTAX
+letters (`k, d, p, …`) stops under `method: sintax` with a message about VSEARCH's
+fixed letter order; the fix is the same.
+
+## Amplicon: the reference check stops the run
+
+!!! warning "Symptom"
+
+    The run stops at rule `check_taxonomy_reference`, before any classification, with
+    a message like this one (shortened):
+
+    ```text
+    [check_taxonomy_reference] /shared/dbs/silva_nr99_v144_toGenus_7rank_other-verbatim_trainset.fa.gz does not hold the ranks declared by the 16S marker pack, release 138.2, method rdp (Domain, Phylum, Class, Order, Family, Genus, Species):
+      - a lineage deeper than the 6 ranks the rank model expects in this file (the Species rank comes from addSpecies): 473,550 header(s)
+          e.g. >Bacteria;Pseudomonadati;Pseudomonadota;Gammaproteobacteria;Pseudomonadales;Pseudomonadaceae;Pseudomonas;
+      - the deepest lineage has 7 ranks, but the rank model expects 6 in this file (the Species rank comes from addSpecies)
+      The classifier would put names on the wrong ranks, so the run stops before any classification. Either the run config points at a wrong file (references:, and for 16S the SILVA release chosen with references.silva.release), or the reference changed upstream and its marker pack needs a new release block (see the reference_values notes in workflow/markers/16S.yaml).
+    ```
+
+**Cause.** A classifier never checks what a rank means: if a reference has one rank more
+or less than the marker pack expects, or two ranks swapped, every name lands in the
+wrong column and nothing errors. So before any classification MetaFlux checks the exact
+file the classifier is about to read against the rank set and the names its pack
+declares (see
+[the reference check](amplicon/markers/index.md#the-reference-check-reference_values)).
+The message names the file, what does not fit, and example headers. Almost always a path
+under `references:` points at the wrong file: in the example, a SILVA 144 training set
+(seven ranks, with the kingdom) pinned as `silva.train` for a run on SILVA 138.2 (six
+ranks). Less often the reference itself has changed upstream.
+
+**Fix.** Point the `references:` entry at the file that belongs to the run's marker and
+SILVA release, or remove it, so that MetaFlux uses, and if needed builds, its own (see
+[reference files MetaFlux builds itself](reference/configuration.md#reference-files-metaflux-builds-itself)).
+For 16S, keep `references.silva.release` and the pinned SILVA files together. If the
+reference itself has changed (a new release with another rank), the marker pack needs a
+new release block. `logs/refdb/check_taxonomy_reference.log` in the output directory
+lists every problem the check found.
 
 ## Amplicon: a reference download stops with "md5 mismatch"
 

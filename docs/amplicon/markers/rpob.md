@@ -27,7 +27,7 @@ RDP classifier is available.
 | Classifier | RDP only (`amplicon.taxonomy.method: rdp`) |
 | Separate species step | none — the trainset itself carries species |
 | Region extractor | none (no rpoB equivalent of Metaxa2 or ITSx) |
-| Rank model | `Kingdom;Phylum;Class;Order;Family;Genus;Species` |
+| Rank model | `Domain;Phylum;Class;Order;Family;Genus;Species` (no kingdom) |
 | Primers | none are shipped; Ogier 2019 `Univ_rpoB_deg` F/R is the usual pair |
 
 ## Setting up a run
@@ -87,7 +87,7 @@ chromosome-level NCBI RefSeq genomes — the rpoB genes extracted from those gen
 | Downloaded from | `https://web-genobioinfo.toulouse.inrae.fr/frogs_databanks/assignation/rpoB/rpoB_bacteria_NCBI_refseq_genome_complete_and_chromosome_20240707.tar.gz` |
 | Fetch rule | `fetch_rpob_archive` → `<out_dir>/logs/refdb/fetch_rpob_archive.log` |
 | Conversion rule | `convert_rpob_to_dada2` → `<out_dir>/logs/refdb/convert_rpob_to_dada2.log` |
-| Cached at | `refdb/rpob/rpob_refseq_cc_20240707_dada2.fa.gz` |
+| Cached at | `refdb/rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` |
 
 The cache root is `references.refdb_root` (default `refdb`). An entry under `references`
 is only needed to relocate a database that already exists elsewhere on disk — for rpoB that
@@ -96,11 +96,20 @@ entry names the **converted** file:
 ```yaml
 references:
   rpob:
-    frogs: /shared/dbs/rpob_refseq_cc_20240707_dada2.fa.gz
+    frogs: /shared/dbs/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz
 ```
 
+The converted file is one MetaFlux builds itself, so a path given here is where
+MetaFlux writes it, and it rebuilds it there whenever the conversion script is newer
+than the file (see
+[reference files MetaFlux builds itself](../../reference/configuration.md#reference-files-metaflux-builds-itself)).
+
 Both rules run once, the first time an rpoB run needs the database, and are skipped
-afterwards because their output is already on disk.
+afterwards because their output is already on disk. "domain-d" in the file name marks
+the file that writes the domain as `d__` (below). The converted file of MetaFlux v2.4.0
+and earlier, `rpob_refseq_cc_20240707_dada2.fa.gz`, wrote it as `k__` and is no longer
+read, so the first rpoB run of a newer MetaFlux downloads the FROGS archive again
+(173 MB) and converts it once.
 
 ### Why a conversion step exists
 
@@ -121,16 +130,22 @@ accession followed by a lineage under a constant `Root`, in which each node carr
 
 DADA2's `assignTaxonomy` instead wants the header to *be* the lineage — semicolon
 separated, no accession, no per-node tags. `convert_rpob_to_dada2` runs
-`workflow/scripts/refdb/frogs_rpob_to_dada2.py`, which makes exactly two edits per header
-and leaves sequence lines untouched:
+`workflow/scripts/refdb/frogs_rpob_to_dada2.py`, which makes exactly three edits per
+header and leaves sequence lines untouched:
 
 1. drop the leading `>ACCESSION Root;`, so the lineage starts at `k__Bacteria`;
-2. strip every ` [id: N]` tag.
+2. strip every ` [id: N]` tag;
+3. write the first rank as a domain: `k__Bacteria` becomes `d__Bacteria`.
 
-The result is the file DADA2 trains on:
+The third edit is needed because FROGS writes the domain under the `k__` prefix. This
+release carries NCBI's taxonomy as it was when FROGS built it (July 2024), before NCBI
+added kingdoms for prokaryotes, so every lineage has a domain and no kingdom. In
+MetaFlux's tables `d__` is always the domain and `k__` always the kingdom, so the rpoB
+pack names its first rank Domain, with the prefix `d__`, and the converted file says the
+same. The result is the file DADA2 trains on:
 
 ```text
->k__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus_simiae
+>d__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus_simiae
 ```
 
 Because sequence lines pass through verbatim, nothing that faces the ASVs is altered — the
@@ -138,13 +153,17 @@ conversion only rewrites labels.
 
 !!! note "The converter refuses to run on an unexpected header shape"
 
-    Both edits are anchored to the exact shape of the 2024-07-07 release, and the URL in
-    the marker pack pins that dated filename rather than a "latest" pointer. If a future
-    release changed the header format, an edit that silently did nothing would ship
-    corrupted taxonomy strings — leftover accession or `[id:` text mistaken for a rank
-    value — with no error at all. So each edit is checked: a header that does not start
-    with `>ACCESSION Root;`, or that still contains `[id:` afterwards, stops the run and
-    names the offending line. The log records how many headers were rewritten.
+    All three edits are anchored to the exact shape of the 2024-07-07 release, and the
+    URL in the marker pack pins that dated filename rather than a "latest" pointer. If a
+    future release changed the header format, an edit that silently did nothing would
+    ship corrupted taxonomy strings — leftover accession or `[id:` text mistaken for a
+    rank value, or a kingdom written as a domain — with no error at all. So each edit is
+    checked: a header that does not start with `>ACCESSION Root;`, that still contains
+    `[id:` afterwards, or whose first rank is then anything but `k__Bacteria` or
+    `k__Archaea` (a kingdom such as `k__Pseudomonadati`, or a rank already written
+    `d__`), stops the run and names the offending line. The log records how many headers
+    were rewritten. The [reference check](index.md#the-reference-check-reference_values)
+    then confirms that every lineage of the converted file starts with `d__Bacteria`.
 
 ## Amplicon length: recovered by in-silico PCR
 
@@ -240,13 +259,14 @@ apart from DADA2's random tie-breaking between equally good reference lineages, 
 move a bootstrap value between identical runs (see
 [Troubleshooting](../../troubleshooting.md)).
 
-The classifier writes seven rank columns, taken from the marker pack. The reference
-already carries `k__`/`p__`/… prefixes, so the pack sets `prefix_style: embedded` and
-MetaFlux emits each value verbatim rather than prepending its own:
+The classifier writes seven rank columns, taken from the marker pack. The converted
+reference already carries `d__`/`p__`/… prefixes, so the pack sets
+`prefix_style: embedded` and MetaFlux emits each value verbatim rather than prepending
+its own:
 
 | Slot | Rank column | Prefix in the taxonomy string |
 |---|---|---|
-| 1 | `Kingdom` | `k__` |
+| 1 | `Domain` | `d__` |
 | 2 | `Phylum` | `p__` |
 | 3 | `Class` | `c__` |
 | 4 | `Order` | `o__` |
@@ -254,10 +274,14 @@ MetaFlux emits each value verbatim rather than prepending its own:
 | 6 | `Genus` | `g__` |
 | 7 | `Species` | `s__` |
 
-Names follow current NCBI/LPSN nomenclature — `p__Bacillota`, `p__Pseudomonadota` — and the
-species slot is an underscore-joined binomial, `s__Staphylococcus_simiae`. That matters when
-writing filter tokens: they must match the reference's spelling, not the older
-Firmicutes/Proteobacteria names.
+There is no kingdom slot, so a `k__` filter token stops the run at start-up, and so does
+a domain other than `d__Bacteria` (the reference holds bacteria only).
+
+Names follow NCBI's taxonomy as it was when FROGS built this release (July 2024): the
+phyla carry their current names, `p__Bacillota` and `p__Pseudomonadota`, and NCBI had not
+yet added the prokaryote kingdoms. The species slot is an underscore-joined binomial,
+`s__Staphylococcus_simiae`. That matters when writing filter tokens: they must match the
+reference's spelling, not the older Firmicutes/Proteobacteria names.
 
 These are NCBI names, not GTDB ones. Unlike the GTDB-based gyrB reference, rpoB genus names
 carry no GTDB suffixes: it is `g__Pseudomonas`, never `g__Pseudomonas_E`. The two markers
@@ -328,10 +352,11 @@ The final tables are the same four files as for every other marker, under
 | `taxon_seq_table.txt` | ASV IDs | one column per rank (`Domain` … `Species`) plus the sequence; the cells hold the bare names (`Pseudomonadota`, `Xenorhabdus_nematophila`), while the `taxonomy` strings keep the prefixes |
 | `asv_table_unfiltered.txt` | ASV IDs, every ASV that reached the filter | the counts and `taxonomy` before the taxon filter, plus `metaxa2_origin` (`NA` for rpoB) and `filter_status` |
 
-An rpoB taxonomy string reads like a 16S one, with NCBI names:
+An rpoB taxonomy string reads like a 16S one on SILVA 138.2 (a domain and no kingdom),
+with NCBI names:
 
 ```text
-k__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas;s__Pseudomonas_fluorescens
+d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas;s__Pseudomonas_fluorescens
 ```
 
 Ranks the classifier could not assign above `min_boot` are simply absent from the string,

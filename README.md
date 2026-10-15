@@ -66,7 +66,7 @@ Both modes run from the same command and the same config file, and produce a sin
         Cutadapt primer │               │  fastp trim
         DADA2 ASVs      │               │  Kraken2 classify
         Metaxa2 / ITSx* │               │  Bracken abundance
-        length filter   │               │  kraken-biom OTU table
+        length filter   │               │  OTU table from Bracken
         multi-marker    │               │  KrakenTools per-taxon reads*
         taxonomy        │               │
                         ▼               ▼
@@ -98,7 +98,7 @@ conda create -n snakemake -c conda-forge -c bioconda snakemake
 conda activate snakemake
 
 # 3. Edit config/config.yaml — set `mode`, input/output paths, and references
-#    (amplicon: primer FASTAs; shotgun: a Kraken2 database)
+#    (amplicon: primer FASTAs; shotgun: a Kraken2 database, or sylph databases)
 
 # 4. Dry-run to check the plan, then execute
 snakemake --sdm conda --cores 16 --configfile config/config.yaml --dry-run
