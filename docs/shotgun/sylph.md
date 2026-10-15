@@ -193,8 +193,8 @@ position.
   row out before computing relative abundances of the detected genomes.
 - **Read accuracy.** The estimates also depend on sylph's estimate of read accuracy.
   When the sample's genomes are covered too thinly for that estimate (common in shallow
-  samples, and in very diverse ones such as soil even when deeply sequenced), sylph
-  assumes 99.5 % instead; `read_accuracy` in the summary then reads
+  samples, and in very diverse ones even when deeply sequenced: it happened in all ten
+  simulated CAMI II marine samples), sylph assumes 99.5 % instead; `read_accuracy` in the summary then reads
   `fixed 99.5% (high diversity for the depth)`, after sylph's own words for this case
   (high diversity compared to sequencing depth). That assumption moves every genome row
   of the sample by one common factor, and the `unassigned` row with them; which genomes
@@ -202,15 +202,15 @@ position.
   BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
   [Shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset)), where sylph's
   own estimate was about 99.9 %, forcing 99.5 % raised the explained share by 12–14 % of
-  its value, 3 to 8 percentage points. Compare explained shares, `unassigned` and
+  its value (3 to 8 percentage points). Compare explained shares, `unassigned` and
   estimated pairs only between samples with the same `read_accuracy`. Otherwise leave
   out `unassigned` and compare shares among the detected genomes, or use
   `sylph_table.genome_copies.tsv`.
 - **Capped samples.** `explained_capped: yes` usually means that sylph's coverage
   estimates added up to at least all of the sample's sequence (sylph does not report the
   uncapped sum). sylph then shares 100 % among the detected genomes, as it does without
-  `-u`, so every genome's estimated read pairs
-  in that sample are scaled down by that unknown amount, and they change when a database
+  `-u`, so every genome's estimated read pairs in that sample are scaled down by that
+  unknown amount, and they change when a database
   is added or removed, even for a genome whose coverage stays the same. Nothing is left
   for `unassigned` to estimate. Compare a capped sample with others by shares among the
   detected genomes or by genome copies, not by estimated pairs.
