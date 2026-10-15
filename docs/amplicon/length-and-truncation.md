@@ -135,9 +135,9 @@ file. Fact three then deletes everything shorter.
     Read from the quality tables alone, the run-wide ceiling came out at **288 bp** —
     set by a different sample, since this one's own table runs to 289. Either way, only
     **three reads here are 288 bp or longer**, so a cut there discards 211,971 of
-    211,974. Without this gate (MetaFlux v2.1.0 and earlier) the cuts land at 288/239,
-    which only 9 of the 908,768 primer-trimmed read pairs in the four samples are long
-    enough to pass, and the run finished with 3 ASVs.
+    211,974. Without this gate (MetaFlux v2.1.0 and earlier) the cuts landed at 288/239:
+    only 9 of the 908,768 primer-trimmed read pairs in the four samples are long enough
+    for them, and the run finished with 3 ASVs.
 
 **What the gate does instead.** Before quality is consulted at all, each sample is asked
 one question: *what is the longest position that at least `min_read_coverage_pct` of my

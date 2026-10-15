@@ -10,7 +10,7 @@ declared in a small YAML file called a *marker pack*, one per marker, under
 Marker packs hold facts about the marker, never run settings. Primers, expected lengths,
 truncation values and taxon filters live in the run config; they are the things that change
 from one experiment to the next. A pack is read separately and is never merged into
-`config`, so each setting is defined in one place only.
+`config`, so no key is defined in both.
 
 !!! note
 
