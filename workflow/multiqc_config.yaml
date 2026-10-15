@@ -60,6 +60,12 @@ sample_names_replace:
   # use_filename_as_sample_name above), so clean_s_name strips '_fastp' → bare
   # {sample}. Kraken2/Bracken report files keep '_report' in their names, stripped
   # here by the regex.
+  # BBDuk's PhiX statistics (rule decontam_phix, <sample>_dephix_stats.txt) sit in
+  # 01.preprocessing/ next to fastp's reports. MultiQC applies these renames one after
+  # the other, so this line must stay above the general 01.preprocessing line below:
+  # once renamed to 'PhiX removal | <sample>', the name no longer starts with
+  # '01.preprocessing', and fastp's label 'Adapter trim' is not put on it.
+  '^01\.preprocessing \| (.+)_dephix_stats$': 'PhiX removal | \1'
   '^01\.preprocessing \| (.+)$':   'Adapter trim | \1'
   '^kraken2 \| (.+)_report$':      'Kraken2 | \1'
   '^03\.abundance \| (.+)_report$': 'Bracken | \1'
