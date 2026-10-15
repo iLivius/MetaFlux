@@ -104,7 +104,7 @@ measurement is the amplicon-length probe (rule `amplicon_probe`), and it only ru
 taken.
 
 **`pcr`** — in-silico PCR. The probe takes the supplied primer FASTAs and runs two
-cutadapt passes against a full-length reference: first keep the reference sequences that
+cutadapt passes against a full-length reference: first keep the reference sequences
 in which the forward primer matches, trimming it and everything upstream, then, of
 those, keep the ones in which the reverse-complemented reverse primer matches, trimming
 it and everything downstream. Neither match is anchored — the references are whole
