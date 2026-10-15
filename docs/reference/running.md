@@ -34,6 +34,9 @@ job starts. A dry run therefore catches, among others:
 - an `amplicon.type` that matches no marker pack;
 - primer FASTAs that do not exist (amplicon), or a `kraken_db` that does not exist (shotgun);
 - a config still using the retired `include_pattern` / `exclude_pattern` filter keys;
+- a keep/discard token that can never match the run's taxonomy strings, such as
+  `k__Bacteria` from a config written for MetaFlux v2.4.0 or earlier (now `d__Bacteria`);
+- a marker pack in `config/markers/` written for an older MetaFlux;
 - ITS combined with `length_filter.mode: auto` but a manual `expected_length`, which would otherwise crash *after* the full DADA2 run.
 
 The same parse step prints a banner line to stderr:
@@ -48,7 +51,7 @@ a 16S run one more naming the SILVA release in use — the quickest check that
 
 ```text
 [MetaFlux] organelle filter: on — ASVs that Metaxa2 calls mitochondria or chloroplast are removed
-[MetaFlux] 16S reference: SILVA 144 (silva_other: verbatim; trainset silva_nr99_v144_toGenus_6rank_other-verbatim_trainset.fa.gz)
+[MetaFlux] 16S reference: SILVA 144 (silva_other: verbatim; trainset silva_nr99_v144_toGenus_7rank_other-verbatim_trainset.fa.gz)
 ```
 
 Checking that the sample count is the expected one costs nothing and catches a
@@ -178,47 +181,48 @@ consequences:
 
 !!! note "Re-running an output folder made with v2.4.0"
 
-    The output folders have new names. The amplicon folders `1.reads` to `7.phylogeny`
-    are now `01.reads` to `07.phylogeny`. In shotgun mode the Kraken2 files move from
-    `02.classification/` into `02.classification/kraken2/`, together with the k-mer
-    evidence files that were in `02b.evidence/`, and sylph's `02c.sylph/` is now
-    `02.classification/sylph/`. A re-run in an older folder therefore writes the new
-    folders and runs every step again. The old folders, and the old files directly in
-    `02.classification/`, are left as they are and can be deleted.
+    **Every step runs again**, because the output folders have new names: the amplicon
+    folders `1.reads` to `7.phylogeny` are now `01.reads` to `07.phylogeny`; in shotgun
+    mode the Kraken2 files move from `02.classification/` into
+    `02.classification/kraken2/`, together with the k-mer evidence files of
+    `02b.evidence/`, and sylph's `02c.sylph/` is now `02.classification/sylph/`. The old
+    folders, and the old files directly in `02.classification/`, are left as they are and
+    can be deleted.
 
-    The same rules apply to a MetaFlux upgrade, and v2.5.0 changes several steps on
-    purpose. In an amplicon folder, `pick_trunclen` and `aggregate_read_counts` now run
-    in the `python_utils` environment (and, for 16S, the length probe has a new cache
-    name), so a plain re-run redoes the denoising and everything after it; a 16S folder
-    also moves to SILVA 144, the new default. With `references: {silva: {release: "138.2"}}`
-    the denoised ASVs and counts come out the same as with v2.4.0, but the taxonomy and
-    the filtered table can still change a little, for two reasons. The taxon filter's new
-    best-hit check and its organelle filter (`filter.organelles`, which removes the ASVs
-    Metaxa2 calls mitochondria or chloroplast) can remove more organelle ASVs. And with
-    `sintax`, the taxonomy step now runs on VSEARCH 2.32, which draws its random numbers
-    differently from earlier releases, so many confidence values move slightly against
-    the v2.4.0 output, even with the same seed. A lineage near the cutoff can then gain or
-    lose a trailing rank, so the few ASVs whose call at the rank of a `keep` token (for
-    example `k__Bacteria`) sits right at the cutoff can be kept by one version and
-    removed by the other. A `discard` token is affected only when the best-hit check is
-    switched off: with it on, an ASV whose best hit carries the token with at least
-    `discard_min_support` support is removed whichever side of the cutoff its call falls. In a shotgun folder the Bracken environment is now pinned to
-    3.1p1, so `bracken` and the steps after it run again.
-    Species-level numbers do not change; at any other `tax_lev` the OTU table is now
-    built correctly, see
-    [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s).
-    The Kraken2 environment is now pinned to 2.17.1, so Kraken2 and every step after
-    it run again in every shotgun folder, and so does the adapter trimming before it:
-    Kraken2 reads the trimmed reads, which are temporary files. A folder whose Kraken2
-    was already 2.17.1 gets the same Kraken2 results back; with any other release the
-    results can differ.
-    The BBTools environment is now pinned to bbmap 39.52, because newer releases crash
-    or hang in PhiX removal on paired reads, trimmed ones above all. So in a folder made
-    with PhiX or host removal on, those steps and every step after them run again,
-    Kraken2 included.
-    `aggregate_read_counts` also runs again in every shotgun folder, because its script
-    changed: with PhiX removal on, `nophix` now leaves out exactly the read pairs BBDuk
-    removed (a pair with PhiX in one mate only used to count as half a pair).
+    **Results that change on purpose:**
+
+    - Taxonomy strings: `d__` is always the domain slot and `k__` the kingdom slot (see
+      [taxonomy strings](output.md#taxonomy-strings-in-the-final-tables)). 16S moves to
+      SILVA 144, the new default: `d__Bacteria;k__Pseudomonadati;p__…`. On SILVA 138.2
+      (`references: {silva: {release: "138.2"}}`, which gives the same ASVs and counts
+      as v2.4.0) and on rpoB: `d__Bacteria;p__…`. ITS, 18S and gyrB keep their ranks.
+      The shotgun `otu_table` has eight slots on every Kraken2 database, a virus carries
+      its realm in `d__`, species names are whole, and in `otu_table.biom` the sample
+      `Id` is the plain sample name (it was `<sample>_report`).
+    - 18S with `sintax`: ASVs whose taxonomy was empty now read at least `d__Eukaryota`;
+      this fix changes nothing below the domain.
+    - ITS with `rdp`: the species reads `Genus_epithet`, as with `sintax`. All taxonomy
+      tables have one format under both methods (`""` as first header cell, `NA` for a
+      rank not reached), and the rank cells of `taxon_seq_table.txt` hold bare names.
+    - The taxon filter can remove more organelle ASVs (best-hit check, organelle
+      filter). A lineage near the cutoff can gain or lose a rank (VSEARCH 2.32 under
+      `sintax`; under `rdp`, as between two identical runs), so an ASV at the cutoff of a
+      `keep` token's rank can be kept by one version and removed by the other.
+    - Shotgun: Kraken2 2.17.1, Bracken 3.1p1 and bbmap 39.52 are pinned, so a folder made
+      with other releases can get slightly different results; at a `tax_lev` other than
+      `S` the OTU table is now built correctly (see
+      [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s));
+      `nophix` in the read tracking counts exactly the read pairs BBDuk removed.
+
+    **Stops at start-up:** a filter token such as `k__Bacteria` (the message names the
+    one to write, `d__Bacteria`); `shotgun.bracken.tax_lev: D`, refused like `K`; a
+    marker pack in `config/markers/` written for an older MetaFlux (copy the shipped pack
+    again and re-apply your change). See [Troubleshooting](../troubleshooting.md).
+
+    **Reference files:** the SILVA 144 files, the 18S PR2 SINTAX file and the rpoB
+    reference are built once under new names (the FROGS rpoB archive is downloaded
+    again); the SILVA 138.2 SINTAX file is rebuilt under its old name, with the same
+    content, so a refdb folder shared with a v2.4.0 checkout keeps working for both.
 
 Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under
