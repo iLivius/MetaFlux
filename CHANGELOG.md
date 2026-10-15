@@ -131,6 +131,12 @@ keep their names.
 
 ### Pinned tool versions
 
+- **Pinned conda environments on Linux.** Next to every `workflow/envs/<tool>.yaml` sits
+  a `<tool>.linux-64.pin.txt` with the exact package builds MetaFlux was tested with. On
+  Linux (x86-64) Snakemake installs each environment from that file, without solving,
+  so two installations of the same release run the same software down to the build;
+  other platforms solve from the yaml as before. The installation page says how to
+  refresh a pin after editing a yaml.
 - **Kraken2 2.17.1.** Releases before 2.17 write NCBI's 2025 domains as `R1`/`R2`
   instead of `D`; the table step stops on such reports.
 - **Bracken 3.1p1,** which fixes Bracken's own count column above species level.
@@ -144,10 +150,13 @@ keep their names.
 
 ### What runs again in a folder made with v2.4.0
 
-Nearly every step, because the output folders have new names; only the steps whose
-files kept their names are skipped (the raw-read QC in `stats/`, the primer reverse
-complements, `samples.tsv`, downloads already on disk). The old folders and count
-files are left as they are and can be deleted. Reference files: the SILVA 144 files
+Every step: the output folders have new names, and the pin files count as a software
+change for every step that runs in a conda environment, which also catches the steps
+whose files kept their names (the raw-read QC in `stats/`, the primer reverse
+complements, the reference files already on disk and, in BioProject mode, the SRA
+downloads; only `samples.tsv` is kept). A run started once with `--rerun-triggers
+mtime params input code` keeps those files. The old folders and count files are left
+as they are and can be deleted. Reference files: the SILVA 144 files
 are downloaded and built once; the 18S PR2 SINTAX file is built once; the rpoB
 reference is built again under a new name (the FROGS archive is downloaded again);
 the SILVA 138.2 SINTAX file is rebuilt under its old name, with the same content, so
@@ -179,7 +188,8 @@ few calls at `min_boot`, as between two identical runs. The documentation's
 New sylph page; the taxonomy, output, configuration, running and troubleshooting
 pages rewritten for the domain and kingdom slots, the start-up checks and the new
 folders; the docs deployment runs a strict build before publishing. The repository
-gains a test suite (`tests/`), a dry-run matrix with tiny test data (`.test/`), a CI
+gains a pin file for every conda environment (`workflow/envs/*.linux-64.pin.txt`), a
+test suite (`tests/`), a dry-run matrix with tiny test data (`.test/`), a CI
 workflow that runs both with a strict docs build on every push, contribution
 guidelines, a code of conduct, support notes, issue forms, this changelog and a
 `CITATION.cff`.

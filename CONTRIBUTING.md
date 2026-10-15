@@ -34,16 +34,19 @@ first: the failures worth knowing about are described there with their fix.
   that say what changes for a user. Typos and small documentation fixes do not need an
   issue first.
 - **Say what runs again.** Snakemake records the text of every rule's command, its
-  parameters, its script and its conda environment file. Changing any of them, even a
-  comment inside a shell block or an environment file, makes every finished output
-  folder run that step and everything after it again. That is often right (a
-  correctness fix must reach old folders), but it has to be said in the pull request,
-  and a change that only reorders or reformats a rule should be avoided for that reason.
+  parameters, its script, its conda environment file and that file's pin. Changing any
+  of them, even a comment inside a shell block or an environment file, makes every
+  finished output folder run that step and everything after it again. That is often
+  right (a correctness fix must reach old folders), but it has to be said in the pull
+  request, and a change that only reorders or reformats a rule should be avoided for
+  that reason.
 - **No new dependency without a discussion first.** Every tool must be installable from
   bioconda or conda-forge, pinned where the version changes results, and listed in one
-  of the environment files under `workflow/envs/`. A tool used only by the tests or the
-  checks (pytest, mkdocs) is not a pipeline dependency and is pinned in
-  `.github/workflows/ci.yml` instead.
+  of the environment files under `workflow/envs/`. After editing an environment file,
+  refresh its pin file (`workflow/envs/<tool>.linux-64.pin.txt`; the installation page
+  says how): as long as the old pin exists, Snakemake installs the old builds from it
+  and never sees the edit. A tool used only by the tests or the checks (pytest, mkdocs)
+  is not a pipeline dependency and is pinned in `.github/workflows/ci.yml` instead.
 - **Run the checks** (next section) before you open the pull request, and add a test
   or a dry-run config when your change can be covered by one.
 
