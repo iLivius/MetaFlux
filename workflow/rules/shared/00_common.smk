@@ -22,6 +22,8 @@
 #     sylph databases and lineage tables, and the PhiX/host decontamination toggles
 #   - for sylph: sample names it cannot use, and out_dirs that already hold another
 #     profiler's results (both checked right after sample discovery)
+#   - whether the keep/discard taxon-filter tokens can match the tables this run
+#     writes (amplicon; shotgun when Kraken2 runs), checked before any job
 #   - which rule files the Snakefile leaves out of this run (SKIP_RULE_FILES)
 #   - which samples exist and how their FASTQ files are named (SAMPLES, EXTN,
 #     FASTQ_NAMING), discovered once here rather than re-globbed by every rule
@@ -435,6 +437,213 @@ def _as_taxon_list(v):
     return list(v)
 
 
+# ── Start-up check of the keep/discard filter tokens ──
+# What it is for: the taxon filters compare each keep/discard token with the
+# ';'-separated slots of a taxonomy string, one whole slot at a time, prefix included
+# (amplicon: 80a_assign_taxonomy.R and 80c_parse_sintax.py; shotgun:
+# 45a_finalize_otu_table.py). A token whose prefix the table never writes, or whose
+# name can never stand in its slot, matches nothing, and nothing says so. In keep it
+# removes every ASV or taxon, and the run stops only at the very end: the amplicon run
+# after the denoising and the classification, the shotgun table step after Kraken2 and
+# Bracken. In discard it silently removes nothing. The usual cause is a config written
+# for MetaFlux v2.4.0 or earlier, which wrote the domain under k__ (k__Bacteria). Since
+# v2.5.0 d__ is always the domain slot and k__ always the kingdom slot, and a table has
+# a kingdom only where its reference defines one.
+# So the tokens are checked when the run starts, before any job, against the slots of
+# the table each filter reads, and one stop lists every problem. The rules both modes
+# share are in _check_filter_tokens() below; the rules that need the Kraken2 database
+# are in _check_shotgun_filter_tokens(), after _kraken2_rank_sets(). The amplicon block
+# calls the first right after REFERENCE_VALUES, the shotgun block the second right after
+# KRAKEN2_RANK_SETS.
+# Why a wrong amplicon name stops the run while a Kraken2 name this database lacks only
+# warns: a marker pack's reference_values say which names a slot can hold at all (its
+# reference file had to pass the same rules), so a name outside them can never occur.
+# Which domains, kingdoms and realms a Kraken2 table holds depends on the database, and
+# one config may serve several databases.
+
+# The three domains of cellular life. MetaFlux always writes them under d__, never
+# under k__: where a table has a k__ slot (16S on SILVA 144, ITS, Kraken2 tables), that
+# slot holds kingdoms such as Pseudomonadati or Fungi.
+_DOMAIN_NAMES = ("Bacteria", "Archaea", "Eukaryota")
+
+# A token's rank prefix (one to three lowercase letters and two underscores: d__, k__,
+# sg__, dv__, sbd__ ...) and the name after it.
+_TOKEN_PATTERN = re.compile(r"^([a-z]{1,3})__(.*)$")
+
+
+def _value_passes(name, rule):
+    """True when a name passes one reference_values rule of a marker pack.
+
+    Example, the SILVA 144 Kingdom rule {ends_with: [ati], one_of: [Incertae Sedis]}:
+    "Bacillati" and "Incertae Sedis" pass; "Bacillota" (a phylum) and "Fungi" fail.
+    A name fails when it is in not_one_of. Otherwise, when one_of or ends_with is
+    given, it must be in one_of or end with one of the endings.
+
+    This is a copy of value_passes() in workflow/scripts/refdb/check_reference_ranks.py,
+    on purpose: that script runs in the python_utils conda env, this file in
+    Snakemake's own Python, and MetaFlux scripts never import from each other. The two
+    must answer the same for every name, because the token check below tests a token's
+    name with exactly the rule that the reference file had to pass in rule
+    check_taxonomy_reference. Change both together. (An edit of the check script reruns
+    the reference check and the taxonomy in every amplicon folder.)
+    """
+    forbidden_names = rule.get("not_one_of") or []
+    if name in forbidden_names:
+        return False
+    allowed_names   = rule.get("one_of") or []
+    allowed_endings = rule.get("ends_with") or []
+    if not allowed_names and not allowed_endings:
+        return True
+    if name in allowed_names:
+        return True
+    for ending in allowed_endings:
+        if name.endswith(ending):
+            return True
+    return False
+
+
+def _describe_value_rule(rule):
+    """A reference_values rule written out for a message, e.g.
+    "one_of [Incertae Sedis]; ends_with [ati]"."""
+    parts = []
+    for kind in ("one_of", "ends_with", "not_one_of"):
+        names = rule.get(kind) or []
+        if names:
+            parts.append(f"{kind} [{', '.join(names)}]")
+    return "; ".join(parts)
+
+
+def _check_filter_tokens(tokens, slot_names, slot_prefixes, slot_values, where,
+                         prefix_notes=None):
+    """Check keep or discard tokens against the slots of the table the filter reads.
+
+    Input:
+      tokens         one keep or discard list, as the filter gets it (_as_taxon_list)
+      slot_names     the table's rank names, top-down (Domain, Kingdom, Phylum ...)
+      slot_prefixes  the prefix each of those slots is written with, in the same
+                     order; "" for a slot written without one (gyrB's gene tag)
+      slot_values    the marker pack's reference_values rules, by rank name, for the
+                     slots of this table ({} when there are none, as for Kraken2)
+      where          how a problem names the list, e.g. "amplicon.taxonomy.filter.keep"
+      prefix_notes   optional {prefix: sentence}, for a prefix that the marker has but
+                     this table does not write: why not (another method writes it;
+                     16S under method sintax writes no species)
+    Output: a list of problems, one sentence each; [] when every token can match.
+
+    The rules, token by token:
+      - it is text, and not empty;
+      - without a prefix it stands for the slot written without one (gyrB: gyrB or
+        other); in a table where every slot has a prefix it is a problem;
+      - its prefix is one this table writes, and a name follows it;
+      - a domain name (Bacteria, Archaea, Eukaryota) under k__ is a problem even
+        where the table has a k__ slot: there k__ holds kingdoms;
+      - its name, taken without a trailing "--other" as the amplicon filter reads it,
+        passes the pack's reference_values rule for its slot, if there is one.
+    Not checked: names in slots without a rule (a genus, a family ...). Any name can
+    stand there, and only the classification shows which ones occur.
+    """
+    if prefix_notes is None:
+        prefix_notes = {}
+
+    # The prefixes this table writes, and its slots written out for messages:
+    # "Domain (d__), Kingdom (k__), ...", or "Gene (no prefix)" for gyrB's gene tag.
+    written_prefixes = []
+    slot_descriptions = []
+    for slot_name, prefix in zip(slot_names, slot_prefixes):
+        if prefix:
+            written_prefixes.append(prefix)
+            slot_descriptions.append(f"{slot_name} ({prefix})")
+        else:
+            slot_descriptions.append(f"{slot_name} (no prefix)")
+    slots_text = ", ".join(slot_descriptions)
+
+    # The slot that a token without a prefix stands for, if the table has one.
+    unprefixed_slot = None
+    if "" in slot_prefixes:
+        unprefixed_slot = slot_names[slot_prefixes.index("")]
+
+    problems = []
+    for token in tokens:
+        # YAML reads a bare yes, no, on, off, null or a number as another kind of
+        # value than text, and such a value never equals a slot of a taxonomy string.
+        if not isinstance(token, str):
+            problems.append(f"{where}: {token!r} is not text (YAML reads a bare yes, "
+                            f"no, on, off, null or a number as another kind of value). "
+                            f"Write the token with its rank prefix, e.g. d__Bacteria, "
+                            f"or put it in quotes.")
+            continue
+        if token.strip() == "":
+            problems.append(f"{where}: an empty token ({token!r}); remove it.")
+            continue
+
+        # Split the token into its prefix and its name.
+        match = _TOKEN_PATTERN.match(token)
+        if match is not None:
+            prefix = match.group(1) + "__"
+            name = match.group(2)
+        else:
+            prefix = ""
+            name = token
+
+        # The amplicon filter reads "X--other" as X (SILVA 144 marks a clade that does
+        # not hold the type of taxon X this way; see silva_other), so the name is
+        # checked without the suffix.
+        if name.endswith("--other"):
+            name = name[: -len("--other")]
+
+        # When the name is a domain under any other prefix: where to write it instead.
+        # Added to whichever problem the token has below.
+        domain_hint = ""
+        if name in _DOMAIN_NAMES and prefix != "d__":
+            if "d__" in written_prefixes:
+                domain_hint = f" {name} is a domain: write d__{name}."
+            else:
+                domain_hint = (f" {name} is a domain, and this table has no domain "
+                               f"rank: its first slot is {slot_descriptions[0]}.")
+
+        # 1. No prefix, in a table where every slot has one.
+        if prefix == "" and unprefixed_slot is None:
+            problems.append(f"{where}: {token!r} has no rank prefix. A token names one "
+                            f"whole slot of the taxonomy string, prefix included; the "
+                            f"slots of this table are {slots_text}.{domain_hint}")
+            continue
+
+        # 2. A prefix this table does not write. prefix_notes may say why.
+        if prefix != "" and prefix not in written_prefixes:
+            note = ""
+            if prefix in prefix_notes:
+                note = " " + prefix_notes[prefix]
+            problems.append(f"{where}: {token!r} uses {prefix}, which this table does "
+                            f"not write (its slots: {slots_text}).{note}{domain_hint}")
+            continue
+
+        # 3. A prefix with no name after it.
+        if name == "":
+            problems.append(f"{where}: {token!r} has no name after its prefix.")
+            continue
+
+        # 4. A domain under k__, also where the table has a k__ slot.
+        if prefix == "k__" and name in _DOMAIN_NAMES:
+            problems.append(f"{where}: {token!r} puts a domain under k__, which holds "
+                            f"kingdoms in this table.{domain_hint}")
+            continue
+
+        # 5. A name that the reference cannot hold in this slot: the pack's
+        # reference_values rule for the slot, the same rule the reference file passed.
+        # (The variable is not called "rule": Snakemake reads a line that starts with
+        # that word as the start of a rule definition, also inside a function.)
+        if prefix == "":
+            slot_name = unprefixed_slot
+        else:
+            slot_name = slot_names[slot_prefixes.index(prefix)]
+        value_rule = slot_values.get(slot_name)
+        if value_rule and not _value_passes(name, value_rule):
+            problems.append(f"{where}: {token!r}: {name} is not a {slot_name} of this "
+                            f"reference (marker pack rule: "
+                            f"{_describe_value_rule(value_rule)}).{domain_hint}")
+    return problems
+
+
 def _text_at(data, position):
     """The text that starts at byte `position` of `data` (the bytes of a taxo.k2d file,
     read by _kraken2_rank_sets below), up to the next zero byte."""
@@ -547,6 +756,130 @@ def _kraken2_rank_sets(taxo_path):
             which_set = "virus_root"  # Viruses, ranked superkingdom before 2025
         rank_sets[which_set][str(taxid)] = _text_at(data, name_block_start + name_offset)
     return rank_sets
+
+
+# The eight slots of every otu_table.tsv lineage, d__ to s__, which rule
+# finalize_otu_table (45_abundance.smk) fills from the Kraken2 report codes D, K, P,
+# C, O, F, G and S, on any Kraken2 database.
+_KRAKEN2_SLOT_NAMES    = ["Domain", "Kingdom", "Phylum", "Class", "Order", "Family",
+                          "Genus", "Species"]
+_KRAKEN2_SLOT_PREFIXES = ["d__", "k__", "p__", "c__", "o__", "f__", "g__", "s__"]
+
+
+def _check_shotgun_filter_tokens(keep, discard, rank_sets, filter_enabled):
+    """Check the shotgun.taxonomy_filter tokens against the slots of otu_table.tsv and
+    against the Kraken2 database (see "Start-up check of the keep/discard filter
+    tokens" above for why).
+
+    Input: the keep and discard lists (_as_taxon_list), the database's rank sets
+    (_kraken2_rank_sets above: {taxid: name} of its domains, kingdoms and virus
+    realms), and whether the filter is switched on.
+    Output: (problems, warnings), two lists of sentences. Problems stop the run;
+    warnings are printed and the run goes on.
+
+    First the rules both modes share (_check_filter_tokens, with the eight slots and
+    no name rules), so a wrong prefix or a domain under k__ reads the same as in an
+    amplicon run. Then the database:
+      problems
+        - Viruses under any prefix. No slot ever holds it: a virus has no domain, its
+          d__ slot holds its realm, and finalize_otu_table never writes Viruses as a
+          domain, also on a database built from NCBI's taxonomy before 2025, which
+          ranked Viruses a superkingdom;
+        - a virus realm of this database under k__: realms are written in d__;
+        - with the filter on, a keep list of which no token can match a row of this
+          database: otu_table.tsv would be empty;
+      warnings (the token is well formed, but this database gives it no row; one
+      config can serve several databases, so this alone does not stop the run)
+        - a d__ name that is neither a domain nor a realm of this database (realm
+          names also change between NCBI releases: Monodnaviria became Floreoviria);
+        - a k__ token on a database without a kingdom rank (GTDB), or a k__ name that
+          is not one of its kingdoms.
+    Names under p__ to s__ are not checked: the rank sets hold only domains, kingdoms
+    and realms. Names are compared as written: Kraken2 names never carry "--other",
+    and the shotgun filter compares whole tokens.
+    """
+    domain_names  = set(rank_sets["domain"].values())
+    kingdom_names = set(rank_sets["kingdom"].values())
+    realm_names   = set(rank_sets["realm"].values())
+
+    # This database's names, written out for messages ("none" for an empty set: a
+    # GTDB database has no kingdom and no realm).
+    if domain_names:
+        domains_text = ", ".join(sorted(domain_names))
+    else:
+        domains_text = "none"
+    if kingdom_names:
+        kingdoms_text = ", ".join(sorted(kingdom_names))
+    else:
+        kingdoms_text = "none"
+    realm_tokens = []
+    for realm_name in sorted(realm_names):
+        realm_tokens.append("d__" + realm_name)
+    if realm_tokens:
+        realms_text = ", ".join(realm_tokens)
+    else:
+        realms_text = "none"
+
+    problems = []
+    warnings = []
+    keep_tokens_without_row = []
+    for direction, tokens in (("keep", keep), ("discard", discard)):
+        where = f"shotgun.taxonomy_filter.{direction}"
+        for token in tokens:
+            # The shared rules, one token at a time, so that a token they stop gets no
+            # database message on top.
+            shared_problems = _check_filter_tokens([token], _KRAKEN2_SLOT_NAMES,
+                                                   _KRAKEN2_SLOT_PREFIXES, {}, where)
+            if shared_problems:
+                problems.extend(shared_problems)
+                continue
+
+            # The shared rules passed, so the token is one of the eight prefixes
+            # followed by a name.
+            match = _TOKEN_PATTERN.match(token)
+            prefix = match.group(1) + "__"
+            name = match.group(2)
+
+            if name == "Viruses":
+                problems.append(f"{where}: {token!r}: no slot of otu_table.tsv holds "
+                                f"Viruses. A virus has no domain: its d__ slot holds its "
+                                f"realm, the top rank of virus taxonomy, and Viruses "
+                                f"itself is never written there, also on a database "
+                                f"built when NCBI still ranked it a superkingdom. To keep "
+                                f"or remove viruses, list their realms (this database: "
+                                f"{realms_text}).")
+                continue
+            if prefix == "k__" and name in realm_names:
+                problems.append(f"{where}: {token!r}: {name} is a virus realm, which "
+                                f"otu_table.tsv writes in the d__ slot: write d__{name}.")
+                continue
+
+            # A well-formed token that this database gives no row.
+            reason = None
+            if prefix == "d__" and name not in domain_names and name not in realm_names:
+                reason = (f"{name} is neither a domain nor a virus realm of this "
+                          f"Kraken2 database (domains: {domains_text}; realms: "
+                          f"{realms_text})")
+            elif prefix == "k__" and not kingdom_names:
+                reason = ("this Kraken2 database has no kingdom rank (a GTDB database "
+                          "has none), so k__ is empty in every row")
+            elif prefix == "k__" and name not in kingdom_names:
+                reason = (f"{name} is not a kingdom of this Kraken2 database (its "
+                          f"kingdoms: {kingdoms_text})")
+            if reason is None:
+                continue
+            warnings.append(f"{where}: {token!r}: {reason}. The token matches no row "
+                            f"with this database.")
+            if direction == "keep":
+                keep_tokens_without_row.append(token)
+
+    # With the filter on, a keep list that no row can match leaves an empty table.
+    if filter_enabled and keep and len(keep_tokens_without_row) == len(keep):
+        problems.append(f"shotgun.taxonomy_filter.keep: none of its tokens "
+                        f"({', '.join(keep)}) can match a row with this Kraken2 "
+                        f"database (see the warnings above), so otu_table.tsv would be "
+                        f"empty.")
+    return problems, warnings
 
 
 # ────────────────────── Amplicon-only globals ──────────────────
@@ -924,6 +1257,9 @@ if MODE == "amplicon":
     # Lists of rank-prefixed tokens (e.g. d__Bacteria, o__Chloroplast) matched
     # against whole taxonomy-string segments. Empty/null list → that direction
     # is a no-op. The recommended per-marker values ship in the config template.
+    # The tokens are checked against this run's rank model further down, once the
+    # method and REFERENCE_VALUES are known ("Start-up check of the keep/discard
+    # tokens").
     _filter_cfg      = amp_cfg["taxonomy"]["filter"]
     # Fail loud on the pre-step-3 schema instead of silently ignoring it: the old
     # include_pattern/exclude_pattern regex keys used to carry per-type defaults;
@@ -1289,6 +1625,111 @@ if MODE == "amplicon":
             f"{AMPLICON_TYPE!r} give {_left_out_text} (method {TAXONOMY_METHOD} reads "
             f"the reference with the ranks {', '.join(_active_tax_levels)}).\n"
         )
+
+    # ── Start-up check of the keep/discard tokens ──
+    # Why: a token that cannot match the taxonomy strings of this run removes every ASV
+    # in keep, or nothing in discard, and the run would only stop after the denoising
+    # and the classification (see "Start-up check of the keep/discard filter tokens"
+    # near the top of this file). So the tokens are checked here, before any job.
+    # The slots are those of the strings this run writes: the active method's rank
+    # model, the one the classifier fills (sintax_* under method sintax), with the
+    # rules that REFERENCE_VALUES keeps for it just above. A rule for a rank that only
+    # the other method's model has is therefore not applied here either: a rule
+    # applies only where its rank exists.
+    # Two kinds of prefix the marker has but this run's strings never carry get a
+    # sentence saying why, added to the stop message:
+    #   - the species, under method sintax, when the species comes from addSpecies
+    #     (16S): the SINTAX file stops at genus, and addSpecies runs only under method
+    #     rdp. The species slot is left out, so an s__ token stops;
+    #   - a prefix of the other method's model only (18S: sbd__, Subdivision, is
+    #     written only under method rdp; under sintax PR2 has one joined rank,
+    #     Division_Subdivision, written dv__).
+    # Runs whenever keep or discard lists a token, also with filter.enabled: false, so
+    # that a wrong token is caught the first time it is written, not on the run that
+    # switches the filter on.
+    #   in : FILTER_KEEP, FILTER_DISCARD (the run config), the two rank models,
+    #        REFERENCE_VALUES, TAXONOMY_SPECIES_DB (not empty when addSpecies runs)
+    #   out: nothing when every token can match; otherwise one sys.exit that lists
+    #        every problem, with the token to write instead where there is one
+    if FILTER_KEEP or FILTER_DISCARD:
+        if TAXONOMY_METHOD == "sintax":
+            _token_slot_names    = list(SINTAX_TAX_LEVELS)
+            _token_slot_prefixes = list(SINTAX_RANK_PREFIXES)
+            _other_slot_names    = list(TAX_LEVELS)
+            _other_slot_prefixes = list(RANK_PREFIXES)
+        else:
+            _token_slot_names    = list(TAX_LEVELS)
+            _token_slot_prefixes = list(RANK_PREFIXES)
+            _other_slot_names    = list(SINTAX_TAX_LEVELS)
+            _other_slot_prefixes = list(SINTAX_RANK_PREFIXES)
+
+        _token_prefix_notes = {}
+        # Under sintax, addSpecies' species slot stays empty: leave it out.
+        if TAXONOMY_METHOD == "sintax" and len(TAXONOMY_SPECIES_DB) > 0:
+            _species_rank   = _token_slot_names[-1]
+            _species_prefix = _token_slot_prefixes[-1]
+            _genus_rank     = _token_slot_names[-2]
+            _genus_prefix   = _token_slot_prefixes[-2]
+            _token_slot_names    = _token_slot_names[:-1]
+            _token_slot_prefixes = _token_slot_prefixes[:-1]
+            _token_prefix_notes[_species_prefix] = (
+                f"{AMPLICON_TYPE} under method: sintax writes no "
+                f"{_species_rank.lower()}: the SINTAX file stops at "
+                f"{_genus_rank.lower()}, and the {_species_rank.lower()} comes only from "
+                f"addSpecies, under method: rdp. Use a {_genus_prefix} token, or "
+                f"method: rdp."
+            )
+        # A prefix that only the other method's rank model writes. When that rank is one
+        # part of a joined rank of this run's model, the note names the joined rank: in
+        # 18S under sintax, Subdivision is part of Division_Subdivision (dv__), because
+        # PR2's SINTAX file joins the two into one field. The rank names come from the
+        # pack, so no marker is named in the code.
+        for _other_rank, _other_prefix in zip(_other_slot_names, _other_slot_prefixes):
+            if _other_prefix == "":
+                continue
+            if _other_prefix in _token_slot_prefixes:
+                continue
+            if _other_prefix in _token_prefix_notes:
+                continue
+            _note = (f"{_other_prefix} ({_other_rank}) is written only under method "
+                     f"{_other_method}.")
+            for _joined_rank, _joined_prefix in zip(_token_slot_names, _token_slot_prefixes):
+                _parts_of_joined_rank = _joined_rank.split("_")
+                if _joined_rank != _other_rank and _other_rank in _parts_of_joined_rank:
+                    _note += (f" Under method {TAXONOMY_METHOD} it is part of "
+                              f"{_joined_rank}, written {_joined_prefix}.")
+                    break
+            _token_prefix_notes[_other_prefix] = _note
+
+        _token_problems = []
+        _token_problems.extend(_check_filter_tokens(
+            FILTER_KEEP, _token_slot_names, _token_slot_prefixes, REFERENCE_VALUES,
+            "amplicon.taxonomy.filter.keep", _token_prefix_notes,
+        ))
+        _token_problems.extend(_check_filter_tokens(
+            FILTER_DISCARD, _token_slot_names, _token_slot_prefixes, REFERENCE_VALUES,
+            "amplicon.taxonomy.filter.discard", _token_prefix_notes,
+        ))
+        if _token_problems:
+            _token_table = f"{AMPLICON_TYPE}, method {TAXONOMY_METHOD}"
+            if PROFILE.get("release"):
+                _token_table += f", release {PROFILE['release']}"
+            _token_footer = (
+                "A token must equal one whole slot of the taxonomy string, prefix "
+                "included. Since v2.5.0 the domain is always written d__, and k__ is the "
+                "kingdom where the reference has one."
+            )
+            if not FILTER_ENABLED:
+                _token_footer += (
+                    " The filter is switched off in this run (filter.enabled: false), "
+                    "but its tokens are checked all the same, so that they are right "
+                    "when it is switched on."
+                )
+            sys.exit(
+                f"[MetaFlux] these amplicon.taxonomy.filter tokens can never match a "
+                f"taxonomy string of this run ({_token_table}), so the run stops before "
+                f"any step:\n  - " + "\n  - ".join(_token_problems) + "\n" + _token_footer
+            )
 
     # One line on every 16S run naming the SILVA release, the silva_other setting
     # and the training-set file, so the log shows which reference classified the run.
@@ -1744,7 +2185,9 @@ else:  # MODE == "shotgun"
 
     # ── OTU-table taxon filter (shotgun counterpart of amplicon keep/discard) ──
     # Same rank-aware token matching; applied to the final otu_table. Config-only,
-    # no code default — default OFF (see config comment).
+    # no code default — default OFF (see config comment). The tokens are checked
+    # against the table's slots and the Kraken2 database just below, once
+    # KRAKEN2_RANK_SETS is read ("Start-up check of the keep/discard tokens").
     _sht_filter        = sht_cfg.get("taxonomy_filter", {}) or {}
     OTU_FILTER_ENABLED = bool(_sht_filter.get("enabled", False))
     OTU_FILTER_KEEP    = _as_taxon_list(_sht_filter.get("keep"))
@@ -1761,6 +2204,49 @@ else:  # MODE == "shotgun"
     KRAKEN2_RANK_SETS = {"domain": {}, "kingdom": {}, "realm": {}, "virus_root": {}}
     if RUN_KRAKEN2:
         KRAKEN2_RANK_SETS = _kraken2_rank_sets(KRAKEN_DB / "taxo.k2d")
+
+    # ── Start-up check of the keep/discard tokens (only when Kraken2 runs) ──
+    # Why: a token that cannot match a row of otu_table.tsv removes every taxon in
+    # keep, or nothing in discard, and the run would only find out at the table step,
+    # after Kraken2 and Bracken (see "Start-up check of the keep/discard filter tokens"
+    # near the top of this file). So the tokens are checked here, before any job,
+    # against the eight slots of the table and against this database's domains,
+    # kingdoms and realms (KRAKEN2_RANK_SETS, just above).
+    # Why tokens can stop here while a database value only warns: the eight slots are
+    # the same on every Kraken2 database, so a wrong prefix or a domain under k__ can
+    # never match; but which domains, kingdoms and realms exist depends on the
+    # database (GTDB has no kingdom; realm names change between NCBI releases), and
+    # one config may serve several databases. A keep list that this database cannot
+    # match at all does stop the run, when the filter is on: the table would be empty.
+    # Runs whenever keep or discard lists a token, also with taxonomy_filter.enabled:
+    # false, as in amplicon runs. Not for a sylph-only run: the filter acts on
+    # otu_table.tsv only, which only the Kraken2 chain writes (the warning below says so).
+    #   in : OTU_FILTER_KEEP, OTU_FILTER_DISCARD, OTU_FILTER_ENABLED, KRAKEN2_RANK_SETS
+    #   out: one warning line per token this database gives no row; then, if any token
+    #        cannot be used, one sys.exit that lists every problem
+    if RUN_KRAKEN2 and (OTU_FILTER_KEEP or OTU_FILTER_DISCARD):
+        _token_problems, _token_warnings = _check_shotgun_filter_tokens(
+            OTU_FILTER_KEEP, OTU_FILTER_DISCARD, KRAKEN2_RANK_SETS, OTU_FILTER_ENABLED,
+        )
+        for _token_warning in _token_warnings:
+            sys.stderr.write(f"[MetaFlux] warning: {_token_warning}\n")
+        if _token_problems:
+            _token_footer = (
+                "A token must equal one whole slot of the lineage, prefix included: d__ "
+                "k__ p__ c__ o__ f__ g__ s__. Since v2.5.0 d__ holds the domain (for a "
+                "virus, its realm) and k__ the kingdom."
+            )
+            if not OTU_FILTER_ENABLED:
+                _token_footer += (
+                    " The filter is switched off in this run (taxonomy_filter.enabled: "
+                    "false), but its tokens are checked all the same, so that they are "
+                    "right when it is switched on."
+                )
+            sys.exit(
+                f"[MetaFlux] these shotgun.taxonomy_filter tokens cannot be used with the "
+                f"Kraken2 database {KRAKEN_DB}, so the run stops before any step:\n  - "
+                + "\n  - ".join(_token_problems) + "\n" + _token_footer
+            )
 
     # The taxon filter acts on otu_table.tsv (Kraken2 + Bracken) only. The sylph tables
     # are written unfiltered, so that each column still adds up to the read pairs after

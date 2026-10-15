@@ -247,6 +247,8 @@ amplicon:
       # An empty list [] means that direction does nothing. There is NO built-in
       # default — whatever you list here is exactly what is applied, so set these to
       # match your marker.
+      # The tokens are checked when the run starts, even with enabled: false: one that
+      # can never match (e.g. k__Bacteria, written d__Bacteria since v2.5.0) stops it.
       #
       # The values below are COMMENTED OUT on purpose. This file is always loaded as a
       # base layer beneath your --configfile, so a concrete value here would silently
@@ -619,7 +621,9 @@ shotgun:
   # `keep` runs first, then `discard`. Empty list = that direction does nothing.
   # Applied to the final otu_table after Bracken, so it never changes read
   # classification, only which OTUs appear in the table. Default OFF (metagenomic
-  # sample types vary too much for a universal default). Common uses:
+  # sample types vary too much for a universal default). The tokens are checked when
+  # the run starts (when Kraken2 runs): one that can never match (e.g. k__Bacteria)
+  # stops it, one this Kraken2 database lacks gives a warning. Common uses:
   #   keep:    [d__Bacteria, d__Archaea]                # prokaryotes only
   #   keep:    [d__Bacteria, d__Archaea, d__Eukaryota]  # drops viruses and anything
   #                                                     # else without a domain (plasmids)
