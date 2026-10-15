@@ -229,10 +229,12 @@ Before any ASV is classified, rule `check_taxonomy_reference` reads the exact fi
 classifier is about to use, a path pinned in the run config included, and checks every
 header against the pack:
 
-- the rank shape: a DADA2 training set (`rdp`) must have the pack's number of ranks
-  (for 16S without the species, which `addSpecies` fills from a file of its own), with
-  the pack's prefixes where the reference embeds them; a SINTAX file must use the
-  pack's letters, in the pack's top-down order;
+- the rank shape: in a DADA2 training set (`rdp`) no lineage may be deeper than the
+  pack's ranks (for 16S without the species, which `addSpecies` fills from a file of
+  its own), and the deepest lineages must reach them; a shallower lineage must end with
+  `;`, as SILVA's do, so that `assignTaxonomy` pads it with empty ranks; the names carry
+  the pack's prefixes where the reference embeds them; a SINTAX file must use the pack's
+  letters, in the pack's top-down order;
 - the names in the ranks the pack has rules for, its `reference_values`.
 
 A file that fails stops the run before any classification. The message names the file,
