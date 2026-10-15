@@ -144,10 +144,11 @@ starts classifying immediately.
     probe is an in-silico PCR of the primers against a full-length reference; for ITS
     and gyrB it is a direct length measurement of a reference that is already
     amplicon-length. Its filenames carry the marker, the reference version (for 16S
-    also the lineages left out of the statistics) and a 12-character fingerprint of the
-    two primer FASTA files, so a change of primers
-    produces a different name and the probe is recomputed rather than silently
-    reused. See [amplicon length and truncation](../amplicon/length-and-truncation.md).
+    also the lineages left out of the statistics; for rpoB `_excl-second-site`, because
+    products that hold a second forward-primer site are left out) and a 12-character
+    fingerprint of the two primer FASTA files, so a change of primers produces a
+    different name and the probe is recomputed rather than silently reused. See
+    [amplicon length and truncation](../amplicon/length-and-truncation.md).
 
 ### PhiX
 

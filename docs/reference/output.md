@@ -281,9 +281,11 @@ refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.amplicons.fa.gz
 ```
 
 The filename carries the marker, the reference it was probed against (for 16S also
-the lineages left out of the statistics), and a hash of both primer sequences, so the probe is skipped on every later run with the same
-marker and primers — including runs writing to a different `out_dir`. Changing a
-primer changes the hash and the probe runs again.
+the lineages left out of the statistics; for rpoB `_excl-second-site`, because products
+that hold a second forward-primer site are left out), and a hash of both primer
+sequences, so the probe is skipped on every later run with the same marker and primers —
+including runs writing to a different `out_dir`. Changing a primer changes the hash and
+the probe runs again.
 
 ---
 

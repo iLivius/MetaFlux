@@ -228,10 +228,11 @@ Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under
 `refdb/cache/` inside the MetaFlux checkout — that second path is fixed and does
 not follow `references.refdb_root`. The probe's filename encodes the marker, its
-reference (for 16S including the lineages left out of the statistics), and a hash of
-both primer sequences, so it is reused whenever those
-are unchanged and recomputed when a primer changes. See
-[output files](output.md) for what a run writes where.
+reference (for 16S also the lineages left out of the statistics; for rpoB
+`_excl-second-site`, because products that hold a second forward-primer site are left
+out), and a hash of both primer sequences, so it is reused whenever those are unchanged
+and recomputed when a primer changes. See [output files](output.md) for what a run
+writes where.
 
 ## Two mode-specific notes
 

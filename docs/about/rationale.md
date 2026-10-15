@@ -87,8 +87,10 @@ distribution itself, keeping ASVs inside
 moves the overlap constraint, not the ASV window.
 
 The probe result is cached under `refdb/cache/`. The filename encodes the marker
-type, the reference (for 16S also the lineages left out of the statistics), and a hash
-of both primer sequences, so the probe re-runs only when one of those actually changes.
+type, the reference (for 16S also the lineages left out of the statistics; for rpoB
+`_excl-second-site`, because products that hold a second forward-primer site are left
+out), and a hash of both primer sequences, so the probe re-runs only when one of those
+actually changes.
 
 !!! note "Automatic is not always right"
 
