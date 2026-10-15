@@ -208,9 +208,9 @@ Two things to know about what is and is not here:
 | Path | Contents |
 |---|---|
 | `read_tracking.txt` | The per-stage summary, described below. |
-| `1.raw_reads.counts` | R1 read count per sample, `{sample} : N`, with a trailing total. |
-| `2.nophix_reads.counts` | Same, after PhiX removal. Only when `remove_phix: true`. |
-| `3.stripped_reads.counts` | Same, after primer trimming. |
+| `01.raw_reads.counts` | R1 read count per sample, `{sample} : N`, with a trailing total. |
+| `02.nophix_reads.counts` | Same, after PhiX removal. Only when `remove_phix: true`. |
+| `03.stripped_reads.counts` | Same, after primer trimming. |
 | `trunclen.json` | The truncation decision: what `truncLen` was chosen for R1 and R2 and how. See [amplicon length and truncation](../amplicon/length-and-truncation.md). |
 | `taxonomy_reference_check.json` | What the reference check saw in the file the classifier reads: the file, the number of records, the ranks per record, the SINTAX letters (under `sintax`) and the names found in each rank the marker pack has a rule for. Written by `check_taxonomy_reference` before any classification, and only when the file passes; `assign_taxonomy` waits for it, and nothing reads its content. See [the reference check](../amplicon/markers/index.md#the-reference-check-reference_values). |
 | `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix`, `stripped`), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. |

@@ -3076,14 +3076,14 @@ def _amplicon_targets():
     if REMOVE_PHIX:
         targets += [
             *expand(OUT / "02.no_phix" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
-            OUT / "stats" / "2.nophix_reads.counts",
+            OUT / "stats" / "02.nophix_reads.counts",
         ]
     targets += [
         # Preprocessing outputs
         *expand(OUT / "03.stripped" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
         # Read count summaries
-        OUT / "stats" / "1.raw_reads.counts",
-        OUT / "stats" / "3.stripped_reads.counts",
+        OUT / "stats" / "01.raw_reads.counts",
+        OUT / "stats" / "03.stripped_reads.counts",
         # Falco QC (per sample, per direction, per stage — 'nophix' only if REMOVE_PHIX)
         *expand(OUT / "stats" / "falco" / "{sample}_R{r}_{stage}",
                 stage=FALCO_STAGES, sample=SAMPLES, r=[1, 2]),

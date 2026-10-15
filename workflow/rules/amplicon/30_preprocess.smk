@@ -26,6 +26,11 @@ rule link_reads:
 # aggregate_read_counts (80_taxonomy.smk), which joins them with the DADA2 and
 # taxonomy counts into one read-tracking table for the whole run.
 #
+# Each file name starts with the two-digit number of the folder whose reads it
+# counts, so stats/ sorts in pipeline order like the output folders do:
+# 01 = the raw reads (linked in 01.reads/), 02 = after PhiX removal (02.no_phix/),
+# 03 = after primer trimming (03.stripped/).
+#
 # count_reads_raw handles both .gz and plain .fastq input because the run's raw
 # FASTQs (in fastq_dir) can be either; count_reads_nophix and count_reads_stripped
 # only ever zcat, because their inputs are rm_phix's and trim_primers' outputs,
@@ -35,7 +40,7 @@ rule count_reads_raw:
     input:
         r1 = expand("{fq}", fq=[raw_fastq(s, 1) for s in SAMPLES]),
     output:
-        counts = OUT / "stats" / "1.raw_reads.counts",
+        counts = OUT / "stats" / "01.raw_reads.counts",
     log:
         LOGS / "count_reads" / "raw.log",
     shell:
@@ -62,7 +67,7 @@ rule count_reads_nophix:
     input:
         r1 = expand(OUT / "02.no_phix" / "{sample}_R1.fastq.gz", sample=SAMPLES),
     output:
-        counts = OUT / "stats" / "2.nophix_reads.counts",
+        counts = OUT / "stats" / "02.nophix_reads.counts",
     log:
         LOGS / "count_reads" / "nophix.log",
     shell:
@@ -85,7 +90,7 @@ rule count_reads_stripped:
     input:
         r1 = expand(OUT / "03.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
     output:
-        counts = OUT / "stats" / "3.stripped_reads.counts",
+        counts = OUT / "stats" / "03.stripped_reads.counts",
     log:
         LOGS / "count_reads" / "stripped.log",
     shell:

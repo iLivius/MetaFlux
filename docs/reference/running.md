@@ -182,13 +182,14 @@ consequences:
 !!! note "Re-running an output folder made with v2.4.0"
 
     **Nearly every step runs again**, because the output folders have new names: the
-    amplicon folders `1.reads` to `7.phylogeny` are now `01.reads` to `07.phylogeny`; in
-    shotgun mode the Kraken2 files move from `02.classification/` into
+    amplicon folders `1.reads` to `7.phylogeny` are now `01.reads` to `07.phylogeny`, and
+    the read-count files in `stats/` take the same two digits (`01.raw_reads.counts` …);
+    in shotgun mode the Kraken2 files move from `02.classification/` into
     `02.classification/kraken2/`, together with the k-mer evidence files of
     `02b.evidence/`. Only the steps whose files kept their names are skipped, and they
-    would write the same files: the count and QC of the raw reads in `stats/`, the primer
-    reverse complements in `_aux/`, `samples.tsv`, and downloads already on disk
-    (references, and the SRA runs in BioProject mode). The old folders, the old files
+    would write the same files: the QC of the raw reads in `stats/`, the primer reverse
+    complements in `_aux/`, `samples.tsv`, and downloads already on disk (references,
+    and the SRA runs in BioProject mode). The old folders and count files, the old files
     directly in `02.classification/`, and `03.abundance/otu_table.raw.biom` (v2.4.0's
     intermediate table, which a run made with `--notemp` keeps) are left as they are and
     can be deleted.

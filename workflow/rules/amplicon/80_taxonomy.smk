@@ -134,15 +134,15 @@ else:  # sintax
 # rule reads it back.
 rule aggregate_read_counts:
     input:
-        raw_counts       = OUT / "stats" / "1.raw_reads.counts",
-        stripped_counts  = OUT / "stats" / "3.stripped_reads.counts",
+        raw_counts       = OUT / "stats" / "01.raw_reads.counts",
+        stripped_counts  = OUT / "stats" / "03.stripped_reads.counts",
         dada2_counts     = OUT / "05.dada2" / "read.counts",
         seqtab_lenfilt   = OUT / "05.dada2" / "seqtab_lenfilt_head_names.txt",
         # seqtab_extracted only present when extraction is enabled
         seqtab_extracted = [OUT / "05.dada2" / "seqtab_extracted_head_names.txt"] if EXTRACTION_ENABLED else [],
         asv_table        = OUT / "06.taxonomy" / "asv_table.txt",
         # nophix_counts only present when PhiX removal runs
-        **({"nophix_counts": OUT / "stats" / "2.nophix_reads.counts"} if REMOVE_PHIX else {}),
+        **({"nophix_counts": OUT / "stats" / "02.nophix_reads.counts"} if REMOVE_PHIX else {}),
     output:
         counts = OUT / "stats" / "read_tracking.txt",
     params:
