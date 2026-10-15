@@ -2152,9 +2152,12 @@ else:  # MODE == "shotgun"
     # gated report. KMER_GATE_ENABLED decides one thing only: whether rule bracken
     # takes the gated report or Kraken2's original (see 45_abundance.smk). Defaults
     # are duplicated here so a config written before this block existed still parses.
+    # The floor of 300 distinct minimizers must match config/config.yaml, whose
+    # comment explains it: the published 1,000 unique k-mers converted to Kraken2's
+    # minimizers (about 333) and rounded down, because the conversion is approximate.
     _kmer_cfg          = sht_cfg.get("kmer_evidence", {}) or {}
     KMER_GATE_ENABLED  = bool(_kmer_cfg.get("enabled", False))
-    KMER_MIN_DISTINCT  = int(_kmer_cfg.get("min_distinct_minimizers", 333))
+    KMER_MIN_DISTINCT  = int(_kmer_cfg.get("min_distinct_minimizers", 300))
     KMER_MIN_READS     = int(_kmer_cfg.get("min_reads", 0))
     KMER_PROTECT_FRAC  = float(_kmer_cfg.get("never_prune_above_fraction", 0.01))
 

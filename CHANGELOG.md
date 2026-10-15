@@ -129,6 +129,20 @@ keep their names.
   `nophix` is the pairs it removed (a pair with PhiX in one mate only used to count as
   half a pair); MultiQC labels BBDuk's statistics "PhiX removal".
 
+### k-mer evidence floor, `allow_one_off` description
+
+- **`shotgun.kmer_evidence.min_distinct_minimizers` defaults to 300** instead of 333.
+  The published floor of 1,000 unique k-mers converts to about 333 distinct
+  minimizers, and the default rounds that down because the conversion is approximate.
+  The gate is off by default, so the default OTU tables do not change; the evidence
+  table and the gated report written on every run now use 300. With the gate on,
+  species with 300 to 332 distinct minimizers now pass. The k-mer evidence page
+  describes a floor scaled to sequencing depth.
+- **`amplicon.dada2.chimera.allow_one_off`:** the comment in `config/config.yaml` had
+  the two settings the wrong way round. `false`, DADA2's default, flags exact bimeras
+  only; `true` also flags ASVs one mismatch or indel away from an exact bimera, so it
+  removes more. Only the comment changes; nothing has to be re-run.
+
 ### Pinned tool versions
 
 - **Pinned conda environments on Linux.** Next to every `workflow/envs/<tool>.yaml` sits
@@ -178,6 +192,8 @@ few calls at `min_boot`, as between two identical runs. The documentation's
 - `discard_min_support: true` is refused; write a number from 0 to 100, or `null`.
 - Under `resources`, the OTU-table rule is now `finalize_otu_table`; a `kraken_biom`
   line is ignored and can go.
+- A config that sets `shotgun.kmer_evidence.min_distinct_minimizers: 333` keeps that
+  floor; write `300`, or delete the line, for the new default.
 - New keys with safe defaults, so an old config parses unchanged: `shotgun.profiler`
   (`kraken2`), `references.sylph_databases` and `sylph_taxonomy_dir`,
   `amplicon.taxonomy.silva_other` (`verbatim`), `filter.discard_min_support` (50),

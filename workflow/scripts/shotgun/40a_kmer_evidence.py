@@ -33,10 +33,11 @@ reading that is impossible; under LCA attribution it is unremarkable.
 
 So column 5 for a species means: how many DISTINCT database minimizers specific to
 that species (or to something below it) were seen anywhere in this sample. That is a
-statement about how much species-specific sequence is present — which is exactly the
-quantity KrakenUniq calls unique k-mers, so the published thresholds below do
-transfer once the units are converted. It is NOT a per-read genome-coverage measure,
-and describing it as "how much of the genome the reads covered" would be wrong.
+statement about how much species-specific sequence is present — the minimizer
+counterpart of what KrakenUniq calls unique k-mers, so the published thresholds below
+are a fair starting point; how well they convert to minimizers is discussed under
+THRESHOLD UNITS. It is NOT a per-read genome-coverage measure, and describing it as
+"how much of the genome the reads covered" would be wrong.
 
 Column 4 divided by column 5 (call it duplicity) is then the average number of times
 each of those species-specific minimizers was seen. Low means the evidence is spread
@@ -108,14 +109,25 @@ Two things have to be right or the pruned report quietly corrupts Bracken's arit
 THRESHOLD UNITS — THE EASY MISTAKE
 ----------------------------------
 Every published threshold (KrakenUniq 2018, aMeta 2023, and Oskolkov 2026 in
-Front. Microbiol. 17:1603339) is quoted in UNIQUE K-MERS. Kraken2's column 5 counts DISTINCT MINIMIZERS, which are
-a sample of the k-mers, not all of them. Each k-mer of length k spans w = k - l + 1
-candidate minimizers of length l, and the standard expected density of selected
-minimizers is 2 / (w + 1). For the usual nucleotide settings (k = 35, l = 31) that is
-w = 5 and a density of 1/3 — roughly one distinct minimizer per three k-mers. So a
-published "1,000 unique k-mers" is about 333 here. Feeding the published number
-straight into the minimizer column makes the filter three times harsher than its
-authors intended. Check k and l on the first line of your database's inspect.txt.
+Front. Microbiol. 17:1603339) is quoted in UNIQUE K-MERS. Kraken2's column 5 counts
+DISTINCT MINIMIZERS, which are a sample of the k-mers, not all of them. Each k-mer of
+length k spans w = k - l + 1 candidate minimizers of length l, and the standard
+expected density of selected minimizers is 2 / (w + 1). For the usual nucleotide
+settings (k = 35, l = 31) that is w = 5 and a density of 1/3 — roughly one distinct
+minimizer per three k-mers. By that arithmetic a published "1,000 unique k-mers" is
+about 333 here. The default floor (shotgun.kmer_evidence.min_distinct_minimizers in
+config.yaml) rounds that down to 300, because the conversion is only approximate.
+Check k and l on the first line of your database's inspect.txt and redo the
+arithmetic if they differ.
+
+Treat 300 as a low, cautious floor. The only direct comparison, Oskolkov 2026
+(Suppl. Fig. S6), ran Kraken2 and KrakenUniq on the same data and found that Kraken2
+needed two to three times MORE distinct minimizers than KrakenUniq needed unique
+k-mers, where the conversion above predicts about three times fewer. At 300 the gate
+removes only the calls with the least distinct sequence behind them. A floor sized to
+sequencing depth (about one distinct minimizer per 1,000 classified read pairs, host
+excluded, in the shallowest sample; at most 6,500) is described in
+docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth.
 
 CONSUMED BY
 -----------
