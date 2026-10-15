@@ -534,11 +534,11 @@ shotgun:
     # bracken log for that sample.
     threshold: auto
 
-    # Scaling coefficient for auto mode. 5e-05 was the best single value across every
-    # benchmarked dataset. On the 41 CAMI II samples it costs a mean of 0.023 F1
-    # against tuning each sample individually (median 0.014), because the optimum
-    # there is a broad plateau rather than a sharp peak; leaving the threshold at a
-    # flat 10 costs up to 0.34 F1. Roughly: 2M pairs -> 100, 5M -> 250, 15M -> 750.
+    # Scaling coefficient for auto mode, one value for every sample. On the 41 CAMI II
+    # benchmark samples it costs a mean of 0.023 F1 against tuning each sample
+    # individually (median 0.014), because the optimum there is a broad plateau rather
+    # than a sharp peak; leaving the threshold at a flat 10 costs up to 0.34 F1.
+    # Roughly: 2M pairs -> 100, 5M -> 250, 15M -> 750.
     #
     # A fit on all 41 CAMI II marine, rhizosphere and strain-madness samples, with a
     # newer PlusPF build, puts the median optimum at 6.0e-05, well inside that plateau.

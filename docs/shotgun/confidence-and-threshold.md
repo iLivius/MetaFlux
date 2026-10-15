@@ -62,8 +62,9 @@ confidence 0.15 and 85 at 0.20 (PlusPF `k2_pluspf_20260626`; 134 and 87 with
 Raising confidence and applying a read-count floor both reduce the same small read
 counts, so together they remove rare species that are present. [Wright, Comeau & Langille
 (2023)](https://doi.org/10.1099/mgen.0.000949) swept confidence 0.00–1.00 on simulated
-data and found two F1 optima, 0.60 and 0.15, with 0.15 favouring accurate relative
-abundance — the source of MetaFlux's existing default. Nothing here changes it.
+data: 0.60 gave the highest mean F1, while 0.15 gave the lowest L1 distance, that is,
+the most accurate relative abundances. 0.15 is the source of MetaFlux's default, and
+nothing here changes it.
 
 ## Bracken threshold
 
@@ -123,7 +124,7 @@ The decision is written to that sample's Bracken log; for the D6331 run it reads
 and does nothing else with it. A cut-off that grows with depth is not a new idea.
 Benchmarks usually filter on relative abundance, a fixed share of the reads (for example
 [Ye et al. 2019](https://www.sciencedirect.com/science/article/pii/S0092867419307755)),
-and KrakenUniq found that the best unique-k-mer threshold rose in proportion to
+and KrakenUniq found that the best unique-k-mer threshold rose roughly linearly with
 sequencing depth ([Breitwieser et al. 2018](https://doi.org/10.1186/s13059-018-1568-0)).
 
 MetaFlux adds a measured constant and computes the threshold for each sample
