@@ -392,18 +392,24 @@ The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 
 #### Reference files MetaFlux builds itself
 
-Four of these keys point at files MetaFlux builds rather than downloads: `silva.train`
-(on SILVA 144), `silva.sintax`, `pr2.sintax` and `rpob.frogs`. A path given for one of
-them is where MetaFlux writes the file it builds, and MetaFlux rebuilds that file
-whenever its input (`silva.train_raw`, the SILVA training set, `pr2.utax` and the FROGS
-archive, in that order) or the conversion script is newer than it (a fresh clone, or an update that
-changes the script), or when the conversion step's input or software changes. So never
-keep a file of your own at such a path; a write-protected file there stops the run as
-soon as MetaFlux wants to rebuild it. If you pin the input of a built file, pin the
-built file to a path of its own too (`pr2.sintax` next to `pr2.utax`, say): otherwise
-the default file is rebuilt from your input, or an older build from another input is
-reused. Whichever path the classifier reads, the reference check tests that very file
-before any classification (see
+Four of these keys point at files MetaFlux builds rather than downloads:
+
+| Key | Built from | By rule |
+|---|---|---|
+| `silva.train` (SILVA 144 only) | `silva.train_raw`, SILVA's own download | `convert_silva_train` |
+| `silva.sintax` | `silva.train`, the training set of the chosen release | `convert_silva_sintax` |
+| `pr2.sintax` | `pr2.utax`, PR2's UTAX download | `convert_pr2_sintax` |
+| `rpob.frogs` | the FROGS rpoB archive, downloaded by `fetch_rpob_archive` | `convert_rpob_to_dada2` |
+
+A path given for one of them is where MetaFlux writes the file it builds. MetaFlux
+rebuilds such a file whenever its input or its conversion script is newer than it (a
+fresh clone, or an update that changes the script), or when the step's input or
+software changes. So never keep a file of your own at such a path; a write-protected
+file there stops the run as soon as MetaFlux wants to rebuild it. If you pin the input
+of a built file, pin the built file to a path of its own too (`pr2.sintax` next to
+`pr2.utax`, say): otherwise the default file is rebuilt from your input, or an older
+build from another input is reused. Whichever path the classifier reads, the reference
+check tests that very file before any classification (see
 [the reference check](../amplicon/markers/index.md#the-reference-check-reference_values)).
 
 A reference that has neither a config entry nor a pack default stops the run with a
