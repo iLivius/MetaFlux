@@ -164,7 +164,9 @@ amplicon:
                                               #   since the direct path never runs an in-silico PCR).
                                               # rpoB auto: in-silico PCR against the full-length FROGS genes; uses
                                               #   probe_length_stat.rpoB — this key MUST be present in auto mode or
-                                              #   parsing hard-errors.
+                                              #   parsing hard-errors. Products that still hold a second
+                                              #   forward-primer site are left out of the statistics: in many
+                                              #   rpoB genes the primer also fits a look-alike stretch upstream.
                                               # Manual: provide a single integer (bp) or [min, max] range.
   probe_length_stat:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max

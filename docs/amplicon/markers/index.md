@@ -101,7 +101,9 @@ it and everything downstream. Neither match is anchored — the references are w
 genes, so the primers bind inside them.
 What survives is the set of amplicons those primers would produce from that reference, and
 their lengths are the distribution. This is the mode for 16S, 18S and rpoB, because SILVA,
-SILVA-Euk and the FROGS rpoB build all contain whole genes.
+SILVA-Euk and the FROGS rpoB build all contain whole genes. For rpoB a third pass leaves
+out of the statistics the products that still hold a second forward-primer site (see
+[A primer that matches twice](../length-and-truncation.md#a-primer-that-matches-twice)).
 
 **`direct`** — no PCR simulation at all. The reference is *already* amplicon-length, so
 cutadapt is never called and the sequence lengths are read off the file as they are. This
@@ -117,12 +119,12 @@ UCHIME references keep only a 15 bp anchor of flanking rRNA at each end).
 
 Both modes end at the same place: one JSON of length statistics
 (`n_amplicons`, `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean`, `stdev`, plus
-`excluded_taxa` and `n_excluded`) cached
+`excluded_taxa` and `n_excluded`, and for rpoB `n_excluded_second_site`) cached
 in the pipeline's own `refdb/cache/`, next to the workflow. That directory is fixed at
 the repository root and does not follow `references.refdb_root`, so the cache stays put
 across runs and output directories even when the databases themselves live on a shared
 path. The file is keyed by marker, reference tag (for 16S including the lineages left
-out of the statistics) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
+out of the statistics, for rpoB the third pass) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
 single statistic becomes `expected_length` comes from `amplicon.probe_length_stat` — see
 [amplicon length and truncation](../length-and-truncation.md).
 

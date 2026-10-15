@@ -4,6 +4,10 @@
 #                    (SILVA / SILVA-Euk / FROGS) — keep reference sequences that
 #                    contain both the fwd primer and revcomp(rev).
 #                    Surviving trimmed sequences = the in-silico PCR products.
+#                    rpoB adds a third pass (pack field probe_exclude_second_site):
+#                    products that still hold a second full-length forward-primer
+#                    site are left out of the statistics, because their start is
+#                    not the real forward-primer site (see 40a_amplicon_probe.py).
 #
 # direct mode (ITS, gyrB): measure lengths directly from a reference that is
 #                    ALREADY amplicon-length — UNITE UCHIME's pre-extracted
@@ -40,6 +44,9 @@ rule amplicon_probe:
         ref_tag     = PROBE_REF_TAG,
         # lineages left out of the length statistics (pack field probe_exclude_taxa)
         exclude_taxa = PROBE_EXCLUDE_TAXA,
+        # true: also leave out products that hold a second full-length forward-primer
+        # site (pack field probe_exclude_second_site; rpoB only)
+        exclude_second_site = PROBE_EXCLUDE_SECOND_SITE,
     log:
         LOGS / "amplicon_probe.log",
     conda:

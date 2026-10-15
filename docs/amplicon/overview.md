@@ -179,14 +179,16 @@ Either way, the step writes a JSON holding the length distribution: `n_amplicons
 `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean` and `stdev`. For 16S, chloroplast,
 mitochondrial and eukaryote references are left out of these statistics, because their
 in-silico products are often longer and the taxon filter removes them later anyway; the
-JSON records what was left out (`excluded_taxa`, `n_excluded`). Which single statistic
-feeds the truncation constraint is set by `amplicon.probe_length_stat.<key>` (the shipped
-config uses `p95` for 16S, 18S and rpoB).
+JSON records what was left out (`excluded_taxa`, `n_excluded`). For rpoB, products that
+still hold a second forward-primer site are left out too (`n_excluded_second_site`):
+their forward primer matched a look-alike stretch upstream of its real site. Which
+single statistic feeds the truncation constraint is set by
+`amplicon.probe_length_stat.<key>` (the shipped config uses `p95` for 16S, 18S and rpoB).
 
 The result is cached in the repository under `refdb/cache/`, not under `out_dir`, and the
-filename encodes the marker, the reference (for 16S including the lineages left out), and
-a short hash of both primer FASTAs. Same marker, same reference, same primers means the
-cached probe is reused — across reruns and across different output directories. Change a primer and the hash changes, so the probe is
+filename encodes the marker, the reference (for 16S including the lineages left out, for
+rpoB the second-site rule), and a short hash of both primer FASTAs. Same marker, same
+reference, same primers means the cached probe is reused — across reruns and across different output directories. Change a primer and the hash changes, so the probe is
 recomputed automatically.
 
 Details, including which statistic to pick and when `auto` is the wrong choice, are on the

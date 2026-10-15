@@ -390,6 +390,32 @@ If no reference sequence carries both primers, the rule fails with a message poi
 primer orientation and the error tolerance — a genuine failure, since sizing a window
 from zero amplicons is meaningless.
 
+#### A primer that matches twice
+
+A primer can match a reference twice: at its real site and at a weaker look-alike
+stretch elsewhere in the gene. With a degenerate primer, cutadapt keeps the leftmost of
+the two matches, even when the later one fits better. For the reverse primer that is the
+site nearest the forward primer, the right one. For the forward primer it is the site
+farther from the reverse primer, so the product starts too early and comes out too long.
+
+In rpoB this is common. With the `Univ_rpoB_deg` primers on the FROGS genes, the forward
+primer also matches, with the 4 mismatches that `max_error_rate: 0.2` allows, a stretch
+about 920 bp upstream of its real site in 7,289 of the 42,995 products (17%), mostly
+Gammaproteobacteria and Actinomycetes. Most of those products are 1.0–2.0 kb long; they
+put p95 at 1,332 bp, so a fully automatic run would check the read overlap, and size the
+ASV length window, for an amplicon more than three times too long; with 2×300 bp reads
+`pick_trunclen` stops there, since no pair of truncation lengths spans 1,332 bp. The
+rpoB marker pack therefore sets `probe_exclude_second_site: true`, which adds a
+**pass 3**: every amplicon body is searched again for the forward primer, at its full
+length and with the same mismatch rate, and the bodies that still hold a forward-primer
+site are left out of the statistics. The probe then gives p95 395 bp (median 386 bp).
+Such a body is left out rather than cut back to its inner site, because the sequence
+alone does not tell which of the two sites a PCR would use.
+
+16S and 18S do not set the field. The same thing happens there, but rarely: 0.6–0.7% of
+the 16S products with 799F/1175R and 0.5% of the 18S products with the TAReuk V4
+primers. Left out, they would move p95 by 1 bp (16S on SILVA 144) and 7 bp (18S).
+
 ### `probe_mode: direct` — lengths read straight off the reference
 
 Used when the reference database already ships amplicon-length sequences (ITS, gyrB).
@@ -411,7 +437,7 @@ gyrB amplicons rather than full genes, with the same consequence.
 | ITS | `direct` | UNITE UCHIME, pre-extracted ITS1 or ITS2 | `unite_uchime_ITS1` / `unite_uchime_ITS2` | none — ITS never resolves a stat |
 | 18S | `pcr` | SILVA-Eukaryotic 18S v132 | `silva_euk_18s_v132` | `18S` |
 | gyrB | `direct` | DD7RZ8 v6 | `gyrb_dd7rz8_v6` | `16S` (gyrB reuses that key) |
-| rpoB | `pcr` | FROGS RefSeq rpoB | `rpob_refseq_cc_20240707` | `rpoB` |
+| rpoB | `pcr` | FROGS RefSeq rpoB (products that hold a second forward-primer site left out of the statistics) | `rpob_refseq_cc_20240707_excl-second-site` | `rpoB` |
 
 For 16S, the in-silico products of chloroplast, mitochondrial and eukaryote references
 are left out of the statistics (marker pack field `probe_exclude_taxa`, written into the
@@ -440,7 +466,9 @@ excluded_taxa, n_excluded
 names the reference lineages left out of the statistics (the pack's
 `probe_exclude_taxa`: Chloroplast, Eukaryota and Mitochondria for 16S, none for the
 other markers) and `n_excluded` how many sequences that left out; `n_amplicons` and the
-statistics count the rest.
+statistics count the rest. With `probe_exclude_second_site: true` (rpoB) the JSON also
+holds `n_excluded_second_site`, the number of products pass 3 left out because they hold
+a second forward-primer site.
 
 `amplicon.probe_length_stat.<key>` selects which one of these becomes
 `expected_length`. Accepted values are `min`, `q1`, `median`, `q3`, `p95`, `p99` and

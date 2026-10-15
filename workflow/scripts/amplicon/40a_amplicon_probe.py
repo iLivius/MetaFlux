@@ -16,7 +16,8 @@ prepared by the rules in 10_refdb.smk (SILVA for 16S, SILVA-Euk for 18S,
 UNITE UCHIME's ITS1/ITS2 subregion for ITS, DD7RZ8 for gyrB, FROGS for rpoB).
 ``fwd``/``rev`` are this run's primer FASTA files (only used in PCR mode).
 
-PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference.
+PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference
+(three passes for rpoB).
   Pass 1: ``-g file:fwd`` with ``--discard-untrimmed``
           → keep reference sequences containing the forward primer, trim it off.
   Pass 2: ``-a file:rev_rc`` with ``--discard-untrimmed``
@@ -27,6 +28,31 @@ PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference.
           The survivors are the in-silico amplicon bodies: what would be left
           of each reference sequence if it were actually PCR-amplified with
           these two primers.
+  Pass 3 (only when the marker pack sets ``probe_exclude_second_site: true``,
+          today rpoB): ``-g`` with each forward primer, required at its own full
+          length, with ``--discard-trimmed``
+          → keep only the amplicon bodies that do NOT hold a second full-length
+          forward-primer site. The others are left out of the length statistics;
+          the amplicons FASTA still contains them.
+          Why: a primer can match a reference twice, at its real site and at a
+          weaker look-alike stretch. With a degenerate primer cutadapt keeps the
+          LEFTMOST of the two matches, even when the later one fits better (here
+          the later one is often a perfect match). For the reverse primer (pass
+          2) that is the site nearest the forward primer, the right one, so no
+          body holds a second reverse site. For the forward primer it is the
+          site farther from the reverse primer, so the product starts at the
+          wrong site and comes out too long.
+          Univ_rpoB_deg_F also matches, with the 4 mismatches that max_error_rate
+          0.2 allows, a stretch about 920 bp upstream of its real site in 7,289 of
+          the 42,995 FROGS genes the two primers amplify (17%, mostly
+          Gammaproteobacteria and Actinomycetes). Those products, most of them
+          1.0-2.0 kb long, pulled p95 to 1,332 bp; without them p95 is 395 bp.
+          Which of the two sites a PCR would use cannot be told from the sequence
+          alone (the inner site is usually the better match, not always), so such
+          a product is left out rather than cut back to the inner site.
+          16S and 18S leave this pass off: the same thing happens there, but
+          rarely (0.5 to 0.7% of the products), and their probe results are kept
+          as they are.
 
 Direct mode (ITS, gyrB): no primer trimming. The reference is ALREADY an
   amplicon-length sequence, whatever marker/DB it comes from — UNITE UCHIME's
@@ -40,7 +66,9 @@ Both modes compute the same length distribution statistics and write a JSON:
 plus amp_type/primer_hash/reference_tag, which together identify exactly which
 inputs produced this result — the probe JSON is cached under refdb/cache/ under
 a filename built from those same three values, so a rerun with unchanged
-marker/reference/primers skips this rule entirely.
+marker/reference/primers skips this rule entirely. When pass 3 runs, the JSON
+also holds n_excluded_second_site, and the reference tag in the filename ends
+in "_excl-second-site" (set in 00_common.smk).
 
 Output: the JSON above (``snakemake.output.json``) is read next by
 ``pick_trunclen`` (50a_pick_trunclen.py), which picks one statistic
@@ -87,6 +115,11 @@ ref_tag     = str(p.ref_tag)
 # for 799F/1175R, and with it truncLen, although these are exactly the sequences
 # the taxonomy filter removes later. The amplicons FASTA still contains them.
 exclude_taxa = {str(t) for t in (p.exclude_taxa or [])}
+# Whether pass 3 runs: leave out of the statistics every product that holds a second
+# full-length forward-primer site (marker pack field probe_exclude_second_site; true
+# for rpoB only, see the module docstring). Read in 00_common.smk, which also stops
+# the run when the field is set on a direct-mode marker.
+exclude_second_site = bool(p.exclude_second_site)
 
 threads = int(sm.threads)
 log_path = Path(sm.log[0])
@@ -149,6 +182,41 @@ def lengths_for_stats(path: Path) -> tuple[list[int], int]:
     return kept, n_excluded
 
 
+# ── Read the primer sequences of a primer FASTA file ────────────
+def read_primer_sequences(path: Path) -> list[str]:
+    """Every sequence of a primer FASTA file, upper case, in file order.
+
+    Used by pass 3 only, which hands each forward primer to cutadapt on its own so
+    that each one can be required at its own full length. A primer file may hold
+    several primers (a primer mix); each of them counts as a primer site.
+    """
+    sequences: list[str] = []
+    current: list[str] = []
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(">"):
+                if current:
+                    sequences.append("".join(current).upper())
+                current = []
+            else:
+                current.append(line)
+    if current:
+        sequences.append("".join(current).upper())
+    return sequences
+
+
+# ── Count the records of a FASTA file ───────────────────────────
+def count_fasta_records(path: Path) -> int:
+    """Number of (non-empty) records in a (gzipped) FASTA file."""
+    n = 0
+    for _header, _length in iter_fasta_records(path):
+        n += 1
+    return n
+
+
 # ── Compute a percentile from a sorted list of lengths ──────────
 def pct(sorted_lengths: list[int], p: float) -> int:
     if not sorted_lengths:
@@ -159,7 +227,12 @@ def pct(sorted_lengths: list[int], p: float) -> int:
 
 out_amplicons.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Two-pass in-silico PCR (16S, 18S, rpoB) ──────────────────────
+# Filled by pass 3 only (pcr mode, packs with probe_exclude_second_site: true): how
+# many in-silico products there were, and how many of them pass 3 left out.
+n_products = 0
+n_second_site = 0
+
+# ── Two-pass in-silico PCR (16S, 18S, rpoB), plus pass 3 for rpoB ─
 if probe_mode == "pcr":
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -210,14 +283,57 @@ if probe_mode == "pcr":
             str(pass1),
         ], "pass2 (3' rev_rc)")
 
-    lengths, n_excluded = lengths_for_stats(out_amplicons)
+        # Pass 3 (packs with probe_exclude_second_site: true, i.e. rpoB): find the
+        # amplicon bodies that still hold a whole forward-primer site, and keep only
+        # the others for the statistics. Why, with the rpoB numbers: module docstring.
+        #   -g          : every forward primer as a 5' search, as in pass 1, each
+        #                 passed on its own so that each gets its own min_overlap.
+        #   min_overlap : the primer's own length, so only a whole primer site counts.
+        #                 With cutadapt's default of 3 bases, a body that merely starts
+        #                 with the last bases of the forward primer would count too.
+        #   -e          : the same mismatch rate as pass 1, so a second site is one
+        #                 that pass 1 would have taken as a primer site.
+        #   --discard-trimmed : write only the bodies in which no primer was found.
+        # The reverse primer is not searched again: pass 2 already keeps the reverse
+        # site nearest the forward primer, so a body never holds a second one.
+        # The kept bodies go to a temporary file; out_amplicons keeps every body.
+        stats_fasta = out_amplicons
+        if exclude_second_site:
+            single_site = tmp / "single_site.fa.gz"
+            pass3_cmd = ["cutadapt", "-j", str(threads)]
+            for primer in read_primer_sequences(Path(fwd)):
+                pass3_cmd += ["-g", f"{primer};min_overlap={len(primer)}"]
+            pass3_cmd += [
+                "-e", str(max_err),
+                "--discard-trimmed",
+                "-o", str(single_site),
+                str(out_amplicons),
+            ]
+            run(pass3_cmd, "pass3 (second forward-primer site)")
+            n_products = count_fasta_records(out_amplicons)
+            n_second_site = n_products - count_fasta_records(single_site)
+            stats_fasta = single_site
+
+        # Read the lengths here, while the temporary folder (and pass 3's file in it)
+        # still exists.
+        lengths, n_excluded = lengths_for_stats(stats_fasta)
 
     if not lengths:
-        log.write(
-            "\n[amplicon_probe] ERROR: no reference sequences had both primers. "
-            "Check primer sequences against the reference DB orientation and "
-            "primer error tolerance.\n"
-        )
+        if n_products > 0 and n_second_site == n_products:
+            # Pass 3 left nothing: every product holds a second forward-primer site.
+            log.write(
+                f"\n[amplicon_probe] ERROR: each of the {n_products} in-silico "
+                "products holds a second full-length forward-primer site, so none is "
+                "left to measure the amplicon length from. Set amplicon.expected_length "
+                "to a number, and length_filter.mode: manual with a range, for these "
+                "primers.\n"
+            )
+        else:
+            log.write(
+                "\n[amplicon_probe] ERROR: no reference sequences had both primers. "
+                "Check primer sequences against the reference DB orientation and "
+                "primer error tolerance.\n"
+            )
         log.close()
         sys.exit(2)
 
@@ -276,6 +392,10 @@ if probe_mode == "pcr":
 # markers), and how many amplicons that removed.
 result["excluded_taxa"] = sorted(exclude_taxa)
 result["n_excluded"] = n_excluded
+# How many products pass 3 left out because they hold a second forward-primer site.
+# Written only when pass 3 ran (rpoB), so the JSON of every other marker stays as it was.
+if exclude_second_site:
+    result["n_excluded_second_site"] = n_second_site
 
 # ── Write results and close log ──────────────────────────────────
 out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -284,6 +404,10 @@ out_json.write_text(json.dumps(result, indent=2) + "\n")
 if exclude_taxa:
     log.write(f"\n[amplicon_probe] left out of the statistics: {n_excluded} sequences "
               f"from {', '.join(sorted(exclude_taxa))}\n")
+if exclude_second_site:
+    log.write(f"\n[amplicon_probe] left out of the statistics: {n_second_site} of "
+              f"{n_products} products, which hold a second full-length "
+              f"forward-primer site\n")
 log.write(
     f"\n[amplicon_probe] DONE. n={len(lengths)} sequences; "
     f"median={result['median']} p95={result['p95']} q1={result['q1']} q3={result['q3']}\n"

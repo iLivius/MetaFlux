@@ -144,6 +144,12 @@ def mem_mb_for(rule_name: str) -> int:
 #   probe_ref_tag       label embedded in the probe-cache filename.
 #   probe_stat_key      which amplicon.probe_length_stat.<key> to read (only the
 #                       pcr path uses it; the direct path ignores the value).
+#   probe_exclude_second_site
+#                       OPTIONAL, pcr mode only, default false. true leaves out of
+#                       the length statistics every in-silico product that still
+#                       holds a second full-length forward-primer site (rpoB: the
+#                       forward primer also matches a look-alike stretch upstream
+#                       of its real site; see 40a_amplicon_probe.py, pass 3).
 #   taxonomy_refdb      reference symbol for the DADA2/RDP training set.
 #   taxonomy_species_db reference symbol for DADA2 addSpecies, or None.
 #   taxonomy_sintax_db  reference symbol for the VSEARCH SINTAX database.
@@ -754,6 +760,27 @@ if MODE == "amplicon":
     PROBE_EXCLUDE_TAXA = list(PROFILE.get("probe_exclude_taxa") or [])
     if PROBE_EXCLUDE_TAXA:
         PROBE_REF_TAG += "_excl-" + "-".join(sorted(t.lower() for t in PROBE_EXCLUDE_TAXA))
+    # In-silico products that still hold a second full-length forward-primer site are
+    # left out of the length statistics when the pack sets probe_exclude_second_site:
+    # true (rpoB; why, and with what numbers, in 40a_amplicon_probe.py, pass 3). It
+    # changes the result, so it goes into the cache file name as well, like the lineage
+    # list above; packs without the field keep their cache names and their results.
+    # Stops the run when the value is not true/false, or when it is set on a
+    # direct-mode marker, whose probe searches for no primer at all.
+    PROBE_EXCLUDE_SECOND_SITE = PROFILE.get("probe_exclude_second_site", False)
+    if not isinstance(PROBE_EXCLUDE_SECOND_SITE, bool):
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r}: probe_exclude_second_site must "
+            f"be true or false (got {PROBE_EXCLUDE_SECOND_SITE!r})."
+        )
+    if PROBE_EXCLUDE_SECOND_SITE and PROBE_MODE != "pcr":
+        sys.exit(
+            f"[MetaFlux] marker pack {AMPLICON_TYPE!r}: probe_exclude_second_site: true "
+            f"needs probe_mode: pcr (this pack has {PROBE_MODE!r}, whose probe searches "
+            f"for no primer site). Remove the field or set it to false."
+        )
+    if PROBE_EXCLUDE_SECOND_SITE:
+        PROBE_REF_TAG += "_excl-second-site"
     # Every marker except ITS can reach resolve_expected_length() in pick_trunclen.py
     # (ITS returns early and never resolves a stat) — so gate this validation on
     # amp_type, not probe_mode. A direct-mode marker like gyrB still needs a valid

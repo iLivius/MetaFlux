@@ -12,6 +12,14 @@ probe_mode:          pcr
 probe_ref:           rpob_frogs
 probe_ref_tag:       rpob_refseq_cc_20240707
 probe_stat_key:      rpoB             # amplicon.probe_length_stat.rpoB feeds auto mode
+# Leave out of the length statistics every in-silico product that still holds a
+# second full-length forward-primer site (40a_amplicon_probe.py, pass 3). In many of
+# these genes the forward primer also fits, with as many mismatches as the probe
+# allows, a look-alike stretch upstream of its real site, and cutadapt then starts the
+# product there. With the Univ_rpoB_deg primers that is 7,289 of the 42,995 products
+# (17%), starting about 920 bp too early; they put p95 at 1,332 bp. Without them p95
+# is 395 bp (median 386 bp), close to the 387 bp the amplicon has between the primers.
+probe_exclude_second_site: true
 
 # rdp path only. The FROGS package is for its own classifier; MetaFlux uses the
 # converted FASTA with DADA2 assignTaxonomy. There is no SINTAX build, so

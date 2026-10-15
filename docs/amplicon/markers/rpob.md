@@ -151,18 +151,27 @@ conversion only rewrites labels.
 The rpoB reference is full-length, so reading its sequence lengths would return the length
 of the gene (about 4 kb), not of the amplicon. The marker pack therefore sets
 `probe_mode: pcr`, the same path used for 16S and 18S: two passes of cutadapt against the
-reference, using the supplied primers.
+reference, using the supplied primers. For rpoB a third pass follows.
 
 | Pass | What it does |
 |---|---|
 | 1 | `-g file:fwd` with `--discard-untrimmed` — keep references carrying the forward primer at the 5′ end, and trim it off |
 | 2 | `-a file:rev_rc` with `--discard-untrimmed` — of those, keep the ones carrying the reverse complement of the reverse primer at the 3′ end, and trim it off |
+| 3 | the forward primer again, required at its full length, with `--discard-trimmed` — leave out of the statistics the bodies that still hold a second forward-primer site |
 
 The reverse primer is reverse-complemented first (with `seqtk seq -r`) so it can be
 searched for at the 3′ end. What survives both passes is the set of in-silico amplicon
 bodies; their lengths become the probe distribution. With the `Univ_rpoB_deg` primers the
 recovered bodies are around 387 bp — the amplicon minus the two primers, which cutadapt
 trims off in the two passes above.
+
+Pass 3 is set in the rpoB marker pack (`probe_exclude_second_site: true`). In 17% of the
+FROGS genes that both primers amplify, the forward primer also matches, with as many
+mismatches as the probe allows, a stretch about 920 bp upstream of its real site, and
+cutadapt keeps that earlier match. Without pass 3 the probe gives a median of 389 bp but a
+p95 of 1,332 bp, and p95 is the statistic `expected_length: auto` uses; with it, q1 is
+386 bp, the median 386 bp and p95 395 bp. The left-out bodies stay in the amplicons file.
+See [A primer that matches twice](../length-and-truncation.md#a-primer-that-matches-twice).
 
 This is the opposite arrangement to [gyrB](gyrb.md), whose reference ships already
 primer-trimmed and is therefore measured directly. The difference is a property of the two
@@ -183,12 +192,12 @@ databases, not of the two genes.
     `<out_dir>/logs/amplicon_probe.log`.
 
 The probe only runs when `amplicon.expected_length: auto`. It writes its statistics, and
-the recovered amplicons, to files whose names encode the marker, the reference tag, and a
-12-character hash of both primer FASTAs:
+the recovered amplicons, to files whose names encode the marker, the reference tag (which
+ends in `_excl-second-site` for pass 3), and a 12-character hash of both primer FASTAs:
 
 ```text
-refdb/cache/probe_rpoB_rpob_refseq_cc_20240707_<primer_hash>.json
-refdb/cache/probe_rpoB_rpob_refseq_cc_20240707_<primer_hash>.amplicons.fa.gz
+refdb/cache/probe_rpoB_rpob_refseq_cc_20240707_excl-second-site_<primer_hash>.json
+refdb/cache/probe_rpoB_rpob_refseq_cc_20240707_excl-second-site_<primer_hash>.amplicons.fa.gz
 ```
 
 Changing primers changes the hash, so the probe reruns; keeping the same primers across
