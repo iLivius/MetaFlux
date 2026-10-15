@@ -62,13 +62,13 @@ Everything else is intermediate data or QC.
 
 ### Inside `05.dada2/`
 
-The directory looks busy, but most of it is the same two artifacts — the **ASV
-sequences** and the **ASV count table** — written out again after each processing
-step. The table reads left to right in pipeline order. Within the count tables,
+Most files here are two kinds of output — the **ASV sequences** and the **ASV count
+table** — written again after each processing step. The table reads left to right in
+pipeline order. Within the count tables,
 `head_names` columns are `ASV_#` identifiers and `head_seqs` columns are the full
 ASV sequence; the counts are identical, only the labels differ.
 
-| Artifact | DADA2 | + Extraction *(optional)* | + Length filter |
+| Output | DADA2 | + Extraction *(optional)* | + Length filter |
 |---|---|---|---|
 | **ASV sequences** (FASTA) | `seqs.fasta` | `seqs_extracted.fasta` | `seqs_lenfilt.fasta` |
 | **Counts** — `ASV_#` keyed | `seqtab_head_names.txt` | `seqtab_extracted_head_names.txt` | `seqtab_lenfilt_head_names.txt` |
@@ -105,11 +105,11 @@ The extraction step leaves a per-extractor trail:
 | 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter) plus the raw `seqs.*` working files under `metaxa2/` |
 | ITS | ITSx | `itsx_extraction.summary.txt`, `itsx_collapse_map.tsv`, plus the raw `seqs.*` working files under `_itsx_tmp/` |
 
-`itsx_collapse_map.tsv` is worth knowing about. Two ASVs can differ only in the
-flanking 5.8S/LSU sequence; once ITSx trims those flanks away the remaining ITS1
-or ITS2 region is identical, so the ASVs are merged into one and their counts are
-added. The map records which original `ASV_#` went into which representative, so
-that merge is auditable rather than silent.
+`itsx_collapse_map.tsv` records how ASVs were merged after extraction. Two ASVs can
+differ only in the flanking 5.8S/LSU sequence; once ITSx trims those flanks away the
+remaining ITS1 or ITS2 region is identical, so the ASVs are merged into one and their
+counts are added. Each row of the map is one representative ASV, with the original
+`ASV_#` IDs that went into it.
 
 ### `06.taxonomy/`
 
@@ -489,7 +489,9 @@ slot below `shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level 
 
 **With `shotgun.profiler: both`** the same organism reads differently in the two tables:
 `otu_table.tsv` has eight slots and `sylph_table.tsv` seven, and the two databases can
-name a taxon differently. From one run:
+name a taxon differently. *Methanobrevibacter smithii* in the D6331 run SRR38976715
+(BioProject PRJNA1474435; see [Benchmark data](../about/test-datasets.md#benchmark-data)),
+as Kraken2 names it with PlusPF `k2_pluspf_20260626` and as sylph names it with GTDB r232:
 
 ```text
 otu_table.tsv    d__Archaea;k__Methanobacteriati;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanobrevibacter;s__Methanobrevibacter smithii

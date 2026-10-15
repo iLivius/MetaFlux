@@ -54,9 +54,12 @@ change which reads are extracted.
 Up to v2.4.0 MetaFlux used the Bracken report here, which has no rows below `tax_lev`
 and none for the taxa Bracken dropped below its threshold. The reads Kraken2 had placed
 on those rows were left out, without a warning: for a species whose genomes sit under a
-strain taxid, often all of them. In a sample of the ZymoBIOMICS Gut Microbiome Standard,
-every *Candida albicans* read sat on the strain SC5314, and the extracted files were
-empty.
+strain taxid, often all of them. In the ZymoBIOMICS Gut Microbiome Standard (D6331), SRA
+run SRR38976715 (BioProject PRJNA1474435; see
+[Benchmark data](../about/test-datasets.md#benchmark-data)), Kraken2 with PlusPF
+`k2_pluspf_20260626` placed all 29,618 *Candida albicans* read pairs on the strain
+SC5314 and none on the species itself. An extraction based on the Bracken report would
+have found none of them.
 
 !!! warning "The name must match one report row exactly"
 
@@ -105,8 +108,9 @@ empty.
       takes only the reads placed on the named taxon or below it. *Escherichia coli*
       reads that also match *Shigella*, a separate genus in NCBI's taxonomy, are
       placed on the family Enterobacteriaceae. There can be many times more of them
-      there than on *E. coli* itself, while Bracken's estimate in the OTU table gives
-      them back to *E. coli*.
+      there than on *E. coli* itself (about 30 times more in the D6331 run
+      SRR38976715), while Bracken's estimate in the OTU table gives them back to
+      *E. coli*.
 
     To collect reads for an assembly or a gene search, name the lowest rank that holds
     them: often the genus, but for *E. coli*, whose reads shared with *Shigella* sit on
@@ -155,8 +159,8 @@ preserved: R1 and R2 stay in step and can go straight into an assembler or a map
 
 One pair of files is produced per sample per taxon, so three taxa across forty
 samples is 240 files. Naming a broad group such as `Bacteria` in a host-depleted
-metagenome effectively writes a second copy of the classified library — worth
-checking the disk has room.
+metagenome writes most of the classified reads out a second time, so check the free
+disk space first.
 
 ## When a taxon is absent
 

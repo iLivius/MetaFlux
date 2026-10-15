@@ -163,8 +163,10 @@ lineage table. The lineage of the Kraken2 table is described on the
 With `profiler: both` the two tables do not line up column by column. `otu_table.tsv`
 has eight slots on any Kraken2 database, `d__ k__ p__ c__ o__ f__ g__ s__`, and this
 table seven, without `k__`; and the two databases can name the same organism
-differently. The same archaeon in one run, Kraken2 (PlusPF) above and sylph (GTDB r232)
-below:
+differently. *Methanobrevibacter smithii* in the D6331 run SRR38976715 (BioProject
+PRJNA1474435; see [Benchmark data](../about/test-datasets.md#benchmark-data)), as Kraken2
+names it with PlusPF `k2_pluspf_20260626` (above) and as sylph names it with GTDB r232
+(below):
 
 ```text
 d__Archaea;k__Methanobacteriati;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanobrevibacter;s__Methanobrevibacter smithii
@@ -195,16 +197,19 @@ position.
   assumes 99.5 % instead; `read_accuracy` in the summary then reads
   `fixed 99.5% (high diversity for the depth)`, after sylph's own words for this case
   (high diversity compared to sequencing depth). That assumption moves every genome row
-  of the sample by one common factor, and the `unassigned` row with them, which can
-  change the explained share by tens of percentage points; which genomes are found, and
-  their genome copies, do not change. Compare explained shares, `unassigned` and
+  of the sample by one common factor, and the `unassigned` row with them; which genomes
+  are found, and their genome copies, do not change. On the four metagenomes of
+  BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
+  [Shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset)), where sylph's
+  own estimate was about 99.9 %, forcing 99.5 % raised the explained share by 12–14 % of
+  its value, 3 to 8 percentage points. Compare explained shares, `unassigned` and
   estimated pairs only between samples with the same `read_accuracy`. Otherwise leave
   out `unassigned` and compare shares among the detected genomes, or use
   `sylph_table.genome_copies.tsv`.
 - **Capped samples.** `explained_capped: yes` usually means that sylph's coverage
-  estimates added up to at least all of the sample's sequence (sylph does not say by how
-  much; in a mock community it can be several percent). sylph then shares 100 % among
-  the detected genomes, as it does without `-u`, so every genome's estimated read pairs
+  estimates added up to at least all of the sample's sequence (sylph does not report the
+  uncapped sum). sylph then shares 100 % among the detected genomes, as it does without
+  `-u`, so every genome's estimated read pairs
   in that sample are scaled down by that unknown amount, and they change when a database
   is added or removed, even for a genome whose coverage stays the same. Nothing is left
   for `unassigned` to estimate. Compare a capped sample with others by shares among the
@@ -227,11 +232,11 @@ GTDB sometimes puts a genome in a genus known only by a code (a placeholder genu
 `g__G047199095`) while the genome's own FASTA header, written by whoever submitted it,
 names a Latin species of another genus. In GTDB r232 this is the case for some
 *Escherichia coli* assemblies that are new in that release: reads of an *E. coli* strain
-can land on such a genome, so
-that the strain appears under a placeholder name and not as *Escherichia coli*. MetaFlux
-renames and merges nothing.
-It flags the genome in `sylph_genomes.tsv` (`GTDB placeholder genus; genome labelled
-Escherichia coli`) and counts the flagged genomes of each sample in the summary.
+can land on such a genome, so that the strain appears under a placeholder name and not
+as *Escherichia coli*. MetaFlux renames and merges nothing. It flags the genome in
+`sylph_genomes.tsv` (`GTDB placeholder genus; genome labelled Escherichia coli`) and
+counts the flagged genomes of each sample in the summary. In the D6331 run SRR38976715
+it flagged two, GCA_047199095.1 and GCA_047199115.1.
 
 ## Reading the tables
 

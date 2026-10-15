@@ -1,7 +1,6 @@
 # Choosing a mode
 
-MetaFlux runs one of two pipelines. The choice is not a matter of taste — it follows
-from what was in the tube when the library was made.
+MetaFlux runs one of two pipelines. The choice follows from how the library was made.
 
 - **`amplicon`** — a marker gene was PCR-amplified with a specific primer pair, and
   those amplicons were sequenced. 16S rRNA for bacteria and archaea, ITS for fungi,
@@ -29,35 +28,43 @@ Both modes read the same `input` and `output` blocks, honour the same per-rule
 `resources` settings, and finish by writing a MultiQC report and a per-sample
 read-tracking table under `out_dir`.
 
-## What shotgun mode is for — and when to reach for something else
+## What shotgun mode is for, and when to use another profiler
 
 MetaFlux's shotgun path is aimed at **environmental communities** — soil, sediment,
 water, enrichment cultures — where no curated marker set covers the habitat and a k-mer
-classifier against a broad database is the practical way to see anything at all.
+classifier with a broad database is the practical option.
 
 For **host-associated and food samples**, a marker-gene profiler such as
 [MetaPhlAn](https://github.com/biobakery/MetaPhlAn) will usually be more precise, and
-MetaFlux does not try to replace it. On the ZymoBIOMICS gut mock, MetaPhlAn 4 called 14
-species with no false positives; tuned MetaFlux scored slightly lower (F1 0.88 against
-0.90). Its database is built for that niche, and that shows.
+MetaFlux does not try to replace it. On the ZymoBIOMICS Gut Microbiome Standard (D6331),
+SRA run SRR38976715 (BioProject PRJNA1474435; see
+[Benchmark data](../about/test-datasets.md#benchmark-data)), MetaPhlAn 4 with the
+database `mpa_vJan26_CHOCOPhlAnSGB_202605` reported 14 of the 17 species and no false
+ones (F1 0.90). MetaFlux at its default settings with PlusPF `k2_pluspf_20260626`
+reported the same 14 species and six false ones, five of them *Fusobacterium* species
+related to the mock's *F. animalis* (F1 0.76). MetaPhlAn's marker database is built for
+this kind of sample.
 
-The trade runs the other way outside it. On four wastewater enrichment cultures,
-MetaPhlAn left 45–76% of reads unclassified, against 4.6% on the gut mock.
+On environmental samples MetaPhlAn classifies far fewer reads. On the four metagenomes of
+BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
+[Shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset)), microbial
+consortia enriched on naproxen from wastewater treatment plants, the same MetaPhlAn
+database left 44–75 % of reads unclassified, against 4.4 % on the gut mock.
 
-Note also which *kind* of error each tool makes. A marker profiler errs by omission: on
-that same gut mock MetaPhlAn missed *Salmonella enterica*, *Clostridium perfringens* and
-*Enterococcus faecalis* — its recall was 0.82 at precision 1.00. A k-mer classifier errs
-by invention, which is what the [confidence and threshold
-tuning](../shotgun/confidence-and-threshold.md) exists to control. For *describing* a
-community, quiet omissions are the safer failure. For *screening* — asking whether a
-particular pathogen is present — they are the dangerous one, and absence from a marker
-profile is not evidence of absence.
+The two tools also make different kinds of error. A marker-gene profiler tends to miss
+taxa; a k-mer classifier tends to report taxa that are not there, which the
+[confidence and threshold settings](../shotgun/confidence-and-threshold.md) are meant to
+limit. (On the D6331 mock both missed the same three rarest members, *Salmonella
+enterica*, *Enterococcus faecalis* and *Clostridium perfringens*, at 0.0001–0.01 % of the
+DNA, so this mock shows no difference in missed taxa.) For describing a community, missed
+taxa do less harm than false ones. For screening, such as testing whether a particular
+pathogen is present, they matter more: a taxon missing from a marker-gene profile may
+still be in the sample.
 
-Neither tool escapes the underlying limit, and it is worth being blunt about it: if your
-organisms are not in a reference database, no parameter setting will find them. CAMI II's
-rhizosphere set has only ~52% of its true species present in the PlusPF database at all,
-and F1 caps near 0.3 there regardless of tuning. That is the same wall MetaPhlAn hits on
-soil, reached from the other side.
+Both tools are limited by their reference database: an organism that is not in it cannot
+be found with any setting. In the 21 CAMI II rhizosphere samples only about half of the
+gold-standard species are in PlusPF (`k2_pluspf_20260626`: 54 % of the 307 species
+pooled, 42 % per sample on average).
 
 ## The switch
 
@@ -106,8 +113,7 @@ config never mentions primers. It can be ignored, or silenced by setting both to
     Nothing is auto-detected. Both modes accept files named `{sample}_R1` /
     `{sample}_R2`, so pointing shotgun mode at amplicon reads — or the reverse —
     does not necessarily fail. It can run to the end and produce a table that looks
-    ordinary and means nothing. The mode is a statement about how the library was
-    made, and it has to be true.
+    normal but is meaningless. Set `mode` to match how the library was made.
 
 ## What to prepare before running
 

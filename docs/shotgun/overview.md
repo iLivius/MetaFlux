@@ -8,7 +8,7 @@ rather than the resolving power of one marker gene.
 !!! note "Is shotgun mode the right tool for your samples?"
     This path targets environmental communities. For host-associated or food
     samples a marker-gene profiler is usually more precise — see
-    [what shotgun mode is for](../getting-started/choosing-a-mode.md#what-shotgun-mode-is-for-and-when-to-reach-for-something-else).
+    [what shotgun mode is for](../getting-started/choosing-a-mode.md#what-shotgun-mode-is-for-and-when-to-use-another-profiler).
 
 The pipeline is [Kraken2](https://github.com/DerrickWood/kraken2) for read
 classification and [Bracken](https://github.com/jenniferlu717/Bracken) for abundance
@@ -26,8 +26,8 @@ The mode can also be set on the command line without editing the file:
 !!! warning "`mode` must match the data"
 
     Both modes accept `{sample}_R1` / `{sample}_R2` filenames, so pointing a shotgun
-    run at amplicon data (or the reverse) does not always produce an error — it
-    produces the wrong analysis. Check `mode` before every run.
+    run at amplicon data (or the reverse) does not always produce an error; the run
+    can finish with the wrong analysis. Check `mode` before every run.
 
 Shotgun mode needs reference data that MetaFlux does not fetch: a Kraken2 database for
 the default profiler, sylph databases and their lineage tables for `profiler: sylph`, and
@@ -53,9 +53,8 @@ raw R1/R2 ──▶ BBDuk PhiX* ──▶ BBMap host* ──▶ fastp ──▶ 
     every case. See [sylph](sylph.md).
 
 Each stage writes files tagged with the step it came off (`_dephix`, `_dehost`,
-`_trim`). When an optional step is switched off, the next step simply reads from
-whatever ran before it — the chain closes up on its own, and no placeholder files are
-produced.
+`_trim`). When an optional step is switched off, the next step reads the output of the
+last step that ran, and no placeholder files are written.
 
 The rules carry descending Snakemake priorities (`download_sra` 10 down to
 `finalize_otu_table` 1), so when many jobs are ready at once the scheduler works through the
@@ -75,12 +74,12 @@ and detects which one is in use:
 | `{sample}_1` / `{sample}_2` | `SRR11605259_1.fastq.gz` | raw `fasterq-dump` output |
 
 Reads must carry the `fastq.gz` extension, or plain `fastq` if uncompressed. `fq` and
-`fq.gz` are accepted by the startup check but are never resolved afterwards — the
+`fq.gz` are accepted by the start-up check but are never resolved afterwards — the
 rules look only for `.fastq.gz` and `.fastq` — and in shotgun mode the missing
 `.fastq.gz` path matches the `download_sra` rule under `_R1`/`_R2` naming, so the run
 tries to fetch each local sample from SRA rather than reporting that the extension is
 unsupported; with `_1`/`_2` naming it stops with a missing-input error instead. The check itself sees
-only the R1 files: a mixture of extensions among them stops the run at startup, but
+only the R1 files: a mixture of extensions among them stops the run at start-up, but
 the R2 files are never inspected, so uniformity across the directory is not enforced.
 
 **Direct from NCBI SRA.** Setting `input.bioproject` to a BioProject accession makes
@@ -275,7 +274,7 @@ MultiQC.
 
     Species-level re-estimation is only as good as the database's species
     representation. With a small or size-capped index, `tax_lev: G` gives a more
-    honest table. The OTU table then lists genera, one row each, with an empty
+    reliable table. The OTU table then lists genera, one row each, with an empty
     species slot.
 
 !!! warning "The numbers in the OTU table are estimates, and they do not sum to the classified reads"
