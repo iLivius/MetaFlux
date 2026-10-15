@@ -26,10 +26,11 @@ regardless of where each read finally got assigned. The report then rolls those
 counts up the tree cumulatively, the same way it does the read counts.
 
 The give-away in any real report is taxa with a couple of assigned reads carrying
-hundreds of thousands of minimizer counts. In the MetaFlux test data one Streptomyces
-row has 2 clade reads and 345,108 total minimizers — 737x more than the ~468 k-mer
-positions two read pairs physically contain. Under the "this taxon's own reads"
-reading that is impossible; under LCA attribution it is unremarkable.
+hundreds of thousands of minimizer counts. In SRR39106521, one of the MetaFlux shotgun
+test samples (BioProject PRJNA1477390, PlusPF k2_pluspf_20260626), the Streptomyces
+genus row has 3 clade reads and 343,359 total minimizers — about 500x more than the
+690 k-mer positions that three pairs of 149-base reads can hold. Under the "this
+taxon's own reads" reading that is impossible; under LCA attribution it is unremarkable.
 
 So column 5 for a species means: how many DISTINCT database minimizers specific to
 that species (or to something below it) were seen anywhere in this sample. That is a
@@ -42,9 +43,10 @@ THRESHOLD UNITS. It is NOT a per-read genome-coverage measure, and describing it
 Column 4 divided by column 5 (call it duplicity) is then the average number of times
 each of those species-specific minimizers was seen. Low means the evidence is spread
 across much distinct sequence; high means a small set of positions was hit again and
-again. Useful to eyeball, and unlike the raw counts it barely tracks abundance
-(measured Pearson r = +0.20 against log reads, versus +0.71 for the distinct count) —
-but it is a WORSE filter, so it is reported and not thresholded (see below).
+again. Useful to eyeball, and unlike the raw counts it barely tracks abundance (on
+the four test samples, Pearson r = +0.17 between log duplicity and log reads, versus
++0.71 for the log distinct count) — but it is a WORSE filter, so it is reported and
+not thresholded (see below).
 
 WHAT THIS SCRIPT DOES
 ---------------------
@@ -91,14 +93,13 @@ Two things have to be right or the pruned report quietly corrupts Bracken's arit
     * The reads do not all end up with close relatives. The rationale for crediting
       the parent is that a spurious call usually borrows its evidence from a
       neighbour, so the neighbour is the likely true source. That holds for most but
-      not all of the traffic: on the four test samples 70% of the reads gained by
-      surviving taxa can be matched to a loss inside the same genus, and the other
-      30% crosses genus or family boundaries.
+      not all of the traffic: part of the reads gained by surviving taxa cross genus
+      or family boundaries.
 
     * Some reads ARE lost, despite the credit. If every species under a genus fails
       the check, Bracken has nothing left at the target rank to redistribute that
-      genus's reads to, and drops them. On the test data that cost 14,606 of
-      9,299,837 reads (-0.16%), with 27-38 genera per sample emptied completely.
+      genus's reads to, and drops them. On the four test samples (floor 300) the
+      Bracken table total changed by less than 0.1% per sample with the gate on.
       Deleting the rows without crediting the parent would lose far more; crediting
       is the better of the two, not a guarantee of conservation.
 
@@ -132,9 +133,9 @@ docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth.
 CONSUMED BY
 -----------
 The gated report feeds rule bracken (45_abundance.smk) when the gate is on, and from
-there the correction flows through kraken_biom into the final otu_table.biom /
-otu_table.tsv — so the pipeline's normal output table IS the corrected table, not a
-side artefact. The TSV and PNG are terminal outputs: nothing downstream reads them.
+there the correction flows through rule finalize_otu_table into the final
+otu_table.biom / otu_table.tsv — so the pipeline's normal output table IS the
+corrected table, not a side artefact. The TSV and PNG are terminal outputs: nothing downstream reads them.
 """
 import matplotlib
 
@@ -285,10 +286,11 @@ for i in candidates:
         # which is typically far larger because Bracken pushes higher-rank reads down
         # onto species. So the rail does not, and cannot, protect a taxon that is big
         # only after redistribution — and on the four test samples it never fired once.
-        # That is the intended behaviour rather than a gap: the clearest false positive
-        # in the test data (Pseudomonas sp. JS425 — 373 Kraken2 reads on 189 distinct
-        # minimizers, which Bracken inflated to 64,961 reads, 3% of the sample) is
-        # exactly the kind of taxon a Bracken-based rail would have rescued.
+        # That is the intended behaviour rather than a gap: the largest thin-evidence
+        # call in the test data (Pseudomonas sp. JS425 in SRR39106521 — 372 Kraken2 read
+        # pairs on 182 distinct minimizers, which Bracken inflated to 69,992 read pairs,
+        # 3% of the sample) is exactly the kind of taxon a Bracken-based rail would have
+        # rescued.
         verdicts[i] = ("keep", f"protected: {share * 100:.2f}% of classified reads")
     elif row["distinct_min"] < min_distinct:
         verdicts[i] = ("prune", f"distinct minimizers {row['distinct_min']} < {min_distinct}")
@@ -318,9 +320,8 @@ orphaned = 0    # reads from pruned taxa with no parent in the report (should no
 
 for i in sorted(pruned):
     # Climb to the nearest ancestor that is still in the report. A pruned taxon's
-    # parent is whatever row sits one level above it, which in practice is usually a
-    # 'G1' node ("unclassified <Genus>") rather than the genus itself — on the test
-    # data G1 rows took 61% of all credited reads. The climb also means that pointing
+    # parent is whatever row sits one level above it: the genus itself or, often, a
+    # 'G1' node ("unclassified <Genus>"). The climb also means that pointing
     # the gate at some other rank cannot silently credit a row that is itself on its
     # way out, which would lose the reads rather than move them.
     p = parent_of.get(i)
@@ -382,16 +383,15 @@ with open(out_gated, "w") as fh:
 #                          of this taxon's own database minimizers was seen in the
 #                          sample. Low means the evidence is spread over much distinct
 #                          sequence; high means a small set of positions was hit again
-#                          and again. On the MetaFlux test data the middle half of taxa
-#                          sit between about 15 and 75, with the clearest false
-#                          positives in the hundreds — but the absolute scale moves with
-#                          sequencing depth and database, so compare taxa WITHIN a
-#                          sample rather than against a remembered number.
+#                          and again. The absolute scale moves with sequencing depth and
+#                          database, so compare taxa WITHIN a sample rather than against
+#                          a remembered number.
 #   minimizers_per_read  = distinct minimizers / clade reads. Included because it is the
 #                          obvious thing to compute, and because it is a trap: it
-#                          anti-correlates strongly with abundance (measured Pearson
-#                          r = -0.74 against log reads), so thresholding it removes the
-#                          abundant taxa and keeps the rare ones. Diagnostic only.
+#                          anti-correlates strongly with abundance (on the four test
+#                          samples, Pearson r = -0.72 between its log and log reads), so
+#                          thresholding it removes the abundant taxa and keeps the rare
+#                          ones. Diagnostic only.
 def safe_ratio(numerator: int, denominator: int) -> str:
     return f"{numerator / denominator:.3f}" if denominator else "NA"
 
@@ -462,7 +462,7 @@ reads_pruned = sum(rows[i]["clade_reads"] for i in pruned)
 # Reads Kraken2 actually placed AT the gated rank. This, not the total classified
 # count, is the population the gate can touch at all — in a metagenome most reads
 # stop at genus or above and are never candidates. Quoting the pruned reads against
-# the total classified count makes the gate look ~30x more harmless than it is.
+# the total classified count makes the gate look more harmless than it is.
 reads_at_rank = sum(rows[i]["clade_reads"] for i in candidates)
 share_rank    = (reads_pruned / reads_at_rank * 100) if reads_at_rank else 0.0
 share_all     = (reads_pruned / total_classified * 100) if total_classified else 0.0
@@ -485,8 +485,9 @@ logmsg(f"of those {len(credit)} parents, {live_parents} still have a surviving t
 # The counts above are Kraken2's. Bracken has not run yet, and it will have been
 # assigning far more reads to some of these species than Kraken2 did, by pushing
 # genus-level reads down onto them. So the change to the final table is bigger than
-# the percentages above — on the MetaFlux test data, 6-19x bigger. Say so here rather
-# than let a reassuring "0.3%" be the last word anyone reads.
+# the percentages above — on the four test samples, Bracken had given the removed
+# species 10-27x more reads than Kraken2 did. Say so here rather than let a reassuring
+# "0.3%" be the last word anyone reads.
 logmsg("NOTE: those are Kraken2's own counts. Bracken redistributes higher-rank reads "
        "down onto species, so a pruned taxon may have been holding many more reads in "
        "the final table than it holds here. Compare 03.abundance with the gate off to "
