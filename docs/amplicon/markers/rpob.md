@@ -310,7 +310,7 @@ runs either way, so off-target amplicons of the wrong size are still removed.
 ## What the output looks like
 
 The final tables are the same four files as for every other marker, under
-`6.taxonomy/` in the output directory:
+`06.taxonomy/` in the output directory:
 
 | File | Rows | Notes |
 |---|---|---|

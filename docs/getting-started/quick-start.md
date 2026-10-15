@@ -153,7 +153,7 @@ files most runs end at:
 
 | Mode | Final table | Read tracking |
 |------|-------------|---------------|
-| amplicon | `6.taxonomy/asv_table.txt` | `stats/read_tracking.txt` |
+| amplicon | `06.taxonomy/asv_table.txt` | `stats/read_tracking.txt` |
 | shotgun | `03.abundance/otu_table.tsv` (plus `otu_table.biom`) | `stats/read_tracking.txt` |
 
 Both modes also write `multiqc/multiqc_report.html`, and `read_tracking.txt` shows

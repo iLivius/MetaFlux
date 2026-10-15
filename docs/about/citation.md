@@ -92,7 +92,7 @@ is why the code and these pages read the way they do.
 ### Phylogeny module (optional, 16S only)
 
 Cite the aligner and whichever tree backend you actually ran — the backend is recorded in
-`7.phylogeny/phylogeny.params.json`.
+`07.phylogeny/phylogeny.params.json`.
 
 44. Katoh, K. & Standley, D. M. (2013). MAFFT multiple sequence alignment software version 7: improvements in performance and usability. *Molecular Biology and Evolution* 30(4):772–780. https://doi.org/10.1093/molbev/mst010 (the aligner, always used when the module runs)
 45. Wong, T. K. F., Ly-Trong, N., et al. & Minh, B. Q. (2026). IQ-TREE 3: phylogenomic inference software using complex evolutionary models. *Molecular Biology and Evolution* 43(5):msag117. https://doi.org/10.1093/molbev/msag117 (default tree backend)

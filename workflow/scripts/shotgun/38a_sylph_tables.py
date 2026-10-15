@@ -42,13 +42,14 @@ WHAT THIS SCRIPT WRITES
                                    the same rows with readable titles, for MultiQC.
 
 INPUTS (all named by rule sylph_tables)
-  input.taxprof     02c.sylph/taxprof/, one {sample}.sylphmpa per sample with at least
-                    one detected genome (rule sylph_taxprof, sylph-tax). Each genome row
-                    carries the full lineage and the two abundances.
+  input.taxprof     02.classification/sylph/taxprof/, one {sample}.sylphmpa per
+                    sample with at least one detected genome (rule sylph_taxprof,
+                    sylph-tax). Each genome row carries the full lineage and the two
+                    abundances.
   input.profile     03.abundance/sylph_profile.tsv, the raw `sylph profile -u` output
                     (rule sylph_profile): one row per sample x genome.
-  input.per_sample  02c.sylph/sylph_profile.per_sample.txt, sylph's own per-sample log
-                    lines (rule sylph_profile).
+  input.per_sample  02.classification/sylph/sylph_profile.per_sample.txt, sylph's own
+                    per-sample log lines (rule sylph_profile).
   input.fastp_jsons the fastp reports (rule trim_adapters, 30_preprocess.smk).
   params.samples    SAMPLES, which fixes the column order.
   params.databases  'file (taxonomy)' of every database, for line 1 of the tables.
@@ -474,8 +475,9 @@ for sample in samples:
 #   '<sketch> has 39.58% of reads detected in database by profile'
 #   '<R1 file> short-read sample has high diversity compared to sequencing depth ...
 #    Using 99.5% as read accuracy estimate instead of automatic detection ...'
-# The first two name the sketch file (02c.sylph/sketches/<sample>.paired.sylsp); the
-# sample is its file name without '.paired.sylsp'. The third names the trimmed R1 file
+# The first two name the sketch file
+# (02.classification/sylph/sketches/<sample>.paired.sylsp); the sample is its file
+# name without '.paired.sylsp'. The third names the trimmed R1 file
 # the sketch was made from (<sample>_trim_R1.fastq.gz). sylph prints it when the
 # sample's genomes are covered too thinly for its own estimate of read accuracy: it
 # ignores k-mers seen once, and falls back when the k-mers it sees more than once are
@@ -495,7 +497,7 @@ FALLBACK_LINE = re.compile(r"\] (.+?) short-read sample has high diversity")
 
 
 def sample_of_sketch(path_text: str) -> str:
-    """'/out/02c.sylph/sketches/SRR29240428.paired.sylsp' -> 'SRR29240428'."""
+    """'/out/02.classification/sylph/sketches/SRR29240428.paired.sylsp' -> 'SRR29240428'."""
     file_name = Path(path_text).name
     if file_name.endswith(".paired.sylsp"):
         file_name = file_name[: -len(".paired.sylsp")]

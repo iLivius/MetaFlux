@@ -274,11 +274,11 @@ the part worth checking on a dataset expected to contain them.
 
 | | |
 |---|---|
-| Input | `5.dada2/seqs.fasta` and `5.dada2/seqtab_head_names.txt`, from `dada_seqtab` |
+| Input | `05.dada2/seqs.fasta` and `05.dada2/seqtab_head_names.txt`, from `dada_seqtab` |
 | Command | `ITSx --only_full F -t all` |
 | Region kept | the file matching `amplicon.its_region` |
-| Output | `5.dada2/seqs_extracted.fasta`, `5.dada2/seqtab_extracted_head_names.txt`, `5.dada2/itsx_extraction.summary.txt`, `5.dada2/itsx_collapse_map.tsv` |
-| Raw tool output | kept under `5.dada2/_itsx_tmp/` for inspection |
+| Output | `05.dada2/seqs_extracted.fasta`, `05.dada2/seqtab_extracted_head_names.txt`, `05.dada2/itsx_extraction.summary.txt`, `05.dada2/itsx_collapse_map.tsv` |
+| Raw tool output | kept under `05.dada2/_itsx_tmp/` for inspection |
 | Consumed by | `dada_length_filter` |
 
 `--only_full F` keeps partial detections, and it is mandatory here: a targeted
@@ -308,9 +308,9 @@ error: that usually means the amplicon does not cover the subregion named in
 ## Taxonomy
 
 `amplicon.taxonomy.method` selects the classifier. Both paths read the
-length-filtered ASVs (`5.dada2/seqs_lenfilt.fasta` and the matching
+length-filtered ASVs (`05.dada2/seqs_lenfilt.fasta` and the matching
 `seqtab_lenfilt_head_names.txt`), apply the same taxon filter, and write the same
-four tables into `6.taxonomy/`: the three filtered tables and `asv_table_unfiltered.txt`,
+four tables into `06.taxonomy/`: the three filtered tables and `asv_table_unfiltered.txt`,
 whose `metaxa2_origin` column is `NA` for ITS.
 
 | | `rdp` | `sintax` |
@@ -421,7 +421,7 @@ writing an empty table — with ITS that almost always means a 16S keep list
 
 ## What an ITS run produces
 
-The final tables are in `6.taxonomy/`:
+The final tables are in `06.taxonomy/`:
 
 | File | Rows | Contents |
 |---|---|---|
@@ -434,6 +434,6 @@ Two diagnostics are worth opening on every ITS run.
 `stats/dada2/asv_length_hist.png` plots ASV lengths before extraction, after
 extraction, and after the length filter — for ITS the first two differ substantially,
 since ITSx removes the conserved flanks, and the gap between them is a direct measure
-of how much flanking sequence the amplicon carried. `5.dada2/itsx_collapse_map.tsv`
+of how much flanking sequence the amplicon carried. `05.dada2/itsx_collapse_map.tsv`
 shows which ASVs were merged after extraction. The full output layout is in
 [Output files](../../reference/output.md).

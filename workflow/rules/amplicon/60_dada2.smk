@@ -1,4 +1,4 @@
-# DADA2 rules: this file turns the primer-trimmed FASTQs in 3.stripped/ (written
+# DADA2 rules: this file turns the primer-trimmed FASTQs in 03.stripped/ (written
 # by trim_primers, 30_preprocess.smk) into a table of ASVs — DADA2's term for
 # "amplicon sequence variant", an inferred true biological sequence resolved to
 # single-nucleotide precision, as opposed to a fuzzy-radius OTU cluster. Order:
@@ -31,20 +31,20 @@ rule dada_length_filter:
     input:
         # seqs_pre: always the pre-extraction DADA2 FASTA, used to record the
         # pre-extraction length distribution for diagnostic comparison.
-        seqs_pre      = OUT / "5.dada2" / "seqs.fasta",
+        seqs_pre      = OUT / "05.dada2" / "seqs.fasta",
         # seqs / seqtab_names: the actual filter source — extracted outputs when
         # extraction is enabled, else the raw DADA2 outputs.
-        seqs          = (OUT / "5.dada2" / "seqs_extracted.fasta") if EXTRACTION_ENABLED
-                        else (OUT / "5.dada2" / "seqs.fasta"),
-        seqtab_names  = (OUT / "5.dada2" / "seqtab_extracted_head_names.txt") if EXTRACTION_ENABLED
-                        else (OUT / "5.dada2" / "seqtab_head_names.txt"),
+        seqs          = (OUT / "05.dada2" / "seqs_extracted.fasta") if EXTRACTION_ENABLED
+                        else (OUT / "05.dada2" / "seqs.fasta"),
+        seqtab_names  = (OUT / "05.dada2" / "seqtab_extracted_head_names.txt") if EXTRACTION_ENABLED
+                        else (OUT / "05.dada2" / "seqtab_head_names.txt"),
         trunclen_json = OUT / "stats" / "trunclen.json",
         # probe_json included only when expected_length=auto
         probe_json    = [PROBE_JSON] if WANTS_PROBE else [],
     output:
-        seqs         = OUT / "5.dada2" / "seqs_lenfilt.fasta",
-        seqtab_names = OUT / "5.dada2" / "seqtab_lenfilt_head_names.txt",
-        seqtab_seqs  = OUT / "5.dada2" / "seqtab_lenfilt_head_seqs.txt",
+        seqs         = OUT / "05.dada2" / "seqs_lenfilt.fasta",
+        seqtab_names = OUT / "05.dada2" / "seqtab_lenfilt_head_names.txt",
+        seqtab_seqs  = OUT / "05.dada2" / "seqtab_lenfilt_head_seqs.txt",
         stats_json   = OUT / "stats" / "dada2" / "asv_length_stats.json",
         hist_png     = OUT / "stats" / "dada2" / "asv_length_hist.png",
     params:
@@ -65,7 +65,7 @@ rule dada_length_filter:
 
 
 # Plots the aggregate per-base quality profile (both directions, every sample
-# together) of the primer-trimmed reads in 3.stripped/. This is a picture for a
+# together) of the primer-trimmed reads in 03.stripped/. This is a picture for a
 # human to look at — it does NOT feed pick_trunclen's truncation decision, which
 # is computed separately and automatically from falco's per-sample quality
 # tables (50_trunclen.smk). Nothing downstream reads these plots either; they
@@ -73,8 +73,8 @@ rule dada_length_filter:
 # anything else in the pipeline.
 rule dada_quality_plots:
     input:
-        fnFs = expand(OUT / "3.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
-        fnRs = expand(OUT / "3.stripped" / "{sample}_R2.fastq.gz", sample=SAMPLES),
+        fnFs = expand(OUT / "03.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
+        fnRs = expand(OUT / "03.stripped" / "{sample}_R2.fastq.gz", sample=SAMPLES),
     output:
         plot_r1     = OUT / "stats" / "dada2" / "stripped_read_R1_qual_plot.png",
         plot_r2     = OUT / "stats" / "dada2" / "stripped_read_R2_qual_plot.png",
@@ -91,7 +91,7 @@ rule dada_quality_plots:
         "../../scripts/amplicon/60a_dada_quality_plots.R"
 
 
-# Runs DADA2's filterAndTrim on one sample's primer-trimmed reads (3.stripped/).
+# Runs DADA2's filterAndTrim on one sample's primer-trimmed reads (03.stripped/).
 # truncLen comes from trunclen.json — pick_trunclen's decision — and cuts every
 # read to that length, discarding any read shorter than it. ITS is the one
 # exception: 60b_dada_filter.R overrides truncLen to c(0, 0) for it, because a
@@ -104,15 +104,15 @@ rule dada_quality_plots:
 # dada_seqtab folds into the run's read-tracking counts.
 rule dada_filter:
     input:
-        r1            = OUT / "3.stripped" / "{sample}_R1.fastq.gz",
-        r2            = OUT / "3.stripped" / "{sample}_R2.fastq.gz",
+        r1            = OUT / "03.stripped" / "{sample}_R1.fastq.gz",
+        r2            = OUT / "03.stripped" / "{sample}_R2.fastq.gz",
         trunclen_json = OUT / "stats" / "trunclen.json",
         # probe_json present only in auto mode; used by dada_filter to derive min_len
         # from q1, but for ITS only — every other marker keeps the config min_len.
         probe_json    = [PROBE_JSON] if WANTS_PROBE else [],
     output:
-        r1    = OUT / "4.filtered" / "{sample}_R1_filt.fastq.gz",
-        r2    = OUT / "4.filtered" / "{sample}_R2_filt.fastq.gz",
+        r1    = OUT / "04.filtered" / "{sample}_R1_filt.fastq.gz",
+        r2    = OUT / "04.filtered" / "{sample}_R2_filt.fastq.gz",
         stats = OUT / "stats" / "dada2" / "{sample}.filter_stats.json",
     params:
         max_ee       = config["amplicon"]["dada2"]["max_ee"],
@@ -158,14 +158,14 @@ rule dada_filter:
 # 70_extract.smk) or directly by dada_length_filter above.
 rule dada_seqtab:
     input:
-        r1           = expand(OUT / "4.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),
-        r2           = expand(OUT / "4.filtered" / "{sample}_R2_filt.fastq.gz", sample=SAMPLES),
+        r1           = expand(OUT / "04.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),
+        r2           = expand(OUT / "04.filtered" / "{sample}_R2_filt.fastq.gz", sample=SAMPLES),
         filter_stats = expand(OUT / "stats" / "dada2" / "{sample}.filter_stats.json", sample=SAMPLES),
     output:
-        seqtab_seqs     = OUT / "5.dada2" / "seqtab_head_seqs.txt",
-        seqtab_names    = OUT / "5.dada2" / "seqtab_head_names.txt",
-        seqs_fasta      = OUT / "5.dada2" / "seqs.fasta",
-        read_counts     = OUT / "5.dada2" / "read.counts",
+        seqtab_seqs     = OUT / "05.dada2" / "seqtab_head_seqs.txt",
+        seqtab_names    = OUT / "05.dada2" / "seqtab_head_names.txt",
+        seqs_fasta      = OUT / "05.dada2" / "seqs.fasta",
+        read_counts     = OUT / "05.dada2" / "read.counts",
         err_plot_r1     = OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.png",
         err_plot_r2     = OUT / "stats" / "dada2" / "filtered_read_R2_error_plot.png",
         err_plot_r1_pdf = OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.pdf",

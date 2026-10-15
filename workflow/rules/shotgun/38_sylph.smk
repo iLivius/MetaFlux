@@ -16,12 +16,14 @@
 #   Kraken2 writes: both are switched off under profiler: sylph (00_common.smk).
 #
 # THE RULES, in data-flow order:
-#   sylph_sketch        per sample: trimmed reads -> 02c.sylph/sketches/{sample}.paired.sylsp
+#   sylph_sketch        per sample: trimmed reads
+#                         -> 02.classification/sylph/sketches/{sample}.paired.sylsp
 #   sylph_profile       ONE job: every sketch + every database
 #                         -> 03.abundance/sylph_profile.tsv (one row per sample x genome)
-#                         -> 02c.sylph/sylph_profile.per_sample.txt (sylph's per-sample lines)
+#                         -> 02.classification/sylph/sylph_profile.per_sample.txt
+#                            (sylph's per-sample lines)
 #   sylph_taxprof       ONE job: sylph-tax adds each genome's lineage
-#                         -> 02c.sylph/taxprof/{sample}.sylphmpa
+#                         -> 02.classification/sylph/taxprof/{sample}.sylphmpa
 #   sylph_tables        ONE job: the tables a user opens
 #                         -> 03.abundance/sylph_table.tsv (+ .biom, .genome_copies.tsv),
 #                            03.abundance/sylph_genomes.tsv, stats/sylph/ (MultiQC)
@@ -78,12 +80,12 @@ rule sylph_sketch:
         r1 = OUT / "01.preprocessing" / "{sample}_trim_R1.fastq.gz",
         r2 = OUT / "01.preprocessing" / "{sample}_trim_R2.fastq.gz",
     output:
-        sketch = OUT / "02c.sylph" / "sketches" / "{sample}.paired.sylsp",
+        sketch = OUT / "02.classification" / "sylph" / "sketches" / "{sample}.paired.sylsp",
     params:
         # The output's folder, written out because sylph -d takes a folder and names the
         # sketch file itself (from -S). snakemake --lint flags it as a hard-coded output
         # prefix; that is harmless here.
-        outdir = str(OUT / "02c.sylph" / "sketches"),
+        outdir = str(OUT / "02.classification" / "sylph" / "sketches"),
         c      = SYLPH_SKETCH_C,
     threads: lambda wc: threads_for_or("sylph_sketch", 1)
     resources:
@@ -171,11 +173,11 @@ rule sylph_sketch:
 # covered too thinly for its own estimate).
 rule sylph_profile:
     input:
-        sketches  = expand(OUT / "02c.sylph" / "sketches" / "{s}.paired.sylsp", s=SAMPLES),
+        sketches  = expand(OUT / "02.classification" / "sylph" / "sketches" / "{s}.paired.sylsp", s=SAMPLES),
         databases = SYLPH_DB_PATHS,
     output:
         profile    = OUT / "03.abundance" / "sylph_profile.tsv",
-        per_sample = OUT / "02c.sylph" / "sylph_profile.per_sample.txt",
+        per_sample = OUT / "02.classification" / "sylph" / "sylph_profile.per_sample.txt",
     params:
         n_samples = len(SAMPLES),
         c         = SYLPH_SKETCH_C,
@@ -248,7 +250,7 @@ rule sylph_taxprof:
         profile  = OUT / "03.abundance" / "sylph_profile.tsv",
         metadata = SYLPH_TAXONOMY_FILES,
     output:
-        taxprof = directory(OUT / "02c.sylph" / "taxprof"),
+        taxprof = directory(OUT / "02.classification" / "sylph" / "taxprof"),
     params:
         # '--taxonomy-dir <folder>', or nothing when every taxonomy is a file path.
         taxonomy_dir_option = SYLPH_TAXONOMY_DIR_OPTION,
@@ -298,9 +300,9 @@ rule sylph_taxprof:
 # Kraken2 runs too (profiler: both), finalize_otu_table also runs again.
 rule sylph_tables:
     input:
-        taxprof     = OUT / "02c.sylph" / "taxprof",
+        taxprof     = OUT / "02.classification" / "sylph" / "taxprof",
         profile     = OUT / "03.abundance" / "sylph_profile.tsv",
-        per_sample  = OUT / "02c.sylph" / "sylph_profile.per_sample.txt",
+        per_sample  = OUT / "02.classification" / "sylph" / "sylph_profile.per_sample.txt",
         fastp_jsons = expand(OUT / "01.preprocessing" / "{s}_fastp.json", s=SAMPLES),
     output:
         table   = OUT / "03.abundance" / "sylph_table.tsv",

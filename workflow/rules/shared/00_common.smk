@@ -987,12 +987,12 @@ if MODE == "amplicon":
         )
 
     # Metaxa2 runs in this run, and so writes its per-ASV origin table
-    # (5.dada2/metaxa2_origin.tsv), only for a metaxa2 marker with extraction on.
+    # (05.dada2/metaxa2_origin.tsv), only for a metaxa2 marker with extraction on.
     # Whenever it does, rule assign_taxonomy reads the table, also with organelles: off,
-    # so that the metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt is filled
+    # so that the metaxa2_origin column of 06.taxonomy/asv_table_unfiltered.txt is filled
     # in either case. For every other marker the rule's inputs stay as they were.
     METAXA2_RUNS = MARKER_EXTRACTOR == "metaxa2" and EXTRACTION_ENABLED
-    METAXA2_ORIGIN_TSV = OUT / "5.dada2" / "metaxa2_origin.tsv"
+    METAXA2_ORIGIN_TSV = OUT / "05.dada2" / "metaxa2_origin.tsv"
 
     # Whether ASVs are actually removed on Metaxa2's organelle call. filter.enabled is
     # the master switch of the whole taxonomy filter, so false switches this off too.
@@ -1459,10 +1459,10 @@ if MODE == "amplicon":
     # Taxonomy always reads the length-filtered outputs (dada_length_filter
     # runs after target_extract — see amplicon/60_dada2.smk).
     def _seqs_for_taxonomy(wildcards=None):
-        return OUT / "5.dada2" / "seqs_lenfilt.fasta"
+        return OUT / "05.dada2" / "seqs_lenfilt.fasta"
 
     def _seqtab_for_taxonomy(wildcards=None):
-        return OUT / "5.dada2" / "seqtab_lenfilt_head_names.txt"
+        return OUT / "05.dada2" / "seqtab_lenfilt_head_names.txt"
 
 
 # ────────────────────── Shotgun-only globals ───────────────────
@@ -2386,7 +2386,7 @@ if MODE == "shotgun":
 
     def _sylph_sketch_file(sample):
         """The kept sylph sketch of one sample (rule sylph_sketch, 38_sylph.smk)."""
-        return OUT / "02c.sylph" / "sketches" / f"{sample}.paired.sylsp"
+        return OUT / "02.classification" / "sylph" / "sketches" / f"{sample}.paired.sylsp"
 
     def _trimmed_r1_file(sample):
         """The temporary trimmed R1 reads of one sample (rule trim_adapters)."""
@@ -2394,19 +2394,22 @@ if MODE == "shotgun":
 
     def _kraken2_report_file(sample):
         """The Kraken2 report of one sample (rule kraken2, 35_kraken2.smk)."""
-        return OUT / "02.classification" / f"{sample}_report.txt"
+        return OUT / "02.classification" / "kraken2" / f"{sample}_report.txt"
 
     # Why: a sylph-only run in a Kraken2 folder would re-create the trimmed reads and
     # replace the MultiQC report with one that no longer shows Kraken2, next to Kraken2
     # tables from an earlier run.
-    _kraken2_results_here = ((OUT / "02.classification").is_dir()
+    # The test looks for 02.classification/kraken2/, not for 02.classification/ itself:
+    # a sylph run keeps its own files in 02.classification/sylph/, so the parent folder
+    # also exists in a folder where only sylph ever ran.
+    _kraken2_results_here = ((OUT / "02.classification" / "kraken2").is_dir()
                              or (OUT / "03.abundance" / "otu_table.tsv").exists())
     if PROFILER == "sylph" and _kraken2_results_here:
         sys.exit(f"[MetaFlux] shotgun.profiler is 'sylph', but {OUT} already holds Kraken2 results "
-                 f"(02.classification/ or 03.abundance/otu_table.tsv). A sylph-only run here would re-create "
-                 f"the trimmed reads and replace the MultiQC report with one that no longer shows Kraken2, next "
-                 f"to Kraken2 tables from an earlier run. Use a new out_dir (or profiler: both, if this folder "
-                 f"was made with profiler: both).")
+                 f"(02.classification/kraken2/ or 03.abundance/otu_table.tsv). A sylph-only run here would "
+                 f"re-create the trimmed reads and replace the MultiQC report with one that no longer shows "
+                 f"Kraken2, next to Kraken2 tables from an earlier run. Use a new out_dir (or profiler: both, "
+                 f"if this folder was made with profiler: both).")
 
     if PROFILER == "both":
         # Why: adding sylph to a FINISHED Kraken2 run needs the deleted trimmed reads,
@@ -2530,8 +2533,8 @@ if MODE == "amplicon":
         s = wildcards.sample
         if REMOVE_PHIX:
             return {
-                "r1": str(OUT / "2.no_phix" / f"{s}_R1.fastq.gz"),
-                "r2": str(OUT / "2.no_phix" / f"{s}_R2.fastq.gz"),
+                "r1": str(OUT / "02.no_phix" / f"{s}_R1.fastq.gz"),
+                "r2": str(OUT / "02.no_phix" / f"{s}_R2.fastq.gz"),
             }
         return {"r1": raw_fastq(s, 1), "r2": raw_fastq(s, 2)}
 
@@ -2549,18 +2552,18 @@ if MODE == "amplicon":
 def _amplicon_targets():
     """Default target list for mode=amplicon — the files `rule all` requests for an amplicon run."""
     targets = [
-        # Raw FASTQ symlinks (1.reads/ — visibility only)
-        *expand(OUT / "1.reads" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
+        # Raw FASTQ symlinks (01.reads/ — visibility only)
+        *expand(OUT / "01.reads" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
     ]
     # PhiX-removed FASTQs and their read count exist only when PhiX removal runs.
     if REMOVE_PHIX:
         targets += [
-            *expand(OUT / "2.no_phix" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
+            *expand(OUT / "02.no_phix" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
             OUT / "stats" / "2.nophix_reads.counts",
         ]
     targets += [
         # Preprocessing outputs
-        *expand(OUT / "3.stripped" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
+        *expand(OUT / "03.stripped" / "{sample}_R{r}.fastq.gz", sample=SAMPLES, r=[1, 2]),
         # Read count summaries
         OUT / "stats" / "1.raw_reads.counts",
         OUT / "stats" / "3.stripped_reads.counts",
@@ -2575,13 +2578,13 @@ def _amplicon_targets():
         OUT / "stats" / "dada2" / "stripped_read_R1_qual_plot.pdf",
         OUT / "stats" / "dada2" / "stripped_read_R2_qual_plot.pdf",
         # DADA2 filterAndTrim
-        *expand(OUT / "4.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),
-        *expand(OUT / "4.filtered" / "{sample}_R2_filt.fastq.gz", sample=SAMPLES),
+        *expand(OUT / "04.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),
+        *expand(OUT / "04.filtered" / "{sample}_R2_filt.fastq.gz", sample=SAMPLES),
         # DADA2 core
-        OUT / "5.dada2" / "seqs.fasta",
-        OUT / "5.dada2" / "seqtab_head_seqs.txt",
-        OUT / "5.dada2" / "seqtab_head_names.txt",
-        OUT / "5.dada2" / "read.counts",
+        OUT / "05.dada2" / "seqs.fasta",
+        OUT / "05.dada2" / "seqtab_head_seqs.txt",
+        OUT / "05.dada2" / "seqtab_head_names.txt",
+        OUT / "05.dada2" / "read.counts",
         OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.png",
         OUT / "stats" / "dada2" / "filtered_read_R2_error_plot.png",
         OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.pdf",
@@ -2601,12 +2604,12 @@ def _amplicon_targets():
         # for example). As a target, the report is made in every folder, and
         # assign_taxonomy reruns once after it.
         OUT / "stats" / "taxonomy_reference_check.json",
-        OUT / "6.taxonomy" / "asv_table.txt",
-        OUT / "6.taxonomy" / "asv_table_seqs.txt",
-        OUT / "6.taxonomy" / "taxon_seq_table.txt",
+        OUT / "06.taxonomy" / "asv_table.txt",
+        OUT / "06.taxonomy" / "asv_table_seqs.txt",
+        OUT / "06.taxonomy" / "taxon_seq_table.txt",
         # Every ASV that reached the taxonomy filter, removed ones included (same rule
         # as the three tables above, so it adds no job).
-        OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
+        OUT / "06.taxonomy" / "asv_table_unfiltered.txt",
         # Combined read-tracking table
         OUT / "stats" / "read_tracking.txt",
         # MultiQC aggregate
@@ -2627,7 +2630,7 @@ def _amplicon_targets():
     # produced. phylo_qc's input list is then a function (see 85_phylogeny.smk): with 4
     # or more ASVs it asks for the alignment, tree, and params file, which is what pulls
     # that whole chain into the run; with fewer, it asks for none of them and records
-    # the skip instead. Every file in the spec's 7.phylogeny/ layout is still produced
+    # the skip instead. Every file in the spec's 07.phylogeny/ layout is still produced
     # on any normal run — it arrives as a dependency of this one target rather than as
     # a target itself.
     #
@@ -2648,23 +2651,23 @@ def _shotgun_targets():
     out = [
         *expand(OUT / "01.preprocessing" / "{s}_fastp.json",          s=SAMPLES),
     ]
-    # Kraken2 + Bracken (profiler kraken2 or both). Under kraken2 the whole list comes
-    # out exactly as before, in the same order, so a finished Kraken2 run sees no change.
+    # Kraken2 + Bracken (profiler kraken2 or both). Kraken2 and the k-mer evidence step
+    # write to 02.classification/kraken2/, Bracken and the OTU table to 03.abundance/.
     if RUN_KRAKEN2:
         out += [
-            *expand(OUT / "02.classification" / "{s}_report.txt",         s=SAMPLES),
-            *expand(OUT / "02.classification" / "{s}_output.txt",         s=SAMPLES),
-            *expand(OUT / "02.classification" / "{s}_R1.fastq.gz",        s=SAMPLES),
-            *expand(OUT / "02.classification" / "{s}_R2.fastq.gz",        s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_report.txt",           s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_output.txt",           s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_R1.fastq.gz",          s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_R2.fastq.gz",          s=SAMPLES),
             # k-mer evidence: requested unconditionally, so the evidence table and plot
             # exist on every shotgun run even when the gate is switched off. Asking for
             # these also builds the gated report (same rule, three outputs), which is
             # what makes "diff it before you trust it" possible.
-            *expand(OUT / "02b.evidence" / "{s}_species_evidence.tsv",    s=SAMPLES),
-            *expand(OUT / "02b.evidence" / "{s}_report_gated.txt",        s=SAMPLES),
-            *expand(OUT / "stats" / "kmer_evidence" / "{s}_evidence.png", s=SAMPLES),
-            *expand(OUT / "03.abundance" / "{s}_report.txt",              s=SAMPLES),
-            *expand(OUT / "03.abundance" / "{s}_output.txt",              s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_species_evidence.tsv", s=SAMPLES),
+            *expand(OUT / "02.classification" / "kraken2" / "{s}_report_gated.txt",     s=SAMPLES),
+            *expand(OUT / "stats" / "kmer_evidence" / "{s}_evidence.png",               s=SAMPLES),
+            *expand(OUT / "03.abundance" / "{s}_report.txt",                            s=SAMPLES),
+            *expand(OUT / "03.abundance" / "{s}_output.txt",                            s=SAMPLES),
             OUT / "03.abundance" / "otu_table.tsv",
         ]
     # sylph (profiler sylph or both): the raw sylph profile, the per-genome tables made

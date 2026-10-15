@@ -45,11 +45,11 @@ if TAXONOMY_METHOD == "rdp":
             # on); for every other marker the rule's inputs are unchanged.
             **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
         output:
-            asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
-            asv_table_seqs  = OUT / "6.taxonomy" / "asv_table_seqs.txt",
-            taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
+            asv_table       = OUT / "06.taxonomy" / "asv_table.txt",
+            asv_table_seqs  = OUT / "06.taxonomy" / "asv_table_seqs.txt",
+            taxon_seq_table = OUT / "06.taxonomy" / "taxon_seq_table.txt",
             # Every ASV that reached the filter, with metaxa2_origin and filter_status.
-            asv_table_unfiltered = OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
+            asv_table_unfiltered = OUT / "06.taxonomy" / "asv_table_unfiltered.txt",
         params:
             amp_type        = AMPLICON_TYPE,
             min_boot        = _tax_cfg["min_boot"],
@@ -91,11 +91,11 @@ else:  # sintax
             # Metaxa2's origin call per ASV — same as the rdp rule above.
             **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
         output:
-            asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
-            asv_table_seqs  = OUT / "6.taxonomy" / "asv_table_seqs.txt",
-            taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
+            asv_table       = OUT / "06.taxonomy" / "asv_table.txt",
+            asv_table_seqs  = OUT / "06.taxonomy" / "asv_table_seqs.txt",
+            taxon_seq_table = OUT / "06.taxonomy" / "taxon_seq_table.txt",
             # Every ASV that reached the filter, with metaxa2_origin and filter_status.
-            asv_table_unfiltered = OUT / "6.taxonomy" / "asv_table_unfiltered.txt",
+            asv_table_unfiltered = OUT / "06.taxonomy" / "asv_table_unfiltered.txt",
         params:
             amp_type        = AMPLICON_TYPE,
             sintax_cutoff   = _tax_cfg["sintax_cutoff"],
@@ -136,11 +136,11 @@ rule aggregate_read_counts:
     input:
         raw_counts       = OUT / "stats" / "1.raw_reads.counts",
         stripped_counts  = OUT / "stats" / "3.stripped_reads.counts",
-        dada2_counts     = OUT / "5.dada2" / "read.counts",
-        seqtab_lenfilt   = OUT / "5.dada2" / "seqtab_lenfilt_head_names.txt",
+        dada2_counts     = OUT / "05.dada2" / "read.counts",
+        seqtab_lenfilt   = OUT / "05.dada2" / "seqtab_lenfilt_head_names.txt",
         # seqtab_extracted only present when extraction is enabled
-        seqtab_extracted = [OUT / "5.dada2" / "seqtab_extracted_head_names.txt"] if EXTRACTION_ENABLED else [],
-        asv_table        = OUT / "6.taxonomy" / "asv_table.txt",
+        seqtab_extracted = [OUT / "05.dada2" / "seqtab_extracted_head_names.txt"] if EXTRACTION_ENABLED else [],
+        asv_table        = OUT / "06.taxonomy" / "asv_table.txt",
         # nophix_counts only present when PhiX removal runs
         **({"nophix_counts": OUT / "stats" / "2.nophix_reads.counts"} if REMOVE_PHIX else {}),
     output:

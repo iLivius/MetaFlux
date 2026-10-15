@@ -137,8 +137,8 @@ from or written to `~/.config/sylph-tax`.
 
 `stats/read_tracking.txt` is written as in every shotgun run; under `profiler: sylph` it
 has no Kraken2 columns and ends with `trimmed`. The MultiQC report gets a table section
-for sylph. `02c.sylph/` keeps the sketches, so a later run in the same folder with other
-databases does not sketch again.
+for sylph. `02.classification/sylph/` keeps the sketches, so a later run in the same
+folder with other databases does not sketch again.
 
 In `sylph_table.tsv`, line 1 is a comment that says what the numbers are and which
 databases they come from, and line 2 is the header, with `#OTU ID`, the samples and

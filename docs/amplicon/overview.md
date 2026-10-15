@@ -25,25 +25,25 @@ in pipeline order under `out_dir`, so the directory listing reads like the workf
 
 | # | Step | Tool | Snakemake rule | Writes to |
 |---|------|------|----------------|-----------|
-| 1 | PhiX removal *(optional)* | bowtie2 | `rm_phix` | `2.no_phix/` |
-| 2 | Primer trimming | Cutadapt | `trim_primers` | `3.stripped/` |
+| 1 | PhiX removal *(optional)* | bowtie2 | `rm_phix` | `02.no_phix/` |
+| 2 | Primer trimming | Cutadapt | `trim_primers` | `03.stripped/` |
 | 3 | Per-stage QC | Falco | `falco` | `stats/falco/` |
 | 4 | Amplicon-length probe | Cutadapt (or direct read) | `amplicon_probe` | `refdb/cache/` |
 | 5 | Truncation-length selection | in-house | `pick_trunclen` | `stats/trunclen.json` |
-| 6 | ASV inference | DADA2 | `dada_filter`, `dada_seqtab` | `4.filtered/`, `5.dada2/` |
-| 7 | Marker-region extraction *(optional)* | Metaxa2 or ITSx | `target_extract` | `5.dada2/` |
-| 8 | ASV length filter | in-house | `dada_length_filter` | `5.dada2/`, `stats/dada2/` |
-| 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `assign_taxonomy` | `6.taxonomy/` |
-| 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `7.phylogeny/`, `stats/phylogeny/` |
+| 6 | ASV inference | DADA2 | `dada_filter`, `dada_seqtab` | `04.filtered/`, `05.dada2/` |
+| 7 | Marker-region extraction *(optional)* | Metaxa2 or ITSx | `target_extract` | `05.dada2/` |
+| 8 | ASV length filter | in-house | `dada_length_filter` | `05.dada2/`, `stats/dada2/` |
+| 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `assign_taxonomy` | `06.taxonomy/` |
+| 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `07.phylogeny/`, `stats/phylogeny/` |
 
 Two more rules close the run: `aggregate_read_counts` builds `stats/read_tracking.txt`,
 and `multiqc` builds `multiqc/multiqc_report.html`. A 16S run on SILVA 144 (the default
 reference) adds a third, `restore_kingdom`, which writes
-`6.taxonomy/taxonomy_lineage_full.tsv`, the lineage with SILVA's kingdom rank put back
+`06.taxonomy/taxonomy_lineage_full.tsv`, the lineage with SILVA's kingdom rank put back
 (see [16S rRNA](markers/16S.md)).
 
 Stage 10 is off by default and runs only for 16S. It takes the contaminant-filtered ASVs
-from `6.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity
+from `06.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity
 analysis you perform yourself — MetaFlux computes no diversity statistics. See
 [Phylogeny](phylogeny.md).
 
@@ -56,7 +56,7 @@ config and works out which jobs it will need. SRA-style `{sample}_1/_2` naming i
 accepted by shotgun mode but rejected here with an explicit error, because the two
 conventions cannot be told apart safely once mixed.
 
-The raw files are never modified. `link_reads` symlinks them into `1.reads/` purely so the
+The raw files are never modified. `link_reads` symlinks them into `01.reads/` purely so the
 inputs of a run are visible next to its outputs; every rule that needs raw reads reads
 them from `fastq_dir` directly.
 
@@ -65,7 +65,7 @@ them from `fastq_dir` directly.
 Illumina runs are routinely spiked with the PhiX174 genome as a sequencing control, and
 those reads have no place in a community profile. `rm_phix` maps each pair against a
 bowtie2 index of the PhiX reference and keeps the pairs that fail to align *concordantly*
-(`--un-conc-gz`), which are written to `2.no_phix/`. Failing to align concordantly is not
+(`--un-conc-gz`), which are written to `02.no_phix/`. Failing to align concordantly is not
 the same as not matching at all: a pair in which only one mate aligned to PhiX is also
 written out and kept, so a small PhiX residue can survive. The shotgun path is stricter —
 BBDuk matches by k-mer and, with its default `removeifeitherbad=t`, drops a pair as soon
@@ -76,7 +76,7 @@ GCF_000819615.1) by `fetch_phix` and indexed by `build_phix_index`; both are cac
 `refdb/phix/`, so this cost is paid on the first run only.
 
 Toggled with `amplicon.decontamination.remove_phix` (shipped default `true`). When it is
-`false` the step is skipped entirely: `2.no_phix/` is not created, Cutadapt reads the raw
+`false` the step is skipped entirely: `02.no_phix/` is not created, Cutadapt reads the raw
 FASTQs instead, and the `nophix` QC stage, its read count and its read-tracking column all
 disappear rather than showing up empty.
 
@@ -90,7 +90,7 @@ reads that synthetic variation as real biological variation. This inflates the A
 and, because the spurious variants share long identical stretches, it interferes with
 chimera detection — unremoved primers are the usual cause of an implausibly high chimeric
 fraction. `trim_primers` runs Cutadapt on the output of step 1 (or on the raw reads when
-PhiX removal is off) and writes to `3.stripped/`.
+PhiX removal is off) and writes to `03.stripped/`.
 
 Trimming happens in two calls, because a read can carry primer sequence at both ends:
 
@@ -246,8 +246,8 @@ samples and saves it as PNG and PDF (`stats/dada2/stripped_read_R{1,2}_qual_plot
 Diagnostic only — it does not feed the truncation decision, which comes from Falco via
 `pick_trunclen`.
 
-**`dada_filter`** runs DADA2's `filterAndTrim` per sample on the reads from `3.stripped/`,
-using the truncation lengths from `stats/trunclen.json`. Filtered reads go to `4.filtered/`,
+**`dada_filter`** runs DADA2's `filterAndTrim` per sample on the reads from `03.stripped/`,
+using the truncation lengths from `stats/trunclen.json`. Filtered reads go to `04.filtered/`,
 and a small per-sample JSON of in/out counts goes to `stats/dada2/`, where `dada_seqtab`
 collects it for read tracking. The gates:
 
@@ -292,7 +292,7 @@ amplicon and would drop every read. Without a probe JSON, ITS falls back to the 
     lengths — it makes sure the reads are cut so they can still meet. `amplicon.dada2.merge.min_overlap`
     is the *runtime* threshold `mergePairs` applies to each individual pair.
 
-The outputs land in `5.dada2/`: `seqs.fasta` (ASV sequences), `seqtab_head_names.txt`
+The outputs land in `05.dada2/`: `seqs.fasta` (ASV sequences), `seqtab_head_names.txt`
 (counts keyed by `ASV_#` ID), `seqtab_head_seqs.txt` (the same counts keyed by the full
 sequence) and `read.counts`.
 
@@ -320,7 +320,7 @@ extractor:
 | 18S, gyrB, rpoB | *none* | No extractor exists in MetaFlux for these. Extraction is forced off with a warning if the config still asks for it. |
 
 Both extractors write `seqs_extracted.fasta` and `seqtab_extracted_head_names.txt` into
-`5.dada2/`, alongside the extractor's own report (`metaxa2_extraction.results.txt` or
+`05.dada2/`, alongside the extractor's own report (`metaxa2_extraction.results.txt` or
 `itsx_extraction.summary.txt`) and its full raw output directory, kept for inspection.
 Metaxa2 also writes `metaxa2_origin.tsv`, its origin call for each ASV, which the
 taxonomy filter reads in step 9. ASVs the extractor could not resolve are dropped at
@@ -336,7 +336,7 @@ into a single representative and their per-sample counts summed. The mapping is 
 Off-target amplification and mis-merged pairs tend to show up as ASVs of implausible
 length. `dada_length_filter` keeps only ASVs inside a length window and writes
 `seqs_lenfilt.fasta`, `seqtab_lenfilt_head_names.txt` and
-`seqtab_lenfilt_head_seqs.txt` to `5.dada2/`.
+`seqtab_lenfilt_head_seqs.txt` to `05.dada2/`.
 
 It is not a backstop for chimeras. A bimera carries both parents' primer sites and spans
 the same region, so it comes out the same length as a real amplicon and passes the window
@@ -372,7 +372,7 @@ The window logic is covered in full on the
 ## 9. Taxonomy assignment
 
 `assign_taxonomy` classifies the length-filtered ASVs and writes the final tables to
-`6.taxonomy/`. Two implementations exist and one is chosen when the workflow is parsed,
+`06.taxonomy/`. Two implementations exist and one is chosen when the workflow is parsed,
 based on `amplicon.taxonomy.method`:
 
 | Method | Tool | Threshold key | Available for |

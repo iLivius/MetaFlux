@@ -53,10 +53,10 @@ rule kraken2:
         r1 = OUT / "01.preprocessing" / "{sample}_trim_R1.fastq.gz",
         r2 = OUT / "01.preprocessing" / "{sample}_trim_R2.fastq.gz",
     output:
-        c_r1   = OUT / "02.classification" / "{sample}_R1.fastq.gz",
-        c_r2   = OUT / "02.classification" / "{sample}_R2.fastq.gz",
-        report = OUT / "02.classification" / "{sample}_report.txt",
-        out    = OUT / "02.classification" / "{sample}_output.txt",
+        c_r1   = OUT / "02.classification" / "kraken2" / "{sample}_R1.fastq.gz",
+        c_r2   = OUT / "02.classification" / "kraken2" / "{sample}_R2.fastq.gz",
+        report = OUT / "02.classification" / "kraken2" / "{sample}_report.txt",
+        out    = OUT / "02.classification" / "kraken2" / "{sample}_output.txt",
     params:
         db             = str(KRAKEN_DB),
         confidence     = KRAKEN_CONF,
@@ -65,9 +65,9 @@ rule kraken2:
         # filename ends in .gz — it just writes plain fastq with a misleading
         # name. So we ask for plain .fastq and pigz them ourselves into the
         # final _R1/_R2.fastq.gz outputs.
-        classified     = str(OUT / "02.classification" / "{sample}#.fastq"),
-        c_r1_native    = str(OUT / "02.classification" / "{sample}_1.fastq"),
-        c_r2_native    = str(OUT / "02.classification" / "{sample}_2.fastq"),
+        classified     = str(OUT / "02.classification" / "kraken2" / "{sample}#.fastq"),
+        c_r1_native    = str(OUT / "02.classification" / "kraken2" / "{sample}_1.fastq"),
+        c_r2_native    = str(OUT / "02.classification" / "kraken2" / "{sample}_2.fastq"),
         memory_mapping = "--memory-mapping" if KRAKEN_MMAP else "",
     threads: KRAKEN2_THREADS
     resources:

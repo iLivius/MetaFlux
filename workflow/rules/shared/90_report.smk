@@ -48,10 +48,10 @@ def _multiqc_inputs():
             "fastp":   expand(OUT / "01.preprocessing" / "{s}_fastp.json", s=SAMPLES),
         }
         # The Kraken2 and Bracken reports exist only when Kraken2 runs (profiler
-        # kraken2 or both). Under kraken2 this dictionary comes out exactly as before,
-        # keys in the same order, so a finished Kraken2 run does not re-run MultiQC.
+        # kraken2 or both): Kraken2's in 02.classification/kraken2/, Bracken's in
+        # 03.abundance/.
         if RUN_KRAKEN2:
-            out["kraken"]  = expand(OUT / "02.classification" / "{s}_report.txt", s=SAMPLES)
+            out["kraken"]  = expand(OUT / "02.classification" / "kraken2" / "{s}_report.txt", s=SAMPLES)
             out["bracken"] = expand(OUT / "03.abundance" / "{s}_report.txt", s=SAMPLES)
         # The sylph summary table, shown by MultiQC as a custom-content table
         # (profiler sylph or both).
@@ -77,18 +77,23 @@ def _multiqc_scan_dirs():
             dirs.append(LOGS / "rm_phix")
         return dirs
     # Shotgun. Only folders the chosen profiler actually fills are listed: MultiQC
-    # stops with an error on a scan folder that does not exist. Under kraken2 the list
-    # is exactly as before (the rule records it as a parameter, so a different list
-    # would re-run MultiQC in every finished run).
+    # stops with an error on a scan folder that does not exist. The rule records the
+    # list as a parameter, so a different list re-runs MultiQC in a finished run.
+    # For Kraken2 the scan folder is 02.classification/kraken2/, never its parent
+    # 02.classification/, which also holds sylph's files (see below). The kraken2/
+    # folder also holds the k-mer evidence step's gated copy of each report
+    # (<sample>_report_gated.txt), which MultiQC would show as a second Kraken2 sample;
+    # multiqc_config.yaml leaves it out by its sample name.
     dirs = [OUT / "01.preprocessing"]
     if RUN_KRAKEN2:
-        dirs += [OUT / "02.classification", OUT / "03.abundance"]
+        dirs += [OUT / "02.classification" / "kraken2", OUT / "03.abundance"]
     # stats/sylph holds only the summary table MultiQC should show. The sylph-tax
-    # files in 02c.sylph/ are deliberately NOT scanned: MultiQC's own sylph-tax module
-    # would pick them up and present genome copies as if they were read shares. Checked with
-    # MultiQC 1.35; envs/multiqc.yaml is not pinned to it, so a later MultiQC could
-    # behave differently. stats/sylph is scanned only when sylph runs, so sylph files
-    # left over from an earlier run never reach a Kraken2-only report.
+    # files in 02.classification/sylph/ are deliberately NOT scanned: MultiQC's own
+    # sylph-tax module would pick them up and present genome copies as if they were read
+    # shares. Checked with MultiQC 1.35; envs/multiqc.yaml is not pinned to it, so a
+    # later MultiQC could behave differently. stats/sylph is scanned only when sylph
+    # runs, so sylph files left over from an earlier run never reach a Kraken2-only
+    # report.
     if RUN_SYLPH:
         dirs.append(OUT / "stats" / "sylph")
     return dirs
@@ -113,7 +118,8 @@ rule multiqc:
         scan_dirs  = _multiqc_scan_dirs(),
         mqc_config = workflow.basedir + "/multiqc_config.yaml",
         # -d --dirs-depth 1 prefixes every sample name with its immediate parent
-        # directory (e.g. '01.preprocessing | SRR123_fastp'), making the regex
+        # directory (e.g. '01.preprocessing | SRR123_fastp'; for a Kraken2 report in
+        # 02.classification/kraken2/ the prefix is 'kraken2'), making the regex
         # patterns in multiqc_config.yaml unambiguous and insensitive to whether
         # a module derives its name from the filename or from file content.
         # Amplicon mode does not need this because its modules use filename-based

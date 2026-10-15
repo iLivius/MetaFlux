@@ -21,11 +21,11 @@ classification and before any table is written.
 
 | Step | What happens |
 |------|--------------|
-| Input | `5.dada2/seqs_lenfilt.fasta` (ASV sequences after the length filter, and after Metaxa2/ITSx extraction where that runs) plus the matching count table `5.dada2/seqtab_lenfilt_head_names.txt` |
+| Input | `05.dada2/seqs_lenfilt.fasta` (ASV sequences after the length filter, and after Metaxa2/ITSx extraction where that runs) plus the matching count table `05.dada2/seqtab_lenfilt_head_names.txt` |
 | Classify | `rdp` path — DADA2 `assignTaxonomy` (+ `addSpecies` for 16S); `sintax` path — `vsearch --sintax` |
 | Build lineage | ranks joined into one taxonomy string per ASV |
 | **Filter** | **`keep`, then `discard`, applied to that string; then `discard`'s best-hit check; for 16S, then Metaxa2's organelle call** |
-| Output | `6.taxonomy/asv_table.txt`, `asv_table_seqs.txt`, `taxon_seq_table.txt` (filtered), and `asv_table_unfiltered.txt` (every ASV, with what the filter did to it) |
+| Output | `06.taxonomy/asv_table.txt`, `asv_table_seqs.txt`, `taxon_seq_table.txt` (filtered), and `asv_table_unfiltered.txt` (every ASV, with what the filter did to it) |
 
 The two classifier paths are separate scripts — `workflow/scripts/amplicon/80a_assign_taxonomy.R`
 for `rdp` and `workflow/scripts/amplicon/80c_parse_sintax.py` for `sintax` — but they
@@ -206,8 +206,8 @@ What the filter takes from Metaxa2, and what it does not:
 
 - Only the organelle calls. Metaxa2's other calls (eukaryota, uncertain, the domains)
   remove nothing; which domains survive is still decided by `keep`.
-- Only Metaxa2's final answer, from its per-origin FASTA files under `5.dada2/metaxa2/`,
-  collected per ASV in `5.dada2/metaxa2_origin.tsv`. Not the preliminary letter in the
+- Only Metaxa2's final answer, from its per-origin FASTA files under `05.dada2/metaxa2/`,
+  collected per ASV in `05.dada2/metaxa2_origin.tsv`. Not the preliminary letter in the
   extraction headers, which calls far too many sequences mitochondrial (see
   [16S rRNA](markers/16S.md#metaxa2-reports-origin-twice-and-only-the-second-answer-is-the-real-one)).
   That final call is stable from run to run, unlike Metaxa2's own taxonomy file,
@@ -239,7 +239,7 @@ and every ASV that only Metaxa2 caught (numbers illustrative):
 
 ### The table with everything: `asv_table_unfiltered.txt`
 
-Removed ASVs are not lost. Every run writes `6.taxonomy/asv_table_unfiltered.txt`: the
+Removed ASVs are not lost. Every run writes `06.taxonomy/asv_table_unfiltered.txt`: the
 same layout as `asv_table.txt`, for every ASV that reached the filter, with two more
 columns.
 
@@ -260,7 +260,7 @@ This is the table for questions about the removed ASVs themselves — for exampl
 primer pair amplifies fewer organelles. The organelle share of each sample, in R:
 
 ```r
-tab    <- read.table("6.taxonomy/asv_table_unfiltered.txt", header = TRUE, sep = "\t", row.names = 1)
+tab    <- read.table("06.taxonomy/asv_table_unfiltered.txt", header = TRUE, sep = "\t", row.names = 1)
 counts <- tab[, !(names(tab) %in% c("taxonomy", "metaxa2_origin", "filter_status"))]
 colSums(counts[tab$metaxa2_origin %in% c("mitochondria", "chloroplast"), ]) / colSums(counts)
 ```
@@ -311,7 +311,7 @@ lists empty unless a particular run shows a reason not to. See [rpoB](markers/rp
 
 Tokens are compared literally, so they have to be spelled exactly as the reference
 database spells them. The reliable way to get that right is to copy the name from the
-`taxonomy` column of `6.taxonomy/asv_table_unfiltered.txt`, which lists every ASV of a
+`taxonomy` column of `06.taxonomy/asv_table_unfiltered.txt`, which lists every ASV of a
 run, the removed ones included.
 
 The rank prefixes for the Linnaean seven ranks (16S, ITS, gyrB from phylum down, rpoB):
@@ -399,7 +399,7 @@ step that say exactly how many ASVs each direction cost:
 
 The organelle lines appear on 16S runs only (followed by one line per ASV that only
 Metaxa2 caught, see [above](#the-organelle-filter-organelles)), and
-`6.taxonomy/asv_table_unfiltered.txt` has the same information per ASV, in its
+`06.taxonomy/asv_table_unfiltered.txt` has the same information per ASV, in its
 `filter_status` column. The `sintax` path writes the same lines under an
 `[assign_taxonomy/sintax]` tag, except that it gives a best hit's support as a SINTAX
 confidence (`best hit f__Mitochondria at 0.68 confidence`) and the threshold as

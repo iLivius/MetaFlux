@@ -44,7 +44,7 @@ Snakemake handles the DECLARED outputs; this clean covers everything else RAxML-
 scatters around its prefix.
 
 Inputs (see rule phylo_tree, raxml-ng branch, in 85_phylogeny.smk)
-  aln : 7.phylogeny/asv_16s.aln.fasta, from phylo_align.
+  aln : 07.phylogeny/asv_16s.aln.fasta, from phylo_align.
 
 Outputs
   tree     : <backend dir>/asv_16s.raxml.bestTree — the best-scoring ML tree, read

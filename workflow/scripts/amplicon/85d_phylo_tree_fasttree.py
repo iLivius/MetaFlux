@@ -39,7 +39,7 @@ does NOT cancel in Faith's PD, which is an absolute sum.
 which would break both metrics.
 
 Inputs (see rule phylo_tree, fasttree branch, in 85_phylogeny.smk)
-  aln : 7.phylogeny/asv_16s.aln.fasta, from phylo_align.
+  aln : 07.phylogeny/asv_16s.aln.fasta, from phylo_align.
 
 Outputs
   tree     : <backend dir>/asv_16s.nwk — read next by phylo_export, which validates it

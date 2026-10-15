@@ -85,9 +85,9 @@ and thresholds the distinct count.
 Every shotgun run produces these, per sample, whether or not the gate is switched on:
 
 ```text
-02b.evidence/{sample}_species_evidence.tsv   one row per taxon at the Bracken rank
-02b.evidence/{sample}_report_gated.txt       the report with failing taxa removed
-stats/kmer_evidence/{sample}_evidence.png    reads vs distinct minimizers, log-log
+02.classification/kraken2/{sample}_species_evidence.tsv   one row per taxon at the Bracken rank
+02.classification/kraken2/{sample}_report_gated.txt       the report with failing taxa removed
+stats/kmer_evidence/{sample}_evidence.png                 reads vs distinct minimizers, log-log
 ```
 
 The gated report is written even when the gate is off, precisely so you can diff it

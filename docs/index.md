@@ -18,7 +18,7 @@ family of pipelines.
 | **Markers**         | 16S rRNA, ITS, 18S rRNA, gyrB, rpoB                                                                                   | not applicable                                                                                    |
 | **Main steps**      | PhiX removal, primer trimming, exact ASV inference, optional marker-region extraction, length filtering, taxonomy      | decontamination, quality trimming, read classification, abundance re-estimation, OTU-table construction |
 | **Reference data**  | SILVA (16S), UNITE (ITS), PR2 (18S), DD7RZ8 (gyrB), FROGS (rpoB) — fetched automatically on first use                  | a Kraken2 database, supplied by the user                                                          |
-| **Final table**     | `6.taxonomy/asv_table.txt`                                                                                            | `03.abundance/otu_table.tsv`                                                                      |
+| **Final table**     | `06.taxonomy/asv_table.txt`                                                                                           | `03.abundance/otu_table.tsv`                                                                      |
 
 **Amplicon mode** resolves sequences exactly rather than clustering them at an
 arbitrary similarity threshold: DADA2 infers amplicon sequence variants (ASVs), which

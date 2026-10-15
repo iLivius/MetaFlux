@@ -184,7 +184,7 @@ subset_seqtab_by_ids(seqtab_names_in, kept_ids, seqtab_names_out, log)
 # Metaxa2 extracted the sequence but listed it in none of the files). Read by
 # rule assign_taxonomy: the organelle filter (amplicon.taxonomy.filter.organelles)
 # removes the mitochondria and chloroplast ASVs, and every ASV's call goes into the
-# metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt.
+# metaxa2_origin column of 06.taxonomy/asv_table_unfiltered.txt.
 ORIGINS = ["mitochondria", "chloroplast", "bacteria", "archaea", "eukaryota", "uncertain"]
 origin_of: dict[str, str] = {}
 for origin in ORIGINS:
@@ -242,9 +242,9 @@ log.write(f"[metaxa2_extract] origin calls of the {len(kept_order)} extracted AS
 # seqs.extraction.fasta, seqs.extraction.fasta.1, seqs.extraction.results) under
 # the prefix dir for QC / downstream inspection. Final dir layout:
 #   <prefix_dir>/seqs.*  ← raw Metaxa2 working files (persisted)
-#   5.dada2/seqs_extracted.fasta             ← promoted, cleaned headers
-#   5.dada2/metaxa2_extraction.results.txt   ← promoted .extraction.results
-#   5.dada2/metaxa2_origin.tsv               ← origin call per ASV, from seqs.<origin>.fasta
+#   05.dada2/seqs_extracted.fasta            ← promoted, cleaned headers
+#   05.dada2/metaxa2_extraction.results.txt  ← promoted .extraction.results
+#   05.dada2/metaxa2_origin.tsv              ← origin call per ASV, from seqs.<origin>.fasta
 log.write(f"[metaxa2_extract] Keeping raw outputs under: {Path(prefix).parent}\n")
 log.write(f"[metaxa2_extract] DONE.\n")
 log.close()

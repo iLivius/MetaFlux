@@ -399,7 +399,7 @@ references:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `6.taxonomy/taxonomy_lineage_full.tsv`. SILVA 138.2 has no Kingdom rank, so nothing is removed and that file is not written. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
+| `silva.release` | Which SILVA release a 16S run classifies against | `144` | `144` or `138.2`. Each release has its own files under `refdb_root`, so switching never overwrites the other. SILVA 144 lineages have a Kingdom rank, which MetaFlux removes before classifying and puts back in `06.taxonomy/taxonomy_lineage_full.tsv`. SILVA 138.2 has no Kingdom rank, so nothing is removed and that file is not written. See [16S rRNA](../amplicon/markers/16S.md#reference-databases). |
 
 ---
 
@@ -450,7 +450,7 @@ Each marker has its own page with the databases it uses and its quirks:
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `remove_phix` | Maps reads against the PhiX genome with bowtie2 and keeps the pairs that do not align | `true` | Set `false` to skip. The `2.no_phix/` stage, its read count and the `nophix` Falco QC stage then do not exist, and Cutadapt reads the raw FASTQs directly. |
+| `remove_phix` | Maps reads against the PhiX genome with bowtie2 and keeps the pairs that do not align | `true` | Set `false` to skip. The `02.no_phix/` stage, its read count and the `nophix` Falco QC stage then do not exist, and Cutadapt reads the raw FASTQs directly. |
 
 PhiX is spiked into most Illumina runs as a low-diversity balancing control; those
 reads are not part of the sample and would be carried into ASV inference.
@@ -723,7 +723,7 @@ still runs either way.
 | `keep` | Tokens defining what survives | unset → `[]` | An ASV is kept only if one of its ranks matches a token. An empty list does nothing. |
 | `discard` | Tokens pruning what `keep` left | unset → `[]` | An ASV is removed if any of its ranks matches a token. Runs after `keep`. |
 | `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. A number from 0 to 100. `null` (or `false` / `off` / `no`) switches it off, which gives the v2.4.0 behaviour. Anything else stops the run at start-up: a value outside 0–100, text that is not a number, and also `true` / `on` / `yes`, which YAML reads as a yes/no value rather than a number. It does nothing while `discard` is empty. See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
-| `organelles` | Also removes the ASVs that Metaxa2 calls mitochondria or chloroplast | `metaxa2` | 16S only, and only with `extraction.enabled: true`, since Metaxa2 has to have run; for every other marker it is inactive and the run prints one info line. Runs after `keep`, `discard` and the best-hit check, and catches plant mitochondria the classifier reports as bacteria (e.g. *Enterobacterales*), which no token can match. Metaxa2's other calls (domains, eukaryota, uncertain) remove nothing. `off` (or `null`) switches it off; any other value stops the run at start-up. Every ASV, organelles included, is still listed in `6.taxonomy/asv_table_unfiltered.txt`. See [the organelle filter](../amplicon/taxon-filter.md#the-organelle-filter-organelles). |
+| `organelles` | Also removes the ASVs that Metaxa2 calls mitochondria or chloroplast | `metaxa2` | 16S only, and only with `extraction.enabled: true`, since Metaxa2 has to have run; for every other marker it is inactive and the run prints one info line. Runs after `keep`, `discard` and the best-hit check, and catches plant mitochondria the classifier reports as bacteria (e.g. *Enterobacterales*), which no token can match. Metaxa2's other calls (domains, eukaryota, uncertain) remove nothing. `off` (or `null`) switches it off; any other value stops the run at start-up. Every ASV, organelles included, is still listed in `06.taxonomy/asv_table_unfiltered.txt`. See [the organelle filter](../amplicon/taxon-filter.md#the-organelle-filter-organelles). |
 
 Each token is matched against a whole segment of the taxonomy string
 (`k__Bacteria`, `o__Chloroplast`, `g__Ralstonia`), so it targets exactly one rank
@@ -858,7 +858,7 @@ The full treatment is on
 
 `amplicon.phylogeny`. Off by default, and 16S only — enabling it for any other marker is
 forced off with a warning at parse time. Builds a tree from the contaminant-filtered ASVs
-in `6.taxonomy/` for phylogenetic-diversity analysis you perform yourself; MetaFlux
+in `06.taxonomy/` for phylogenetic-diversity analysis you perform yourself; MetaFlux
 computes no diversity statistics. The full discussion, including why the other markers are
 excluded and how to use the tree in R, is on the
 [Phylogeny](../amplicon/phylogeny.md) page.
@@ -1089,7 +1089,7 @@ still written, with a warning in `logs/finalize_otu_table.log`.
 | `extract_taxa` | NCBI scientific names whose reads should be pulled out into their own FASTQ files | `[]` | `[]` skips extraction entirely. Example: `[Bacteria, Archaea]`. |
 
 Each name must be exactly the name of one row in the sample's Kraken2 report
-(`02.classification/{sample}_report.txt`), and it is looked up at whatever rank it
+(`02.classification/kraken2/{sample}_report.txt`), and it is looked up at whatever rank it
 appears, so a broad group (`Bacteria`) and a single species (`Escherichia coli`) are
 named the same way. KrakenTools then extracts every read under that taxid, including
 its children, strains among them. A name found in several rows of a report

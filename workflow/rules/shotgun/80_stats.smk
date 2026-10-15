@@ -20,8 +20,8 @@
 
 rule aggregate_read_counts:
     input:
-        fastp_jsons    = expand(OUT / "01.preprocessing" / "{s}_fastp.json",    s=SAMPLES),
-        kraken_reports = expand(OUT / "02.classification" / "{s}_report.txt",   s=SAMPLES),
+        fastp_jsons    = expand(OUT / "01.preprocessing" / "{s}_fastp.json",               s=SAMPLES),
+        kraken_reports = expand(OUT / "02.classification" / "kraken2" / "{s}_report.txt", s=SAMPLES),
         # PhiX step: BBDuk's log, not its stats file. The log's "Input:" and
         # "Result:" lines count the reads BBDuk read and kept, so they give the
         # pairs it really removed; the stats file only counts reads that matched.

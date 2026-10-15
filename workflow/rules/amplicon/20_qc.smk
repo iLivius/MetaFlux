@@ -10,17 +10,17 @@ def _falco_input(wildcards):
     if wildcards.stage == "raw":
         return raw_fastq(wildcards.sample, int(wildcards.r))
     if wildcards.stage == "nophix":
-        return str(OUT / "2.no_phix" / f"{wildcards.sample}_R{wildcards.r}.fastq.gz")
+        return str(OUT / "02.no_phix" / f"{wildcards.sample}_R{wildcards.r}.fastq.gz")
     if wildcards.stage == "stripped":
-        return str(OUT / "3.stripped" / f"{wildcards.sample}_R{wildcards.r}.fastq.gz")
+        return str(OUT / "03.stripped" / f"{wildcards.sample}_R{wildcards.r}.fastq.gz")
     raise ValueError(f"unknown falco stage: {wildcards.stage}")
 
 
 # Runs falco (a fast, drop-in re-implementation of FastQC — same reports, much
 # quicker on large FASTQs) on one sample, one read direction, one pipeline stage.
 # Input comes from _falco_input above: the raw FASTQ, the PhiX-filtered FASTQ
-# (2.no_phix/, only when PhiX removal is on), or the primer-trimmed FASTQ
-# (3.stripped/) depending on which {stage} wildcard Snakemake is building.
+# (02.no_phix/, only when PhiX removal is on), or the primer-trimmed FASTQ
+# (03.stripped/) depending on which {stage} wildcard Snakemake is building.
 # Output is the standard FastQC-style trio (fastqc_data.txt, fastqc_report.html,
 # summary.txt) in a per-sample/direction/stage folder. The "stripped" stage's
 # fastqc_data.txt is not just a report: pick_trunclen (50_trunclen.smk) reads its

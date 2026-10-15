@@ -6,11 +6,11 @@ is small but load-bearing: turn MetaFlux's final taxonomy tables into a plain FA
 the aligner can read, and prove while doing so that the ASVs going into the tree are
 exactly the ASVs in the abundance table the user will pair it with in R.
 
-WHY IT READS 6.taxonomy AND NOT 5.dada2
----------------------------------------
+WHY IT READS 06.taxonomy AND NOT 05.dada2
+-----------------------------------------
 MetaFlux's contaminant filter (chloroplast, mitochondria, wrong-domain, off-target)
 runs inside stage 80, when taxonomy is assigned. The stage-60 FASTA
-(5.dada2/seqs_lenfilt.fasta) therefore still contains every off-target ASV the filter
+(05.dada2/seqs_lenfilt.fasta) therefore still contains every off-target ASV the filter
 would remove. Those sequences are only distantly related to real 16S, so in a de novo
 tree they hang off long branches — and long branches are precisely what distorts
 Faith's PD (an absolute sum of branch length) and unweighted UniFrac. Reading the
@@ -30,15 +30,15 @@ abundance when the sequence table is built, so they are stable WITHIN a run but 
 across runs. ASV_7 in two different runs is not the same organism.
 
 Inputs (see rule phylo_input in 85_phylogeny.smk)
-  taxon_seq_table : 6.taxonomy/taxon_seq_table.txt, from assign_taxonomy (80a or
+  taxon_seq_table : 06.taxonomy/taxon_seq_table.txt, from assign_taxonomy (80a or
                     80c). Rows are ASV IDs; the last column is the sequence.
-  asv_table       : 6.taxonomy/asv_table.txt, same rule. Rows are ASV IDs, columns
+  asv_table       : 06.taxonomy/asv_table.txt, same rule. Rows are ASV IDs, columns
                     are per-sample counts plus taxonomy. Used here purely as the
                     authority on which ASVs survived the contaminant filter.
 
 Outputs
-  seqs       : 7.phylogeny/asv_16s.fasta — read next by phylo_align (MAFFT).
-  input_json : 7.phylogeny/input.json — the eligible count (which decides whether a
+  seqs       : 07.phylogeny/asv_16s.fasta — read next by phylo_align (MAFFT).
+  input_json : 07.phylogeny/input.json — the eligible count (which decides whether a
                tree is attempted at all), the ASV ID list, per-ASV lengths, and
                checksums of both source tables and the FASTA. Read by phylo_qc's
                input function to make the build-or-skip decision, by phylo_export as
@@ -239,7 +239,7 @@ def main() -> int:
         if only_in_table:
             log(f"[phylo_input]   only in asv_table.txt (up to 10):       {only_in_table}")
         log("[phylo_input] Both tables come from assign_taxonomy, so this points at a "
-            "corrupt or partially-written 6.taxonomy/ — re-run the taxonomy step.")
+            "corrupt or partially-written 06.taxonomy/ — re-run the taxonomy step.")
         log_fh.close()
         return 1
 

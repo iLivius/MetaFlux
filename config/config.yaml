@@ -281,7 +281,7 @@ amplicon:
       # catches plant mitochondria that the classifier reports as bacteria (e.g.
       # Enterobacterales), which no token can reach. Safe to leave set for every
       # marker: it only acts on 16S with extraction enabled, and does nothing (one
-      # info line) otherwise. 6.taxonomy/asv_table_unfiltered.txt keeps every ASV,
+      # info line) otherwise. 06.taxonomy/asv_table_unfiltered.txt keeps every ASV,
       # organelles included, whatever this is set to.
       organelles: metaxa2
 
@@ -333,7 +333,7 @@ amplicon:
   # (Faith's PD, UniFrac) yourself in R. MetaFlux writes the tree and stops there:
   # it computes no diversity statistics, no ordination, no PERMANOVA.
   #
-  # The tree is built from the POST-taxonomy ASV set (6.taxonomy/), i.e. after the
+  # The tree is built from the POST-taxonomy ASV set (06.taxonomy/), i.e. after the
   # contaminant filter above. That is deliberate: chloroplast, mitochondrial and
   # off-target ASVs appear in a de novo tree as long branches, which inflate Faith's
   # PD and can invent sample separations in unweighted UniFrac.
@@ -374,7 +374,7 @@ amplicon:
                                                 # thresholds are unpublished and size-dependent, so
                                                 # adding one ASV could silently change the algorithm.
                                                 # The resolved choice is written to
-                                                # 7.phylogeny/phylogeny.params.json.
+                                                # 07.phylogeny/phylogeny.params.json.
 
     model: auto                                 # auto | an explicit model string for the backend
                                                 #   auto → iqtree: GTR+F+G4 | fasttree: gtr | raxml-ng: GTR+G
@@ -562,9 +562,9 @@ shotgun:
   # cleaned report, so the correction flows into the normal otu_table.
   #
   # ALWAYS WRITTEN, whether enabled or not:
-  #   02b.evidence/{sample}_species_evidence.tsv   per-taxon evidence + verdict
-  #   02b.evidence/{sample}_report_gated.txt       what the gate would remove
-  #   stats/kmer_evidence/{sample}_evidence.png    reads vs distinct minimizers
+  #   02.classification/kraken2/{sample}_species_evidence.tsv  per-taxon evidence + verdict
+  #   02.classification/kraken2/{sample}_report_gated.txt      what the gate would remove
+  #   stats/kmer_evidence/{sample}_evidence.png                reads vs distinct minimizers
   # Look at those first. `enabled` only decides whether Bracken reads the gated
   # report or the original one.
   kmer_evidence:
@@ -631,8 +631,8 @@ shotgun:
   # NCBI scientific names of taxa whose reads should be extracted via krakentools.
   # Empty list = skip extraction entirely. Example: [Bacteria, Archaea]
   # Each name must be exactly the name of one row of the sample's Kraken2 report
-  # (02.classification/{sample}_report.txt); a genus and a subgenus of the same name
-  # (Plasmodium, Leishmania) count as the genus.
+  # (02.classification/kraken2/{sample}_report.txt); a genus and a subgenus of the
+  # same name (Plasmodium, Leishmania) count as the genus.
   extract_taxa: []
 
 # ─────────────────────── Resources [shared] ─────────────────────

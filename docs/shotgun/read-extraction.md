@@ -44,7 +44,7 @@ to everything below it** are extracted, so `Bacteria` yields the bacterial fract
 the sample and `Escherichia coli` that one species, its strains included.
 
 Both the lookup and the walk down the tree (`--include-children`) use the sample's own
-Kraken2 report, `02.classification/{sample}_report.txt`. It lists every taxon that
+Kraken2 report, `02.classification/kraken2/{sample}_report.txt`. It lists every taxon that
 Kraken2 assigned at least one read to, strains and other ranks below species included,
 so the read pairs extracted for a taxon are exactly its clade count in that report (the
 second column). The Bracken settings (`tax_lev`, `threshold`) and the
@@ -81,10 +81,10 @@ empty.
 
     ```bash
     extract_kraken_reads.py -t <taxid> --include-children \
-        -k 02.classification/<sample>_output.txt \
-        -r 02.classification/<sample>_report.txt \
-        -1 02.classification/<sample>_R1.fastq.gz \
-        -2 02.classification/<sample>_R2.fastq.gz \
+        -k 02.classification/kraken2/<sample>_output.txt \
+        -r 02.classification/kraken2/<sample>_report.txt \
+        -1 02.classification/kraken2/<sample>_R1.fastq.gz \
+        -2 02.classification/kraken2/<sample>_R2.fastq.gz \
         --fastq-output -o <taxon>_R1.fastq -o2 <taxon>_R2.fastq
     ```
 
@@ -111,7 +111,7 @@ empty.
     To collect reads for an assembly or a gene search, name the lowest rank that holds
     them: often the genus, but for *E. coli*, whose reads shared with *Shigella* sit on
     the family, Enterobacteriaceae, which also brings in the reads of its other genera.
-    The direct-read column of `02.classification/{sample}_report.txt` (the third) shows
+    The direct-read column of `02.classification/kraken2/{sample}_report.txt` (the third) shows
     on which rows Kraken2 placed them. Use a species-level extraction to check a
     doubtful species call instead: map the extracted reads to a genome of that species
     and look at how evenly they cover it. Reads spread over the whole genome support the
@@ -123,18 +123,18 @@ empty.
 For each sample and each named taxon:
 
 1. The taxon's NCBI taxid is looked up in that sample's Kraken2 report
-   (`02.classification/{sample}_report.txt`): the row whose name is exactly the
+   (`02.classification/kraken2/{sample}_report.txt`): the row whose name is exactly the
    requested name. The lookup runs with the Python of the KrakenTools environment, so
    it does not depend on the tools installed on the host.
 2. `extract_kraken_reads.py` reads the Kraken2 per-read output
-   (`02.classification/{sample}_output.txt`), which records the assignment of every
+   (`02.classification/kraken2/{sample}_output.txt`), which records the assignment of every
    read pair, together with the same Kraken2 report so it can walk the taxonomy below
    the target taxid (`--include-children`).
 3. The matching read pairs are written out as FASTQ and then compressed with `pigz` —
    `extract_kraken_reads.py` cannot write gzip itself, so a separate rule does it.
 
 The reads come from the classified-read FASTQs Kraken2 wrote
-(`02.classification/{sample}_R1.fastq.gz` and `_R2.fastq.gz`), which is why those
+(`02.classification/kraken2/{sample}_R1.fastq.gz` and `_R2.fastq.gz`), which is why those
 files are kept rather than deleted. Reads Kraken2 could not classify are not in that
 pool and can never be extracted — extraction only ever pulls out reads that already
 carry a Kraken2 assignment.

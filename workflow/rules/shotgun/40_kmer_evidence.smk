@@ -26,11 +26,13 @@
 #   reads the gated report or the original. With the gate off the pipeline behaves
 #   exactly as it did before this rule existed.
 #
-# Outputs and who reads them:
-#   02b.evidence/{sample}_species_evidence.tsv -> nothing; a final artefact for you
-#   02b.evidence/{sample}_report_gated.txt     -> rule bracken, but only when the
-#                                                 gate is on (see 45_abundance.smk)
-#   stats/kmer_evidence/{sample}_evidence.png  -> nothing; a final artefact for you
+# Outputs and who reads them (the first two sit next to the Kraken2 report itself):
+#   02.classification/kraken2/{sample}_species_evidence.tsv
+#       -> nothing; a final artefact for you
+#   02.classification/kraken2/{sample}_report_gated.txt
+#       -> rule bracken, but only when the gate is on (see 45_abundance.smk)
+#   stats/kmer_evidence/{sample}_evidence.png
+#       -> nothing; a final artefact for you
 #
 # All the parsing, scoring and subtree-pruning logic lives in
 # scripts/shotgun/40a_kmer_evidence.py — see that script's docstring for the two
@@ -42,10 +44,10 @@
 
 rule kmer_evidence:
     input:
-        report = OUT / "02.classification" / "{sample}_report.txt",
+        report = OUT / "02.classification" / "kraken2" / "{sample}_report.txt",
     output:
-        evidence = OUT / "02b.evidence" / "{sample}_species_evidence.tsv",
-        gated    = OUT / "02b.evidence" / "{sample}_report_gated.txt",
+        evidence = OUT / "02.classification" / "kraken2" / "{sample}_species_evidence.tsv",
+        gated    = OUT / "02.classification" / "kraken2" / "{sample}_report_gated.txt",
         plot     = OUT / "stats" / "kmer_evidence" / "{sample}_evidence.png",
     params:
         sample       = "{sample}",

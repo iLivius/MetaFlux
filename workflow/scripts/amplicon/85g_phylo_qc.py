@@ -371,7 +371,7 @@ def main() -> int:
         "all_asvs_present_exactly_once": branches.get("n_tips", 0) == n_eligible,
         "note": (
             "Enforced by phylo_export before the tree was written: it refuses to produce "
-            "asv_16s.unrooted.nwk unless every ASV in 6.taxonomy/asv_table.txt appears "
+            "asv_16s.unrooted.nwk unless every ASV in 06.taxonomy/asv_table.txt appears "
             "exactly once as a tip."
         ),
     }

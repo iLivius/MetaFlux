@@ -36,7 +36,7 @@ VSEARCH --tabbedout columns:
      Empty when unclassified.
 
 For 16S, metaxa2_origin is also read: Metaxa2's own origin call per ASV
-(5.dada2/metaxa2_origin.tsv, from target_extract — present only when Metaxa2
+(05.dada2/metaxa2_origin.tsv, from target_extract — present only when Metaxa2
 ran). With organelles on (params.organelle_filter, from
 amplicon.taxonomy.filter.organelles) the ASVs it calls mitochondria or
 chloroplast are removed together with keep/discard (see "Organelle filter").

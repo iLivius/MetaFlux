@@ -40,12 +40,12 @@ FLAGS DELIBERATELY NOT USED
 --auto            : see above.
 
 Inputs (see rule phylo_align in 85_phylogeny.smk)
-  seqs : 7.phylogeny/asv_16s.fasta, from phylo_input. Bare ASV_N headers.
+  seqs : 07.phylogeny/asv_16s.fasta, from phylo_input. Bare ASV_N headers.
 
 Outputs
-  aln      : 7.phylogeny/asv_16s.aln.fasta — read next by phylo_tree, and kept as a
+  aln      : 07.phylogeny/asv_16s.aln.fasta — read next by phylo_tree, and kept as a
              deliverable so it can be inspected or reused without re-running.
-  run_json : 7.phylogeny/aln_run.json — resolved strategy, MAFFT version, thread
+  run_json : 07.phylogeny/aln_run.json — resolved strategy, MAFFT version, thread
              count, and the exact command line. Folded into phylogeny.params.json by
              phylo_export; the recording is what makes a size-dependent choice
              defensible rather than hidden.

@@ -8,7 +8,7 @@
 # position-by-position (DADA2's error model is learned per-position, so mixed
 # read lengths would misalign it).
 #
-# Input: this sample's primer-stripped FASTQ pair from 3.stripped/ (rule
+# Input: this sample's primer-stripped FASTQ pair from 03.stripped/ (rule
 # trim_primers, Cutadapt, see 30_preprocess.smk), plus trunclen.json — the
 # truncLen decision made once for the whole run by rule pick_trunclen
 # (50a_pick_trunclen.py). This script runs once per sample (Snakemake
@@ -24,7 +24,7 @@
 # read-wide error budget, not a single bad base) or falls outside the
 # [min_len, max_len] length window.
 #
-# Output: the filtered FASTQ pair (4.filtered/) that dada_seqtab.R denoises
+# Output: the filtered FASTQ pair (04.filtered/) that dada_seqtab.R denoises
 # next, plus a small JSON with this sample's reads-in/reads-out counts, which
 # dada_seqtab.R reads back in to build the pipeline-wide read-tracking table.
 

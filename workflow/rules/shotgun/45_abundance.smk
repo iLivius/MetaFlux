@@ -55,8 +55,8 @@
 # 30_preprocess.smk — see that file's header for why.
 rule bracken:
     input:
-        report = (OUT / "02b.evidence" / "{sample}_report_gated.txt") if KMER_GATE_ENABLED
-                 else (OUT / "02.classification" / "{sample}_report.txt"),
+        report = (OUT / "02.classification" / "kraken2" / "{sample}_report_gated.txt") if KMER_GATE_ENABLED
+                 else (OUT / "02.classification" / "kraken2" / "{sample}_report.txt"),
         json   = OUT / "01.preprocessing" / "{sample}_fastp.json",
     output:
         report = OUT / "03.abundance" / "{sample}_report.txt",

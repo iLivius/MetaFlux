@@ -223,7 +223,7 @@ silently.
     universal right answer and MetaFlux applies no default. Running once with empty
     keep/discard lists makes the paralog fraction visible in the output — count the ASVs
     whose taxonomy string starts with `other`, or read the `Gene` column of
-    `6.taxonomy/taxon_seq_table.txt` — and then decide whether to discard them.
+    `06.taxonomy/taxon_seq_table.txt` — and then decide whether to discard them.
 
     The fraction is not random noise: co-amplification of *parE* is taxon-dependent, so
     it concentrates in particular clades rather than spreading evenly across the table.
@@ -254,7 +254,7 @@ mismatch.
     that one.
 
     Check the names actually present before writing a filter — the `Genus` column of
-    `6.taxonomy/taxon_seq_table.txt` shows them, without the `g__` that a token needs —
+    `06.taxonomy/taxon_seq_table.txt` shows them, without the `g__` that a token needs —
     and list every variant that applies.
     This affects gyrB only: rpoB's FROGS reference carries NCBI taxonomy, where the
     genus is not split.
@@ -276,7 +276,7 @@ runs either way, so off-target amplicons of the wrong size are still removed.
 ## What the output looks like
 
 The final tables are the same four files as for every other marker, under
-`6.taxonomy/` in the output directory:
+`06.taxonomy/` in the output directory:
 
 | File | Rows | Notes |
 |---|---|---|

@@ -72,7 +72,7 @@ MetaFlux uses DADA2's own defaults for `dada2.merge.min_overlap` and `max_mismat
 (12 and 0). To measure what they cost against the looser 10 and 2, every marker was run
 on its set with each pair of values and nothing else changed. Read counts
 are summed across the samples of each set; ASV counts are rows of the final
-`6.taxonomy/asv_table.txt`.
+`06.taxonomy/asv_table.txt`.
 
 | Marker | Reads merged, at 10/2 | at 12/0 | change | ASVs at 10/2 | at 12/0 | change |
 |---|--:|--:|--:|--:|--:|--:|

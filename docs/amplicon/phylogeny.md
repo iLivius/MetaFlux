@@ -109,8 +109,8 @@ config is read, before anything runs, and the run continues normally.
 
 ## Where the ASVs come from
 
-The tree is built from the ASV set in `6.taxonomy/` — **after** the contaminant filter —
-and never from `5.dada2/seqs_lenfilt.fasta`.
+The tree is built from the ASV set in `06.taxonomy/` — **after** the contaminant filter —
+and never from `05.dada2/seqs_lenfilt.fasta`.
 
 This is the single most important design decision in the module. MetaFlux's contaminant
 filter (`amplicon.taxonomy.filter`: chloroplast, mitochondria, wrong domain, off-target)
@@ -164,7 +164,7 @@ the tree's tips and the abundance table you pair it with in R are the same featu
 | `raxml-ng` | Full ML alternative. | Cross-checking a result against a second full-ML implementation. |
 
 All three write the same canonical outputs, so switching backends does not change how you
-use the result downstream. Their native files are kept in `7.phylogeny/<backend>/`, so
+use the result downstream. Their native files are kept in `07.phylogeny/<backend>/`, so
 switching leaves the previous backend's output in place for comparison (the run log
 points this out so you do not mistake it for current output).
 
@@ -293,7 +293,7 @@ argues for adding a masking step.
 
 ## Rooting — the tree is exported unrooted, and only unrooted
 
-`7.phylogeny/asv_16s.unrooted.nwk` is **the** deliverable, and there is deliberately no
+`07.phylogeny/asv_16s.unrooted.nwk` is **the** deliverable, and there is deliberately no
 option to produce a rooted copy.
 
 Faith's PD and UniFrac are both root-dependent. In practice you will prune the tree
@@ -315,7 +315,7 @@ tidiness there are two hard reasons: FastTree truncates a name at the first spac
 names are quoted, and both FastTree and RAxML-NG reject the `:,()` characters a lineage
 string is full of.
 
-Join taxonomy back on in R, keyed on the ASV ID, from `6.taxonomy/asv_table.txt`.
+Join taxonomy back on in R, keyed on the ASV ID, from `06.taxonomy/asv_table.txt`.
 
 !!! note "ASV IDs mean nothing outside their own dataset"
     IDs are assigned by decreasing abundance when the sequence table is built, so `ASV_7`
@@ -457,7 +457,7 @@ out_dir <- "path/to/your/metaflux_output"          # <- edit this
 # column. R's read.table handles MetaFlux's quoting as-is; check.names = FALSE
 # keeps sample names such as "WT-1" from being mangled into "WT.1".
 asv_table <- read.table(
-  file.path(out_dir, "6.taxonomy", "asv_table.txt"),
+  file.path(out_dir, "06.taxonomy", "asv_table.txt"),
   sep = "\t", header = TRUE, row.names = 1,
   quote = "\"", comment.char = "", check.names = FALSE
 )
@@ -470,7 +470,7 @@ counts <- as.matrix(asv_table[, setdiff(colnames(asv_table), "taxonomy"), drop =
 
 # The tree. MetaFlux exports it unrooted on purpose: you are about to remove
 # tips, and a root chosen before that stops being the right root afterwards.
-tree <- read.tree(file.path(out_dir, "7.phylogeny", "asv_16s.unrooted.nwk"))
+tree <- read.tree(file.path(out_dir, "07.phylogeny", "asv_16s.unrooted.nwk"))
 
 cat(sprintf("read %d ASVs x %d samples; tree has %d tips\n",
             nrow(counts), ncol(counts), length(tree$tip.label)))
@@ -828,7 +828,7 @@ not that the centroids differ.
 
 ## What is recorded
 
-`7.phylogeny/phylogeny.params.json` holds everything resolved at run time: the resolved
+`07.phylogeny/phylogeny.params.json` holds everything resolved at run time: the resolved
 aligner strategy, the resolved (or selected) model, effective thread counts, tool
 versions, the seed, SHA-256 checksums of both input tables and the extracted FASTA, and
 any `extra_args`. That record is what lets you pin an automatic choice explicitly later.
@@ -863,7 +863,7 @@ which one it lands on is steered by things that look as though they should not m
 With these three in place, two runs of the same data and configuration give
 byte-identical files at every stage: the reads, the ASV sequences and per-sample counts,
 the alignment and `asv_16s.unrooted.nwk` itself. The raw SINTAX output
-(`6.taxonomy/_sintax_raw.tsv`) lists the ASVs in the order VSEARCH's threads finish
+(`06.taxonomy/_sintax_raw.tsv`) lists the ASVs in the order VSEARCH's threads finish
 them, so sort it before comparing two runs. The tables built from it are
 byte-identical.
 
@@ -873,11 +873,11 @@ byte-identical.
   between equally good reference genera at random, outside the seed, so a few bootstrap
   values can differ between identical runs. `sintax`, the default, is reproducible at any
   thread count from v2.5.0 on.
-- **Metaxa2's own taxonomy file** (`5.dada2/metaxa2/seqs.taxonomy.txt`) can shift
+- **Metaxa2's own taxonomy file** (`05.dada2/metaxa2/seqs.taxonomy.txt`) can shift
   slightly between runs. MetaFlux never reads it, and the extracted sequences and table
   do not change, so it is a by-product worth knowing about, not something that feeds a
   result. The organelle filter reads Metaxa2's final origin call instead (collected
-  from the per-origin FASTA files into `5.dada2/metaxa2_origin.tsv`), and that call is
+  from the per-origin FASTA files into `05.dada2/metaxa2_origin.tsv`), and that call is
   stable from run to run.
 
 **If you are not chasing byte-identity**, the thing worth knowing is how far these

@@ -39,10 +39,10 @@ EXTRACT_TAXON_PATTERN = "|".join(_extract_taxon_choices)
 
 
 # Which report the rule reads: Kraken2's own report of the sample,
-# 02.classification/{sample}_report.txt (rule kraken2, 35_kraken2.smk), both for the taxid
-# lookup below and for KrakenTools (-r). extract_kraken_reads.py works out which taxa lie
-# below the requested one (--include-children) only from the rows of the report it is
-# handed, and it skips, without a warning, every read placed on a taxon that report
+# 02.classification/kraken2/{sample}_report.txt (rule kraken2, 35_kraken2.smk), both for
+# the taxid lookup below and for KrakenTools (-r). extract_kraken_reads.py works out which
+# taxa lie below the requested one (--include-children) only from the rows of the report
+# it is handed, and it skips, without a warning, every read placed on a taxon that report
 # lacks. Kraken2's report lists every taxon that got at least one read, strains
 # included, so the read pairs extracted for a taxon are exactly the clade count of its
 # row (column 2). The Bracken report (03.abundance/{sample}_report.txt) would lose
@@ -124,10 +124,10 @@ rule extract_taxon_reads:
         taxon  = EXTRACT_TAXON_PATTERN,
     input:
         # Kraken2's own report, not Bracken's (the comment above the rule says why).
-        report = OUT / "02.classification" / "{sample}_report.txt",
-        kraken = OUT / "02.classification" / "{sample}_output.txt",
-        r1     = OUT / "02.classification" / "{sample}_R1.fastq.gz",
-        r2     = OUT / "02.classification" / "{sample}_R2.fastq.gz",
+        report = OUT / "02.classification" / "kraken2" / "{sample}_report.txt",
+        kraken = OUT / "02.classification" / "kraken2" / "{sample}_output.txt",
+        r1     = OUT / "02.classification" / "kraken2" / "{sample}_R1.fastq.gz",
+        r2     = OUT / "02.classification" / "kraken2" / "{sample}_R2.fastq.gz",
     output:
         r1 = temp(OUT / "04.extracted_reads" / "{sample}_{taxon}_R1.fastq"),
         r2 = temp(OUT / "04.extracted_reads" / "{sample}_{taxon}_R2.fastq"),

@@ -55,9 +55,21 @@ sample_names_replace:
 
   # Shotgun — directory-prefixed patterns (require -d --dirs-depth 1 in multiqc call).
   # With -d, MultiQC prepends the immediate parent directory to every sample name.
-  # fastp uses the JSON filename (enforced by use_filename_as_sample_name above),
-  # so clean_s_name strips '_fastp' → bare {sample}. Kraken2/Bracken report files
-  # keep '_report' in their names, stripped here by the regex.
-  '^01\.preprocessing \| (.+)$':                'Adapter trim | \1'
-  '^02\.classification \| (.+)_report$': 'Kraken2 | \1'
-  '^03\.abundance \| (.+)_report$':      'Bracken | \1'
+  # For the Kraken2 reports that is 'kraken2' (they sit in 02.classification/kraken2/),
+  # not '02.classification'. fastp uses the JSON filename (enforced by
+  # use_filename_as_sample_name above), so clean_s_name strips '_fastp' → bare
+  # {sample}. Kraken2/Bracken report files keep '_report' in their names, stripped
+  # here by the regex.
+  '^01\.preprocessing \| (.+)$':   'Adapter trim | \1'
+  '^kraken2 \| (.+)_report$':      'Kraken2 | \1'
+  '^03\.abundance \| (.+)_report$': 'Bracken | \1'
+
+# Shotgun — samples MultiQC must not show. The k-mer evidence step writes a gated
+# copy of every Kraken2 report, {sample}_report_gated.txt, into the same folder as
+# the report (02.classification/kraken2/, which MultiQC scans). The copy has the
+# Kraken2 report format, so MultiQC's Kraken module would show it as a second
+# sample, 'kraken2 | {sample}_report_gated', next to the real one. It is left out
+# by that name (a shell-style pattern: * stands for any text). Checked with
+# MultiQC 1.35.
+sample_names_ignore:
+  - 'kraken2 | *_report_gated'

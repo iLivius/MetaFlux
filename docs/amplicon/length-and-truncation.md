@@ -522,9 +522,9 @@ from the count table, and both keyed forms of the table are rewritten:
 
 | Output | Contents |
 |---|---|
-| `5.dada2/seqs_lenfilt.fasta` | the surviving ASV sequences — the input to taxonomy |
-| `5.dada2/seqtab_lenfilt_head_names.txt` | counts, columns keyed by `ASV_#` — also read by taxonomy |
-| `5.dada2/seqtab_lenfilt_head_seqs.txt` | the same counts, columns keyed by the full sequence; a terminal deliverable, not consumed downstream |
+| `05.dada2/seqs_lenfilt.fasta` | the surviving ASV sequences — the input to taxonomy |
+| `05.dada2/seqtab_lenfilt_head_names.txt` | counts, columns keyed by `ASV_#` — also read by taxonomy |
+| `05.dada2/seqtab_lenfilt_head_seqs.txt` | the same counts, columns keyed by the full sequence; a terminal deliverable, not consumed downstream |
 | `stats/dada2/asv_length_stats.json` | length distributions at three stages — pre-extraction, filter source, kept — plus the window and its source |
 | `stats/dada2/asv_length_hist.png` | the filter-source and kept distributions as a histogram, with the window boundaries drawn in; the pre-extraction distribution is overlaid as well when extraction ran |
 
@@ -646,5 +646,5 @@ Full symptom and fix in [Troubleshooting](../troubleshooting.md).
 | [Amplicon overview](overview.md) | the whole DADA2 path, step by step |
 | [Markers](markers/index.md) | what each marker's reference databases are and how they differ |
 | [Configuration](../reference/configuration.md) | every config key and its default |
-| [Output files](../reference/output.md) | what else lands in `5.dada2/` and `stats/` |
+| [Output files](../reference/output.md) | what else lands in `05.dada2/` and `stats/` |
 | [Troubleshooting](../troubleshooting.md) | the `auto` truncation caveat and other practical failures |

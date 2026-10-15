@@ -121,7 +121,7 @@ clearer.
     Both modes write `stats/read_tracking.txt` and `multiqc/multiqc_report.html`.
     Running the second mode into the first mode's output directory overwrites them.
     The same applies to running two markers into one directory: the ASV files in
-    `5.dada2/` are not named after the marker.
+    `05.dada2/` are not named after the marker.
 
 **Limiting concurrency.** `--cores` is the total CPU budget on the machine; a rule
 asking for more threads than that is scaled down to fit. Lowering `--cores` is
@@ -165,7 +165,7 @@ workflow with no changes does nothing at all and says so. Three practical
 consequences:
 
 - **A deleted or edited output is rebuilt, and only what is needed to rebuild it
-  runs.** Deleting `6.taxonomy/asv_table.txt` re-runs `assign_taxonomy`; the DADA2
+  runs.** Deleting `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy`; the DADA2
   steps upstream are already satisfied and are skipped.
 - **Changing the config can be enough to mark a step out of date.** Current
   Snakemake versions consider more than file timestamps: a changed rule parameter, a
@@ -177,6 +177,14 @@ consequences:
   re-run would execute, which is faster than reasoning about it.
 
 !!! note "Re-running an output folder made with v2.4.0"
+
+    The output folders have new names. The amplicon folders `1.reads` to `7.phylogeny`
+    are now `01.reads` to `07.phylogeny`. In shotgun mode the Kraken2 files move from
+    `02.classification/` into `02.classification/kraken2/`, together with the k-mer
+    evidence files that were in `02b.evidence/`, and sylph's `02c.sylph/` is now
+    `02.classification/sylph/`. A re-run in an older folder therefore writes the new
+    folders and runs every step again. The old folders, and the old files directly in
+    `02.classification/`, are left as they are and can be deleted.
 
     The same rules apply to a MetaFlux upgrade, and v2.5.0 changes several steps on
     purpose. In an amplicon folder, `pick_trunclen` and `aggregate_read_counts` now run

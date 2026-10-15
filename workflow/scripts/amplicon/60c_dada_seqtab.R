@@ -3,7 +3,7 @@
 # amplicon sequence variants (ASVs) — DADA2's alternative to OTU clustering,
 # where every ASV is one exact sequence rather than a cluster of similar ones.
 #
-# Input: every sample's filtered FASTQ pair from 4.filtered/ (one pair per
+# Input: every sample's filtered FASTQ pair from 04.filtered/ (one pair per
 # sample, produced by dada_filter.R) plus that sample's filter_stats JSON
 # (reads in/out from the filtering step), collected here across the whole
 # sample set for the final read-tracking table.

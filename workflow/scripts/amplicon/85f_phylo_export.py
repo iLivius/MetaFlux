@@ -34,14 +34,14 @@ Inputs (see rule phylo_export in 85_phylogeny.smk)
                tree's tips.
   tree       : the backend's own tree file, from phylo_tree.
   input_json : from phylo_input — carries the authoritative ASV ID list, which was
-               already verified against 6.taxonomy/asv_table.txt when it was written.
+               already verified against 06.taxonomy/asv_table.txt when it was written.
   aln_json,
   tree_json  : the per-step run records, merged into phylogeny.params.json here.
 
 Outputs
-  unrooted    : 7.phylogeny/asv_16s.unrooted.nwk — THE deliverable. Nothing in
+  unrooted    : 07.phylogeny/asv_16s.unrooted.nwk — THE deliverable. Nothing in
                 MetaFlux reads it; it is for your R session.
-  params_json : 7.phylogeny/phylogeny.params.json — the full provenance record
+  params_json : 07.phylogeny/phylogeny.params.json — the full provenance record
                 (resolved strategy and model, thread counts, tool versions, seed,
                 input checksums, extra_args). Read by phylo_qc for its report header.
 """
@@ -218,11 +218,11 @@ def main() -> int:
 
     # Gate 1, run twice against two independent records of what the ASV set is: the
     # alignment that was actually fed to the backend, and the ID list recorded by
-    # phylo_input (already checked against 6.taxonomy/asv_table.txt when written).
+    # phylo_input (already checked against 06.taxonomy/asv_table.txt when written).
     # Agreement across both is what lets the docs promise that the tree's tips and the
     # abundance table are the same feature set.
     aligned_ids = read_fasta_ids(aln_in)
-    ok = check_tips(tree, expected_ids, "6.taxonomy", log)
+    ok = check_tips(tree, expected_ids, "06.taxonomy", log)
     if ok and sorted(aligned_ids) != sorted(expected_ids):
         log("[phylo_export] ERROR: the alignment and the recorded ASV set disagree — "
             "the alignment step and the taxonomy tables are out of step.")

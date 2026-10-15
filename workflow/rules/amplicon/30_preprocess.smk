@@ -1,15 +1,15 @@
 # Amplicon preprocessing: PhiX removal (bowtie2), primer revcomp, primer
 # trimming (Cutadapt), and per-stage read counts.
 
-# ─────────────────── 1.reads/ symlinks (visibility) ─────────────
-# Symlinks input FASTQs into 1.reads/. Raw files stay in fastq_dir; downstream
+# ─────────────────── 01.reads/ symlinks (visibility) ───────────
+# Symlinks input FASTQs into 01.reads/. Raw files stay in fastq_dir; downstream
 # rules (rm_phix, falco_raw, count_reads_raw) read from there directly.
 # These symlinks are listed in rule all for visibility only.
 rule link_reads:
     input:
         fastq = lambda wc: raw_fastq(wc.sample, int(wc.r)),
     output:
-        link = OUT / "1.reads" / "{sample}_R{r}.fastq.gz",
+        link = OUT / "01.reads" / "{sample}_R{r}.fastq.gz",
     wildcard_constraints:
         r = "1|2",
     shell:
@@ -60,7 +60,7 @@ rule count_reads_raw:
 
 rule count_reads_nophix:
     input:
-        r1 = expand(OUT / "2.no_phix" / "{sample}_R1.fastq.gz", sample=SAMPLES),
+        r1 = expand(OUT / "02.no_phix" / "{sample}_R1.fastq.gz", sample=SAMPLES),
     output:
         counts = OUT / "stats" / "2.nophix_reads.counts",
     log:
@@ -83,7 +83,7 @@ rule count_reads_nophix:
 
 rule count_reads_stripped:
     input:
-        r1 = expand(OUT / "3.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
+        r1 = expand(OUT / "03.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
     output:
         counts = OUT / "stats" / "3.stripped_reads.counts",
     log:
@@ -134,8 +134,8 @@ rule rm_phix:
         r2  = lambda wc: raw_fastq(wc.sample, 2),
         idx = rules.build_phix_index.output.idx,
     output:
-        r1 = OUT / "2.no_phix" / "{sample}_R1.fastq.gz",
-        r2 = OUT / "2.no_phix" / "{sample}_R2.fastq.gz",
+        r1 = OUT / "02.no_phix" / "{sample}_R1.fastq.gz",
+        r2 = OUT / "02.no_phix" / "{sample}_R2.fastq.gz",
     params:
         prefix = str(REFDB_PHIX_PREFIX),
     log:
@@ -211,15 +211,15 @@ rule revcomp_primers:
 # With orientation: fixed (the default), only pass A runs.
 rule trim_primers:
     input:
-        # r1/r2 resolve to 2.no_phix when REMOVE_PHIX else the raw FASTQs.
+        # r1/r2 resolve to 02.no_phix when REMOVE_PHIX else the raw FASTQs.
         unpack(primer_trim_upstream),
         fwd    = PRIMER_FWD,
         rev    = PRIMER_REV,
         fwd_rc = rules.revcomp_primers.output.fwd_rc,
         rev_rc = rules.revcomp_primers.output.rev_rc,
     output:
-        r1       = OUT / "3.stripped" / "{sample}_R1.fastq.gz",
-        r2       = OUT / "3.stripped" / "{sample}_R2.fastq.gz",
+        r1       = OUT / "03.stripped" / "{sample}_R1.fastq.gz",
+        r2       = OUT / "03.stripped" / "{sample}_R2.fastq.gz",
         json_pa5 = OUT / "stats" / "cutadapt" / "{sample}.passA_5prime.cutadapt.json",
         json_pa3 = OUT / "stats" / "cutadapt" / "{sample}.passA_3prime.cutadapt.json",
     params:

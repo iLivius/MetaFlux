@@ -8,7 +8,7 @@
 # automatically — this script does not feed any decision back into the
 # pipeline, it is only for a human to eyeball a run.
 #
-# Input: the primer-stripped FASTQ pair for every sample, from 3.stripped/
+# Input: the primer-stripped FASTQ pair for every sample, from 03.stripped/
 # (produced by rule trim_primers, Cutadapt, see 30_preprocess.smk). All
 # samples' R1 files go into one plot, all R2 files into another.
 #

@@ -20,7 +20,7 @@ did not, it is shotgun data.
 | Core method | DADA2 exact ASV inference | Kraken2 classification + Bracken re-estimation |
 | Reference | Marker database, fetched automatically (SILVA, UNITE, PR2, DD7RZ8, FROGS) | A Kraken2 index, supplied by the user |
 | Primers | Required — `amplicon.primers.fwd` / `.rev` | Not used |
-| Main result | `6.taxonomy/asv_table.txt` — ASVs × samples, with taxonomy | `03.abundance/otu_table.tsv` — taxa × samples, plus the BIOM version |
+| Main result | `06.taxonomy/asv_table.txt` — ASVs × samples, with taxonomy | `03.abundance/otu_table.tsv` — taxa × samples, plus the BIOM version |
 | Resolution | Exact sequence variants of one gene | Whatever the index supports, down to species with Bracken |
 | Input naming | `{sample}_R1` / `{sample}_R2` only | `{sample}_R1/_R2` or SRA-style `{sample}_1/_2` |
 | Can fetch its own reads | No | Yes — from an NCBI BioProject accession |

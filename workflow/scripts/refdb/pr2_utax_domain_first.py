@@ -29,7 +29,7 @@ VSEARCH then classifies the domain first. The supergroup now sits under the lett
 k:, which for VSEARCH is only a position, the second rank. MetaFlux still writes it
 as sg__ in the Supergroup column: 18S.yaml pairs the SINTAX letter k with
 Supergroup and sg__ (sintax_rank_letters / sintax_rank_prefixes). Only the raw
-VSEARCH output, 6.taxonomy/_sintax_raw.tsv, shows the supergroup as k:<supergroup>.
+VSEARCH output, 06.taxonomy/_sintax_raw.tsv, shows the supergroup as k:<supergroup>.
 Everything after the first two values is copied character for character.
 
 WHAT IT REFUSES (the script stops with a message rather than guess)

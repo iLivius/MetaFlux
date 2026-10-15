@@ -215,7 +215,7 @@ the read — so a read can show dozens of k-mer hits and still amount to a singl
 at one locus.
 
 Input: the fastp-trimmed reads and the Kraken2 database. Output, in
-`02.classification/`:
+`02.classification/kraken2/`:
 
 | File | Contents |
 |---|---|
@@ -350,7 +350,9 @@ point for a targeted assembly or a closer look at one organism. See
 ```text
 out_dir/
 ├── 01.preprocessing/     # dephix / dehost stats, fastp JSON + HTML, host index
-├── 02.classification/    # Kraken2 reports, per-read output, classified reads
+├── 02.classification/
+│   ├── kraken2/          # Kraken2 reports, per-read output, classified reads, k-mer evidence
+│   └── sylph/            # sylph sketches and sylph-tax files (profiler sylph | both)
 ├── 03.abundance/         # Bracken reports, otu_table.tsv / otu_table.biom
 ├── 04.extracted_reads/   # KrakenTools per-taxon reads (only if extract_taxa set)
 ├── stats/                # read_tracking.txt

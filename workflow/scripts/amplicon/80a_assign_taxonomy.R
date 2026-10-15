@@ -24,7 +24,7 @@
 # Metaxa2/ITSx region extraction and the post-extraction ASV length window,
 # i.e. this run's final ASV set. Also reads the marker's reference database
 # (refdb) and, for 16S only, the addSpecies reference (species_db) and
-# Metaxa2's own origin call per ASV (metaxa2_origin, 5.dada2/metaxa2_origin.tsv
+# Metaxa2's own origin call per ASV (metaxa2_origin, 05.dada2/metaxa2_origin.tsv
 # from target_extract — present only when Metaxa2 ran), which the organelle
 # filter uses (see "Organelle filter" below).
 #

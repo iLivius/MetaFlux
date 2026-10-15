@@ -17,8 +17,8 @@
 # relatives reasonably and says little about deep relationships. Nothing here is a
 # species tree.
 #
-# THE INPUT DECISION THAT MATTERS MOST. This module reads 6.taxonomy/, the ASV set
-# AFTER the contaminant filter, and never 5.dada2/seqs_lenfilt.fasta. The filter
+# THE INPUT DECISION THAT MATTERS MOST. This module reads 06.taxonomy/, the ASV set
+# AFTER the contaminant filter, and never 05.dada2/seqs_lenfilt.fasta. The filter
 # (keep/discard: chloroplast, mitochondria, wrong domain) runs inside stage 80, so the
 # stage-60 output still holds exactly the off-target sequences that show up in a de
 # novo tree as long branches — the documented failure mode where a handful of
@@ -31,7 +31,7 @@
 # published reason (see docs/amplicon/phylogeny.md).
 #
 # THE RULES, in data-flow order:
-#   phylo_input   : 6.taxonomy/ tables      -> asv_16s.fasta + input.json   [CHECKPOINT]
+#   phylo_input   : 06.taxonomy/ tables     -> asv_16s.fasta + input.json   [CHECKPOINT]
 #   phylo_align   : asv_16s.fasta           -> asv_16s.aln.fasta   (MAFFT)
 #   phylo_tree    : the alignment           -> a backend-native tree
 #                   (iqtree | fasttree | raxml-ng — exactly one rule defined, chosen
@@ -48,10 +48,11 @@
 
 if PHYLO_ENABLED:
 
-    # Where this stage writes. 7.phylogeny/ continues the N.stage/ numbering (taxonomy
-    # is stage 6); stats/phylogeny/ holds the diagnostic report, matching every other
-    # stage's habit of keeping deliverables and diagnostics apart.
-    PHYLO_DIR    = OUT / "7.phylogeny"
+    # Where this stage writes. 07.phylogeny/ continues the numbered stage folders
+    # (06.taxonomy/ comes just before it); stats/phylogeny/ holds the diagnostic
+    # report, matching every other stage's habit of keeping deliverables and
+    # diagnostics apart.
+    PHYLO_DIR    = OUT / "07.phylogeny"
     PHYLO_QC_DIR = OUT / "stats" / "phylogeny"
 
     # Minimum ASV count for a tree to mean anything. Below four tips there is only one
@@ -86,8 +87,8 @@ if PHYLO_ENABLED:
     # only checkpoint in MetaFlux.
     checkpoint phylo_input:
         input:
-            taxon_seq_table = OUT / "6.taxonomy" / "taxon_seq_table.txt",
-            asv_table       = OUT / "6.taxonomy" / "asv_table.txt",
+            taxon_seq_table = OUT / "06.taxonomy" / "taxon_seq_table.txt",
+            asv_table       = OUT / "06.taxonomy" / "asv_table.txt",
         output:
             seqs       = PHYLO_DIR / "asv_16s.fasta",
             input_json = PHYLO_DIR / "input.json",

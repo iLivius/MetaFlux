@@ -37,7 +37,7 @@ prefix_style:  bare
 # made VSEARCH treat the supergroup as the top rank and lose the domain whenever the
 # supergroup was uncertain. MetaFlux therefore classifies against a copy with the
 # two letters swapped (rule convert_pr2_sintax). The raw VSEARCH output,
-# 6.taxonomy/_sintax_raw.tsv, shows the supergroup as k:<supergroup>; the tables
+# 06.taxonomy/_sintax_raw.tsv, shows the supergroup as k:<supergroup>; the tables
 # write it as sg__ / Supergroup.
 sintax_tax_levels:    [Domain, Supergroup, Division_Subdivision, Class, Order, Family, Genus, Species]
 sintax_rank_letters:  [d, k, p, c, o, f, g, s]

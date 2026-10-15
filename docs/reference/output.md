@@ -6,10 +6,10 @@ cached under `references.refdb_root` (`refdb/` by default) so that every run
 reuses the same downloads, and — in shotgun BioProject mode — the FASTQs fetched
 from SRA, which land in `input.fastq_dir`.
 
-Inside `out_dir` the directories are numbered in the order the stages run, so a
-plain `ls` reads like the pipeline itself. Both modes also write `logs/` (one log
-per rule, one per sample where the rule runs per sample), `stats/read_tracking.txt`
-and `multiqc/multiqc_report.html`.
+Inside `out_dir` the directories are numbered, with two digits, in the order the
+stages run, so a plain `ls` reads like the pipeline itself. Both modes also write
+`logs/` (one log per rule, one per sample where the rule runs per sample),
+`stats/read_tracking.txt` and `multiqc/multiqc_report.html`.
 
 !!! warning "One output directory per mode"
 
@@ -26,16 +26,16 @@ and `multiqc/multiqc_report.html`.
 
 ```text
 out_dir/
-├── 1.reads/          # symlinks to the input FASTQs (visibility only)
-├── 2.no_phix/        # PhiX-filtered reads      (absent when remove_phix: false)
-├── 3.stripped/       # primer-trimmed reads
-├── 4.filtered/       # DADA2 filterAndTrim output
-├── 5.dada2/          # ASV sequences and count tables at each stage
-├── 6.taxonomy/       # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
+├── 01.reads/         # symlinks to the input FASTQs (visibility only)
+├── 02.no_phix/       # PhiX-filtered reads      (absent when remove_phix: false)
+├── 03.stripped/      # primer-trimmed reads
+├── 04.filtered/      # DADA2 filterAndTrim output
+├── 05.dada2/         # ASV sequences and count tables at each stage
+├── 06.taxonomy/      # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
 │                     # asv_table_unfiltered.txt (every ASV, removed ones included)
 │                     # (+ _sintax_raw.tsv on the sintax path)
 │                     # (+ taxonomy_lineage_full.tsv for 16S on SILVA 144)
-├── 7.phylogeny/      # alignment + unrooted tree  (only when phylogeny.enabled: true)
+├── 07.phylogeny/     # alignment + unrooted tree  (only when phylogeny.enabled: true)
 ├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
 │                     # (+ phylogeny/ when phylogeny.enabled: true)
 ├── multiqc/          # multiqc_report.html + multiqc_data/
@@ -44,24 +44,24 @@ out_dir/
 └── _aux/primers/     # reverse-complemented primers used by Cutadapt
 ```
 
-Three files carry the result of an amplicon run: `6.taxonomy/asv_table.txt`
-(ASV × sample counts plus a taxonomy string), `5.dada2/seqs_lenfilt.fasta` (the
+Three files carry the result of an amplicon run: `06.taxonomy/asv_table.txt`
+(ASV × sample counts plus a taxonomy string), `05.dada2/seqs_lenfilt.fasta` (the
 sequences those ASV IDs refer to), and `stats/read_tracking.txt` (how many reads
-survived each stage, per sample). Next to them, `6.taxonomy/asv_table_unfiltered.txt`
+survived each stage, per sample). Next to them, `06.taxonomy/asv_table_unfiltered.txt`
 is the same table before the taxon filter, with the step that removed each ASV, and a
-16S run on SILVA 144 adds `6.taxonomy/taxonomy_lineage_full.tsv` with the Kingdom rank.
+16S run on SILVA 144 adds `06.taxonomy/taxonomy_lineage_full.tsv` with the Kingdom rank.
 Everything else is intermediate data or QC.
 
-### Reads: `1.reads/` → `4.filtered/`
+### Reads: `01.reads/` → `04.filtered/`
 
 | Directory | Files | Rule | What happened |
 |---|---|---|---|
-| `1.reads/` | `{sample}_R1.fastq.gz`, `_R2` | `link_reads` | Symlinks pointing back at `input.fastq_dir`. Nothing reads from here — the downstream rules open the originals. The links exist so the run directory shows which files went in. |
-| `2.no_phix/` | `{sample}_R1.fastq.gz`, `_R2` | `rm_phix` | Bowtie2 against the fetched PhiX reference; the pairs that do *not* align are kept. Present only when `amplicon.decontamination.remove_phix` is `true` (the default). |
-| `3.stripped/` | `{sample}_R1.fastq.gz`, `_R2` | `trim_primers` | Cutadapt removes the primers at the 5' end and any read-through of the opposite primer at the 3' end. With `primers.orientation: mixed` a second pass recovers reads that arrived the other way round and reverse-complements them back. |
-| `4.filtered/` | `{sample}_R1_filt.fastq.gz`, `_R2_filt` | `dada_filter` | DADA2 `filterAndTrim` with the `truncLen` decided in `stats/trunclen.json`. This is the last per-sample FASTQ; from here DADA2 works on all samples at once. |
+| `01.reads/` | `{sample}_R1.fastq.gz`, `_R2` | `link_reads` | Symlinks pointing back at `input.fastq_dir`. Nothing reads from here — the downstream rules open the originals. The links exist so the run directory shows which files went in. |
+| `02.no_phix/` | `{sample}_R1.fastq.gz`, `_R2` | `rm_phix` | Bowtie2 against the fetched PhiX reference; the pairs that do *not* align are kept. Present only when `amplicon.decontamination.remove_phix` is `true` (the default). |
+| `03.stripped/` | `{sample}_R1.fastq.gz`, `_R2` | `trim_primers` | Cutadapt removes the primers at the 5' end and any read-through of the opposite primer at the 3' end. With `primers.orientation: mixed` a second pass recovers reads that arrived the other way round and reverse-complements them back. |
+| `04.filtered/` | `{sample}_R1_filt.fastq.gz`, `_R2_filt` | `dada_filter` | DADA2 `filterAndTrim` with the `truncLen` decided in `stats/trunclen.json`. This is the last per-sample FASTQ; from here DADA2 works on all samples at once. |
 
-### Inside `5.dada2/`
+### Inside `05.dada2/`
 
 The directory looks busy, but most of it is the same two artifacts — the **ASV
 sequences** and the **ASV count table** — written out again after each processing
@@ -101,7 +101,7 @@ is the raw material for the DADA2 part of `stats/read_tracking.txt`.
 
 The extraction step leaves a per-extractor trail:
 
-| Marker | Extractor | Files in `5.dada2/` |
+| Marker | Extractor | Files in `05.dada2/` |
 |---|---|---|
 | 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter) plus the raw `seqs.*` working files under `metaxa2/` |
 | ITS | ITSx | `itsx_extraction.summary.txt`, `itsx_collapse_map.tsv`, plus the raw `seqs.*` working files under `_itsx_tmp/` |
@@ -112,7 +112,7 @@ or ITS2 region is identical, so the ASVs are merged into one and their counts ar
 added. The map records which original `ASV_#` went into which representative, so
 that merge is auditable rather than silent.
 
-### `6.taxonomy/`
+### `06.taxonomy/`
 
 Three tables, all written by `assign_taxonomy`, all built from the same filtered
 set of ASVs. They differ only in what labels the rows. A fourth,
@@ -193,7 +193,7 @@ check and, for 16S, the organelle filter) has already been applied when these ta
 are written, so the ASVs it removed are absent here, except from
 `asv_table_unfiltered.txt` — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
 
-### `7.phylogeny/`
+### `07.phylogeny/`
 
 Only when `amplicon.phylogeny.enabled: true` (16S only). The whole directory is absent
 otherwise. See [Phylogeny](../amplicon/phylogeny.md).
@@ -253,7 +253,7 @@ extraction step ran. The last column counts reads still present after the
 contaminant filter, so the drop between `post_length_filter` and
 `post_taxonomy_filter` is exactly what the taxon filter removed: the keep/discard
 lists, the best-hit check and, for 16S, the organelle filter.
-`6.taxonomy/asv_table_unfiltered.txt` shows which of them removed each ASV. A sample
+`06.taxonomy/asv_table_unfiltered.txt` shows which of them removed each ASV. A sample
 that collapses at one particular column points straight at the step to inspect.
 
 **`asv_length_stats.json`** and the matching histogram record ASV lengths at
@@ -313,8 +313,10 @@ primer changes the hash and the probe runs again.
 ```text
 out_dir/
 ├── 01.preprocessing/    # QC reports and decontamination stats (reads are temporary)
-├── 02.classification/   # Kraken2 reports, per-read output, classified reads
-├── 02c.sylph/           # sylph sketches and sylph-tax files (profiler sylph | both)
+├── 02.classification/
+│   ├── kraken2/         # Kraken2 reports, per-read output, classified reads, k-mer
+│   │                    # evidence (profiler kraken2 | both)
+│   └── sylph/           # sylph sketches and sylph-tax files (profiler sylph | both)
 ├── 03.abundance/        # Bracken reports + otu_table.tsv / otu_table.biom; sylph tables
 ├── 04.extracted_reads/  # per-taxon reads (only when extract_taxa is set)
 ├── stats/               # read_tracking.txt; sylph/ summary (profiler sylph | both)
@@ -354,11 +356,16 @@ has been built from it. See [decontamination](../shotgun/decontamination.md).
 
 ### `02.classification/`
 
+One subfolder per profiler: `kraken2/` when Kraken2 runs (`shotgun.profiler: kraken2`
+or `both`) and `sylph/` when sylph runs (`sylph` or `both`; see
+[below](#with-shotgunprofiler-sylph-or-both)). `kraken2/` holds:
+
 | File | Contents |
 |---|---|
 | `{sample}_report.txt` | Kraken2's tree report. |
 | `{sample}_output.txt` | Kraken2's per-read assignment — one line per read pair. Large, and only useful for read extraction and troubleshooting. |
 | `{sample}_R1.fastq.gz`, `_R2` | The reads Kraken2 managed to classify. Kept, because per-taxon extraction reads them. |
+| `{sample}_species_evidence.tsv`, `{sample}_report_gated.txt` | The k-mer evidence of every taxon at the Bracken rank, and the Kraken2 report without the taxa that fail it. Written on every run; Bracken reads the gated report only when `shotgun.kmer_evidence.enabled` is `true`. See [species-level k-mer evidence](../shotgun/kmer-evidence.md). |
 
 !!! warning "The Kraken2 report has extra columns"
 
@@ -401,7 +408,7 @@ under `sylph`. The two sets are never merged.
 | `03.abundance/sylph_genomes.tsv` | One row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI. |
 | `03.abundance/sylph_profile.tsv` | sylph's own output, unchanged: one row per sample and genome. |
 | `stats/sylph/sylph_summary.tsv` | One row per sample: read pairs after QC, the share the detected genomes explain, genomes found, flagged genomes. `sylph_summary_mqc.tsv` next to it is the copy MultiQC reads. |
-| `02c.sylph/` | The sketches (`sketches/{sample}.paired.sylsp`, kept), sylph-tax's `taxprof/{sample}.sylphmpa` files, and sylph's own log lines for each sample. |
+| `02.classification/sylph/` | The sketches (`sketches/{sample}.paired.sylsp`, kept), sylph-tax's `taxprof/{sample}.sylphmpa` files, and sylph's own log lines for each sample. |
 
 How to read these numbers is explained on the [sylph](../shotgun/sylph.md) page.
 

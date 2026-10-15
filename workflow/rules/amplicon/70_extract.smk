@@ -36,24 +36,24 @@ if MARKER_EXTRACTOR == "metaxa2":
     # Rule assign_taxonomy reads it: with amplicon.taxonomy.filter.organelles:
     # metaxa2 (the default) the ASVs called mitochondria or chloroplast are
     # removed there, next to the keep/discard tokens, and every ASV's call is
-    # written to the metaxa2_origin column of 6.taxonomy/asv_table_unfiltered.txt.
+    # written to the metaxa2_origin column of 06.taxonomy/asv_table_unfiltered.txt.
     # Removing them on the classified lineage alone is not enough: on the 16S test
     # set, plant mitochondria whose nearest SILVA reference is a mitochondrion at
     # 97-99 % identity were reported as bacteria (mostly Enterobacterales) and
     # escaped every token.
     rule target_extract:
         input:
-            seqs         = OUT / "5.dada2" / "seqs.fasta",
-            seqtab_names = OUT / "5.dada2" / "seqtab_head_names.txt",
+            seqs         = OUT / "05.dada2" / "seqs.fasta",
+            seqtab_names = OUT / "05.dada2" / "seqtab_head_names.txt",
         output:
-            seqs         = OUT / "5.dada2" / "seqs_extracted.fasta",
-            seqtab_names = OUT / "5.dada2" / "seqtab_extracted_head_names.txt",
-            results      = OUT / "5.dada2" / "metaxa2_extraction.results.txt",
-            origin       = METAXA2_ORIGIN_TSV,       # 5.dada2/metaxa2_origin.tsv
+            seqs         = OUT / "05.dada2" / "seqs_extracted.fasta",
+            seqtab_names = OUT / "05.dada2" / "seqtab_extracted_head_names.txt",
+            results      = OUT / "05.dada2" / "metaxa2_extraction.results.txt",
+            origin       = METAXA2_ORIGIN_TSV,       # 05.dada2/metaxa2_origin.tsv
         params:
             # All raw Metaxa2 outputs (seqs.*) are persisted under this dir for
             # downstream QC / inspection; see 70a_metaxa2_extract.py.
-            prefix = lambda wc: str(OUT / "5.dada2" / "metaxa2" / "seqs"),
+            prefix = lambda wc: str(OUT / "05.dada2" / "metaxa2" / "seqs"),
         log:
             LOGS / "target_extract.log",
         conda:
@@ -84,19 +84,19 @@ elif MARKER_EXTRACTOR == "itsx":
     # useful for checking why the ASV count dropped after extraction.
     rule target_extract:
         input:
-            seqs         = OUT / "5.dada2" / "seqs.fasta",
-            seqtab_names = OUT / "5.dada2" / "seqtab_head_names.txt",
+            seqs         = OUT / "05.dada2" / "seqs.fasta",
+            seqtab_names = OUT / "05.dada2" / "seqtab_head_names.txt",
         output:
-            seqs         = OUT / "5.dada2" / "seqs_extracted.fasta",
-            seqtab_names = OUT / "5.dada2" / "seqtab_extracted_head_names.txt",
-            results      = OUT / "5.dada2" / "itsx_extraction.summary.txt",
-            collapse_map = OUT / "5.dada2" / "itsx_collapse_map.tsv",
+            seqs         = OUT / "05.dada2" / "seqs_extracted.fasta",
+            seqtab_names = OUT / "05.dada2" / "seqtab_extracted_head_names.txt",
+            results      = OUT / "05.dada2" / "itsx_extraction.summary.txt",
+            collapse_map = OUT / "05.dada2" / "itsx_collapse_map.tsv",
         params:
             its_region = ITS_REGION,
             # Raw ITSx outputs (seqs.ITS1/ITS2.fasta, seqs.positions.txt, seqs.summary.txt,
             # ...) are persisted under this dir for QC/inspection, same as Metaxa2's above —
             # the leading underscore is only a naming convention, nothing deletes this dir.
-            prefix     = lambda wc: str(OUT / "5.dada2" / "_itsx_tmp" / "seqs"),
+            prefix     = lambda wc: str(OUT / "05.dada2" / "_itsx_tmp" / "seqs"),
         log:
             LOGS / "target_extract.log",
         conda:

@@ -46,7 +46,7 @@ IQ-TREE writes that are NOT declared (.log, .bionj, .mldist, .uniqueseq.phy, and
 extra files produced under -B or MFP).
 
 Inputs (see rule phylo_tree, iqtree branch, in 85_phylogeny.smk)
-  aln : 7.phylogeny/asv_16s.aln.fasta, from phylo_align.
+  aln : 07.phylogeny/asv_16s.aln.fasta, from phylo_align.
 
 Outputs
   tree     : <backend dir>/asv_16s.treefile — the ML tree, read next by phylo_export,
