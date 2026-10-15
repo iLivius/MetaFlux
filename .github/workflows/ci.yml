@@ -1,0 +1,97 @@
+# The checks GitHub runs on every push and pull request. Three independent jobs, so
+# a failure in one does not hide the result of the others, and all three finish in a
+# few minutes on GitHub's free runners (no conda environment is built, no reference
+# database or Kraken2 index is downloaded, and nothing here needs a secret):
+#
+#   docs        `mkdocs build --strict`: the same check the docs deployment workflow
+#               (docs.yml) runs before publishing, here for every branch and pull
+#               request, so a broken link is found before it reaches main.
+#   unit-tests  `pytest tests`: the test suite of the pure-Python parts (the start-up
+#               checks, the reference check, the OTU-table builder and its taxo.k2d
+#               reader, the read-tracking parsers, the taxon lookup of the read
+#               extraction). tests/helpers.py says how the tests reach the code.
+#   dry-runs    `snakemake --lint` on an amplicon and a shotgun config, then the
+#               dry-run matrix of .test/run_dry_runs.sh: every amplicon marker,
+#               taxonomy method and SILVA release, and the three shotgun profilers,
+#               on the tiny data and stub databases under .test/ (its README says
+#               what they are). A dry run runs every start-up check and plans every
+#               job without running one, which is what can be checked without the
+#               tools installed. The configs that must stop at start-up are checked
+#               for their stop message.
+#
+# Versions are pinned to the ones the checks were verified with locally, so a new
+# release of a tool cannot silently break or change a check. Update them together
+# with a local run of the same commands (CONTRIBUTING.md, "Running the checks").
+# The lint step is informational: Snakemake's linter flags a few long-standing style
+# points (rules without a conda environment, hard-coded path prefixes) that are kept
+# on purpose, so the step reports them but does not fail the job.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the checks still running for the old one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The checks only read the repository.
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: Docs build (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install mkdocs-material==9.7.7
+      # --strict turns every warning into an error: a page left out of the nav, a
+      # link to a missing page or heading (the validation block of mkdocs.yml).
+      - name: Check the docs (strict build)
+        run: mkdocs build --strict
+
+  unit-tests:
+    name: Unit tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # pytest and PyYAML run the suite; biom-format and numpy are the two packages
+      # of workflow/envs/biom.yaml, needed to run the OTU-table builder end to end.
+      - run: pip install pytest==9.1.1 pyyaml==6.0.3 biom-format==2.1.18
+      - name: Run the test suite
+        run: pytest tests
+
+  dry-runs:
+    name: Snakemake lint and dry runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The Snakemake release MetaFlux is developed and tested with. Installed with
+      # pip, not conda: a dry run never builds a job's environment.
+      - run: pip install snakemake==9.23.1
+      # Informational (see the header): the output lists Snakemake's style findings
+      # for the rules of each mode, and the job goes on whatever the exit code.
+      - name: snakemake --lint (informational)
+        continue-on-error: true
+        run: |
+          status=0
+          snakemake --lint --configfile .test/config/16S_sintax_silva144.yaml || status=1
+          snakemake --lint --configfile .test/config/shotgun_both.yaml || status=1
+          exit $status
+      # Every config under .test/config/ must plan its jobs; every config under
+      # .test/config/expected_stop/ must stop at start-up with its expected message.
+      - name: Dry-run matrix
+        run: bash .test/run_dry_runs.sh
