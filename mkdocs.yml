@@ -63,6 +63,20 @@ markdown_extensions:
 plugins:
   - search
 
+# Link checks. `mkdocs build --strict` turns every warning into an error, so with
+# these four set to "warn" a strict build stops on: a page under docs/ that the nav
+# below leaves out (omitted_files), a link written as an absolute path that only
+# works on one website layout (absolute_links), a link MkDocs cannot resolve
+# (unrecognized_links), and a link to a heading that no longer exists on its page
+# (anchors). The last one matters most: renaming a heading changes its anchor, and
+# MkDocs 1.6 reports a missing anchor only at INFO level by default, which --strict
+# does not catch, so the link would still open the page, at its top, without a word.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
 nav:
   - Home: index.md
   - Getting started:
