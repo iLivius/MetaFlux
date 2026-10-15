@@ -15,8 +15,7 @@ downloaded by the workflow.
 PhiX is worth a note: the `references.phix` block in the config is used by amplicon
 mode, which downloads the genome and builds a bowtie2 index from it. Shotgun mode
 uses BBDuk's own bundled `phix2.fa.gz` instead, so no shotgun rule uses that block.
-Keep it anyway: `references.phix.fasta` is read when the workflow is parsed, in both
-modes.
+Keep it anyway: `references.phix.fasta` is read at start-up, in both modes.
 
 ## Pointing MetaFlux at the database
 
@@ -26,8 +25,8 @@ references:
 ```
 
 When Kraken2 runs (`shotgun.profiler: kraken2`, the default, or `both`), the path is
-checked when the workflow is parsed, before any job runs. A missing or mistyped path
-then stops the run immediately with:
+checked at start-up, before any job runs. A missing or mistyped path then stops the run
+immediately with:
 
 ```text
 [MetaFlux] mode=shotgun requires kraken_db but not found: /path/to/db/k2_pluspf
@@ -82,10 +81,10 @@ memory mapping on — the shipped default — it requests a fixed 20 GB of priva
 workspace and lets the kernel page the index in, so the size on disk is not consulted
 at all. See [Memory](#memory).
 
-The trade-off between them is biological, not technical. A capped index holds fewer
-k-mers, so more reads go unclassified and species-level calls become less reliable —
-on a shallow index it is often more honest to re-estimate at genus level with
-`shotgun.bracken.tax_lev: G`.
+The choice affects the results as well as the memory needed. A capped index holds fewer
+k-mers, so more reads go unclassified and species-level calls become less reliable;
+with a shallow index, re-estimating at genus level with `shotgun.bracken.tax_lev: G` is
+often the more reliable choice.
 
 Two practical rules when choosing:
 
@@ -97,8 +96,7 @@ Two practical rules when choosing:
 
 !!! warning "A missing organism does not show up as unclassified"
 
-    The unclassified fraction is the visible half of database incompleteness, and it is
-    the reassuring half. The other half is silent.
+    The unclassified fraction shows only part of what the database is missing.
 
     When an organism is absent from the index but a relative is present, its reads do not
     fail to classify. Their k-mers genuinely occur in that relative, so they map to it,
@@ -110,8 +108,8 @@ Two practical rules when choosing:
     Raising `confidence` does not help here. The score measures how much of a read's
     evidence supports the taxon it was given, and nothing in that calculation can
     distinguish "this read is from *X*" from "this read is from an unsequenced relative
-    of *X*". So a well-populated unclassified fraction is not evidence that the database
-    was adequate, and a low one is not evidence that the species calls are right.
+    of *X*". So a low unclassified fraction shows neither that the database was adequate
+    nor that the species calls are right.
 
     The practical defences are to use an index that covers the expected community, to
     re-estimate at genus level where species representation is thin
@@ -134,7 +132,9 @@ There are two reasons for one exact release:
   and `K` code against `taxo.k2d` and stops on such reports (see
   [Troubleshooting](../troubleshooting.md#shotgun-the-table-step-stops-on-a-report-code)).
 - **The defaults were measured with 2.17.1.** The k-mer evidence settings and the
-  automatic Bracken threshold come from benchmarks run with this release. Kraken2
+  automatic Bracken threshold come from the benchmarks described in
+  [Choosing confidence and threshold](confidence-and-threshold.md#the-benchmark-behind-these-numbers)
+  and [Species-level k-mer evidence](kmer-evidence.md), run with this release. Kraken2
   2.17.2 changes how reads are classified and how minimizers are counted, so those
   numbers would have to be measured again before moving to it.
 
@@ -146,14 +146,14 @@ downloader is faster and resumable:
 ```bash
 mkdir -p /path/to/db && cd /path/to/db
 
-# substitute the latest dated build from the catalog
-aria2c -x16 -s16 https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260226.tar.gz
+# k2_pluspf_20260626, one of the builds read by Kraken2 2.17.1 (see Kraken2 version above)
+aria2c -x16 -s16 https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260626.tar.gz
 
 # verify integrity against the md5 listed in the catalog
-md5sum k2_pluspf_20260226.tar.gz
+md5sum k2_pluspf_20260626.tar.gz
 
 # contains hash.k2d, opts.k2d, taxo.k2d, *.kmer_distrib
-tar -xzf k2_pluspf_20260226.tar.gz
+tar -xzf k2_pluspf_20260626.tar.gz
 ```
 
 If the AWS CLI is installed, `aws s3 cp --no-sign-request <url>` is the fastest
@@ -202,16 +202,16 @@ situation, a size-capped build that does fit is the better trade.
 
 !!! note "How the kraken2 memory request is computed"
 
-    The memory request for the `kraken2` rule is settled when the workflow is
-    parsed: with memory mapping on it is a flat 20 GB; with it off, the real size of
-    `hash.k2d` on disk plus 10% headroom, so a 16 GB capped index and a 100 GB PlusPF
+    The memory request for the `kraken2` rule is settled at start-up: with memory
+    mapping on it is a flat 20 GB; with it off, the real size of `hash.k2d` on disk
+    plus 10% headroom, so a 16 GB capped index and a 100 GB PlusPF
     are handled without editing anything — or, with memory mapping off and `hash.k2d`
     not readable yet (the database is still downloading, say), a conservative
     ~110 GB. This value is what the rule uses, so the `resources.mem_mb.kraken2`
     entry in the config does not override it.
 
-    On a cluster this matters: the value is what gets requested from the scheduler,
-    so an underestimate is a killed job.
+    On a cluster this is the value requested from the scheduler, and a job that uses
+    more memory than it requested is killed.
 
 The first Kraken2 call of a run reads the whole database off disk and is slow while
 the cache is cold; later samples are much faster once the operating system has the
@@ -245,15 +245,18 @@ altogether and their reads are discarded rather than redistributed — Bracken p
 them in its log as "Total reads discarded".
 
 It is therefore a floor on direct evidence, not on the final estimate, and that has
-two consequences worth knowing. A species whose reads Kraken2 mostly parked at genus
+two consequences. A species whose reads Kraken2 mostly parked at genus
 level — the usual outcome where the database holds several close relatives — can be
 removed even though redistribution would have credited it with thousands of reads.
 And because the discarded reads leave the table rather than moving to a surviving
 relative, the threshold shrinks the total, not just the tail.
 
-The count is flat rather than proportional, so it also bites harder on shallowly
-sequenced samples than on deep ones. Raise it for deep libraries; lower it if either
-of the above is a concern, and expect a longer tail of one-read taxa.
+A fixed integer is the same number of reads at every depth, so it is a stricter filter,
+relative to the size of the sample, for a shallow sample than for a deep one. That is
+why `auto`, the default, scales the count with depth (see
+[Choosing confidence and threshold](confidence-and-threshold.md)). If you set an
+integer, raise it for deep libraries; lower it if either of the above is a concern, and
+expect a longer tail of one-read taxa.
 
 The read length Bracken uses is not configurable: it is read per sample from the
 fastp report and matched to the nearest distribution the database ships (50, 75, 100,

@@ -121,9 +121,8 @@ fills the `no_host` column of `stats/read_tracking.txt`.
 For human host removal, the reference should be a **masked** one. Regions that are
 conserved across life — ribosomal RNA genes above all — plus low-complexity repeats
 and stretches with clear homology to bacteria, plants or fungi are masked out of the
-reference. Without that masking, a real bacterial 16S read can align
-convincingly to the human rDNA locus and be thrown away as host, quietly depleting
-exactly the organisms the study is about.
+reference. Without that masking, a bacterial 16S read can align to the human rDNA locus
+well enough to be removed as host, so microbial reads are lost from the sample.
 
 The masked human reference on Zenodo
 ([Handley 2020](https://doi.org/10.5281/zenodo.4116107), 889 MB) is Brian Bushnell's
@@ -159,8 +158,7 @@ from BBMap's mapping rate in `logs/decontam_host/{sample}.log`.
 `host_min_id` is BBMap's `minid`, and the default is `0.95`. BBMap's own
 documentation calls it an *approximate* minimum alignment identity: it tunes how hard
 BBMap looks for an alignment rather than imposing a hard cut, so the realised identity
-of the reads that get removed scatters around the value. Treat it as a sensitivity
-dial, not a threshold.
+of the reads that get removed scatters around the value.
 
 - **Lower** (e.g. `0.90`) removes more: it catches host reads that diverge from the
   reference, at the cost of pulling in microbial reads that happen to align
@@ -189,8 +187,8 @@ for a masked human genome, whose BBMap index needs roughly 24–28 GB:
 All three rules, BBDuk and the two BBMap rules, pass 85% of their `mem_mb` to the JVM
 as `-Xmx`, leaving the rest for the process itself. A smaller host genome can take a
 smaller budget; a larger one must be given more, or the index build will run out of
-heap. BBDuk is capped at 6 threads on purpose — it scales poorly past four to six
-workers on a 5 kb reference, so running several samples in parallel is the better use
+heap. BBDuk is capped at 6 threads on purpose — it scales poorly beyond four to six
+threads on a 5 kb reference, so running several samples in parallel is the better use
 of cores.
 
 ## When BBDuk or BBMap stops on the read pairs
