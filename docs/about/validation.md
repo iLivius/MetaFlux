@@ -218,7 +218,7 @@ Support (UFBoot ≥ 95 *and* SH-aLRT ≥ 80): **64%** of internal branches on th
 - **The fragment loses most of the topology and keeps a fair amount of the distances.**
   Every V5–V7 tree sits in one band — about 58% of internal branches differ from the
   full-gene tree (Robinson–Foulds distance 0.56–0.60), while patristic distances correlate at 0.83–0.88. For
-  scale: the full-gene reference rebuilt with another seed differs from itself by 0.02–0.06, and the same *fragment* alignment rebuilt with another seed by 0.22–0.28 —
+  scale: the full-gene reference rebuilt with another seed differs from itself by 0.02–0.04, and the same *fragment* alignment rebuilt with another seed by 0.22–0.28 —
   so roughly 40 % of the fragment's disagreement is run-to-run variation of the tree
   search, and the rest is information the fragment does not contain. These are the
   measured values behind the opening paragraph of the

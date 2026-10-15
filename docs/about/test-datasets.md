@@ -5,7 +5,8 @@ release. The runs are deliberately small — four to six samples each — so the
 amplicon path can be re-run in minutes after a change and the output compared against
 the previous result.
 
-All the data on this page are public and reachable from the accessions given, so any
+All the data on this page are public and reachable from the accessions and references
+given, so any
 result on it can be reproduced from scratch with the primers, references and databases
 listed. Exact counts of ASVs and of reads in the final table also depend on the reference
 release and the taxon-filter settings, and both have changed between MetaFlux versions,
@@ -60,8 +61,9 @@ are used.
 | SRR39106521, SRR39106522, SRR39106523, SRR39106524 | 4.6–5.9 million | PlusPF `k2_pluspf_20260626` | `gtdb-r232-c200-dbv1` and `fungi-refseq-2025-10-11-c200-dbv1` |
 
 The cultures have no known composition, so the run checks the mechanics of shotgun mode
-rather than its accuracy. It is also the source of the real-data examples on the
-[k-mer evidence](../shotgun/kmer-evidence.md) and [sylph](../shotgun/sylph.md) pages.
+rather than its accuracy. The real-data examples on the
+[k-mer evidence](../shotgun/kmer-evidence.md) and [sylph](../shotgun/sylph.md) pages come
+from these four runs and from the D6331 run listed under [Benchmark data](#benchmark-data).
 
 ## Benchmark data
 
@@ -76,8 +78,8 @@ Accuracy figures for shotgun mode come from communities of known composition:
   plant-associated (rhizosphere) samples 0–20 and strain-madness samples 0–9.
 
 Zymo's manual lists the standard's *Fusobacterium* as *F. nucleatum* 2/1/50A, but sylph
-(GTDB r232), MetaPhlAn 4 and Kraken2 (PlusPF `k2_pluspf_20260626` and GTDB r226) all
-place its reads in *F. animalis*, formerly *F. nucleatum* subsp. *animalis*, so
+(GTDB r232), MetaPhlAn 4 and Kraken2 (PlusPF `k2_pluspf_20260626` and GTDB r226) put
+nearly all of its reads in *F. animalis*, formerly *F. nucleatum* subsp. *animalis*, so
 *F. animalis* is scored as the true member and calls of *F. nucleatum*, *F. polymorphum*
 and *F. vincentii* count as false positives.
 
@@ -136,10 +138,11 @@ removed a third of the merged reads.
 
 On this mock it cost no taxa: all four expected genera are still recovered from the 12
 remaining ASVs. The class-only fraction described above (almost certainly *Saccharomyces*)
-is not an artefact of this parameter change either — checked directly against the looser
-10/2 setting, where it is 7 separate ASVs rather than 2 (the looser overlap tolerance
+does not come from this parameter change either. In a run with the looser 10/2 setting
+(made with v2.2.0) it is 7 separate ASVs rather than 2 (the looser overlap tolerance
 lets more marginal read variants through, so the same underlying signal is split across
-more low-abundance ASVs), carrying 42.5% of that run's final reads versus 43.3% here.
+more low-abundance ASVs), carrying 42.5% of that run's final reads, against 43.3% in the
+v2.5.0 run.
 The exact ASVs differ, but the fraction stuck at class level is essentially unchanged —
 this classification gap is a property of the reference and classifier for this organism,
 not of the merge parameters. A defined community of only four confidently-named genera is

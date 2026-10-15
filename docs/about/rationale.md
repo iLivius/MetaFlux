@@ -4,11 +4,11 @@ Over many years of amplicon-sequencing and metagenomics work, a set of methods
 and parameter choices accumulates into an in-house pipeline. MetaFlux
 re-implements that methodology as a more modern, modular Snakemake workflow.
 
-Compared with that pipeline, MetaFlux adds five things. Read truncation (section 1)
-and amplicon length (2) are derived from the data instead of being chosen by eye or
-hard-coded for one marker and one sequencing run; primer trimming recovers reads in
-mixed orientation (3); CPU and memory are set per rule (4); and one workflow covers
-both amplicon and shotgun data (5).
+Compared with that pipeline, MetaFlux adds five things. Read truncation (section 1) is
+derived from the reads and amplicon length (2) from the reference database, instead of
+being chosen by eye or hard-coded for one marker and one sequencing run; primer trimming
+recovers reads in mixed orientation (3); CPU and memory are set per rule (4); and one
+workflow covers both amplicon and shotgun data (5).
 
 ## 1. Data-driven read truncation
 

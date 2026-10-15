@@ -75,12 +75,10 @@ fails later on an input the rules cannot resolve.
 ## Step 4 in detail — why the dry-run matters
 
 `--dry-run` makes Snakemake work out every job it would run and then stop without
-running any. It takes seconds. A real run starts by building conda environments and
-downloading reference databases, which can take a long time, so without a dry run a
-configuration error may show only after that.
-
-Nearly all of MetaFlux's own validation happens while the plan is being built, so a
-dry-run exercises it. What is checked before the first job starts:
+running any. It takes seconds. MetaFlux's own checks run while that plan is built, so
+a dry run stops on the same configuration errors a real run would stop on, and it also
+lists the jobs before any conda environment is built or reference database downloaded.
+What is checked before the first job starts:
 
 - `mode` is one of `amplicon` / `shotgun`.
 - `fastq_dir` yields at least one `{sample}_R1` file (or `{sample}_1` in shotgun
