@@ -32,3 +32,9 @@ config/*.yml
 # site/ is the generated HTML, rebuilt on demand and published to the gh-pages
 # branch rather than committed here.
 site/
+
+# Test suite and CI dry runs (see CONTRIBUTING.md and .test/README.md). pytest's
+# cache, and the output folder the .test configs name: a dry run never creates it,
+# but a real run against a .test config would.
+.pytest_cache/
+.test/out/
