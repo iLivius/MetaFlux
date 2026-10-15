@@ -1,18 +1,21 @@
 # Rebuilds and publishes the MkDocs site (docs/) to GitHub Pages on every push to
 # main. This is the standard deployment pattern documented by mkdocs-material itself
-# (squidfunk.github.io/mkdocs-material/publishing-your-site/) — nothing bespoke here.
+# (squidfunk.github.io/mkdocs-material/publishing-your-site/), with one addition: a
+# strict build that checks the docs before anything is published.
 #
 # What happens on a push to main:
 #   1. GitHub checks out the repo on a temporary Ubuntu runner.
 #   2. Installs Python and the exact mkdocs-material version verified locally (pinned
 #      below, so a future mkdocs-material release can't silently break this build).
-#   3. Runs `mkdocs gh-deploy`, which builds the site and force-pushes the result to
+#   3. Runs `mkdocs build --strict`, the same check as when editing the docs locally.
+#      Any warning stops the job here, before anything is published (see below).
+#   4. Runs `mkdocs gh-deploy`, which builds the site and force-pushes the result to
 #      the gh-pages branch (created automatically on first run if it doesn't exist).
-#   4. GitHub Pages (once pointed at the gh-pages branch in repo Settings) serves
+#   5. GitHub Pages (once pointed at the gh-pages branch in repo Settings) serves
 #      whatever is on that branch — so the live site updates within about a minute.
 #
-# A failed run here (e.g. a broken link with strict mode, though CI does not run
-# --strict — see below) does not take the live site down: gh-pages simply keeps
+# A failed run here (for example a broken link, which the strict build in step 3
+# turns into an error) does not take the live site down: gh-pages simply keeps
 # whatever it last successfully published until the next successful run.
 #
 # One-time setup this file does NOT do for you (both are in repo Settings on
@@ -56,9 +59,19 @@ jobs:
 
       - run: pip install mkdocs-material==9.7.7
 
-      # No --strict here: a genuinely broken link should fail loudly when caught
-      # locally (mkdocs build --strict, already part of the normal editing routine
-      # for this docs set), but a hard CI failure over something cosmetic is not
-      # worth blocking a docs update over. gh-deploy still fails the whole job (and
-      # leaves the previous version live) if the build itself errors outright.
-      - run: mkdocs gh-deploy --force
+      # Check the docs before publishing them. --strict turns every warning into an
+      # error, so this step fails on anything the link checks in mkdocs.yml (its
+      # validation block) report: a page left out of the nav, an absolute link, a
+      # link to a page or to a heading that does not exist. Without --strict these
+      # only print a warning and the site is published anyway; a link to a renamed
+      # heading then opens its page at the top, without a word. This is the same
+      # command used when editing the docs locally. When it fails, the publish step
+      # below does not run, and the live site keeps its last version.
+      - name: Check the docs (strict build)
+        run: mkdocs build --strict
+
+      # Publish. gh-deploy builds the site again (a few seconds) and force-pushes it
+      # to the gh-pages branch. It too fails the whole job, and leaves the previous
+      # version live, if its build errors outright.
+      - name: Publish to GitHub Pages
+        run: mkdocs gh-deploy --force
