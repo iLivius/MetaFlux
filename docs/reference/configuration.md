@@ -1196,6 +1196,7 @@ so they are what a cluster executor turns into job requests.
 | `decontam_host` | shotgun | 16 | |
 | `fastp` | shotgun | 16 | Read by the `trim_adapters` rule. fastp scales poorly past about 16 threads. |
 | `kraken2` | shotgun | 16 | Overridden by `shotgun.kraken.threads` when that is not `null`. |
+| `kmer_evidence` | shotgun | 1 | Only when Kraken2 runs, whether the k-mer gate is on or off. One job per sample; the script reads that sample's Kraken2 report and uses one thread. |
 | `bracken` | shotgun | 4 | |
 | `finalize_otu_table` | shotgun | 1 | One pass over the Bracken reports, building `otu_table.tsv` and `otu_table.biom`. |
 | `extract_taxon_reads` | shotgun | 4 | |
@@ -1231,6 +1232,7 @@ so they are what a cluster executor turns into job requests.
 | `decontam_host` | shotgun | 30000 | Mapping against that index. |
 | `fastp` | shotgun | 8000 | Read by the `trim_adapters` rule. |
 | `kraken2` | shotgun | 20000 | Not read — the real figure is computed at parse time from `memory_mapping` and the actual `hash.k2d` size. |
+| `kmer_evidence` | shotgun | 2000 | Only when Kraken2 runs. Holds one sample's Kraken2 report and draws its evidence plot. |
 | `bracken` | shotgun | 4000 | |
 | `finalize_otu_table` | shotgun | 2000 | |
 | `extract_taxon_reads` | shotgun | 2000 | |
