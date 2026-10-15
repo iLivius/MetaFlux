@@ -35,9 +35,10 @@ a table carries a kingdom only where its reference defines one.
 - **18S under `sintax`: the domain is classified first.** VSEARCH reads the SINTAX
   letters as a fixed top-down order, and PR2's own file puts the domain under the
   second letter, so an ASV lost its domain whenever its supergroup was uncertain.
-  MetaFlux now classifies against a copy with the two letters swapped. Only the
-  domain label is gained; nothing below it changes. 18S `sintax` runs made with
-  earlier versions have this problem; re-run them.
+  MetaFlux now classifies against a copy with the two letters swapped, so the domain
+  is no longer lost: on the 18S test set, 158 of the 159 ASVs that had an empty
+  taxonomy now carry `d__Eukaryota`. 18S `sintax` runs made with earlier versions
+  have this problem; re-run them.
 - **The shotgun OTU table is built from the Bracken reports**, without kraken-biom:
   eight lineage slots on every Kraken2 database (`d__` to `s__`), NCBI's kingdoms kept,
   a virus's realm in `d__`, species names complete, and a slot never filled from a
@@ -138,10 +139,13 @@ keep their names.
   table and the gated report written on every run now use 300. With the gate on,
   species with 300 to 332 distinct minimizers now pass. The k-mer evidence page
   describes a floor scaled to sequencing depth.
-- **`amplicon.dada2.chimera.allow_one_off`:** the comment in `config/config.yaml` had
-  the two settings the wrong way round. `false`, DADA2's default, flags exact bimeras
-  only; `true` also flags ASVs one mismatch or indel away from an exact bimera, so it
-  removes more. Only the comment changes; nothing has to be re-run.
+- **`amplicon.dada2.chimera.allow_one_off`:** the comment in `config/config.yaml` and
+  the configuration page had the two settings the wrong way round. `false`, DADA2's
+  default, flags exact bimeras only; `true` also flags ASVs one mismatch or indel away
+  from an exact bimera, so it removes more. The pipeline's behaviour does not change,
+  and runs at the default need no re-run. A config that set `true` to relax the check,
+  as the old text advised, removed more ASVs instead: set it back to `false` and
+  re-run.
 
 ### Pinned tool versions
 

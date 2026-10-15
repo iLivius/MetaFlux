@@ -37,8 +37,8 @@ and most stop a little short, a cut placed there discards nearly everything.
 
 MetaFlux guards against this by default: `amplicon.trunc_len.min_read_coverage_pct`
 (95) caps each sample at the length that percentage of its reads still reach, before
-quality is considered at all. With the default config the guard is on, so the cause is
-one of the two cases below.
+quality is considered at all. The guard is on by default, so if this error appears
+anyway, the cause is one of the two cases below.
 
 After primer trimming most reads end a little before the full read length, and
 DADA2's `filterAndTrim` **discards any read shorter than `truncLen`** rather than
@@ -60,8 +60,8 @@ and DADA2 has nothing left to work with.
     The ceiling comes out at 288 because the strictest sample sets it: its longest R1
     read is 288 bp, while the other three reach 289. Most R1 reads (70%) stop at
     exactly 281. Since `filterAndTrim` discards anything shorter than `truncLen`, only
-    9 of 908,768 pairs are long enough for the cut, and MetaFlux v2.1.0, which had no
-    cap, finished with 3 ASVs.
+    9 of 908,768 pairs are long enough for the cut, and without the cap the run
+    finished with 3 ASVs.
 
     Retention against the R1 cut, measured on this library:
 
@@ -443,8 +443,9 @@ then no longer changes the result:
   `sintax`, the default, is not affected. Now and then such a tie flips an ASV's whole
   lineage between two identical runs, even its kingdom: on the ITS test set
   ([PRJNA862334](about/test-datasets.md)), ASV_16 had an orchid as best hit in 8 of 11
-  identical runs and *Saccharomyces* in the other 3, so `keep: [k__Fungi]` removed it
-  in some runs and kept it in others.
+  identical runs and *Saccharomyces* in the other 3. Its kingdom support reached
+  `min_boot: 80` in only one of those three, so `keep: [k__Fungi]` kept the ASV in 1 run
+  and removed it in the other 10.
 
 ## Amplicon: an outdated marker pack in `config/markers/` stops the run
 

@@ -156,8 +156,8 @@ references:
 ```
 
 A **non-empty** `references.*` entry wins. An entry left `null` or empty counts as
-absent, so the pack default is used, without an error. The key that relocates each
-database is listed in [Markers](../amplicon/markers/index.md).
+absent, so the pack default is used, without an error or a warning. The key that
+relocates each database is listed in [Markers](../amplicon/markers/index.md).
 
 Two 16S settings do not override the pack but choose between variants it declares:
 `references.silva.release` picks the SILVA release (`144` or `138.2`), and
@@ -833,7 +833,7 @@ The full treatment is on
 | `merge.just_concatenate` | Joins R1 and R2 with a run of Ns instead of merging on overlap | `false` | A safety valve for ITS amplicons too long to overlap at all. The joined sequence is R1 + R2 + spacer, not the amplicon length, so `length_filter.mode: auto` is no longer sizing a meaningful window — switch to `manual` with an explicit `range` sized for the concatenated length. |
 | `merge.trim_overhang` | Trims bases that read past the far end of the amplicon | `true` | Safe for 16S; necessary for short ITS amplicons where the read runs off the end into primer sequence. |
 | `chimera.method` | `removeBimeraDenovo` method | `consensus` | Chimeras are called per sample and the verdicts pooled. |
-| `chimera.min_fold_parent` | How much more abundant a parent must be than its suspected chimera | `4` | DADA2's `minFoldParentOverAbundance`, raised above the package default. Higher is **more permissive**: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the note below. |
+| `chimera.min_fold_parent` | How much more abundant a parent must be than its suspected chimera | `4` | DADA2's `minFoldParentOverAbundance`, raised above the package default. Higher is **more permissive**: parents must be more abundant to qualify, so fewer sequences are called chimeric and more ASVs survive. See the tip on the chimera settings below the table. |
 | `chimera.allow_one_off` | Also flags sequences one mismatch or indel away from an exact chimera | `false` (DADA2's own default) | With `false`, only exact chimeras of two parents are flagged. `true` also flags sequences one mismatch or indel away from an exact chimera, so more sequences are removed. |
 
 !!! note "What the `min_overlap` and `max_mismatch` defaults cost in practice"
@@ -1056,7 +1056,7 @@ alongside the report.
 |---|---|---|---|
 | `tax_lev` | Rank at which abundance is re-estimated: `P`, `C`, `O`, `F`, `G` or `S` | `S` | Read only when Kraken2 runs (`profiler: kraken2` or `both`). Drop to `G` for a shallow database, where species-level calls are not supported by the reference content. The OTU table then has one row per taxon at this rank, and the lineage below it is left empty (`…;g__Bacteroides;s__`). `D` and `K` stop the run at start-up: at those ranks Bracken counts the reads of viruses (`D`) or of protists (`K`) towards a neighbouring domain or kingdom, and on a GTDB database it finds no kingdom at all. For domain or kingdom totals, add up a lower-rank table by its `d__` or `k__` slot; see [Troubleshooting](../troubleshooting.md#shotgun-the-run-refuses-tax_lev-d-or-k). `P`, `C`, `O` and `F` print a warning at start-up: at those ranks Bracken can add the reads of taxa that lack the rank to a row they do not belong to (same Troubleshooting entry), so `S` or `G` is recommended. Up to v2.4.0, any value other than `S` gave an empty or nearly empty table; see [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s). |
 | `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this and why the historic fixed default of 10 costs up to 0.34 F1 on the CAMI II benchmark samples. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
-| `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Fitted on the [benchmark data](../about/test-datasets.md#benchmark-data): the ZymoBIOMICS D6331 standard and the CAMI II marine, rhizosphere and strain-madness samples. The optimum is a broad plateau, so this rarely needs adjusting; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md#how-firmly-alpha-is-established). |
+| `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Set from the [benchmark data](../about/test-datasets.md#benchmark-data). On the CAMI II marine, rhizosphere and strain-madness samples the optimum is a broad plateau around this value; on the ZymoBIOMICS D6331 standard the best value is several times higher. See [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md#how-firmly-alpha-is-established) before changing it. |
 | `threshold_min` | Floor for the auto-computed threshold | `10` | Prevents a near-zero threshold on a very shallow or heavily filtered sample. Also Bracken's own historic default. |
 
 Bracken redistributes the reads Kraken2 assigned to internal nodes down to the
