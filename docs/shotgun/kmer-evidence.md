@@ -176,10 +176,11 @@ KrakenUniq's unique k-mers:
     1,000. In a Kraken2 report the same amount of sequence shows up as about 333
     distinct minimizers. The default floor, **300**, is that figure rounded down, because
     the conversion is only approximate. It was not tuned on MetaFlux's own test data, and
-    it is a cautious value rather than an equivalent: when Oskolkov (2026) ran both tools
-    on the same simulated data, the best Kraken2 floor was two to three times *higher*
-    than the best KrakenUniq one, and MetaFlux's own benchmark finds useful floors in the
-    thousands (see [Scaling the floor with depth](#scaling-the-floor-with-depth)).
+    it is a low, cautious value rather than an exact equivalent. When Oskolkov (2026) ran
+    both tools on the same simulated data, the best Kraken2 floor was two to three times
+    *higher* than the best KrakenUniq one, where the conversion predicts three times
+    lower, and MetaFlux's own benchmark finds useful floors in the thousands (see
+    [Scaling the floor with depth](#scaling-the-floor-with-depth)).
 
     **The arithmetic**, for a database built with other settings. How many k-mers share
     a minimizer depends on the database's `k` and `l`. Each k-mer of length `k`
@@ -226,7 +227,7 @@ distinct minimizers a species needs in the Kraken2 report to stay in the table.
   *Pseudomonas* sp. JS425 in SRR39106521: 372 read pairs from Kraken2, carrying 182
   distinct minimizers, raised by Bracken to 69,992 read pairs, the eighth most abundant
   species in the sample. Its read count passes the Bracken threshold; only the
-  distinct-minimizer count shows how little of its genome is behind it (more
+  distinct-minimizer count shows how little species-specific sequence is behind it (more
   [below](#unchanged-f1-does-not-mean-an-unchanged-table)).
 - **Fewer species is the right direction for these samples.** sylph, run by MetaFlux on
   the same reads in `both` mode against `gtdb-r232-c200-dbv1` and
@@ -254,18 +255,18 @@ A lower floor keeps the species with 200 to 300 distinct minimizers, 7 to 11 mor
 sample. These samples have no known composition, so they cannot show whether those
 species are real. A higher floor removes many more species but also moves a large share
 of the table: at 3,000, 13 to 42 % of the read pairs end up under a different species. On
-benchmark communities of known composition, a fixed floor of 10,000 already removed true
-species from some samples, and lower fixed floors did the same once shallower sequencing
-was modelled (3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to the depth of
-the sample avoids this; see the next section.
+benchmark communities of known composition, a fixed floor of 10,000 already lowered some
+samples' F1 by removing true species, and lower fixed floors did the same once shallower
+sequencing was modelled (3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to
+the depth of the sample avoids this; see the next section.
 
 ### Scaling the floor with depth
 
 A species that is really present leaves more distinct minimizers the deeper a sample is
 sequenced, and so, up to a limit, does a spurious call that borrows sequence from an
 abundant relative. A fixed floor is therefore lenient on deep samples and strict on
-shallow ones. KrakenUniq reported the same for unique k-mers (table above), but neither
-publication gives a rule for Kraken2.
+shallow ones. KrakenUniq and Oskolkov (2026) reported the same for unique k-mers (table
+above), but neither gives a depth rule for Kraken2.
 
 MetaFlux's benchmark was used to fit one. It covers 42 samples of known composition: one
 real mock community (ZymoBIOMICS D6331, SRA run SRR38976715, BioProject PRJNA1474435)
@@ -282,7 +283,7 @@ everywhere:
 - it removed 2,288 of 13,118 false species calls and 6 of 13,419 true ones (none with
   PlusPF), and lowered no sample's F1;
 - it stayed safe when shallower sequencing was modelled, down to 1 % of the reads, while
-  every fixed floor from 300 to 10,000 lowered some samples' F1 at some depth.
+  every fixed floor tested, from 300 to 10,000, lowered some samples' F1 at some depth.
 
 This is the same order of magnitude as KrakenUniq's slope (about 670 distinct minimizers
 per million read pairs once converted), but the number itself comes from MetaFlux's
@@ -300,7 +301,9 @@ Each sample's classified count is in `stats/read_tracking.txt` (column `classifi
 in its Bracken log (`[bracken] auto threshold: 5e-05 x N classified read pairs`).
 MetaFlux applies one floor to every sample in a run, so size it on the shallowest sample;
 the deeper samples then get a more lenient floor than they could take. Below about
-500,000 classified pairs the gate changes little, whatever the floor.
+500,000 classified pairs the scaled floor gains little. Use it even when it comes out
+lower than the default of 300: in benchmark samples thinned to 26,000–195,000 classified
+pairs, the fixed floor of 300 lowered some samples' F1 and the scaled floor lowered none.
 
 Limits of this rule:
 
@@ -308,7 +311,8 @@ Limits of this rule:
   community; on the simulated CAMI samples it was 0.01–0.03. The shallower depths were
   modelled from the observed counts, not sequenced.
 - **Do not go above 1.5 per 1,000 pairs.** At that rate rare true species start to be
-  removed (92 of 13,419 true calls), and from 2 per 1,000 the F1 falls.
+  removed (92 of 13,419 true calls), and from 2 per 1,000 some samples' F1 falls even at
+  full depth.
 - **Do not go above 6,500 for deeper samples.** The benchmark stops at 6.5 million
   classified pairs. A floor that keeps growing with depth eventually exceeds what a real
   species with a small species-specific part of its genome can reach; in the model this

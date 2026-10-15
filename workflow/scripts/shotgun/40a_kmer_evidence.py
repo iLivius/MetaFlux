@@ -135,7 +135,8 @@ CONSUMED BY
 The gated report feeds rule bracken (45_abundance.smk) when the gate is on, and from
 there the correction flows through rule finalize_otu_table into the final
 otu_table.biom / otu_table.tsv — so the pipeline's normal output table IS the
-corrected table, not a side artefact. The TSV and PNG are terminal outputs: nothing downstream reads them.
+corrected table, not a side artefact. The TSV and PNG are terminal outputs: nothing
+downstream reads them.
 """
 import matplotlib
 
