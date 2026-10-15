@@ -6,11 +6,10 @@ targets one of its two halves at a time — ITS1 or ITS2 — classified against
 `workflow/markers/ITS.yaml`; the run config chooses which subregion was amplified and
 supplies the primers.
 
-ITS behaves differently from every other marker in MetaFlux, and the differences are
-biological rather than cosmetic. ITS length varies a lot between fungal taxa, so the
-fixed-length read truncation that suits 16S would silently delete real, short
-amplicons. The three sections that follow — the direct-mode probe, the `truncLen`
-override, and ITSx extraction — are where that plays out.
+ITS is handled differently from every other marker in MetaFlux. Its length varies a lot
+between fungal taxa, so the fixed-length read truncation used for 16S would remove real,
+short amplicons. The differences are in the direct-mode probe, the `truncLen` override
+and ITSx extraction, described in the sections below.
 
 ## Setting up a run
 
@@ -178,9 +177,9 @@ If ITS R2 quality is poor, the lever is therefore a stricter `trunc_q` or a tigh
     `min_len_stat: null`, and every marker uses `filter.min_len` — 20 bp, DADA2's own
     default.
 
-    Setting `min_len_stat` turns on a probe-derived floor for ITS, and the numbers are
-    worth seeing before doing so. Measured directly from the UNITE UCHIME reference
-    dataset (release 16.10.2022, the file this workflow downloads):
+    Setting `min_len_stat` turns on a probe-derived floor for ITS. The UNITE UCHIME
+    reference dataset (release 16.10.2022, the file this workflow downloads) has these
+    lengths:
 
     | Subregion | n | min | q1 | median | q3 | p95 | max |
     |---|--:|--:|--:|--:|--:|--:|--:|
@@ -216,15 +215,15 @@ numbers are QC information, not instructions: `dada_filter` overrides them to `c
     `dada2.merge.just_concatenate` (default `false`) joins R1 and R2 with a run of Ns
     instead of merging them on overlap.
 
-## Long amplicons are lost, and that is accepted
+## Long amplicons that do not merge are lost
 
 ITS length varies biologically, and on a fixed read length the long tail of that
 distribution cannot be spanned. Where R1 and R2 no longer reach each other, `mergePairs`
 discards the pair. Nothing in the workflow rescues those reads, so an ITS run is
 systematically biased against its longest amplicons.
 
-This is a real limitation of short-read ITS metabarcoding rather than a defect in the
-workflow, and MetaFlux does not try to hide it. Two things make it tolerable:
+This is a limitation of short-read ITS metabarcoding, not of the workflow. Two points
+limit its effect:
 
 - The bias is **consistent across samples in a study**. Every sample loses the same
   length classes for the same reason, so comparisons of composition between samples —
@@ -235,12 +234,11 @@ workflow, and MetaFlux does not try to hide it. Two things make it tolerable:
 
 !!! warning "`just_concatenate` is all-or-nothing, and is not a rescue for the long tail"
 
-    It is tempting to read `dada2.merge.just_concatenate: true` as "merge what overlaps,
-    concatenate the rest". It does not work that way. With this set, DADA2 joins **every**
-    pair with a spacer of Ns and never attempts an overlap merge, even where the pair
-    would have merged cleanly.
+    `dada2.merge.just_concatenate: true` does not merge the pairs that overlap and
+    concatenate the rest: DADA2 joins **every** pair with a spacer of Ns and never
+    attempts an overlap merge, even where the pair would have merged cleanly.
 
-    That has consequences beyond the ITS page. The overlap-based error correction that
+    This has several consequences. The overlap-based error correction that
     merging provides is gone for every ASV; the joined length is R1 + R2 + spacer rather
     than the amplicon length, so the [ASV length filter](../length-and-truncation.md)
     is no longer measuring what it thinks it is; the N run and the unsequenced middle
@@ -260,8 +258,8 @@ rRNA (SSU, 5.8S, LSU) and keep the spacer itself. This is what brings ASV length
 roughly the same scale as the probe distribution, which was measured on the UNITE
 UCHIME ITS1/ITS2 files.
 
-Only roughly, though, and it is worth knowing why. Those UCHIME files were themselves
-produced with `ITSx --anchor 15`, so every reference sequence keeps about 15 bp of
+The match is approximate: those UCHIME files were themselves produced with
+`ITSx --anchor 15`, so every reference sequence keeps about 15 bp of
 flanking rRNA at each end — SSU and 5.8S for ITS1, 5.8S and LSU for ITS2. MetaFlux runs
 ITSx over the ASVs with the default anchor of 0, so the reference distribution sits
 roughly 30 bp above the ASVs it is being compared with. The 50 bp `window_margin`
@@ -293,11 +291,12 @@ markers would split one taxon's abundance in half. MetaFlux collapses such ASVs 
 one representative (the lowest-numbered ASV of the group, i.e. the most abundant, since
 DADA2 numbers ASVs by decreasing abundance) and sums their per-sample counts.
 `itsx_collapse_map.tsv` records the outcome for every representative — one row each,
-singletons included:
+singletons included. One row from the ITS test set
+([PRJNA862334](../../about/test-datasets.md)):
 
 ```text
 representative    merged_asvs         n_merged   extracted_length
-ASV_7             ASV_7,ASV_142       2          231
+ASV_3             ASV_3,ASV_18        2          232
 ```
 
 ASVs from which ITSx cannot extract the requested region are dropped from both the
@@ -389,11 +388,12 @@ Filter tokens must be written the way the lineage writes them, underscore includ
 The two methods write the same form, but they are different classifiers reading two
 different UNITE files, so they do not give the same answers:
 
-- **Depth.** On the ITS test set (the yeast mock on
-  [Test datasets](../../about/test-datasets.md), 12 ASVs), `sintax` at
-  `sintax_cutoff: 0.8` named the species of 8 ASVs and the genus of 2 more. `rdp` at
-  `min_boot: 80` named the species of 1 and stopped at phylum or kingdom for 8; the
-  other 3 got no kingdom at all, so `keep: [k__Fungi]` removed them.
+- **Depth.** On the ITS test set ([PRJNA862334](../../about/test-datasets.md), a yeast
+  mock, 12 ASVs, UNITE release 19.02.2025), `sintax` at `sintax_cutoff: 0.8` named the
+  species of 8 ASVs and the genus of 2 more. `rdp` at `min_boot: 80` named the species
+  of 1 and stopped at phylum or kingdom for 8; the other 3 got no kingdom at all, so
+  `keep: [k__Fungi]` removed them (in 10 of 11 identical `rdp` runs; ASV_16, below, is
+  the exception).
 - **Placeholders.** Where UNITE has no name for a rank, the general release (`rdp`)
   carries an *Incertae sedis* placeholder such as `c__Ascomycota_cls_Incertae_sedis`,
   while the UTAX file (`sintax`) leaves the rank out: the `sintax` string skips it and
@@ -422,10 +422,11 @@ for `discard` by default; lab or kit contaminants revealed by a negative control
 be added there as genus tokens.
 
 With `method: rdp`, DADA2 breaks ties between equally good references at random, and
-now and then that flips an ASV's whole lineage between two identical runs, even its
-kingdom (an ASV whose best hit is a plant in one run and a fungus in the next), so
-`keep: [k__Fungi]` can keep such an ASV in one run and drop it in the next; `sintax`
-gives the same answer every time.
+this can change an ASV's whole lineage between identical runs. On the ITS test set,
+ASV_16 had an orchid as best hit in 8 of 11 identical runs and *Saccharomyces* in the
+other 3. Its kingdom support reached `min_boot: 80` in only one of those three, so
+`keep: [k__Fungi]` kept the ASV in 1 run and removed it in the other 10. `sintax` gives
+the same answer every time.
 
 Each token is matched against a whole rank segment of the taxonomy string, so
 `g__Fusarium` matches a genus named exactly that and never a substring elsewhere in

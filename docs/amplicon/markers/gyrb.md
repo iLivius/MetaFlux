@@ -57,7 +57,7 @@ amplicon:
 ```
 
 Primers are never supplied by MetaFlux: `amplicon.primers.fwd` and `amplicon.primers.rev`
-must both point at existing FASTA files, and parsing stops immediately if either is
+must both point at existing FASTA files, and the run stops at start-up if either is
 missing. The Barret 2015 F64 / R353 pair is the natural choice, because DD7RZ8's reference
 amplicons were cut with those same primers, but any gyrB pair works — the length window is
 measured from the reference rather than assumed.
@@ -66,7 +66,7 @@ measured from the reference rather than assumed.
 
     `config/config.yaml` ships with `amplicon.taxonomy.method: sintax`, which is fine for
     16S/ITS/18S but not available for gyrB. A run config copied from the template without
-    changing that line stops at parse time, before any compute is spent:
+    changing that line stops at start-up, before any compute is spent:
 
     ```text
     [MetaFlux] marker gyrB has no SINTAX reference database, so
@@ -145,8 +145,8 @@ q1 and p95 plus `length_filter.window_margin`. See
 
     Which statistic of the probe distribution becomes `expected_length` is chosen by
     `amplicon.probe_length_stat.<key>`, and the gyrB pack deliberately reuses the `16S`
-    key rather than defining a separate one. If the `16S` entry is missing, parsing
-    stops with:
+    key rather than defining a separate one. If the `16S` entry is missing, the run
+    stops at start-up with:
 
     ```text
     [MetaFlux] amplicon.probe_length_stat is missing the '16S' key that marker gyrB
@@ -155,7 +155,7 @@ q1 and p95 plus `length_filter.window_margin`. See
           16S: p95
     ```
 
-    The key is checked at parse time for every non-ITS marker, whether or not
+    The key is checked at start-up for every non-ITS marker, whether or not
     `expected_length` is `auto`. A manual `expected_length` (a single integer, or a
     `[min, max]` pair) skips the probe itself, but the `16S` entry must still be present.
 
@@ -163,7 +163,7 @@ q1 and p95 plus `length_filter.window_margin`. See
 
 The DD7RZ8 release ships a DADA2 trainset and nothing else — there is no SINTAX-formatted
 build of it — so the marker pack leaves `taxonomy_sintax_db` empty and MetaFlux refuses
-`method: sintax` at parse time rather than failing later inside the classifier.
+`method: sintax` at start-up rather than failing later inside the classifier.
 
 Classification is DADA2's `assignTaxonomy` (the RDP naive Bayesian classifier) against the
 trainset, with `taxonomy.min_boot` as the bootstrap confidence minimum and
@@ -196,7 +196,7 @@ paralog such as *parE*.
 
 MetaFlux keeps that tag as an ordinary taxonomy rank, which means paralogs can be removed
 with the same keep/discard filter used to drop chloroplast and mitochondrial ASVs from a
-16S run — no extra machinery, no separate step:
+16S run:
 
 ```yaml
 amplicon:
@@ -228,11 +228,11 @@ silently.
     whose taxonomy string starts with `other`, or read the `Gene` column of
     `06.taxonomy/taxon_seq_table.txt` — and then decide whether to discard them.
 
-    The fraction is not random noise: co-amplification of *parE* is taxon-dependent, so
-    it concentrates in particular clades rather than spreading evenly across the table.
-    A run dominated by the affected groups will show a much larger `other` fraction than
-    one that is not, which is worth checking against the composition before assuming a
-    primer problem.
+    Co-amplification of *parE* depends on the taxon, so the `other` ASVs concentrate in
+    particular clades. On the gyrB test set ([PRJNA459479](../../about/test-datasets.md),
+    five mock communities), 74 of 237 ASVs carry the `other` tag, 62 of them in Bacilli,
+    and they hold 26% of the reads. A run dominated by such groups shows a larger `other`
+    fraction, so check the composition before suspecting the primers.
 
 If a keep/discard combination removes every ASV, `assign_taxonomy` stops with an error
 instead of writing a header-only table, since that is nearly always a marker/config

@@ -9,8 +9,8 @@ declared in a small YAML file called a *marker pack*, one per marker, under
 
 Marker packs hold facts about the marker, never run settings. Primers, expected lengths,
 truncation values and taxon filters live in the run config; they are the things that change
-from one experiment to the next. A pack is read into its own namespace and is never merged
-into `config`, so no key has two homes.
+from one experiment to the next. A pack is read separately and is never merged into
+`config`, so each setting is defined in one place only.
 
 !!! note
 
@@ -43,7 +43,7 @@ into `config`, so no key has two homes.
 Names in backticks are the pack's internal reference symbols. They belong to the
 `workflow/markers/*.yaml` packs, which use them to name the probe substrate
 (`probe_ref`) and the taxonomy databases (`taxonomy_refdb`, `taxonomy_species_db`,
-`taxonomy_sintax_db`); the workflow turns each symbol into a path when it is parsed.
+`taxonomy_sintax_db`); the workflow turns each symbol into a path at start-up.
 They are not run-config keys. Relocating a database in the run config uses a separate
 two-level key under `references:` — one level for the database family, one for the
 file — as in the config template:
@@ -121,11 +121,11 @@ is the mode for ITS, whose UNITE UCHIME reference is the pre-extracted ITS1 or I
 subregion, and for gyrB, whose DD7RZ8 trainset was itself built by cutting in-silico
 amplicons with the Barret 2015 primers.
 
-Running the wrong mode fails in a specific way worth knowing: in-silico PCR against a
-pre-trimmed reference finds no primer binding sites left to cut against, so it recovers
-nothing. For ITS the problem is biological rather than technical — ITS1F and ITS4 bind in
-the flanking rRNA genes, and those binding sites are not part of a UNITE sequence (the
-UCHIME references keep only a 15 bp anchor of flanking rRNA at each end).
+With the wrong mode, in-silico PCR against a pre-trimmed reference finds no primer
+binding sites left to cut against, so it recovers nothing. For ITS this follows from where
+the primers bind: ITS1F and ITS4 sit in the flanking rRNA genes, and those binding sites
+are not part of a UNITE sequence (the UCHIME references keep only a 15 bp anchor of
+flanking rRNA at each end).
 
 Both modes end at the same place: one JSON of length statistics
 (`n_amplicons`, `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean`, `stdev`, plus
@@ -140,8 +140,8 @@ single statistic becomes `expected_length` comes from `amplicon.probe_length_sta
 
 !!! note
 
-    `probe_mode` is a pack field, not a config knob. It is validated when the workflow is
-    parsed: anything other than `pcr` or `direct` stops the run immediately with
+    `probe_mode` is set in the marker pack, not in the run config. It is checked at
+    start-up: anything other than `pcr` or `direct` stops the run with
     `has an invalid probe_mode … must be 'pcr' or 'direct'`.
 
 ## What "no extractor" means
@@ -154,7 +154,7 @@ with `amplicon.extraction.enabled`.
 and for 18S the pack deliberately does not use Metaxa2 even though it could handle SSU.
 Those markers define no `target_extract` rule at all, so if the config still asks for
 extraction the workflow would otherwise go looking for a file nothing produces. Instead
-the setting is overridden at parse time and the reason is printed:
+the setting is overridden at start-up and the reason is printed:
 
 ```text
 [MetaFlux] warning: marker 18S has no target-region extractor; ignoring amplicon.extraction.enabled: true (no extraction step will run)
@@ -170,7 +170,7 @@ explicitly for these three markers has exactly the same effect and avoids the wa
 `min_boot` as the bootstrap cutoff) and `sintax` (VSEARCH, with `sintax_cutoff`). A marker
 can only offer `sintax` if a SINTAX-formatted build of its reference exists. For gyrB and
 rpoB none does — DD7RZ8 and the FROGS release both ship a DADA2 trainset only — so the
-pack leaves `taxonomy_sintax_db` empty and the run stops at parse time rather than failing
+pack leaves `taxonomy_sintax_db` empty and the run stops at start-up rather than failing
 somewhere deep in the taxonomy rule:
 
 ```text
@@ -218,8 +218,8 @@ and are emitted verbatim. Either way the taxonomy strings in the final table loo
 same, which is what the keep/discard filter matches against — see
 [keeping and discarding taxa](../taxon-filter.md).
 
-gyrB is worth one extra sentence. Its first rank is not a taxon: DD7RZ8 tags every
-reference as `gyrB` (the real gene) or `other` (a co-amplified paralog such as *parE*).
+In gyrB the first rank is not a taxon: DD7RZ8 tags every reference as `gyrB` (the real
+gene) or `other` (a co-amplified paralog such as *parE*).
 Keeping that tag as rank 1 means paralogs can be dropped with the ordinary taxon filter
 (`discard: [other]`) instead of a mechanism of their own.
 

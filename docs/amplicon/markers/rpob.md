@@ -59,7 +59,7 @@ amplicon:
 ```
 
 Primers are never supplied by MetaFlux: `amplicon.primers.fwd` and `amplicon.primers.rev`
-must both point at existing FASTA files, and parsing stops immediately if either is
+must both point at existing FASTA files, and the run stops at start-up if either is
 missing. `Univ_rpoB_deg` is degenerate, which is what makes it broad enough for community
 work. The same primer FASTAs are used both to trim the reads and to run the in-silico PCR
 described below, and both steps allow the mismatch rate set by
@@ -69,7 +69,7 @@ described below, and both steps allow the mismatch rate set by
 
     `config/config.yaml` ships with `amplicon.taxonomy.method: sintax`. That is fine for
     16S/ITS/18S but not available for rpoB, so a run config copied from the template
-    without changing that line stops at parse time, before any compute is spent:
+    without changing that line stops at start-up, before any compute is spent:
 
     ```text
     [MetaFlux] marker rpoB has no SINTAX reference database, so
@@ -148,16 +148,15 @@ same. The result is the file DADA2 trains on:
 >d__Bacteria;p__Bacillota;c__Bacilli;o__Bacillales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus_simiae
 ```
 
-Because sequence lines pass through verbatim, nothing that faces the ASVs is altered — the
-conversion only rewrites labels.
+The sequences are not changed; the conversion rewrites only the headers.
 
 !!! note "The converter refuses to run on an unexpected header shape"
 
     All three edits are anchored to the exact shape of the 2024-07-07 release, and the
     URL in the marker pack pins that dated filename rather than a "latest" pointer. If a
-    future release changed the header format, an edit that silently did nothing would
-    ship corrupted taxonomy strings — leftover accession or `[id:` text mistaken for a
-    rank value, or a kingdom written as a domain — with no error at all. So each edit is
+    future release changed the header format, an edit that did nothing would leave wrong
+    taxonomy strings (leftover accession or `[id:` text read as a rank value, or a
+    kingdom written as a domain) without any error. So each edit is
     checked: a header that does not start with `>ACCESSION Root;`, that still contains
     `[id:` afterwards, or whose first rank is then anything but `k__Bacteria` or
     `k__Archaea` (a kingdom such as `k__Pseudomonadati`, or a rank already written
@@ -230,8 +229,8 @@ q1 and p95 plus `length_filter.window_margin`. See
 
     Which statistic of the probe distribution becomes `expected_length` is chosen by
     `amplicon.probe_length_stat.rpoB` (the shipped template sets `p95`). The key is
-    checked at parse time whether or not `expected_length` is `auto`; with no such entry,
-    parsing stops with:
+    checked at start-up whether or not `expected_length` is `auto`; with no such entry,
+    the run stops with:
 
     ```text
     [MetaFlux] amplicon.probe_length_stat is missing the 'rpoB' key that marker rpoB
@@ -248,7 +247,7 @@ q1 and p95 plus `length_filter.window_margin`. See
 The FROGS package targets FROGS' own classifier; MetaFlux uses the converted FASTA with
 DADA2's `assignTaxonomy` instead. There is no SINTAX-formatted build of this reference, so
 the marker pack leaves `taxonomy_sintax_db` empty and MetaFlux refuses `method: sintax` at
-parse time rather than failing later inside the classifier.
+start-up rather than failing later inside the classifier.
 
 `taxonomy.min_boot` sets the bootstrap confidence minimum and `taxonomy.try_rc` decides
 whether reverse-complemented sequences are also tried. There is no separate `addSpecies`
@@ -296,10 +295,10 @@ such as *parE*. rpoB has no close paralog of that kind, so the FROGS RefSeq set 
 rpoB and nothing else, there is no equivalent tag to filter on, and MetaFlux recommends no
 default `keep`/`discard` list for this marker.
 
-The flip side is worth knowing: because every reference sequence is rpoB, an off-target or
-paralogous amplicon cannot show up as a distinct label — it is assigned to whichever rpoB
-lineage it most resembles. gyrB's tag makes that visible; for rpoB the checks are the ASV
-length window, the bootstrap confidences, and the fraction of ASVs left unassigned.
+Because every reference sequence is rpoB, an off-target or paralogous amplicon cannot
+show up as a distinct label: it is assigned to whichever rpoB lineage it most resembles.
+gyrB's tag makes that visible; for rpoB the checks are the ASV length window, the
+bootstrap confidences, and the fraction of ASVs left unassigned.
 
 The filter is still available, and the usual reason to reach for it on an rpoB run is
 dropping lab or kit contaminants that a negative control revealed:
@@ -320,8 +319,8 @@ rank-prefixed name as it appears in the `taxonomy` column of `asv_table.txt`. Se
 
 !!! note "An empty list is not the same as a disabled filter"
 
-    An empty `keep` or `discard` list makes that direction a no-op, which is the
-    recommended starting point for rpoB. `enabled: false` switches the whole filter off.
+    An empty `keep` or `discard` list does nothing, which is the recommended starting
+    point for rpoB. `enabled: false` switches the whole filter off.
     Either way every ASV survives — but if a filter ever removes *all* of them,
     `assign_taxonomy` stops with an error instead of writing a header-only table, since
     that is nearly always a marker/config mismatch.
