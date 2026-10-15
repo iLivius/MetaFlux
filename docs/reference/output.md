@@ -527,6 +527,12 @@ that DADA2 cuts out of UNITE's species, see [ITS](../amplicon/markers/its.md)). 
 reference that already returns a complete name — PR2's `Unruhdinium_kevei`, for
 instance — is passed through untouched, so the genus is never glued on twice.
 
+This happens in the taxonomy string only. In `taxon_seq_table.txt`, the `Species` column
+of 16S under `rdp` holds `addSpecies`' bare epithet (`subtilis`), and the binomial is
+only in the string; [Reading the tables in R](#reading-the-tables-in-r) shows how to
+build it from the table. For every other marker and method the `Species` cell holds the
+same name as the `s__` slot.
+
 In the sylph table, a lineage table that writes the domain as `k__` (FungiRefSeq's
 `k__Eukaryota`) is rewritten to `d__`, so every row uses the same seven prefixes. See
 [sylph](../shotgun/sylph.md#what-you-get).
@@ -549,6 +555,16 @@ reads every column as text:
 tax <- read.table("06.taxonomy/taxon_seq_table.txt", sep = "\t", header = TRUE,
                   row.names = 1, colClasses = "character")
 tax[, "Phylum"]
+```
+
+On 16S under `rdp`, `Species` holds only the epithet (`subtilis`). This line writes the
+binomial of the taxonomy string into it, after dropping a trailing `--other` from the
+genus (SILVA 144 with `silva_other: verbatim`, the default). Run it on 16S `rdp` tables
+only: in the other tables the cell already holds the whole name.
+
+```r
+tax[, "Species"] <- ifelse(is.na(tax[, "Species"]), NA,
+                           paste(sub("--other$", "", tax[, "Genus"]), tax[, "Species"]))
 ```
 
 Do not parse the taxonomy strings with phyloseq's `parse_taxonomy_greengenes`. It knows
