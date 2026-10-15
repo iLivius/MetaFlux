@@ -48,6 +48,34 @@ PR2. Defined
 18S mock communities are scarce; the ground-truth work is carried by the other three
 sets.
 
+## Shotgun test dataset
+
+Shotgun mode is tested on four metagenomes from BioProject
+[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1477390): microbial consortia
+enriched on naproxen from wastewater treatment plants, sequenced paired-end on an Illumina
+NextSeq 500. The BioProject also holds metatranscriptomes; only the four metagenome runs
+are used.
+
+| Runs | Read pairs per run | Kraken2 index | sylph databases |
+|---|--:|---|---|
+| SRR39106521, SRR39106522, SRR39106523, SRR39106524 | 4.6–5.9 million | PlusPF `k2_pluspf_20260626` | `gtdb-r232-c200-dbv1` and `fungi-refseq-2025-10-11-c200-dbv1` |
+
+The cultures have no known composition, so the run checks the mechanics of shotgun mode
+rather than its accuracy. It is also the source of the real-data examples on the
+[k-mer evidence](../shotgun/kmer-evidence.md) and [sylph](../shotgun/sylph.md) pages.
+
+## Benchmark data
+
+Accuracy figures for shotgun mode come from communities of known composition:
+
+- the ZymoBIOMICS Gut Microbiome Standard (D6331), SRA run
+  [SRR38976715](https://www.ncbi.nlm.nih.gov/sra/SRR38976715) (BioProject PRJNA1474435),
+  Illumina NovaSeq 6000, 8.1 million read pairs, scored against the composition in
+  Zymo's instruction manual;
+- CAMI II short-read samples with their gold-standard profiles
+  ([Meyer et al. 2022](https://doi.org/10.1038/s41592-022-01431-4)): marine samples 0–9,
+  plant-associated (rhizosphere) samples 0–20 and strain-madness samples 0–9.
+
 ## Check a public dataset before adopting it
 
 Assembling these five sets meant rejecting other candidates along the way, each for a
