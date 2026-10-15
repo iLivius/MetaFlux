@@ -28,9 +28,9 @@ PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference
           The survivors are the in-silico amplicon bodies: what would be left
           of each reference sequence if it were actually PCR-amplified with
           these two primers.
-  Pass 3 (only when the marker pack sets ``probe_exclude_second_site: true``,
-          today rpoB): ``-g`` with each forward primer, required at its own full
-          length, with ``--discard-trimmed``
+  Pass 3 (only when the marker pack sets ``probe_exclude_second_site: true``;
+          among the shipped packs, rpoB only): ``-g`` with each forward primer,
+          required at its own full length, with ``--discard-trimmed``
           → keep only the amplicon bodies that do NOT hold a second full-length
           forward-primer site. The others are left out of the length statistics;
           the amplicons FASTA still contains them.
