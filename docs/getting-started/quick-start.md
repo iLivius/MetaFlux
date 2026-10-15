@@ -53,7 +53,7 @@ Input files are found by pattern, not listed by hand. MetaFlux globs `fastq_dir`
 `{sample}_R1` / `{sample}_R2` pairs — shotgun also accepts the SRA-style
 `{sample}_1` / `{sample}_2` — and the part before the mate suffix becomes the sample
 name used in every output table. All files must share one extension, and in practice
-that extension has to be `fastq` or `fastq.gz`. The startup check also lets `fq` and
+that extension has to be `fastq` or `fastq.gz`. The start-up check also lets `fq` and
 `fq.gz` through, but every rule that reads a raw file resolves its path as
 `.fastq.gz` or `.fastq`, so a directory of `.fq.gz` files passes validation and then
 fails later on an input the rules cannot resolve.
@@ -74,11 +74,10 @@ fails later on an input the rules cannot resolve.
 
 ## Step 4 in detail — why the dry-run matters
 
-`--dry-run` asks Snakemake to work out everything it would do and then stop without
-running a single job. It costs seconds. Skipping it costs whatever the workflow
-manages to do before it hits the problem — and the first thing a real run does is
-build conda environments and download reference databases, which can take a long
-time before anything fails.
+`--dry-run` makes Snakemake work out every job it would run and then stop without
+running any. It takes seconds. A real run starts by building conda environments and
+downloading reference databases, which can take a long time, so without a dry run a
+configuration error may show only after that.
 
 Nearly all of MetaFlux's own validation happens while the plan is being built, so a
 dry-run exercises it. What is checked before the first job starts:

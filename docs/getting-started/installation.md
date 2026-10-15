@@ -57,9 +57,8 @@ git-ignored.
 
 Two practical consequences:
 
-- **The first run is slow before it is even doing science.** Downloading and
-  installing several conda environments takes minutes; afterwards they are already on
-  disk and the workflow starts immediately.
+- **The first run is slower.** Downloading and installing the conda environments takes
+  several minutes; later runs reuse them and start at once.
 - **Tools never have to coexist.** The R/DADA2 stack, Cutadapt, Kraken2 and MultiQC
   each get their own environment, so an upgrade to one cannot break another. The
   yaml files fix some tools to an exact version and others only to a minimum; on
@@ -218,19 +217,21 @@ Langmead's [catalog](https://benlangmead.github.io/aws-indexes/k2). A standard
 choice is the **PlusPF** index. A single `wget` stream works but is slow on a
 ~100 GB file; a multi-connection downloader is faster and resumable.
 
-Pick the current build from the catalog:
+Use one of the builds Kraken2 2.17.1 reads (listed under
+[Kraken2 version](../shotgun/databases.md#kraken2-version)). The example downloads
+`k2_pluspf_20260626`, the build the [shotgun test run](../about/test-datasets.md#shotgun-test-dataset)
+uses:
 
 ```bash
 mkdir -p /path/to/db && cd /path/to/db
 
-# substitute the latest dated build from the catalog
-aria2c -x16 -s16 https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260226.tar.gz
+aria2c -x16 -s16 https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20260626.tar.gz
 
 # verify integrity against the md5 listed in the catalog
-md5sum k2_pluspf_20260226.tar.gz
+md5sum k2_pluspf_20260626.tar.gz
 
 # contains hash.k2d, opts.k2d, taxo.k2d, *.kmer_distrib
-tar -xzf k2_pluspf_20260226.tar.gz
+tar -xzf k2_pluspf_20260626.tar.gz
 ```
 
 `aria2c` is an external download helper, not part of MetaFlux. If the AWS CLI is

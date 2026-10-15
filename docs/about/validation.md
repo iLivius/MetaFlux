@@ -5,8 +5,11 @@ module's choices matter and for how much a short amplicon fragment can and canno
 recover. This page is where those figures come from. Two experiments produced them —
 a **sensitivity analysis on the real 16S test run** and a **full-gene check** against
 reference sequences — and they are different kinds of evidence, so each is described
-with what it can and cannot support. The trees, alignments and analysis scripts behind
-every number are available on request.
+with what it can and cannot support. Both start from public data: the reads of the 16S
+test set ([PRJNA305879](test-datasets.md)) and the SILVA 138.2 training set for DADA2.
+The alignments, trees and scripts made from them are not distributed with MetaFlux; the
+design of each experiment is given below, and the note on earlier versions explains why
+a repeat with a current version gives its own trees.
 
 !!! note "Terms"
     Patristic distance, Robinson–Foulds distance, UFBoot, likelihood mapping and the
@@ -18,17 +21,20 @@ every number are available on request.
     Both were run before v2.4.0 started sorting the phylogeny input by sequence and
     building the tree on one thread, and before v2.5.0 moved 16S to SILVA 144 and added
     the best-hit check and the organelle filter, which change the set of ASVs the test
-    data gives. A fresh run with the defaults of v2.4.0 or later therefore does **not**
-    reproduce the "T01" tree below. The comparisons between settings are unaffected:
+    data gives: 197 with the v2.5.0 defaults, fewer than 200, so `aligner_strategy: auto`
+    now aligns them with L-INS-i rather than FFT-NS-2. A fresh run with the defaults of
+    v2.4.0 or later therefore does **not** reproduce the "T01" tree below. The comparisons between settings are unaffected:
     read the tables as *"changing this setting moved the output by this much"*, which is
     what they were built to answer, not as a description of the tree your own run will
     produce.
 
 ## The sensitivity analysis on the real test run
 
-**Design.** One real dataset — the 16S test set, 211 ASVs after contaminant filtering,
-6 samples, V5–V7 — and the pipeline's default before v2.4.0, IQ-TREE on 4 threads, as the
-reference point (v2.4.0 moved the default to one thread; see the note above). Then one
+**Design.** One real dataset — the 16S test set ([PRJNA305879](test-datasets.md), six
+samples, V5–V7), classified against SILVA 138.2 with `method: sintax`, 211 ASVs after
+contaminant filtering with the `keep` and `discard` lists — and the pipeline's default
+before v2.4.0, IQ-TREE on 4 threads, as the reference point (v2.4.0 moved the default to
+one thread; see the note above). Then one
 thing changed at a time, everything else held fixed (same ASV set, seed 42; 4 threads for IQ-TREE, RAxML-NG
 clamped to its own recommendation of 1, FastTree single-threaded as in the pipeline):
 
@@ -94,8 +100,10 @@ What the table says, in order of how much each choice moved the output:
 - *Masking* is the only choice that changes the scale: both trimAl masks removed 24 % of
   the columns and with them 28 % of total tree length (18.61 → 13.4), and every
   per-sample PD value shrank with it. The two trimAl trees are nearly the same tree
-  (RF 0.154, *r* 0.997 between them). AliFilter removed almost nothing and changed
-  almost nothing. No mask improved taxonomic coherence (10 / 19 genera vs 11 / 19).
+  (RF 0.154, *r* 0.997 between them). AliFilter removed 14 % of the columns
+  (443 → 379) and shortened the tree by 6 % (18.61 → 17.46); of the three masks it moved
+  the tree least (RF 0.389, *r* 0.942). No mask improved taxonomic coherence (10 / 19
+  genera vs 11 / 19).
 - *Backend* moves topology and distances more than any setting within a backend:
   FastTree's two models give essentially the same tree (RF 0.111, *r* 0.986 between
   T07 and T08), yet both sit farthest from the IQ-TREE default in patristic distance
@@ -106,22 +114,22 @@ What the table says, in order of how much each choice moved the output:
   length is 19 % shorter — the FreeRate model rescales the branches, so absolute PD
   values are not comparable across models even when the tree is.
 - *Alignment strategy* (T02) moves topology a lot (46 % of internal branches differ)
-  but distances little (*r* 0.954). One tree per setting cannot say how much of that is
-  the tier and how much is ordinary run-to-run variation of the tree search; the
+  but distances little (*r* 0.954). One tree per setting cannot separate the effect of
+  the alignment strategy from ordinary run-to-run variation of the tree search; the
   full-gene check below, where seeds were replicated, puts numbers on both.
-- *Per-sample PD* barely notices any of it: *r* ≥ 0.989 against the default for every
-  tree, and the ranking of the six samples is preserved by the two IQ-TREE trees
-  (Spearman 1.0) and nearly so by the rest (Spearman 0.83–0.94). With six samples this
-  is a coarse check.
+- *Per-sample PD* changes little: *r* ≥ 0.989 against the default for every tree. The
+  ranking of the six samples is unchanged under ModelFinder (T06) and RAxML-NG GTR+Γ
+  (T09) (Spearman 1.0) and nearly unchanged for the other trees (Spearman 0.83–0.94).
+  With six samples this is a coarse check.
 
 **Support and signal on the default alignment.** The support run (T11: default tree,
 `-B 1000 --alrt 1000`) puts 208 internal branches on the tree; 77 (37 %) reach
 UFBoot ≥ 95, 141 (68 %) reach SH-aLRT ≥ 80, and 67 (32 %) meet both — the documented
 read for a single-gene tree. Likelihood mapping on 5,000 random quartets finds
-77.9 % fully resolved, 9.5 % partly resolved and 12.7 % unresolved. Both numbers say the
-same thing: a ~440-column V5–V7 alignment supports the broad structure of the tree and
-leaves about a third of the fine splits undecided, which is the expected amount for a
-fragment this short.
+77.9 % fully resolved, 9.5 % partly resolved and 12.7 % unresolved. Most quartets are
+resolved, but only a third of the internal branches (32 %) pass both support thresholds:
+the 443-column V5–V7 alignment supports the broad structure of the tree and leaves many
+fine splits poorly supported.
 
 **Model selection, for the record.** ModelFinder (BIC) chose TPM3u+R5 on the default
 alignment; RAxML-NG's MOOSE chose GTR+FU+R5. Both prefer a five-category FreeRate
@@ -140,14 +148,15 @@ run and the seventh classified no deeper than phylum.
 environmental ASVs, so nothing in it says which tree is *right*. It is one dataset, one
 amplicon region, one tree per setting, and six samples (so the PD correlations rest on six
 points). Run-to-run variation of the tree search was not part of the design, but it was
-measured afterwards on the same 211 ASVs: two IQ-TREE searches that differed only in the
-order of two input sequences (see *Reproducibility* on the Phylogeny page) gave trees
-0.47 apart by normalized RF, patristic *r* 0.88, tree lengths 16.2 and 17.0, and
-per-sample PD *r* 0.995. That is the noise floor for the table above. The RF column (0.13–0.62) sits
-largely inside it, so topological differences between settings should not be read as
-effects of the settings; the masking effect on tree length (−28 %) and the backend effect
-on distances (*r* 0.85–0.89) lie outside it, and the ModelFinder result (*r* 0.998) lies
-well within it. The masks were produced with the same
+measured afterwards on the alignment the v2.4.0 pipeline produced for the same 211 ASVs:
+two IQ-TREE searches that differed only in the order of two input sequences (see
+*Reproducibility* on the Phylogeny page) gave trees 0.47 apart by normalized RF (194 of
+416 splits), patristic *r* 0.88, tree lengths 16.2 and 17.0, and per-sample PD *r* 0.995.
+That is the noise floor for the table above. The RF column (0.13–0.62) sits largely
+inside it, so topological differences between settings should not be read as effects of
+the settings; the masking effect on tree length (−28 %) and FastTree's effect on
+distances (*r* 0.85–0.86) lie outside it, RAxML-NG GTR+Γ (*r* 0.885) sits at it, and the
+ModelFinder result (*r* 0.998) lies well within it. The masks were produced with the same
 binaries and flags the pipeline would use, but outside the pipeline. Read its numbers as
 *"this choice moved the output by this much on this data"*. The question it cannot answer
 — how far any fragment tree is from the best tree the same organisms' whole genes can
@@ -210,27 +219,29 @@ Support (UFBoot ≥ 95 *and* SH-aLRT ≥ 80): **64%** of internal branches on th
   Every V5–V7 tree sits in one band — about 58% of internal branches differ from the
   full-gene tree (Robinson–Foulds distance 0.56–0.60), while patristic distances correlate at 0.83–0.88. For
   scale: the full-gene reference rebuilt with another seed differs from itself by 0.02–0.06, and the same *fragment* alignment rebuilt with another seed by 0.22–0.28 —
-  so roughly a third of the fragment's disagreement is the tree search wandering, and
-  the rest is information the fragment does not have. That band *is* the framing paragraph at the top of
-  the [Phylogeny](../amplicon/phylogeny.md) page, measured.
-- **None of the settings tested escapes the band.** Aligner, mask, backend, model: a
-  spread of 0.04 in RF and 0.05 in patristic r — smaller than the seed-to-seed variation
-  of a single setting — against a gap of ~0.55 to the full gene. The pipeline's choices
-  are not where the distance to the full-gene tree is decided; the fragment is. The
-  defaults stand.
+  so roughly 40 % of the fragment's disagreement is run-to-run variation of the tree
+  search, and the rest is information the fragment does not contain. These are the
+  measured values behind the opening paragraph of the
+  [Phylogeny](../amplicon/phylogeny.md) page.
+- **All the settings tested fall in the same band.** Across aligner, mask, backend and
+  model, RF varies by 0.04 and patristic r by 0.05, less than the seed-to-seed variation
+  of a single setting, while every V5–V7 tree is 0.56–0.60 RF from the full-gene tree.
+  The distance to the full-gene tree is set by the fragment, and none of these settings
+  reduces it, so the defaults are kept.
 - **V4 is not a better region than V5–V7** on this measure (RF 0.60, r 0.87).
 - **Roughly a third of the taxonomic coherence is lost with the fragment** (a fifth to
   two fifths, depending on the measure): genera monophyletic 84% → 55–59%, families
   89% → 61–72%; well-supported branches 64% → 38%.
-- **Branch-length scale depends on the rate model and on the region — and neither
-  tells you the true scale.** V5–V7 fragment trees under GTR+F+G4 come out the same
+- **Branch-length scale depends on the rate model and on the region, and neither gives
+  the true scale.** V5–V7 fragment trees under GTR+F+G4 come out the same
   total length as the full-gene GTR+F+G4 tree (ratio ≈ 1.0); the V4 fragment under the
   same model does not (0.75). FreeRate models and FastTree make the V5–V7 tree 33–38%
   shorter — and the 1.4 kb *reference itself* loses 25% when ModelFinder picks GTR+F+R7
   for it, so on this data the shrinkage is a rate-model effect, not a fragment effect.
   (Medlar et al. 2014 describe a separate short-fragment underestimation; the V4 row is
-  the only place this grid shows something like it.) Either way: absolute PD must never
-  be compared between runs built under different models or from different regions.
+  the only place this grid shows something like it.) Absolute PD values should
+  therefore not be compared between runs built under different models or from
+  different regions.
 - **Model selection at 250 references** lands in the GTR family (GTR+F+R7 on the full
   gene, GTR+F+I+R5 on the fragment), with FreeRate preferred over gamma both times — the
   same rate-model preference the sensitivity analysis found on the real ASVs.

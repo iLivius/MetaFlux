@@ -4,16 +4,17 @@ Over many years of amplicon-sequencing and metagenomics work, a set of methods
 and parameter choices accumulates into an in-house pipeline. MetaFlux
 re-implements that methodology as a more modern, modular Snakemake workflow.
 
-The re-write was not a straight port. It added five things the previous
-implementation never had, all aimed at the same target: decisions that used to be
-made by eye, or hard-coded for one marker and one sequencing run, are now derived
-from the data itself.
+Compared with that pipeline, MetaFlux adds five things. Read truncation (section 1)
+and amplicon length (2) are derived from the data instead of being chosen by eye or
+hard-coded for one marker and one sequencing run; primer trimming recovers reads in
+mixed orientation (3); CPU and memory are set per rule (4); and one workflow covers
+both amplicon and shotgun data (5).
 
 ## 1. Data-driven read truncation
 
-Choosing where to cut Illumina reads before denoising is the classic by-eye step:
-open the quality profile, pick a cycle where the plot "looks bad", hope the pairs
-still overlap. MetaFlux can derive it instead.
+The truncation position for Illumina reads before denoising is usually chosen by eye
+from the quality profile, and the analyst then has to check that the read pairs still
+overlap. MetaFlux can derive it from the data instead.
 
 With `amplicon.trunc_len.mode: auto`, the `pick_trunclen` rule reads the per-base
 quality tables Falco produced for the primer-trimmed reads. For each cycle it
@@ -48,7 +49,7 @@ See [Amplicon length and truncation](../amplicon/length-and-truncation.md) for
 the details, and [Troubleshooting](../troubleshooting.md) for the one case where
 `auto` misfires.
 
-## 2. Agnostic amplicon-length inference
+## 2. Amplicon length measured from the reference
 
 The measured amplicon length drives the overlap check on the truncation cuts, the
 ASV length filter window, and — for ITS only — DADA2's per-read minimum length.
@@ -63,16 +64,12 @@ The `amplicon_probe` rule works in one of two ways depending on the marker:
 | PCR | 16S, 18S, rpoB | Two-pass in-silico PCR with Cutadapt: keep reference sequences carrying the forward primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end; the surviving trimmed sequences are the predicted products | SILVA, SILVA-Euk, FROGS |
 | Direct | ITS, gyrB | Measure lengths straight off a reference that is already amplicon-length — no primer binding sites needed | UNITE UCHIME pre-extracted ITS1/ITS2, DD7RZ8 pre-trimmed amplicons |
 
-Direct mode exists because in-silico PCR is unreliable for these two, for two
-different reasons. The common ITS primers (ITS1F, ITS4) bind in flanking rRNA
-regions that UNITE sequences do not contain, so a PCR-style probe would recover
-almost nothing. gyrB's DD7RZ8 reference has the opposite problem: it is not a
-whole-gene database at all — its sequences were already cut down to the
-in-silico amplicon (with the Barret 2015 primer sites removed in the process)
-when the trainset itself was built. An in-silico PCR against it would be
-searching for primer-binding sites that are no longer there, so it would also
-recover almost nothing, just for the reverse reason: too little sequence
-outside the amplicon for ITS, none at all for gyrB.
+Direct mode exists because in-silico PCR does not work against these two references:
+neither contains the primer-binding sites. The common ITS primers (ITS1F, ITS4) bind in
+the flanking rRNA genes, which UNITE sequences do not include. The gyrB DD7RZ8
+reference is not a whole-gene database: its sequences were cut down to the in-silico
+amplicon, with the Barret 2015 primer sites removed, when the trainset was built. A
+PCR-style probe would therefore recover almost nothing from either reference.
 
 Both modes produce the same thing: a length distribution summarised as JSON.
 The consumers read it differently. `probe_length_stat` picks which
@@ -117,7 +114,7 @@ first pass, so the swapped reads rejoin the main set instead of being discarded.
 With `orientation: fixed` only the first pass runs. The reverse-complemented
 primer sequences both passes need are built once by the `revcomp_primers` rule.
 
-The two knobs that matter here are `amplicon.cutadapt.max_error_rate` (0.2,
+The two settings that matter here are `amplicon.cutadapt.max_error_rate` (0.2,
 generous enough for degenerate primer positions) and
 `amplicon.cutadapt.min_length` (50 bp, a floor that drops reads left as fragments
 after trimming).
@@ -143,12 +140,12 @@ resources:
 
 Rules read these through the `threads_for()` and `mem_mb_for()` helpers defined
 in `workflow/rules/shared/00_common.smk`, and the values feed straight into
-Snakemake's cluster executor. The same workflow therefore runs on a laptop and on
-an HPC queue unchanged — only the numbers move. One value is computed rather than
-read: Kraken2's memory request is overridden when the workflow is parsed, from
-`shotgun.kraken.memory_mapping` and the real size of the database's `hash.k2d`
-file, because that is the one requirement that depends on which database was
-supplied.
+Snakemake's cluster executor. The same workflow therefore runs on a laptop or on an
+HPC queue; only the values in the `resources` block change. One value is computed
+rather than read: at start-up, MetaFlux replaces Kraken2's memory request with one
+derived from `shotgun.kraken.memory_mapping` and the size of the database's
+`hash.k2d` file, because that is the only requirement that depends on which database
+was supplied.
 
 ## 5. One pipeline, two modes
 
@@ -176,7 +173,8 @@ infrastructure around them is about being able to get the same answer again.
   DADA2 environments, because newer builds break DADA2 at load time; `vsearch=2.32.0`,
   because the random draws behind the `sintax` confidence values change between
   releases; `kraken2=2.17.1`, because releases before 2.17 report NCBI's domains as
-  unranked rows, and the benchmarks and defaults were measured with 2.17.1;
+  unranked rows, and the CAMI II and ZymoBIOMICS D6331 benchmarks behind the shotgun
+  defaults ([Benchmark data](test-datasets.md#benchmark-data)) were run with 2.17.1;
   `bracken=3.1p1`, for its corrected report; and `bbmap=39.52`, because the
   BBDuk of newer releases crashes or hangs on paired reads, trimmed ones above all. A
   few rules have no environment of their own and run in Snakemake's: those that only

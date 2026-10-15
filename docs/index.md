@@ -32,7 +32,7 @@ level. With `shotgun.profiler: sylph`, sylph profiles the same reads against ske
 reference genomes instead, and with `both` the two run side by side. See the
 [shotgun overview](shotgun/overview.md) and [sylph](shotgun/sylph.md).
 
-## One command, one config, one report
+## Launching a run
 
 Both modes are launched the same way, from the repository root:
 
