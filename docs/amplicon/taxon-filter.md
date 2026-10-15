@@ -496,9 +496,12 @@ The OTU table always has eight slots, `d__ k__ p__ c__ o__ f__ g__ s__`, on any 
 database. A virus has no domain: its `d__` slot holds its realm (`d__Duplodnaviria`) or
 stays empty, so `keep: [d__Bacteria, d__Archaea]` also drops every virus, and so does
 `[d__Bacteria, d__Archaea, d__Eukaryota]`, together with anything else without a domain
-(plasmids). To keep viruses, list their realms. Realm names follow the NCBI taxonomy the
-database was built with (the realm called Monodnaviria in older builds is Floreoviria in
-newer ones).
+(plasmids). To keep viruses, list their realms. A virus that NCBI places in no realm has
+an empty `d__`, so no realm token matches it: a `keep` list of realms drops it, and a
+`discard` list of realms leaves it in. Name it by a lower rank it does have: its family
+where there is one, otherwise its genus or species. Realm names follow the NCBI taxonomy
+the database was built with (the realm called Monodnaviria in older builds is
+Floreoviria in newer ones).
 
 When Kraken2 runs, these tokens are checked at start-up as well, against the eight slots
 and against the database itself, whose domains, kingdoms and realms MetaFlux reads from

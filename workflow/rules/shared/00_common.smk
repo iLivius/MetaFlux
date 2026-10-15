@@ -784,7 +784,9 @@ def _check_shotgun_filter_tokens(keep, discard, rank_sets, filter_enabled):
         - Viruses under any prefix. No slot ever holds it: a virus has no domain, its
           d__ slot holds its realm, and finalize_otu_table never writes Viruses as a
           domain, also on a database built from NCBI's taxonomy before 2025, which
-          ranked Viruses a superkingdom;
+          ranked Viruses a superkingdom. The message lists this database's realms
+          instead, and says that a virus NCBI places in no realm has an empty d__,
+          so only a token of a lower rank (family, genus or species) reaches it;
         - a virus realm of this database under k__: realms are written in d__;
         - with the filter on, a keep list of which no token can match a row of this
           database: otu_table.tsv would be empty;
@@ -847,7 +849,9 @@ def _check_shotgun_filter_tokens(keep, discard, rank_sets, filter_enabled):
                                 f"itself is never written there, also on a database "
                                 f"built when NCBI still ranked it a superkingdom. To keep "
                                 f"or remove viruses, list their realms (this database: "
-                                f"{realms_text}).")
+                                f"{realms_text}); a virus without a realm has an empty "
+                                f"d__ and needs a token of a lower rank (its family, "
+                                f"genus or species).")
                 continue
             if prefix == "k__" and name in realm_names:
                 problems.append(f"{where}: {token!r}: {name} is a virus realm, which "
