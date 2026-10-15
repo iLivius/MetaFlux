@@ -43,7 +43,8 @@ of their path — probe measurement, truncation, merging, rank handling in SILVA
 and are judged on whether the output is coherent rather than against a known answer.
 For 18S that check is that 99.97% of reads classify as Eukaryota, splitting into TSAR
 (53%), Obazoa (28%) and Archaeplastida (14%), and that the observed ASV median length
-of 381 bp lands on the 381 bp median predicted by in-silico PCR against PR2. Defined
+of 382 bp lands within a base of the 381 bp median predicted by in-silico PCR against
+PR2. Defined
 18S mock communities are scarce; the ground-truth work is carried by the other three
 sets.
 
@@ -135,8 +136,10 @@ instead. Without the read-coverage cap that ceiling comes from the longest read 
 270 / 239 avoids that; `amplicon.trunc_len.min_read_coverage_pct` makes it unnecessary
 by capping each sample at the length 95% of its reads still reach before quality is
 consulted. On this library it brings the R1 ceiling to 271, and `auto` returns
-**271 / 239** unaided, carrying 90.9% of raw reads through to the final table — 828,018
-reads against 828,170 for the hand-picked 270 / 239, a difference of 0.02%.
+**271 / 239** unaided, carrying 90.9% of raw reads through to the ASV table — 828,018
+read pairs reach the length filter, against 828,170 for the hand-picked 270 / 239, a
+difference of 0.02%. (With the recommended `keep: [d__Eukaryota]` a further 214 pairs,
+in six ASVs with no domain or a nuclear-origin label, leave the final table.)
 
 The 18S test run therefore uses `mode: auto`, deliberately: it is the working test that
 the guard does its job. Note also that only R1 was ever the problem. R2's quality did
@@ -150,9 +153,11 @@ The full diagnosis is in
 
 The 16S set is the opposite case and runs on `mode: auto` unchanged. Its quality does
 fall away towards the 3′ end, so the picker finds honest quality-based cuts — but they
-come out too short to leave the 12 bp of overlap the 384 bp amplicon needs. That
-triggers `resolve_policy: raise_trunc`, which extends the cuts back out until the pair
-can merge, and the run settles at 242 / 154 with the overlap requirement met exactly.
+come out too short to leave the 12 bp of overlap the amplicon needs (386 bp, the p95 of
+the in-silico products on SILVA 144; 384 bp on SILVA 138.2). That triggers
+`resolve_policy: raise_trunc`, which extends the cuts back out until the pair can
+merge, and the run settles at 244 / 154 with the overlap requirement met exactly
+(242 / 154 on SILVA 138.2).
 
 This makes the set the working test of that resolution path, which is otherwise easy to
 leave unexercised: most libraries either merge comfortably or fail outright.
