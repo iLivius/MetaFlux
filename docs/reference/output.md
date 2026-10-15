@@ -377,9 +377,10 @@ reports, from the same rows and numbers, so they always agree. Each row is one t
 in the sample's Bracken report (0 where the sample does not have it). Each row carries
 a lineage of eight slots taken from the reports' own rank codes (see
 [below](#taxonomy-strings-in-the-final-tables)). Rows come in the order the taxa are
-first met, reading the samples in the order of the sample sheet. The rule then applies
-the optional `shotgun.taxonomy_filter` keep/discard lists. In the BIOM file the sample
-metadata field `Id` holds the plain sample name.
+first met, reading the samples in the order of the table's columns, which are sorted by
+sample name (as in `samples.tsv`). The rule then applies the optional
+`shotgun.taxonomy_filter` keep/discard lists. In the BIOM file the sample metadata
+field `Id` holds the plain sample name.
 
 ### With `shotgun.profiler: sylph` or `both`
 

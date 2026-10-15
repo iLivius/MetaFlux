@@ -51,9 +51,9 @@ copy of the database taxonomy, written when the index is built and read at every
 classification, so every Kraken2 database has it. From it MetaFlux takes which taxa
 the database ranks as a domain, a kingdom or a virus realm. The OTU table needs that:
 its lineage has eight fixed slots, `d__ k__ p__ c__ o__ f__ g__ s__`, filled from the
-rank codes of the Bracken reports, but Kraken2 has no code for a virus realm (it prints
-a realm as an unranked `R2` row, like other unranked nodes), and the domain and kingdom
-codes of the reports are checked against the database (see
+rank codes of the Bracken reports, but Kraken2 has no code for a virus realm (on current
+databases it prints a realm as an unranked `R2` row, like other unranked nodes), and the
+domain and kingdom codes of the reports are checked against the database (see
 [OTU table](overview.md#7-otu-table)). A directory without a readable `taxo.k2d` stops
 the run at start-up:
 

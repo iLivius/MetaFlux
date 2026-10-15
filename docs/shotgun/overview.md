@@ -305,7 +305,7 @@ MetaFlux builds the OTU table itself, straight from the per-sample Bracken repor
 row per taxon at `shotgun.bracken.tax_lev`, one column per sample, and in each cell
 Bracken's re-estimated read count for that taxon (the clade count of its row in the
 sample's report). Taxa appear in the order they are first met, reading the samples in
-the order of the sample sheet.
+the order of the table's columns, which are sorted by sample name (as in `samples.tsv`).
 
 Every row carries a lineage of eight fixed slots, one for each rank code Kraken2 prints
 in its reports, on any database:
@@ -317,7 +317,9 @@ d__ k__ p__ c__ o__ f__ g__ s__      domain, kingdom, phylum, class, order, fami
 - **Where the names come from.** A slot takes the name of the row, on the path from the
   report's root down to the taxon, whose code is exactly the slot's letter (`D`, `K`,
   `P` …). Rows with a numbered code (`K1`, `P3`, `R2` …) are in-between nodes and get no
-  slot.
+  slot, with one exception: a virus realm, which Kraken2 also prints with a numbered
+  code (`R2`; `D1` on a database built when NCBI still ranked Viruses a superkingdom),
+  fills `d__` (below).
 - **Empty slots.** A rank that the lineage does not have leaves its slot empty: `k__` is
   empty in every row on a GTDB database, which has no kingdom rank, and on NCBI
   databases for the taxa NCBI places in no kingdom, most protists among them; at
