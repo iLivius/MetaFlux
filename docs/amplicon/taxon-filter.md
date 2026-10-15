@@ -7,10 +7,9 @@ came in with the extraction kit, a *parE* paralog picked up by gyrB primers. The
 taxonomy filter is where they are removed.
 
 It is a plain keep/discard list of taxon names, set in
-`amplicon.taxonomy.filter`. The keep and discard lists have no hidden default and no
-per-marker magic in the code — whatever is listed in the config is exactly what gets
-applied. For 16S there is
-one more step that is not a list: ASVs that Metaxa2 calls mitochondria or chloroplast
+`amplicon.taxonomy.filter`. The keep and discard lists have no built-in default and no
+per-marker rules in the code: what the config lists is exactly what is applied. For 16S
+there is one more step that is not a list: ASVs that Metaxa2 calls mitochondria or chloroplast
 are removed too ([the organelle filter](#the-organelle-filter-organelles), on by
 default).
 
@@ -66,7 +65,7 @@ matches when it is exactly equal to one of those segments.
 That is what makes the lists safe to use at any rank. `g__Bacillus` matches an ASV whose
 genus is exactly *Bacillus*, and nothing else: not a differently suffixed genus such as
 `g__Bacillus_A`, and not a species or family segment that happens to contain the same
-letters. Substring accidents cannot happen.
+letters.
 
 One exception is deliberate. SILVA 144 marks some clades `X--other` (a clade that does
 not contain the type of taxon *X* but is still considered part of it), and the filter
@@ -170,11 +169,15 @@ rank is at least `discard_min_support`:
 
 The `keep` list is not affected, and `s__` tokens are only ever compared with the
 reported lineage (the species from `addSpecies` has no support value). Each ASV removed
-this way gets its own log line:
+this way gets its own log line, as here on the 16S test set
+([PRJNA305879](../about/test-datasets.md)) under `method: rdp` with SILVA 144:
 
 ```text
+[assign_taxonomy]   ASV_104: best hit f__Mitochondria at 60% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
 [assign_taxonomy]   ASV_19: best hit f__Mitochondria at 70% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
-[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 5 more ASV(s) removed
+[assign_taxonomy]   ASV_198: best hit f__Mitochondria at 54% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
+[assign_taxonomy]   ASV_25: best hit f__Mitochondria at 62% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 4 more ASV(s) removed
 ```
 
 The default of 50 means the best hit needs at least half the support at that rank (50
@@ -196,17 +199,20 @@ classifier best hit is a bacterium is reported as a bacterium, so neither
 `f__Mitochondria` nor the best-hit check has anything to match.
 
 How much is left for the organelle filter depends on the classifier and the reference.
-Plant mitochondrial 16S is often closest to a mitochondrion in SILVA, yet `rdp` can
-report it as *Enterobacterales* on either release, and `sintax` on SILVA 138.2 may stop
-at phylum, class or order with a bacterial best hit below that. `sintax` on SILVA 144
-more often has *Mitochondria* as the best hit, so there `f__Mitochondria` and the
-best-hit check already remove most of it. Metaxa2, which aligns each ASV against its own
-reference set, organelles included, calls such ASVs mitochondrial, so with the organelle
-filter on, the choice of classifier and release matters much less for which ASVs are
-kept.
+On the 16S test set ([PRJNA305879](../about/test-datasets.md)) Metaxa2 calls 29 ASVs
+mitochondrial (28 in the SILVA 138.2 runs, whose ASV set differs slightly). With SILVA
+144 the tokens and the best-hit check remove 26 of them under `sintax` but only 16 under
+`rdp`, which reports 9 of the other 13 as *Enterobacterales*. With SILVA 138.2 both
+methods remove 18 of the 28; of the other 10, `rdp` reports 8 as *Enterobacterales*, and
+`sintax` stops at phylum, class or order, mostly with a bacterial best hit below that
+rank. Metaxa2, which aligns each ASV against its own reference set, organelles included,
+calls such ASVs mitochondrial, so with the organelle filter on, the choice of classifier
+and release matters much less for which ASVs are kept.
 
-The tokens stay useful next to it: now and then the classifier calls an ASV
-*Mitochondria* that Metaxa2 calls bacterial. The two signals overlap a lot but not
+The tokens stay useful next to it. On the 16S test set under `sintax` with SILVA 138.2,
+two ASVs that the classifier placed in *Mitochondria* (one in the reported lineage, one
+through the best-hit check) are called bacterial by Metaxa2; in the SILVA 144 runs, and
+under `rdp` with SILVA 138.2, there are none. The two signals overlap a lot but not
 completely, so the filter uses both.
 
 What the filter takes from Metaxa2, and what it does not:
@@ -216,7 +222,7 @@ What the filter takes from Metaxa2, and what it does not:
 - Only Metaxa2's final answer, from its per-origin FASTA files under `05.dada2/metaxa2/`,
   collected per ASV in `05.dada2/metaxa2_origin.tsv`. Not the preliminary letter in the
   extraction headers, which calls far too many sequences mitochondrial (see
-  [16S rRNA](markers/16S.md#metaxa2-reports-origin-twice-and-only-the-second-answer-is-the-real-one)).
+  [16S rRNA](markers/16S.md#metaxa2s-two-origin-calls)).
   That final call is stable from run to run, unlike Metaxa2's own taxonomy file,
   which the filter does not read.
 - It runs after `keep`, `discard` and the best-hit check, so it only removes what those
@@ -235,13 +241,16 @@ then exactly what the tokens and the best-hit check alone give. Any other value 
 run at start-up.
 
 The log lists what Metaxa2 found, how much of it the earlier steps had already removed,
-and every ASV that only Metaxa2 caught (numbers illustrative):
+and every ASV that only Metaxa2 caught (16S test set,
+[PRJNA305879](../about/test-datasets.md), `method: sintax`, SILVA 144):
 
 ```text
 [assign_taxonomy/sintax] Organelle filter (Metaxa2 origin): 29 ASV(s), 2984 reads, called mitochondria (29) or chloroplast (0)
 [assign_taxonomy/sintax]   already removed above by the tokens or the best-hit check: 26 ASV(s), 2977 reads (keep 0, discard 20, best-hit check 6)
 [assign_taxonomy/sintax]   removed only by the organelle filter: 3 ASV(s), 7 reads
 [assign_taxonomy/sintax]     ASV_199: mitochondria by Metaxa2, 3 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria;o__Hyphomicrobiales--other)
+[assign_taxonomy/sintax]     ASV_219: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy/sintax]     ASV_226: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
 ```
 
 ### The table with everything: `asv_table_unfiltered.txt`
@@ -295,8 +304,9 @@ so its rank labels play no part in the filter.
 
 **gyrB** has no recommended keep/discard, but it does have a filter worth applying, of a
 different kind. The DD7RZ8 reference tags every entry's first rank as `gyrB` (the true
-gene) or `other` (a co-amplified paralog such as *parE*). That tag rides along as an
-ordinary taxonomy rank, so the same machinery drops paralogs with no extra code:
+gene) or `other` (a co-amplified paralog such as *parE*). The tag is stored as an
+ordinary taxonomy rank, so a `discard` token removes the paralogs as it would any other
+taxon:
 
 ```yaml
 discard: [other]     # drops paralogs, keeps ASVs the classifier left unassigned
@@ -448,7 +458,7 @@ What to check, in order:
 ## Seeing what the filter did
 
 Both classifier paths log their counts to `logs/assign_taxonomy.log`, one line per
-step that say exactly how many ASVs each direction cost:
+step, saying how many ASVs each step cost (numbers illustrative):
 
 ```text
 [assign_taxonomy] Keep filter (d__Bacteria,d__Archaea): 1620 / 1843 ASVs retained
@@ -482,8 +492,8 @@ the token names, rather than the ASVs being genuinely off-target.
 
 Shotgun runs have their own filter, `shotgun.taxonomy_filter`, with three of the same
 keys (`enabled`, `keep`, `discard`; there is no best-hit check and no organelle filter)
-and exactly the same whole-segment token matching: `keep` first, then `discard`, empty
-list means no-op. It is applied to the final OTU table after Bracken, so it changes
+and exactly the same whole-segment token matching: `keep` first, then `discard`, and an
+empty list does nothing. It is applied to the final OTU table after Bracken, so it changes
 which OTUs appear in `03.abundance/otu_table.tsv` and `otu_table.biom`, never how reads
 were classified.
 

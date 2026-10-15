@@ -31,8 +31,8 @@ That single number is pulled in two opposite directions:
   transitions as a function of quality score, and a noisy tail both raises those rates
   and generates spurious uniques.
 - **Trim too short** and R1 and R2 stop overlapping in the middle of the amplicon.
-  `mergePairs` then cannot join them, and a pair that will not merge is dropped
-  entirely — not shortened, dropped.
+  `mergePairs` then cannot join them, and a pair that does not merge is discarded as a
+  whole.
 
 So the cut has to remove the bad tail but stop while the forward and reverse reads
 still reach each other. MetaFlux picks the first part from the data and then enforces
@@ -75,9 +75,9 @@ questions and both are needed.
 
 *Within a sample — how far do most of its reads actually reach?* Falco reports a quality
 bin for every position up to the **longest** read in a file, however few reads get that
-far. Trusting that would be a mistake, because `filterAndTrim` **discards** any read
-shorter than `truncLen` instead of padding it: a cut placed where only a handful of reads
-reach does not trim a few bases, it throws away the library. So before quality is
+far. This matters because `filterAndTrim` **discards** any read shorter than `truncLen`
+instead of padding it: a cut placed where only a few reads reach discards almost the
+whole library. So before quality is
 consulted at all, each sample's bins are cut off at the length that
 `amplicon.trunc_len.min_read_coverage_pct` percent of its reads still reach — 95% by
 default, read from Falco's "Sequence Length Distribution" module.
@@ -87,13 +87,12 @@ considered if **all** samples have data there, so the run-wide ceiling is the sm
 the per-sample ceilings and no sample is cut beyond its own range. This gate is fixed at
 100% in the code and is not exposed as a config key.
 
-The order matters, and the next section is why.
+The next section explains why the read-coverage gate is applied first.
 
 ### Why the read-coverage gate exists
 
-This is the one part of truncation worth understanding properly, because when it goes
-wrong it does not go slightly wrong — it costs the entire run. Three separate facts
-combine into the problem, and none of them is obviously dangerous on its own.
+If this part of truncation goes wrong, the run loses almost all of its reads. Three facts
+combine to cause it.
 
 **One: reads are not all the same length once the primer is off.** A library that came
 off the sequencer at a uniform 301 bp does not stay uniform. The primer does not sit at
@@ -108,16 +107,17 @@ that far — it is a quality profile, not a census.
 
 **Three: DADA2 discards short reads rather than padding them.** `filterAndTrim` with
 `truncLen = N` cuts every read at position N **and throws away outright any read that
-never reached N**. There is no partial credit.
+never reached N**.
 
-Put those together and the failure assembles itself. On a clean run, per-base quality
+Together, these produce the failure. On a clean run, per-base quality
 never drops below `q_threshold`, so the picker has no quality signal to cut on and simply
 runs to the end of the table. The end of the table was written by the longest read in the
 file. Fact three then deletes everything shorter.
 
 !!! example "What that looks like on real data"
 
-    `Surface_dolomite`, the 18S test set, R1 after primer trimming: **211,974 reads**.
+    `Surface_dolomite` (run DRR316764) of the 18S test set
+    ([PRJDB12231](../about/test-datasets.md)), R1 after primer trimming: **211,974 reads**.
     Reading Falco's length distribution from the longest length downwards:
 
     | Read length | reads ending exactly here | reads reaching **at least** here |
@@ -135,8 +135,9 @@ file. Fact three then deletes everything shorter.
     Read from the quality tables alone, the run-wide ceiling came out at **288 bp** —
     set by a different sample, since this one's own table runs to 289. Either way, only
     **three reads here are 288 bp or longer**, so a cut there discards 211,971 of
-    211,974. That is not hypothetical: without this gate the four-sample 18S run keeps 9
-    read pairs out of 908,768 and finishes with 3 ASVs.
+    211,974. Without this gate (MetaFlux v2.1.0 and earlier) the cuts land at 288/239,
+    which only 9 of the 908,768 primer-trimmed read pairs in the four samples are long
+    enough to pass, and the run finished with 3 ASVs.
 
 **What the gate does instead.** Before quality is consulted at all, each sample is asked
 one question: *what is the longest position that at least `min_read_coverage_pct` of my
@@ -148,9 +149,9 @@ says.
 
 Two properties are worth noticing:
 
-- **You usually keep far more than you asked for.** The setting is a floor, not a target.
-  Because read lengths cluster rather than spreading evenly, the 95% request here
-  actually retains 99.96% of the sample.
+- **The share of reads kept is usually much higher than the setting.** Because read
+  lengths cluster rather than spread evenly, the 95% request here retains 99.96% of the
+  sample.
 - **It is per sample, and then the strictest one wins.** The four 18S samples capped at
   275, 271, 276 and 271, so the run-wide R1 ceiling is 271. No sample is ever cut past
   its own limit.
@@ -165,13 +166,12 @@ ceiling and flags when the gate did real work:
 
 The `NOTE` fires when the gap is 10 bp or more, and is worth reading rather than
 skipping. A large gap means the read lengths are ragged — normal after primer trimming,
-and extreme for markers whose amplicons genuinely vary in length, where the ITS test set
-shows an 89 bp gap.
+and extreme for markers whose amplicons genuinely vary in length: on the ITS test set
+([PRJNA862334](../about/test-datasets.md)) the gap is 89 bp (run SRR20648167: longest
+read 298 bp, 95% of its reads reach 209 bp).
 
-**When to change it.** Rarely — and note which way it runs, because it is the opposite
-of what "raise the percentage to be more permissive" would suggest. The value is a
-*guarantee about reads*, not an allowance about length: asking for a higher percentage
-asks for a position more reads reach, which is necessarily **further in**.
+**When to change it.** Rarely. A higher percentage gives a shorter cut, because it asks
+for a position that more reads reach; a lower percentage gives a longer cut.
 
 | | Effect on the cut | Effect on reads |
 |---|---|---|
@@ -184,24 +184,24 @@ Measured on `Surface_dolomite` R1, so the shape is visible:
 |---|--:|--:|--:|--:|--:|--:|--:|
 | resulting cap | 276 | 271 | 271 | **271** | 271 | 271 | **79** |
 
-Two things fall out of that. Between roughly 80 and 99 the value barely matters, because
-read lengths cluster rather than spreading evenly — so there is little to gain by tuning
-it. And **`100` is a cliff, not an off switch**: it demands that *every* read reach the
-cut, so the ceiling collapses onto the single shortest read in the file. On this sample
-that is 79 bp, which then fails the overlap constraint and stops the run.
+Between roughly 80 and 99 the value makes little difference, because read lengths
+cluster rather than spread evenly. `100` does not switch the gate off: it requires every
+read to reach the cut, so the ceiling drops to the shortest read in the file. On this
+sample that is 79 bp, which then fails the overlap constraint and stops the run.
 
 !!! warning "There is no value that disables this gate"
 
-    `100` does not restore the old behaviour — it is the most aggressive setting
-    available, not the least. If you want the old behaviour for comparison, there is no
-    config value for it; use `mode: manual` and set the lengths yourself.
+    `100` is the strictest setting, not the most permissive. No value restores the
+    behaviour of MetaFlux v2.1.0 and earlier, which had no gate; to reproduce it, use
+    `mode: manual` and set the lengths yourself.
 
 The gate runs under `mode: auto` only — in `manual` mode the lengths come straight from
 `manual_r1` / `manual_r2` and no quality table is consulted at all, so the value has no
 effect. (The key itself still has to be present and numeric even for a manual run, which
-the shipped template guarantees.) On the 18S set the default picks 271/239 unaided —
-against 270/239 worked out by hand from a retention curve — the run keeps 828,018 reads
-where the hand-picked pair kept 828,170, a difference of 0.02%.
+the shipped template guarantees.) On the 18S test set the default picks 271/239 unaided,
+against 270/239 worked out by hand from a retention curve: 828,018 read pairs pass the
+length filter, against 828,170 with the hand-picked lengths (measured in v2.2.0), a
+difference of 0.02%.
 
 **The cut itself.** Walking the aggregated profile from position 1, the cut is placed at
 the last cycle still at or above `q_threshold` — that is, one position before the first
@@ -257,7 +257,7 @@ comes out below 50 bp, which usually means the falco reports are worth a look.
 | `amplicon.expected_length` | `auto` | Amplicon length used by the overlap constraint. See [where the expected length comes from](#where-the-expected-amplicon-length-comes-from). |
 | `amplicon.min_overlap` | `12` | Overlap the two cuts must leave, in bp. Design constraint only. |
 
-!!! note "`amplicon.min_overlap` is not the same knob as `dada2.merge.min_overlap`"
+!!! note "`amplicon.min_overlap` is not the same setting as `dada2.merge.min_overlap`"
 
     `amplicon.min_overlap` (default `12`) is used **only** in the truncation arithmetic
     below — it decides where the reads are cut. `amplicon.dada2.merge.min_overlap`
@@ -314,11 +314,11 @@ favour of the more abundant parent, and rejects outright any pair exceeding
     run: the bases least worth keeping, which then cost reads at `maxEE` anyway. Taking
     the good bases first spends the same number of bases and keeps more of them useful.
 
-    The log records the split and the mean quality of what each read gained:
+    The log records the split and the mean quality of what each read gained. On the 16S
+    test set ([PRJNA305879](../about/test-datasets.md)) the whole deficit goes to R1:
 
     ```text
-    [pick_trunclen] Raised: R1 +20 (mean Q1 of added bases 20.0), R2 +10 (mean Q1 12.0);
-    allocation is quality-weighted, not headroom-weighted
+    [pick_trunclen] Raised: R1 +30 (mean Q1 of added bases 21.8), R2 +0 (mean Q1 n/a); allocation is quality-weighted, not headroom-weighted
     ```
 
 Whichever route was taken is recorded as `resolved_via` in `stats/trunclen.json`
@@ -398,8 +398,9 @@ the two matches, even when the later one fits better. For the reverse primer tha
 site nearest the forward primer, the right one. For the forward primer it is the site
 farther from the reverse primer, so the product starts too early and comes out too long.
 
-In rpoB this is common. With the `Univ_rpoB_deg` primers on the FROGS genes, the forward
-primer also matches, with the 4 mismatches that `max_error_rate: 0.2` allows, a stretch
+In rpoB this is common. With the `Univ_rpoB_deg` primers on the FROGS RefSeq rpoB release
+MetaFlux uses (`rpob_refseq_cc_20240707`), the forward primer also matches, with the 4
+mismatches that `max_error_rate: 0.2` allows, a stretch
 about 920 bp upstream of its real site in 7,289 of the 42,995 products (17%), mostly
 Gammaproteobacteria and Actinomycetes. Most of those products are 1.0–2.0 kb long; they
 put p95 at 1,332 bp, so a fully automatic run would check the read overlap, and size the
@@ -423,7 +424,7 @@ No cutadapt, no primers: the lengths are read directly from the reference FASTA,
 reference is gzip-copied to the rule's amplicon output so the declared output file exists
 in both modes.
 
-This is not a shortcut, it is the only correct option for these two. UNITE's UCHIME
+For these two markers it is the only option that works. UNITE's UCHIME
 release contains pre-extracted ITS1/ITS2 subregions, and the common ITS primers (ITS1F,
 ITS4) bind in the flanking rRNA regions that those sequences no longer contain — an
 in-silico PCR would find nothing to cut against. DD7RZ8 ships primer-trimmed in-silico
@@ -480,11 +481,11 @@ would leave the long tail unmergeable.
 !!! warning "The key must exist for the marker being run"
 
     Every marker except ITS *reads* a `probe_length_stat` key when
-    `expected_length: auto`. The key is *required* for every marker except ITS at
-    startup, whether or not `expected_length` is `auto` — a 16S, 18S, gyrB or rpoB run
-    with a manual integer length and no matching key still stops at parse time, with
-    the exact key to add in the message. Note that gyrB reads `probe_length_stat.16S`,
-    not a key of its own.
+    `expected_length: auto`. The key is *required* for every marker except ITS, whether
+    or not `expected_length` is `auto` — a 16S, 18S, gyrB or rpoB run with a manual
+    integer length and no matching key still stops at start-up, with the exact key to
+    add in the message. Note that gyrB reads `probe_length_stat.16S`, not a key of its
+    own.
 
 ### Probe caching
 
@@ -542,7 +543,7 @@ against the window and set an explicit `length_filter.range` if long-ITS taxa ma
     `length_filter.mode: auto` therefore has neither a probe JSON (route 2) nor an
     `expected_length` to fall back on, and it fails in `dada_length_filter` — after the
     whole DADA2 chain and any extraction have already finished. Unlike the ITS case
-    below, nothing catches this combination at parse time. Set `length_filter.range`
+    below, nothing catches this combination at start-up. Set `length_filter.range`
     explicitly whenever `expected_length` is not `auto`, or keep `trunc_len.mode: auto`.
 
 **What the filter produces.** ASVs outside the window are dropped from the FASTA and
@@ -631,8 +632,8 @@ each ceiling, the overlap arithmetic, and any policy that fired — is in
 
 ## When `auto` goes wrong
 
-One failure mode is worth knowing about, both because it is guarded against by default
-and because the guard can be turned off.
+The read-coverage gate guards against one failure mode by default; lowering
+`min_read_coverage_pct` weakens it.
 
 On a very clean run, per-base quality can stay above `q_threshold` right to the last
 cycle. The picker then has no quality signal to cut on and takes the ceiling instead.
@@ -640,10 +641,12 @@ If that ceiling were the maximum read length, it would sit above where most read
 after primer trimming — and since `filterAndTrim` discards every read shorter than
 `truncLen`, the DADA2 step fails with `Error: No reads passed the filter`.
 
-This is what `min_read_coverage_pct` prevents. The 18S test set is a real instance: its
-R1 quality never falls below Q20, its longest reads reach 289 bp while half stop at 281,
-and a cut at 288 kept 9 read pairs out of 908,768. With the default 95% cap the ceiling
-comes in at 271, `auto` returns 271/239 unaided, and the run keeps 90.9% of its reads.
+This is what `min_read_coverage_pct` prevents. The 18S test set
+([PRJDB12231](../about/test-datasets.md)) is a real instance: its R1 quality never falls
+below Q20, its longest reads reach 289 bp while 70% of R1 reads stop at exactly 281, and
+only 9 of its 908,768 primer-trimmed read pairs are long enough for the 288/239 cut that
+MetaFlux v2.1.0 and earlier chose. With the default 95% cap the ceiling comes in at 271,
+`auto` returns 271/239 unaided, and 90.9% of the raw read pairs reach the final table.
 
 It can still bite in two situations:
 

@@ -51,8 +51,8 @@ analysis you perform yourself — MetaFlux computes no diversity statistics. See
 
 Amplicon mode requires local paired FASTQs named `{sample}_R1.fastq.gz` and
 `{sample}_R2.fastq.gz` in `input.fastq_dir`. Sample names are discovered from those
-filenames at parse time — the moment before the run starts, when Snakemake reads the
-config and works out which jobs it will need. SRA-style `{sample}_1/_2` naming is
+filenames at start-up, when Snakemake reads the config and works out which jobs it will
+need. SRA-style `{sample}_1/_2` naming is
 accepted by shotgun mode but rejected here with an explicit error, because the two
 conventions cannot be told apart safely once mixed.
 
@@ -328,9 +328,9 @@ Metaxa2 also writes `metaxa2_origin.tsv`, its origin call for each ASV, which th
 taxonomy filter reads in step 9. ASVs the extractor could not resolve are dropped at
 this point.
 
-ITSx has one extra behaviour worth knowing: distinct ASVs whose extracted subregions come
-out identical — they differed only in the flanks that were just removed — are collapsed
-into a single representative and their per-sample counts summed. The mapping is recorded in
+ITSx also collapses ASVs: distinct ASVs whose extracted subregions come out identical —
+they differed only in the flanks that were just removed — become a single representative,
+and their per-sample counts are summed. The mapping is recorded in
 `itsx_collapse_map.tsv`.
 
 ## 8. ASV length filter
@@ -374,8 +374,8 @@ The window logic is covered in full on the
 ## 9. Taxonomy assignment
 
 `assign_taxonomy` classifies the length-filtered ASVs and writes the final tables to
-`06.taxonomy/`. Two implementations exist and one is chosen when the workflow is parsed,
-based on `amplicon.taxonomy.method`:
+`06.taxonomy/`. Two implementations exist, and one is chosen at start-up based on
+`amplicon.taxonomy.method`:
 
 | Method | Tool | Threshold key | Available for |
 |--------|------|---------------|---------------|
