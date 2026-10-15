@@ -1,0 +1,13 @@
+# Settings of the "New issue" page on GitHub: no empty issues (every issue starts
+# from one of the forms in this folder), and three links for what is not a bug.
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussion
+    url: https://github.com/iLivius/MetaFlux/discussions
+    about: How to use MetaFlux, which settings to choose, how to read a result.
+  - name: Documentation
+    url: https://iLivius.github.io/MetaFlux/
+    about: Installation, every config key, the output files, one page per marker.
+  - name: Troubleshooting
+    url: https://iLivius.github.io/MetaFlux/troubleshooting/
+    about: The failures worth knowing about in advance, each with its cause and fix.

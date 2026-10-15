@@ -1,0 +1,52 @@
+# The form behind "Feature request" on GitHub's New issue page. A short exchange before
+# any code is written saves both sides a rewrite; CONTRIBUTING.md says why.
+name: Feature request
+description: Propose a change, a new setting or a new marker
+title: "[proposal] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Many things that look like a missing feature are deliberate
+        and the documentation usually says why, so please have a look there first. If you
+        are not sure whether this is a bug, a question or a proposal, a
+        [discussion](https://github.com/iLivius/MetaFlux/discussions) is the right place.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and what stands in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: The change as you imagine it, and what a user would see (a new config key, a new output file, a new marker ...).
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which part of MetaFlux
+      multiple: true
+      options:
+        - amplicon mode, one or more markers
+        - a new amplicon marker
+        - shotgun mode, Kraken2 + Bracken
+        - shotgun mode, sylph
+        - read tracking, MultiQC, output files
+        - documentation
+        - something else
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+      description: Other ways to reach the same goal, with MetaFlux as it is or with other tools.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Would you work on it?
+      options:
+        - label: I could prepare a pull request once the approach is agreed.

@@ -1,0 +1,80 @@
+# The form behind "Bug report" on GitHub's New issue page. It asks for what is needed to
+# reproduce a problem without a round of questions; CONTRIBUTING.md explains each item.
+name: Bug report
+description: Something in MetaFlux does not work as the documentation says
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please have a look at the
+        [troubleshooting page](https://iLivius.github.io/MetaFlux/troubleshooting/) first:
+        the failures worth knowing about are described there with their fix. Then fill in
+        what you can below; paths may be shortened, but please keep the config keys.
+  - type: input
+    id: version
+    attributes:
+      label: MetaFlux version
+      description: The banner the run prints, or the output of `git describe --tags`.
+      placeholder: v2.5.0
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      description: For amplicon runs, the marker; for shotgun runs, the profiler.
+      options:
+        - amplicon, 16S
+        - amplicon, ITS
+        - amplicon, 18S
+        - amplicon, gyrB
+        - amplicon, rpoB
+        - shotgun, kraken2
+        - shotgun, sylph
+        - shotgun, both
+        - not tied to a mode (installation, documentation, other)
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: The command you ran
+      render: shell
+      placeholder: snakemake --sdm conda --cores 16 --configfile config/my_run.yaml
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Your run config
+      description: The YAML passed with `--configfile`, as it is (paths may be shortened).
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What MetaFlux printed
+      description: The `[MetaFlux]` start-up lines and the error; for a failing dry run, the whole dry-run output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The log of the failing job
+      description: "`logs/<rule>/<sample>.log` in the output folder, if a job failed."
+      render: text
+  - type: input
+    id: environment
+    attributes:
+      label: Snakemake version and operating system
+      placeholder: Snakemake 9.23.1, Ubuntu 24.04
