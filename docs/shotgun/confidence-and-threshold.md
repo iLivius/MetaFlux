@@ -50,8 +50,9 @@ species left at `-t 265` are *Fusobacterium* species closely related to the mock
 Raising the confidence score removes far fewer weakly supported species than the Bracken
 threshold does, because Kraken2 does not reject a read that falls short of the
 confidence threshold: it moves the call **up** the taxonomy tree until the score clears
-the bar, and only reports "unclassified" if even the root fails. Raising confidence therefore mostly moves reads to coarser
-ranks, which leaves more reads for Bracken to redistribute.
+the bar, and only reports "unclassified" if even the root fails. Raising confidence
+therefore mostly moves reads to coarser ranks, which leaves more reads for Bracken to
+redistribute.
 
 The measured consequence: raising confidence lowers the read count of species-level
 calls, and a rare species can lose a large share of its few reads. On the same D6331
@@ -73,10 +74,11 @@ nothing here changes it.
 The right floor depends on how many reads a sample has. A species with 200 reads is
 better supported in a sample of 2 million classified read pairs than in one of
 15 million: `auto` sets `-t 100` in the first, which keeps it, and `-t 750` in the
-second, which removes it. A fixed threshold is therefore right for one depth only. On
-one CAMI II marine sample (sample 0), subsampled to 2, 5 and 10 million read pairs and
-also used at its full 16.6 million, Bracken's default of 10 gave a lower F1 the deeper
-the sample was sequenced:
+second, which removes it. A fixed threshold is therefore right for one depth only. In
+the first benchmark behind the default, with PlusPF `k2_pluspf_20251015`, one CAMI II
+marine sample (sample 0) was subsampled to 2, 5 and 10 million read pairs and also used
+at its full 16.6 million. At Bracken's default of 10, F1 was lower the deeper the sample
+was sequenced:
 
 | classified pairs | F1 at fixed `-t 10` |
 |--:|--:|
@@ -99,8 +101,9 @@ paired mode counts a pair as one unit, and the classified fraction depends on ho
 the database covers the community: with PlusPF `k2_pluspf_20260626`, 99.8 % of the
 D6331 mock's read pairs were classified, against 47–75 % for the four wastewater
 metagenomes of the [shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset),
-at similar depth (3.5–5.3 million read pairs entering Kraken2). Raw input reads would
-therefore be the wrong denominator.
+at similar depth (5.3 million read pairs entering Kraken2 for the mock, 3.5–4.7 million
+for the wastewater metagenomes). Raw input reads would therefore be the wrong
+denominator.
 
 ```yaml
 shotgun:
@@ -130,11 +133,11 @@ sequencing depth ([Breitwieser et al. 2018](https://doi.org/10.1186/s13059-018-1
 MetaFlux adds a measured constant and computes the threshold for each sample
 automatically:
 
-- a depth exponent of **0.967**, fitted on one CAMI II marine sample classified at four
-  depths (1.8 to 15 million classified pairs, the series above), consistent with a
-  threshold directly proportional to depth
-- a coefficient, **alpha = 5×10⁻⁵**, chosen in a first benchmark with PlusPF
-  `k2_pluspf_20251015` and re-fitted on all 41 CAMI II samples with
+- a depth exponent of **0.967**, fitted in the first benchmark on one CAMI II marine
+  sample classified at four depths (1.8 to 15 million classified pairs, the series
+  above), consistent with a threshold directly proportional to depth
+- a coefficient, **alpha = 5×10⁻⁵**, chosen in the first benchmark (PlusPF
+  `k2_pluspf_20251015`) and re-fitted on all 41 CAMI II samples with
   `k2_pluspf_20260626`, where the median optimum was 6.0×10⁻⁵; on the D6331 mock the
   optimum is several times higher (next section)
 - the `auto` computation itself, run per sample inside the `bracken` rule
@@ -161,8 +164,8 @@ per-sample optima in the 41-sample re-fit with PlusPF `k2_pluspf_20260626`.
 Pooling the 41 CAMI II samples gives a median optimal alpha of **6.0×10⁻⁵**, 1.2× the
 default. One constant works for these samples despite the spread because F1 changes
 little over a wide range of alpha: using 5×10⁻⁵ everywhere costs a mean of **0.023 F1**
-against tuning each sample to its own best (median cost 0.014). In the same benchmark,
-Bracken's default of 10 cost up to **0.34 F1** on the simulated CAMI II samples.
+against tuning each sample to its own best (median cost 0.014). In the first benchmark,
+Bracken's default of 10 cost up to **0.34 F1**.
 
 The D6331 mock is an exception: there the default costs 0.146 F1 against the optimum
 (0.757 against 0.903).
@@ -195,10 +198,10 @@ Worked examples: 2M classified pairs → `-t` ≈ 100 · 5M → ≈ 250 · 15M �
 The threshold raises precision substantially, lowers recall slightly and changes
 abundance accuracy little.
 
-On the D6331 run, the L1 distance between the Bracken profile and the composition in
-Zymo's manual (the sum of absolute differences, in percentage points) was 40.88 at
-`-t 10` and 40.87 at `-t 265`, and the Bray–Curtis dissimilarity between the two
-profiles was 0.0009. The threshold changes **which taxa are named**, not **how much of
+On the D6331 run, the L1 distance between the Bracken profile and the genomic-DNA
+composition in Zymo's manual (the sum of absolute differences, in percentage points) was
+40.88 at `-t 10` and 40.87 at `-t 265`, and the Bray–Curtis dissimilarity between the
+two profiles was 0.0009. The threshold changes **which taxa are named**, not **how much of
 each is reported**. If your downstream work is ordination or differential abundance on
 already-good tables, expect little change. If it is species counts, richness, or
 presence/absence, expect a large one.
@@ -235,22 +238,23 @@ k-mer evidence gate on them.
 
 **Scorer check:** the benchmark scorer was checked against
 [OPAL](https://github.com/CAMI-challenge/OPAL) 1.0.13, the CAMI assessment tool, on the
-two Kraken2 runs with PlusPF `k2_pluspf_20260626` (confidence 0.15 and 0.20), which cover
-the 41 CAMI II samples and the D6331 mock. With its inputs prepared as the scorer
-prepares them, OPAL's species-level true positives, false positives and false negatives
-equal the scorer's in every sample. Run on the gold standards as distributed, OPAL
-differs only in the taxa those preparation rules touch: gold taxids that NCBI has merged
-since the CAMI release, placeholder names such as "uncultured bacterium", which the
-scorer does not score, and the mock's *Fusobacterium*, which Zymo lists as
-*F. nucleatum*. The first benchmark, the 41-sample re-fit behind the CAMI II rows of the
-alpha table and the `k2_pluspf_20251015` runs were not part of this check.
+Bracken species tables of the two runs with PlusPF `k2_pluspf_20260626` (Kraken2
+confidence 0.15 and 0.20), which cover the 41 CAMI II samples and the D6331 mock. With
+its inputs prepared as the scorer prepares them, OPAL's species-level true positives,
+false positives and false negatives equal the scorer's in every sample. Run on the gold
+standards as distributed, OPAL differs only in the taxa those preparation rules touch:
+gold taxids that NCBI has merged since the CAMI release, placeholder names such as
+"uncultured bacterium", which the scorer does not score, and *F. animalis*, which the
+scorer counted as the mock's *F. nucleatum* in this check; the D6331 figures on this
+page score *F. animalis* as the true member instead. The first benchmark, the 41-sample
+re-fit behind the CAMI II rows of the alpha table and the `k2_pluspf_20251015` runs
+were not part of this check.
 
 **Comparator:** [MetaPhlAn 4](https://github.com/biobakery/MetaPhlAn), database
 `mpa_vJan26_CHOCOPhlAnSGB_202605`, on the same trimmed reads of the D6331 run. MetaPhlAn
 reported 14 of the 17 species and no false ones (F1 0.90). MetaFlux at its v2.5.0
 defaults (PlusPF `k2_pluspf_20260626`) reported the same 14 species and six false ones,
-five of them *Fusobacterium* species related to the mock's *F. animalis* (F1 0.76). A
-comparison on the CAMI II samples is in preparation.
+five of them *Fusobacterium* species related to the mock's *F. animalis* (F1 0.76).
 
 ## References
 
