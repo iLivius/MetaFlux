@@ -1,0 +1,48 @@
+# Citation metadata in the Citation File Format (CFF), which GitHub shows under "Cite
+# this repository" and Zenodo reads when a release is archived. Keep `version` in
+# step with the version in the Snakefile and the README banner, and add the release
+# date at release time:
+#     date-released: YYYY-MM-DD
+# The DOI below is the Zenodo concept DOI, which always resolves to the newest
+# release; each release also has a DOI of its own, listed on Zenodo and in
+# docs/about/citation.md.
+cff-version: 1.2.0
+message: "If you use MetaFlux in your work, please cite it as below, and cite the tools and reference databases it runs (see the citation page of the documentation)."
+type: software
+title: "MetaFlux: a unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow"
+version: 2.5.0
+authors:
+  - family-names: Antonielli
+    given-names: Livio
+    affiliation: AIT Austrian Institute of Technology
+license: MIT
+repository-code: https://github.com/iLivius/MetaFlux
+url: https://iLivius.github.io/MetaFlux/
+doi: 10.5281/zenodo.22876451
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22876451
+    description: Zenodo concept DOI, resolving to the newest release
+abstract: >-
+  A Snakemake workflow that takes raw paired-end short reads to a taxonomically
+  annotated abundance table in one of two modes: amplicon (DADA2-based, for the 16S
+  rRNA, ITS, 18S rRNA, gyrB and rpoB markers, with an optional 16S phylogeny) and
+  shotgun (Kraken2 + Bracken, or sylph). Both modes run from one command and one
+  config file and end in one MultiQC report.
+keywords:
+  - metagenomics
+  - amplicon sequencing
+  - 16S rRNA
+  - ITS
+  - 18S rRNA
+  - gyrB
+  - rpoB
+  - DADA2
+  - Snakemake
+  - taxonomic profiling
+  - shotgun metagenomics
+  - Kraken2
+  - sylph
+  - phylogenetics
+  - bioinformatics workflow
+  - reproducibility
