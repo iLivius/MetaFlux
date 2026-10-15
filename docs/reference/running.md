@@ -181,12 +181,16 @@ consequences:
 
 !!! note "Re-running an output folder made with v2.4.0"
 
-    **Every step runs again**, because the output folders have new names: the amplicon
-    folders `1.reads` to `7.phylogeny` are now `01.reads` to `07.phylogeny`; in shotgun
-    mode the Kraken2 files move from `02.classification/` into
+    **Nearly every step runs again**, because the output folders have new names: the
+    amplicon folders `1.reads` to `7.phylogeny` are now `01.reads` to `07.phylogeny`; in
+    shotgun mode the Kraken2 files move from `02.classification/` into
     `02.classification/kraken2/`, together with the k-mer evidence files of
-    `02b.evidence/`, and sylph's `02c.sylph/` is now `02.classification/sylph/`. The old
-    folders, and the old files directly in `02.classification/`, are left as they are and
+    `02b.evidence/`. Only the steps whose files kept their names are skipped, and they
+    would write the same files: the count and QC of the raw reads in `stats/`, the primer
+    reverse complements in `_aux/`, `samples.tsv`, and downloads already on disk
+    (references, and the SRA runs in BioProject mode). The old folders, the old files
+    directly in `02.classification/`, and `03.abundance/otu_table.raw.biom` (v2.4.0's
+    intermediate table, which a run made with `--notemp` keeps) are left as they are and
     can be deleted.
 
     **Results that change on purpose:**
@@ -194,13 +198,17 @@ consequences:
     - Taxonomy strings: `d__` is always the domain slot and `k__` the kingdom slot (see
       [taxonomy strings](output.md#taxonomy-strings-in-the-final-tables)). 16S moves to
       SILVA 144, the new default: `d__Bacteria;k__Pseudomonadati;p__…`. On SILVA 138.2
-      (`references: {silva: {release: "138.2"}}`, which gives the same ASVs and counts
-      as v2.4.0) and on rpoB: `d__Bacteria;p__…`. ITS, 18S and gyrB keep their ranks.
-      The shotgun `otu_table` has eight slots on every Kraken2 database, a virus carries
-      its realm in `d__`, species names are whole, and in `otu_table.biom` the sample
-      `Id` is the plain sample name (it was `<sample>_report`).
-    - 18S with `sintax`: ASVs whose taxonomy was empty now read at least `d__Eukaryota`;
-      this fix changes nothing below the domain.
+      (`references: {silva: {release: "138.2"}}`, the release v2.4.0 used) and on rpoB:
+      `d__Bacteria;p__…`. ITS, 18S and gyrB keep their ranks. The shotgun `otu_table`
+      has eight slots on every Kraken2 database, a virus carries its realm in `d__`,
+      species names are whole, and in `otu_table.biom` the sample `Id` is the plain
+      sample name (it was `<sample>_report`).
+    - 16S on SILVA 138.2: the length probe now leaves chloroplast, mitochondrial and
+      eukaryote references out. With the usual primer pairs this changes neither
+      `truncLen` nor the denoised ASVs and counts, but the `auto` ASV length window can
+      move by a base (for 799F/1175R its lower edge moves from 324 to 325 bp).
+    - 18S with `sintax`: almost every ASV whose taxonomy was empty now carries its
+      domain, nearly always `d__Eukaryota`; this fix changes nothing below the domain.
     - ITS with `rdp`: the species reads `Genus_epithet`, as with `sintax`. All taxonomy
       tables have one format under both methods (`""` as first header cell, `NA` for a
       rank not reached), and the rank cells of `taxon_seq_table.txt` hold bare names.
@@ -212,17 +220,20 @@ consequences:
       with other releases can get slightly different results; at a `tax_lev` other than
       `S` the OTU table is now built correctly (see
       [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s));
-      `nophix` in the read tracking counts exactly the read pairs BBDuk removed.
+      `nophix` in the read tracking now counts exactly the read pairs BBDuk kept, so
+      `raw` minus `nophix` is the pairs it removed (a pair with PhiX in one mate only
+      used to count as half a pair).
 
     **Stops at start-up:** a filter token such as `k__Bacteria` (the message names the
     one to write, `d__Bacteria`); `shotgun.bracken.tax_lev: D`, refused like `K`; a
     marker pack in `config/markers/` written for an older MetaFlux (copy the shipped pack
     again and re-apply your change). See [Troubleshooting](../troubleshooting.md).
 
-    **Reference files:** the SILVA 144 files, the 18S PR2 SINTAX file and the rpoB
-    reference are built once under new names (the FROGS rpoB archive is downloaded
-    again); the SILVA 138.2 SINTAX file is rebuilt under its old name, with the same
-    content, so a refdb folder shared with a v2.4.0 checkout keeps working for both.
+    **Reference files:** the SILVA 144 files are downloaded and built once, and the 18S
+    PR2 SINTAX file is built once (neither existed in v2.4.0); the rpoB reference is
+    built again under a new name (the FROGS rpoB archive is downloaded again); the SILVA
+    138.2 SINTAX file is rebuilt under its old name, with the same content, so a refdb
+    folder shared with a v2.4.0 checkout keeps working for both.
 
 Two caches deliberately sit outside this machinery and survive across runs:
 reference databases under `refdb/`, and the amplicon-length probe result under
