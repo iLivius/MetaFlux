@@ -256,7 +256,7 @@ guidelines, a code of conduct, support notes, issue forms, this changelog and a
   The file is byte-for-byte the same, so nothing has to be re-run. A personal run
   config keeps the old URL: change `ftp://` to `https://` in `references.phix.fetch_url`.
 
-## 2.3.0 — 2026-08-04
+## 2.3.0 — 2026-08-19
 
 - Shotgun: a species-level k-mer evidence gate (`shotgun.kmer_evidence`, off by
   default) that removes taxa without enough distinct k-mers before Bracken, and a
@@ -264,7 +264,7 @@ guidelines, a code of conduct, support notes, issue forms, this changelog and a
 - The documentation site is deployed to GitHub Pages automatically.
 - `sintax`: a malformed VSEARCH output line stops the run instead of being guessed at.
 
-## 2.2.0 — 2026-07-30
+## 2.2.0 — 2026-08-19
 
 - The documentation site (MkDocs); the README is slimmed to a pointer at it.
 - Automatic `truncLen` is never placed above the bulk of the reads
