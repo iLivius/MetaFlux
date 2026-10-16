@@ -19,8 +19,9 @@ fastp) is the same whichever profiler runs.
   holds something at 95 % average nucleotide identity (ANI) or more to it, roughly the
   species boundary. Each row of the table is one reference genome.
 - **Abundance comes from coverage.** From how many of a genome's k-mers turn up, and how
-  often, sylph estimates the genome's coverage. Coverage times genome size gives the
-  share of the sample's sequence that genome explains.
+  often, sylph estimates how deeply the genome is covered. Multiplying that coverage by
+  the genome's length gives the amount of sequence the genome contributed to the
+  sample, and from that its share of the reads.
 - **No read gets a label.** sylph writes no per-read output, so
   [read extraction](read-extraction.md), which picks reads by the taxon Kraken2 gave each
   one, has nothing to work from. The [k-mer evidence gate](kmer-evidence.md) needs
