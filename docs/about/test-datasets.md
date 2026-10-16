@@ -16,10 +16,10 @@ difference between them holds even where the absolute counts have since moved.
 
 | Marker | Dataset | Samples | Runs used | Primers | Reference |
 |---|---|--:|---|---|---|
-| 16S (V5–V7) | [PRJNA305879](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA305879) — plant-associated bacterial communities, MiSeq 2×300 | 6 of 27 | SRR3032384, SRR3032389, SRR3032393, SRR3032396, SRR3032402, SRR3032405 | 799F / 1175R | SILVA 144 (138.2 selectable) |
-| ITS (ITS2) | [PRJNA862334](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA862334) — yeast mock communities, MiSeq 2×300 | 6 of 36 | SRR20648162, SRR20648163, SRR20648167, SRR20648181, SRR20648185, SRR20648187 | ITS3 / ITS4 | UNITE |
-| 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
-| gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
+| 16S (V5–V7) | [PRJNA305879](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA305879) — plant-associated bacterial communities, MiSeq 2×300 | 6 of 27 | SRR3032384, SRR3032389, SRR3032393, SRR3032396, SRR3032402, SRR3032405 | 799F / 1175R | SILVA 144 (138.2 selectable) |
+| ITS (ITS2) | [PRJNA862334](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA862334) — yeast mock communities, MiSeq 2×300 | 6 of 36 | SRR20648162, SRR20648163, SRR20648167, SRR20648181, SRR20648185, SRR20648187 | ITS3 / ITS4 | UNITE |
+| 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
+| gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
 | rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
 
 The three mock-community sets (ITS, gyrB, rpoB) have known composition, so they check
@@ -51,7 +51,7 @@ carried by the other three sets.
 ## Shotgun test dataset
 
 Shotgun mode is tested on four metagenomes from BioProject
-[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1477390): microbial consortia
+[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1477390): microbial consortia
 enriched on naproxen from wastewater treatment plants, sequenced paired-end on an Illumina
 NextSeq 500. The BioProject also holds metatranscriptomes; only the four metagenome runs
 are used.
@@ -98,7 +98,7 @@ and a sample of its reads before building a run on it.
 
 | Check | How to run it | What it caught |
 |---|---|---|
-| **Do the reads still carry their primers?** | On a few thousand reads from more than one sample, check that R1 starts with the forward primer and R2 with the reverse primer, allowing for degenerate bases. The commonest 22-mer at the 5′ end of R1 shows what is there instead: if it changes with the organisms in each sample, the primer is gone. | [PRJNA1138067](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1138067), ITS2 mocks of two fungi in different proportions. The archived reads carry no primer: each read starts at the first base after its primer site, and the commonest 5′ 22-mers of R1 are the 5.8S sequences of the two fungi (75% and 21% of reads in SRR29900459). MetaFlux trims primers with `--discard-untrimmed`, so a library like this loses every read at that step. |
+| **Do the reads still carry their primers?** | On a few thousand reads from more than one sample, check that R1 starts with the forward primer and R2 with the reverse primer, allowing for degenerate bases. The commonest 22-mer at the 5′ end of R1 shows what is there instead: if it changes with the organisms in each sample, the primer is gone. | [PRJNA1138067](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1138067), ITS2 mocks of two fungi in different proportions. The archived reads carry no primer: each read starts at the first base after its primer site, and the commonest 5′ 22-mers of R1 are the 5.8S sequences of the two fungi (75% and 21% of reads in SRR29900459). MetaFlux trims primers with `--discard-untrimmed`, so a library like this loses every read at that step. |
 | **Is it really paired?** | In the SRA run table, check that `spots_with_mates` is not 0 and that `avgLength` matches the stated read length and layout: a 2×300 paired run reads about 600, not about 300. | A 16S V5–V7 deposit labelled `PAIRED`. The forward and reverse reads of each sample were deposited as two separate runs with one read per spot (`spots_with_mates` 0, `avgLength` at most 300), so each run downloads as one mate only. fasterq-dump writes a single FASTQ for such a run and reports the second read of every spot as zero-length. |
 | **Is it the platform and layout you expect?** | Read the platform and layout fields of the ENA or SRA run table, not a paper or a summary of the study. | [PRJEB23971](https://www.ebi.ac.uk/ena/browser/view/PRJEB23971), 18S V4: 454 GS FLX Titanium, single-end. [PRJEB24936](https://www.ebi.ac.uk/ena/browser/view/PRJEB24936), rpoB and 16S mock communities on Illumina MiSeq, deposited as single-end reads: the rpoB mock runs average 431–434 bases per read, the length of the whole amplicon, so the pairs had already been merged. |
 

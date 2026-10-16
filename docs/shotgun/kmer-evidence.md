@@ -200,7 +200,7 @@ KrakenUniq's unique k-mers:
 ### What it does on real data
 
 The numbers below come from the four metagenomes of BioProject
-[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1477390) (runs
+[PRJNA1477390](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1477390) (runs
 SRR39106521–SRR39106524), microbial consortia enriched on naproxen from wastewater
 treatment plants (see [Shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset)).
 They were processed with the MetaFlux v2.5.0 defaults (Kraken2 confidence 0.15, Bracken
