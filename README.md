@@ -153,8 +153,8 @@ Publications that use MetaFlux should cite the Zenodo record:
 > shotgun taxonomic profiling workflow.* Zenodo. https://doi.org/10.5281/zenodo.22876451
 
 That DOI always resolves to the newest release. To cite the exact version you ran, use
-its own DOI instead — v2.4.0 is
-[10.5281/zenodo.22876452](https://doi.org/10.5281/zenodo.22876452) — and give the version
+its own DOI instead — v2.5.0 is
+[10.5281/zenodo.23426290](https://doi.org/10.5281/zenodo.23426290) — and give the version
 number in the reference, because results can depend on it.
 [CITATION.cff](CITATION.cff) carries the same information in a form GitHub shows under
 "Cite this repository".
