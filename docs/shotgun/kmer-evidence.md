@@ -377,10 +377,13 @@ difference between samples. The gate removes it from all four.
 These samples have no known composition, so they do not enter the F1 scores above. That
 is why the benchmark shows almost no gain from the gate while the table changes.
 
-**When to turn it on:** environmental or otherwise poorly-covered communities, where reads
-from organisms absent from the database have to land somewhere. For gut, clinical, or
-anything close to RefSeq, leave it off. Either way the preview gated report is written
-even when disabled, so `diff` it against the Kraken2 report before deciding.
+**When to consider turning it on:** communities the database covers poorly, where reads
+from organisms absent from the database are assigned to their relatives. The evidence
+for this is limited. It rests on cases like JS425 in the wastewater test samples, which
+have no known composition; on the CAMI II rhizosphere samples, the poorly covered
+benchmark set with a known composition, the gate hardly changed F1. For gut, clinical
+or other samples close to RefSeq, leave it off. Either way the gated report is written
+even when the gate is off, so compare it with the Kraken2 report before deciding.
 
 ## Validation status
 
