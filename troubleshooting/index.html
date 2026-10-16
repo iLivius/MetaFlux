@@ -1,0 +1,2417 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../reference/running/">
+      
+      
+        <link rel="next" href="../about/rationale/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Troubleshooting - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#troubleshooting" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Troubleshooting
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../amplicon/phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/sylph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: automatic truncLen can drop all reads on very clean runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-bbduk-phix-removal-stops-on-the-read-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: BBDuk PhiX removal stops on the read pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: empty or nearly empty OTU table with tax_lev other than S
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-run-refuses-tax_lev-d-or-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the run refuses tax_lev: D or K
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-table-step-stops-on-a-report-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the table step stops on a report code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-up-the-run-refuses-a-keepdiscard-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start-up: the run refuses a keep/discard token
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-taxon-filter-removed-every-taxon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the taxon filter removed every taxon
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-asv-counts-or-taxonomy-calls-differ-between-identical-re-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: ASV counts or taxonomy calls differ between identical re-runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-an-outdated-marker-pack-in-configmarkers-stops-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: an outdated marker pack in config/markers/ stops the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-the-reference-check-stops-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: the reference check stops the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-a-reference-download-stops-with-md5-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: a reference download stops with "md5 mismatch"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config-yaml-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config (YAML) errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: automatic truncLen can drop all reads on very clean runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-bbduk-phix-removal-stops-on-the-read-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: BBDuk PhiX removal stops on the read pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: empty or nearly empty OTU table with tax_lev other than S
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-run-refuses-tax_lev-d-or-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the run refuses tax_lev: D or K
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-table-step-stops-on-a-report-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the table step stops on a report code
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-up-the-run-refuses-a-keepdiscard-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start-up: the run refuses a keep/discard token
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shotgun-the-taxon-filter-removed-every-taxon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shotgun: the taxon filter removed every taxon
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-asv-counts-or-taxonomy-calls-differ-between-identical-re-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: ASV counts or taxonomy calls differ between identical re-runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-an-outdated-marker-pack-in-configmarkers-stops-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: an outdated marker pack in config/markers/ stops the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-the-reference-check-stops-the-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: the reference check stops the run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplicon-a-reference-download-stops-with-md5-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amplicon: a reference download stops with "md5 mismatch"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config-yaml-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config (YAML) errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/troubleshooting.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h1>
+<p>This page covers these problems: an automatic truncation length that throws away
+every read, a PhiX-removal step that stops on
+the read pairs, a shotgun OTU table that comes out empty at a rank other than
+species, a Bracken rank that MetaFlux refuses, a shotgun table step that stops on the
+codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgun
+taxon filter that removes every taxon, small differences between two runs on the same
+data, an outdated marker pack in <code>config/markers/</code>, a reference file that fails the
+reference check, a reference download that fails its md5 check, and YAML mistakes in
+the config. Each entry gives the symptom, the reason behind it, and what to change.</p>
+<h2 id="amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs">Amplicon: automatic <code>truncLen</code> can drop all reads on very clean runs<a class="headerlink" href="#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The run gets through primer trimming and QC, then stops at the DADA2
+filtering step (rule <code>dada_filter</code>) with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error: No reads passed the filter ...
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> With <code>amplicon.trunc_len.mode: auto</code>, the <code>pick_trunclen</code> rule reads
+the per-base quality tables that Falco wrote for the primer-trimmed reads
+(<code>stats/falco/{sample}_R{1,2}_stripped/fastqc_data.txt</code>) and cuts just before the
+first position whose per-base lower quartile (Q1, the 25th percentile of quality
+at that cycle) falls below <code>amplicon.trunc_len.q_threshold</code> — 20 by default — so
+the cut keeps the last cycle still at or above it. If quality never
+drops that far, and clean MiSeq runs often stay high to the last cycle,
+<code>truncLen</code> lands on the ceiling instead.</p>
+<p>Falco reports a quality bin for every position up to the <strong>longest</strong> read in a file,
+however few reads reach it — so a ceiling taken from the quality table alone describes
+the longest reads, not typical ones. On a library where a few reads run to full length
+and most stop a little short, a cut placed there discards nearly everything.</p>
+<p>MetaFlux guards against this by default: <code>amplicon.trunc_len.min_read_coverage_pct</code>
+(95) caps each sample at the length that percentage of its reads still reach, before
+quality is considered at all. The guard is on by default, so if this error appears
+anyway, the cause is one of the two cases below.</p>
+<p>After primer trimming most reads end a little before the full read length, and
+DADA2's <code>filterAndTrim</code> <strong>discards any read shorter than <code>truncLen</code></strong> rather than
+padding it. So a cut placed at the very end of the read removes almost everything,
+and DADA2 has nothing left to work with.</p>
+<div class="admonition example">
+<p class="admonition-title">What it looks like on a real library without the guard</p>
+<p>The 18S test dataset (PRJDB12231; see <a href="../about/test-datasets/">test datasets</a>)
+shows it. Its R1 quality never falls below Q20, so without the guard (MetaFlux
+v2.1.0 and earlier) <code>auto</code> puts the R1 cut on the ceiling and returns
+<code>truncLen = 288 / 239</code>. After primer trimming the reads themselves are:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">min</th>
+<th style="text-align: right;">p05</th>
+<th style="text-align: right;">median</th>
+<th style="text-align: right;">max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td style="text-align: right;">78</td>
+<td style="text-align: right;">271</td>
+<td style="text-align: right;">281</td>
+<td style="text-align: right;">289</td>
+</tr>
+<tr>
+<td>R2</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: right;">282</td>
+<td style="text-align: right;">282</td>
+<td style="text-align: right;">298</td>
+</tr>
+</tbody>
+</table>
+<p>The ceiling comes out at 288 because the strictest sample sets it: its longest R1
+read is 288 bp, while the other three reach 289. Most R1 reads (70%) stop at
+exactly 281. Since <code>filterAndTrim</code> discards anything shorter than <code>truncLen</code>, only
+9 of 908,768 pairs are long enough for the cut, and without the cap the run
+finished with 3 ASVs.</p>
+<p>Retention against the R1 cut, measured on this library:</p>
+<table>
+<thead>
+<tr>
+<th>truncLen R1</th>
+<th style="text-align: right;">288</th>
+<th style="text-align: right;">281</th>
+<th style="text-align: right;">275</th>
+<th style="text-align: right;">270</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pairs retained</td>
+<td style="text-align: right;">0.0%</td>
+<td style="text-align: right;">70.3%</td>
+<td style="text-align: right;">92.4%</td>
+<td style="text-align: right;">100.0%</td>
+</tr>
+</tbody>
+</table>
+<p>Moving the R1 cut from 288 to 270 bp raises retention from 0% to 100%.</p>
+<p>With the 95% read-coverage cap the R1 ceiling comes in at 271 instead of 288, and
+<code>auto</code> returns 271 / 239 on this library with no manual intervention. It carries
+90.9% of the raw reads through to the final table, practically the same as a
+hand-picked 270 / 239.</p>
+</div>
+<p><strong>Why it can still happen with the guard on.</strong> Two cases:</p>
+<ol>
+<li><strong><code>min_read_coverage_pct</code> was lowered.</strong> The value is a guarantee about reads, so
+   a <em>lower</em> percentage permits a <em>longer</em> cut — that is the direction that reintroduces
+   this failure, and it is the first thing to check. Raising it does the opposite, and
+   <code>100</code> is not an off switch: it collapses the ceiling onto the single shortest read in
+   the file, which fails the overlap constraint instead.</li>
+<li><strong>Read lengths are ragged enough that even the 95% length is unrepresentative.</strong>
+   Heavily pre-trimmed input does this, as do markers whose amplicons genuinely vary
+   in length. <code>logs/pick_trunclen.log</code> tells you directly — it prints each sample's
+   longest read alongside the length 95% of its reads reach, and emits a <code>NOTE</code> when
+   the gap is 10 bp or more. A very large gap there means the ceiling is being set
+   from a distribution with a long tail, and a hand-picked value will beat it.</li>
+</ol>
+<p><strong>Fix — set the truncation length by hand.</strong></p>
+<ol>
+<li>Look at the read lengths <em>after</em> primer trimming: the
+   <code>QC | primer-trimmed reads | {sample}_R{1,2}</code> entries under "Sequence Length
+   Distribution" in the MultiQC report, or the per-sample Falco reports under
+   <code>stats/falco/{sample}_R{1,2}_stripped/</code>.</li>
+<li>Switch to <code>mode: manual</code> and set <code>manual_r1</code> / <code>manual_r2</code> a little below the
+   length most reads still reach, so <code>filterAndTrim</code> stops discarding them.</li>
+<li>Keep the pairs long enough to still merge:
+   <code>truncLen_R1 + truncLen_R2 ≥ amplicon_length + min_overlap</code>
+   (<code>amplicon.min_overlap</code> is 12 bp by default).</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">trunc_len</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">manual</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">manual_r1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">270</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">manual_r2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">239</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Pick the R1 and R2 cuts separately</p>
+<p>Only the read whose quality stayed flat is stuck on the ceiling. In the example
+above R2 <em>did</em> degrade, so <code>auto</code> found a quality-based cut for it at 239. Only R1
+needed a new value; R2 kept the cut that <code>auto</code> found.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Retrying is cheap</p>
+<p>Snakemake picks up where the run left off: PhiX removal, primer trimming and
+QC are already done and stay done, so only DADA2 and the steps after it run
+again. Trying a second value costs minutes, not a full re-run.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">ITS is not affected</p>
+<p>For <code>type: ITS</code>, <code>dada_filter</code> overrides <code>truncLen</code> to <code>c(0, 0)</code>
+unconditionally — ITS amplicons vary in length, so a fixed cut would throw
+away genuinely short sequences. The 3′ tail is still cleaned, by <code>truncQ</code>
+and <code>maxEE</code> instead. Because the override is unconditional, <code>manual_r1</code> /
+<code>manual_r2</code> have no effect on an ITS run either.</p>
+</div>
+<p>Background on how the cut is chosen, and on the overlap constraint, is in
+<a href="../amplicon/length-and-truncation/">Amplicon length and truncation</a>.</p>
+<h2 id="shotgun-bbduk-phix-removal-stops-on-the-read-pairs">Shotgun: BBDuk PhiX removal stops on the read pairs<a class="headerlink" href="#shotgun-bbduk-phix-removal-stops-on-the-read-pairs" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The shotgun run aborts at rule <code>decontam_phix</code> with one of these two messages:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>java.lang.AssertionError:
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>There appear to be different numbers of reads in the paired input files.
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>The pairing may have been corrupted by an upstream process.  It may be fixable by running repair.sh.
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>java.lang.AssertionError: List size mismatch: 600 vs 601
+</code></pre></div>
+<p>The first means the pairing <strong>is</strong> broken. The second does not: it comes from a
+newer bbmap than the one MetaFlux pins (see the end of this entry).</p>
+</div>
+<p><strong>Cause.</strong> BBDuk reads the R1 and R2 files in lockstep, one record from each at
+a time, and requires both files to hold the same number of records in the same
+order. Read length has nothing to do with it — ragged lengths, and mates of the
+same pair ending up different lengths, are processed normally. "There appear to be
+different numbers of reads" means R1 and R2 contain different numbers of reads,
+which usually happens when reads were filtered before deposition and orphaned mates
+were left behind in one file. SRA and BioProject submissions are the common
+case. MetaFlux's own fetch can produce it as well: rule <code>download_sra</code> calls
+<code>fasterq-dump --split-files</code>, which writes a record to <code>_1</code> only for any spot
+holding a single read (<code>--split-3</code> is the option that keeps the two files in
+step).</p>
+<p>The BBMap host-removal step (rule <code>decontam_host</code>) fails on the same input, for
+the same reason and with the same message: BBMap reads the pair in lockstep too and
+makes the same requirement. The message names the fix outright.</p>
+<p><strong>Fix — repair the pairing.</strong> <code>repair.sh</code> ships in the same <code>bbmap</code> conda
+package MetaFlux already installs for these rules, so no extra tool is needed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>repair.sh<span class="w"> </span><span class="nv">in1</span><span class="o">=</span>R1.fastq.gz<span class="w"> </span><span class="nv">in2</span><span class="o">=</span>R2.fastq.gz<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nv">out1</span><span class="o">=</span>fixed_R1.fastq.gz<span class="w"> </span><span class="nv">out2</span><span class="o">=</span>fixed_R2.fastq.gz<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nv">outs</span><span class="o">=</span>singletons.fastq.gz
+</code></pre></div>
+<p>It re-syncs the two files on read name and writes the leftover single-ended
+reads to <code>outs=</code>. Point <code>input.fastq_dir</code> at the repaired files and run again.
+Where the raw, untrimmed reads are still available they are the better starting
+point: they are properly paired, and MetaFlux trims with fastp anyway, so
+pre-trimmed input buys nothing.</p>
+<div class="admonition warning">
+<p class="admonition-title"><code>remove_phix: false</code> is not a fix here</p>
+<p>Switching PhiX removal off only moves the failure to BBMap, which stops on
+the same files. Switching host removal off as well moves it to fastp, which
+stops on unequal record counts too. Repair the files instead.</p>
+</div>
+<p><strong><code>List size mismatch</code> is a different problem.</strong> MetaFlux pins bbmap 39.52, whose
+BBDuk and BBMap never print this message. It comes from the rewritten BBDuk that
+<code>bbduk.sh</code> runs in bbmap 39.76 to 40.02: its paired-read reader loses track of
+mates and stops with this message, or hangs, on correctly paired reads, above all on
+trimmed reads whose mates differ in length. It prints the same message on broken
+pairs too, so it says nothing about the pairing, and <code>repair.sh</code> does not help. The
+first lines of <code>logs/decontam_phix/{sample}.log</code> name the version that ran
+(<code>Version 39.52</code> for the pinned one).</p>
+<p><strong>Fix — run with MetaFlux's environment.</strong> Start the run with <code>--sdm conda</code>, so that
+Snakemake installs and uses the pinned environment (<code>workflow/envs/bbtools.yaml</code>),
+and keep the pin if you edit that file. MetaFlux before v2.5.0 did not pin bbmap, so
+its environment could get one of these releases.</p>
+<p>More on host references and masking is in
+<a href="../shotgun/decontamination/">Decontamination</a>.</p>
+<h2 id="shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s">Shotgun: empty or nearly empty OTU table with <code>tax_lev</code> other than <code>S</code><a class="headerlink" href="#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p><code>shotgun.bracken.tax_lev</code> is set to <code>G</code>, or to any rank other than <code>S</code>. The run
+finishes without an error, but <code>03.abundance/otu_table.tsv</code> has no rows, or only a
+handful, while Bracken's own <code>{sample}_output.txt</code> files list plenty of taxa.</p>
+</div>
+<p><strong>Cause.</strong> Fixed in v2.5.0. Up to v2.4.0, rule <code>kraken_biom</code> ran kraken-biom with its
+default settings, which assume a species-level report: it takes the clade count for
+species, and from genus up to order only the reads placed directly on the taxon.
+Plain Bracken 3.1 writes 0 in that column for almost every taxon above species (a bug
+in Bracken itself, fixed in the 3.1p1 build that MetaFlux pins from v2.5.0 on), so
+those taxa dropped out. A genus survived only when Kraken2 had placed no reads on any
+of its species, and at class, phylum or domain level, which lie outside that range,
+nothing survived at all. Bracken's <code>{sample}_output.txt</code> files were never affected, and
+neither were species-level runs.</p>
+<p><strong>Fix.</strong> Update to v2.5.0 and run the same command again, from the same MetaFlux
+folder. v2.5.0 builds the table with rule <code>finalize_otu_table</code> straight from the Bracken
+reports, from their clade counts, and pins Bracken 3.1p1. In a folder made with an
+earlier version every step runs again, Kraken2 included, because the output folders
+have new names (see
+<a href="../reference/running/#what-happens-on-a-re-run">What happens on a re-run</a>), so nothing
+has to be forced.</p>
+<p>A config with <code>tax_lev: D</code> stops at start-up from v2.5.0 on; see the next entry.</p>
+<h2 id="shotgun-the-run-refuses-tax_lev-d-or-k">Shotgun: the run refuses <code>tax_lev: D</code> or <code>K</code><a class="headerlink" href="#shotgun-the-run-refuses-tax_lev-d-or-k" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>A run with Kraken2 (<code>profiler: kraken2</code> or <code>both</code>) stops before any step starts,
+with one of these messages (wrapped here):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[MetaFlux] shotgun.bracken.tax_lev: D is not allowed. Viruses have no domain in
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>NCBI's taxonomy (since 2025), and at this rank Bracken adds their reads, with a
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>share of the reads left at the root, to the domain the Kraken2 report lists last
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>(usually Archaea). Use P or a lower rank. To compare domains, add up the rows of
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>otu_table.tsv by their d__ slot; that sum counts the reads Bracken placed at the
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>table's rank, not every read of the domain.
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>[MetaFlux] shotgun.bracken.tax_lev: K is not allowed. Most protists have no
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kingdom, and a GTDB database has no kingdom rank at all. At this rank Bracken adds
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>the reads of a taxon without a kingdom to the kingdom the Kraken2 report lists just
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>before it, and on a GTDB database it stops after Kraken2. Use P or a lower rank;
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>the k__ slot of otu_table.tsv gives the kingdom of each row.
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> Bracken reads a Kraken2 report from top to bottom and adds the reads of
+every row below the target rank to the last row of that rank it has read. For a taxon
+that has the target rank, that last row is the taxon's own ancestor, because the report
+lists every branch right after its parent. A taxon without the rank is counted towards
+whichever row of that rank comes before it. At domain and kingdom level whole groups of
+taxa lack the rank:</p>
+<ul>
+<li><strong>Domain.</strong> Viruses have no domain in NCBI's taxonomy since 2025, and their branch
+  comes after all cellular organisms. Their reads, and the share of the root's reads
+  that Bracken attributes to them, go to the domain listed last. Kraken2 lists sister
+  rows by read count, largest first, so this is the domain with the fewest reads,
+  usually Archaea. In a saltmarsh rhizosphere sample (SRR6394731, BioProject
+  PRJNA422917) classified with the Kraken2 index <code>k2_NCBI_reference_20251007</code>, Archaea
+  had 2,612 reads at phylum level and 35,636 at domain level, from only 71 viral reads
+  and the root reads attributed to them.</li>
+<li><strong>Kingdom.</strong> Most protists have no kingdom in NCBI's taxonomy, and GTDB has no
+  kingdom rank at all. The protists' reads go to the kingdom listed just before them:
+  in the same rhizosphere sample, Fungi had 7,957 reads in its phyla but 12,001 at kingdom
+  level. On a GTDB database Bracken finds no kingdom and stops with "no reads found",
+  after Kraken2 has run.</li>
+</ul>
+<p><strong>Fix.</strong> Set <code>tax_lev</code> to <code>S</code>, the default. It is the only rank where this cannot
+happen, because every row below a species row is a strain of that species. At <code>P</code> to
+<code>G</code> it hits only the few taxa that lack that rank, but one row can still gain several
+times its own reads: in the rhizosphere sample, protists without a phylum took
+Oomycota from 56 to 1,095 reads at <code>P</code>, and bacteria without an order took Nevskiales
+from 1,393 to 6,237 at <code>O</code>. At these ranks, compare a surprising row with the
+species-level table.</p>
+<p>Domain and kingdom totals can be read from any of these tables: add up the rows of
+<code>otu_table.tsv</code> by their <code>d__</code> or <code>k__</code> slot. That sum counts the reads Bracken placed
+at the table's rank, not every read of the domain or kingdom: reads that Kraken2 left
+above that rank, and that Bracken could not push down, are in no row (see
+<a href="../shotgun/overview/#6-bracken-abundance-re-estimation">Bracken abundance re-estimation</a>).
+With <code>profiler: sylph</code> Bracken does not run, and <code>tax_lev</code> is not checked.</p>
+<h2 id="shotgun-the-table-step-stops-on-a-report-code">Shotgun: the table step stops on a report code<a class="headerlink" href="#shotgun-the-table-step-stops-on-a-report-code" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The run stops at rule <code>finalize_otu_table</code> with a message like this one (wrapped
+here):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[finalize_otu_table] SRR123_report.txt: Eukaryota (taxid 2759) is a domain in the
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Kraken2 database set as references.kraken_db, but the report codes it R2, not D.
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Kraken2 releases before 2.17 write reports like this (they do not know the rank name
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>'domain'), and so do reports made with another database. Run Kraken2 again on
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>references.kraken_db with the release MetaFlux pins (workflow/envs/kraken2.yaml), for
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>example with -R kraken2.
+</code></pre></div>
+<p>Its relatives say that a taxon "is coded D, but it is not a domain", that a kingdom is
+not coded <code>K</code> (or a <code>K</code> row is not a kingdom), or that one taxon "has two lineages".
+No table is written.</p>
+</div>
+<p><strong>Cause.</strong> The OTU table takes its domain and kingdom slots from the rank codes of the
+Bracken reports, and MetaFlux checks every <code>D</code> and <code>K</code> code against the taxonomy of the
+database named in <code>references.kraken_db</code>, its <code>taxo.k2d</code> file. The two disagree when the
+Kraken2 reports were written by a Kraken2 older than 2.17, which codes NCBI's domains
+<code>R1</code> or <code>R2</code> (a run started without <code>--sdm conda</code> uses whatever Kraken2 is on the
+<code>PATH</code>), or when they were made with another database than the one the config names
+now. Reports of two databases can also give one taxon two lineages. A table built from
+such reports would have an empty <code>d__</code> slot in every row, or slots filled from another
+taxonomy, with no other sign that anything is wrong.</p>
+<p><strong>Fix.</strong> Run Kraken2 again with MetaFlux's pinned environment (<code>--sdm conda</code>), against
+the database the config names; <code>-R kraken2</code> forces it when Snakemake sees nothing to
+redo. If instead the reports are right and the config names the wrong database, point
+<code>references.kraken_db</code> back at the database they were made with.</p>
+<h2 id="start-up-the-run-refuses-a-keepdiscard-token">Start-up: the run refuses a keep/discard token<a class="headerlink" href="#start-up-the-run-refuses-a-keepdiscard-token" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The run stops before any step starts, with a message like this one (an amplicon
+run; in a shotgun run the message names <code>shotgun.taxonomy_filter</code> and the Kraken2
+database):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[MetaFlux] these amplicon.taxonomy.filter tokens can never match a taxonomy string of this run (16S, method sintax, release 144), so the run stops before any step:
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  - amplicon.taxonomy.filter.keep: 'k__Bacteria' puts a domain under k__, which holds kingdoms in this table. Bacteria is a domain: write d__Bacteria.
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  - amplicon.taxonomy.filter.keep: 'k__Archaea' puts a domain under k__, which holds kingdoms in this table. Archaea is a domain: write d__Archaea.
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>A token must equal one whole slot of the taxonomy string, prefix included. Since v2.5.0 the domain is always written d__, and k__ is the kingdom where the reference has one.
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> The taxon filter compares each token with whole slots of the taxonomy
+strings, so a token that no string of the run can contain would remove every ASV or
+taxon in <code>keep</code>, or nothing in <code>discard</code>, and the run would only find out at its end.
+MetaFlux therefore checks the tokens when it starts, also with the filter switched off.
+The usual cause is a config written for MetaFlux v2.4.0 or earlier, which wrote the
+domain under <code>k__</code> (<code>k__Bacteria</code>); since v2.5.0 <code>d__</code> is always the domain and <code>k__</code>
+always the kingdom. The message names the other causes too: a prefix the marker, method
+or SILVA release never writes (<code>k__</code> on SILVA 138.2 or rpoB, <code>d__</code> on ITS, <code>s__</code> on 16S
+under <code>sintax</code>), a name that cannot stand in that slot of the reference (<code>k__Fungi</code> on
+16S), and in a shotgun run <code>Viruses</code>, or a virus realm under <code>k__</code>.</p>
+<p><strong>Fix.</strong> Write the token the message names (<code>d__Bacteria</code> for <code>k__Bacteria</code>) and run the
+same command again; nothing has run yet, so nothing is lost. The rules, and what the
+check cannot see, are under
+<a href="../amplicon/taxon-filter/#when-metaflux-refuses-a-token-at-start-up">when MetaFlux refuses a token at start-up</a>.</p>
+<h2 id="shotgun-the-taxon-filter-removed-every-taxon">Shotgun: the taxon filter removed every taxon<a class="headerlink" href="#shotgun-the-taxon-filter-removed-every-taxon" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The run stops at rule <code>finalize_otu_table</code> with a message like this one (wrapped
+here; the numbers depend on the run):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>[finalize_otu_table] shotgun.taxonomy_filter removed every taxon of the table
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>(111 taxa; keep: [p__Firmicutes], discard: []). The d__ values in this table are:
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>d__Archaea (1 taxon), d__Bacteria (107 taxa), d__Eukaryota (3 taxa). A token must
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>equal one whole slot of the lineage, prefix included (d__ k__ p__ c__ o__ f__ g__
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>s__). Check the tokens, or set shotgun.taxonomy_filter.enabled: false.
+</code></pre></div>
+<p>No <code>otu_table.tsv</code> or <code>otu_table.biom</code> is written.</p>
+</div>
+<p><strong>Cause.</strong> <code>shotgun.taxonomy_filter</code> compares each token with whole slots of the
+lineage, so a token with a name the table does not have matches nothing. A <code>keep</code> list
+in which no token matches removes every row, and so does a <code>discard</code> list that covers
+every row. An empty table would look like a finished run, so MetaFlux stops instead, as
+the amplicon filter does. Tokens that can never match any table (a wrong prefix, a
+domain under <code>k__</code>) stop the run at start-up already (see
+<a href="#start-up-the-run-refuses-a-keepdiscard-token">the entry above</a>), but names below the
+kingdom are not checked there, so a misspelt name, or one the database does not use,
+gets this far: NCBI's taxonomy names the phylum <code>p__Bacillota</code>, not <code>p__Firmicutes</code>.</p>
+<p><strong>Fix.</strong> Compare the tokens with the <code>d__</code> values the message lists, or with the
+<code>taxonomy</code> column of a run made with <code>shotgun.taxonomy_filter.enabled: false</code>, correct
+them and run the same command again. Kraken2 and Bracken do not run again; the table is
+built again from the Bracken reports already in <code>03.abundance/</code>. To keep every taxon,
+switch the filter off.</p>
+<h2 id="amplicon-asv-counts-or-taxonomy-calls-differ-between-identical-re-runs">Amplicon: ASV counts or taxonomy calls differ between identical re-runs<a class="headerlink" href="#amplicon-asv-counts-or-taxonomy-calls-differ-between-identical-re-runs" title="Permanent link">&para;</a></h2>
+<p>Three steps in the amplicon path draw on a random-number generator, so two runs
+on the exact same input can differ slightly:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Rule</th>
+<th>What the random draw is for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DADA2 <code>learnErrors(randomize = TRUE)</code></td>
+<td><code>dada_seqtab</code></td>
+<td>Subsamples reads to build the error model</td>
+</tr>
+<tr>
+<td>DADA2 <code>assignTaxonomy</code> (<code>method: rdp</code>)</td>
+<td><code>assign_taxonomy</code></td>
+<td>Bootstrap confidence</td>
+</tr>
+<tr>
+<td>VSEARCH <code>--sintax</code> (<code>method: sintax</code>)</td>
+<td><code>assign_taxonomy</code></td>
+<td>Bootstrap confidence, seeded from a random source by default</td>
+</tr>
+</tbody>
+</table>
+<p>Without a fixed seed each of these draws a different sample every run, so a
+handful of ASVs or taxonomy calls sitting near a decision threshold can flip
+between two runs. This is expected DADA2/VSEARCH behaviour — not a bug, and not
+corrupted data.</p>
+<p>Before v2.4.0 the order of the reads also differed between runs, and the seed had no
+effect on it: bowtie2 removed phiX on several threads and wrote the surviving pairs in
+whatever order they finished, so every run
+handed DADA2 the same reads in a different sequence (pairing was never broken, and
+cutadapt and <code>filterAndTrim</code> only drop reads, they never reorder). DADA2 numbers ASVs by
+decreasing abundance and keeps the input order for ties, so two ASVs with exactly the
+same total count could swap IDs between runs. <strong>Fixed in v2.4.0</strong>: bowtie2 now runs with
+<code>--reorder</code>, so every run hands DADA2 the reads in the same order and gets the same ASV
+sequences and counts back. If you are reading output from an earlier version, compare
+runs by sequence rather than by ASV ID. See
+<a href="../amplicon/phylogeny/#reproducibility">Reproducibility</a> for what this meant for the
+optional phylogeny stage, which is sensitive to the order of the alignment rows.</p>
+<p><code>amplicon.seed</code> (42 by default) fixes the generator for all three, and the thread count
+then no longer changes the result:</p>
+<ul>
+<li><strong><code>learnErrors</code>: reproducible at any thread count.</strong></li>
+<li><strong><code>--sintax</code>: reproducible at any thread count, from v2.5.0 on.</strong> MetaFlux v2.5.0 runs
+  VSEARCH 2.32, which gives every ASV its own random stream. Older VSEARCH releases
+  shared one stream between all threads, so up to v2.4.0 the <code>sintax</code> results were
+  identical only on one thread (<code>resources.threads.assign_taxonomy: 1</code>). A new VSEARCH
+  release can also draw differently, as 2.32 did, so compared with a run made with an
+  older MetaFlux version many confidence values move slightly, and a lineage near the
+  cutoff can gain or lose a trailing rank, even with the same seed. The raw
+  <code>_sintax_raw.tsv</code> lists the ASVs in the order the threads finish them, so sort it
+  before comparing two runs; the tables built from it do not depend on that order.
+  All of this needs a positive <code>amplicon.seed</code>: VSEARCH reads <code>0</code> as "pick a random
+  seed".</li>
+<li><strong><code>assignTaxonomy</code> (rdp): reproducible at any thread count, with one exception.</strong>
+  DADA2's <code>assignTaxonomy</code> breaks exact ties between equally good reference lineages at
+  random, outside the seed, so a few bootstrap values can differ between identical runs;
+  <code>sintax</code>, the default, is not affected. Now and then such a tie flips an ASV's whole
+  lineage between two identical runs, even its kingdom: on the ITS test set
+  (<a href="../about/test-datasets/">PRJNA862334</a>), ASV_16 had an orchid as best hit in 8 of 11
+  identical runs and <em>Saccharomyces</em> in the other 3. Its kingdom support reached
+  <code>min_boot: 80</code> in only one of those three, so <code>keep: [k__Fungi]</code> kept the ASV in 1 run
+  and removed it in the other 10.</li>
+</ul>
+<h2 id="amplicon-an-outdated-marker-pack-in-configmarkers-stops-the-run">Amplicon: an outdated marker pack in <code>config/markers/</code> stops the run<a class="headerlink" href="#amplicon-an-outdated-marker-pack-in-configmarkers-stops-the-run" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>Every amplicon run stops before any step starts, whichever marker it uses, with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>[MetaFlux] config/markers/18S.yaml was written for an older MetaFlux: it has no reference_values. A pack in config/markers/ replaces the shipped one completely, so copy workflow/markers/18S.yaml again and re-apply your change.
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> A pack in <code>config/markers/</code> replaces the shipped pack of the same name
+completely, so an old copy would bring back everything the shipped pack has changed
+since: an 18S pack from MetaFlux v2.4.0 would classify against PR2's own letter order,
+which hides the domain of many ASVs. Since v2.5.0 every pack declares
+<code>reference_values</code>, the rules its reference file is checked against before
+classification, so a pack without them was written for an older MetaFlux. Every pack in
+<code>config/markers/</code> is checked on every amplicon run, which is why an outdated 18S pack
+stops a 16S run too. A pack for a marker of your own without <code>reference_values</code> gets a
+message of its own, which says what to add.</p>
+<p><strong>Fix.</strong> Copy the shipped pack (<code>workflow/markers/&lt;marker&gt;.yaml</code>) to <code>config/markers/</code>
+again and re-apply your change, or delete the copy if the shipped pack now does what
+you need. For a marker of your own, add <code>reference_values</code> with rules for its top
+ranks, or <code>reference_values: {}</code> to have only the rank shape checked (see
+<a href="../amplicon/markers/#the-reference-check-reference_values">the reference check</a>).
+An 18S pack that does declare <code>reference_values</code> but keeps PR2's original SINTAX
+letters (<code>k, d, p, …</code>) stops under <code>method: sintax</code> with a message about VSEARCH's
+fixed letter order; the fix is the same.</p>
+<h2 id="amplicon-the-reference-check-stops-the-run">Amplicon: the reference check stops the run<a class="headerlink" href="#amplicon-the-reference-check-stops-the-run" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>The run stops at rule <code>check_taxonomy_reference</code>, before any classification, with
+a message like this one (shortened):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>[check_taxonomy_reference] /shared/dbs/silva_nr99_v144_toGenus_7rank_other-verbatim_trainset.fa.gz does not hold the ranks declared by the 16S marker pack, release 138.2, method rdp (Domain, Phylum, Class, Order, Family, Genus, Species):
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  - a lineage deeper than the 6 ranks the rank model expects in this file (the Species rank comes from addSpecies): 473,550 header(s)
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>      e.g. &gt;Bacteria;Pseudomonadati;Pseudomonadota;Gammaproteobacteria;Pseudomonadales;Pseudomonadaceae;Pseudomonas;
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  - the deepest lineage has 7 ranks, but the rank model expects 6 in this file (the Species rank comes from addSpecies)
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  The classifier would put names on the wrong ranks, so the run stops before any classification. Either the run config points at a wrong file (references:, and for 16S the SILVA release chosen with references.silva.release), or the reference changed upstream and its marker pack needs a new release block (see the reference_values notes in workflow/markers/16S.yaml).
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> A classifier never checks what a rank means: if a reference has one rank more
+or less than the marker pack expects, or two ranks swapped, every name lands in the
+wrong column and nothing errors. So before any classification MetaFlux checks the exact
+file the classifier is about to read against the rank set and the names its pack
+declares (see
+<a href="../amplicon/markers/#the-reference-check-reference_values">the reference check</a>).
+The message names the file, what does not fit, and example headers. Almost always a path
+under <code>references:</code> points at the wrong file: in the example, a SILVA 144 training set
+(seven ranks, with the kingdom) pinned as <code>silva.train</code> for a run on SILVA 138.2 (six
+ranks). Less often the reference itself has changed upstream.</p>
+<p><strong>Fix.</strong> Point the <code>references:</code> entry at the file that belongs to the run's marker and
+SILVA release, or remove it, so that MetaFlux uses, and if needed builds, its own (see
+<a href="../reference/configuration/#reference-files-metaflux-builds-itself">reference files MetaFlux builds itself</a>).
+For 16S, keep <code>references.silva.release</code> and the pinned SILVA files together. If the
+reference itself has changed (a new release with another rank), the marker pack needs a
+new release block. <code>logs/refdb/check_taxonomy_reference.log</code> in the output directory
+lists every problem the check found.</p>
+<h2 id="amplicon-a-reference-download-stops-with-md5-mismatch">Amplicon: a reference download stops with "md5 mismatch"<a class="headerlink" href="#amplicon-a-reference-download-stops-with-md5-mismatch" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Symptom</p>
+<p>A <code>fetch_*</code> rule fails, and its log (<code>logs/refdb/fetch_&lt;name&gt;.log</code> in the output
+directory) ends with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>md5 mismatch for &lt;file&gt;: expected …, got …
+</code></pre></div>
+</div>
+<p><strong>Cause.</strong> The downloaded file is not the one the marker pack expects: the download was
+cut off, a proxy returned an error page, or the file behind the address has changed.
+MetaFlux deletes the file, so it is never used.</p>
+<p><strong>Fix.</strong> Run the same command again; a broken download usually works the second time.
+If the same checksum comes back every time, the file on the server has changed. Report
+it as an <a href="https://github.com/iLivius/MetaFlux/issues">issue on GitHub</a> rather than
+editing the md5 in the marker pack.</p>
+<h2 id="config-yaml-errors">Config (YAML) errors<a class="headerlink" href="#config-yaml-errors" title="Permanent link">&para;</a></h2>
+<p>Snakemake reports any config problem with one generic message
+(<em>"Config file is not valid JSON or YAML…"</em>). That almost always means a YAML
+indentation or list-syntax issue, or a stray tab — not a problem with the
+parameter values themselves. Validate the file directly to get the exact line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import yaml; yaml.safe_load(open('config/config.yaml'))"</span>
+</code></pre></div>
+<p>A <em>"expected block end, but found block sequence start"</em> message points to a
+misplaced or over-indented <code>-</code> list item — commonly in <code>host_genomes</code>.</p>
+<p>The full key-by-key reference is in <a href="../reference/configuration/">Configuration</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

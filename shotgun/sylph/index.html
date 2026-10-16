@@ -1,0 +1,2169 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../databases/">
+      
+      
+        <link rel="next" href="../decontamination/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>sylph (alternative profiler) - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sylph-the-alternative-profiler" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              sylph (alternative profiler)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-sylph-does-differently" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What sylph does differently
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-it-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching it on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#databases-and-lineage-tables-set-up-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Databases and lineage tables, set up once
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you get
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reading the numbers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-placeholder-genus-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The placeholder-genus flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-that-do-not-apply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings that do not apply
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-sylph-does-differently" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What sylph does differently
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-it-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching it on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#databases-and-lineage-tables-set-up-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Databases and lineage tables, set up once
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you get
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reading the numbers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-placeholder-genus-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The placeholder-genus flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-that-do-not-apply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings that do not apply
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/shotgun/sylph.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="sylph-the-alternative-profiler">sylph, the alternative profiler<a class="headerlink" href="#sylph-the-alternative-profiler" title="Permanent link">&para;</a></h1>
+<p><a href="https://github.com/bluenote-1577/sylph">sylph</a> is a second way to turn the cleaned
+shotgun reads into a taxon table. It runs instead of Kraken2 + Bracken, or next to them,
+when <code>shotgun.profiler</code> asks for it. The cleaning in front (PhiX removal, host removal,
+fastp) is the same whichever profiler runs.</p>
+<div class="admonition note">
+<p class="admonition-title">Kraken2 + Bracken stays the default</p>
+<p>sylph is available from v2.5.0 and is used only when <code>shotgun.profiler</code> is set to
+<code>sylph</code> or <code>both</code>. With the default, <code>kraken2</code>, nothing on this page applies.</p>
+</div>
+<h2 id="what-sylph-does-differently">What sylph does differently<a class="headerlink" href="#what-sylph-does-differently" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>It compares sketches, not reads.</strong> sylph reduces each sample to a sketch, a fixed
+  subset of about one in 200 of its 31-bp k-mers, and compares it with sketches of whole
+  reference genomes.</li>
+<li><strong>It reports genomes, at about species level.</strong> A genome is reported when the sample
+  holds something at 95 % average nucleotide identity (ANI) or more to it, roughly the
+  species boundary. Each row of the table is one reference genome.</li>
+<li><strong>Abundance comes from coverage.</strong> From how many of a genome's k-mers turn up, and how
+  often, sylph estimates how deeply the genome is covered. Multiplying that coverage by
+  the genome's length gives the amount of sequence the genome contributed to the
+  sample, and from that its share of the reads.</li>
+<li><strong>No read gets a label.</strong> sylph writes no per-read output, so
+  <a href="../read-extraction/">read extraction</a>, which picks reads by the taxon Kraken2 gave each
+  one, has nothing to work from. The <a href="../kmer-evidence/">k-mer evidence gate</a> needs
+  Kraken2 too: it filters the Kraken2 report before Bracken, and under <code>sylph</code> neither
+  runs.</li>
+<li><strong>Same reads as Kraken2.</strong> sylph sketches exactly the trimmed read pairs Kraken2 would
+  classify. With <code>profiler: both</code> the two tables come from identical input; they are
+  written side by side and never merged.</li>
+</ul>
+<h2 id="switching-it-on">Switching it on<a class="headerlink" href="#switching-it-on" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">shotgun</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">profiler</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sylph</span><span class="w">              </span><span class="c1"># kraken2 (default) | sylph | both</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">references</span><span class="p">:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">sylph_databases</span><span class="p">:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/db/sylph/gtdb-r232-c200-dbv1.syldb</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">taxonomy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GTDB_r232</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/db/sylph/fungi-refseq-2025-10-11-c200-dbv1.syldb</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">taxonomy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">FungiRefSeq-latest</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">sylph_taxonomy_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/db/sylph_taxonomy</span>
+</code></pre></div>
+<p>With <code>sylph</code>, the Kraken2 database is not needed and <code>references.kraken_db</code> can keep its
+placeholder. With <code>both</code>, Kraken2 + Bracken and sylph run on the same reads in one run,
+and fastp still runs once per sample.</p>
+<p>All databases are profiled in one sylph run, so within a sample an organism present in
+two of them is reported once, by its closer genome.</p>
+<p>Everything in the block above is checked before the first job starts: the file names, a
+taxonomy for every database and the lineage table behind each. When a database file name
+shows its release (<code>gtdb-r232-c200-dbv1.syldb</code>, or a copy renamed <code>gtdb_r232_c200.syldb</code>),
+MetaFlux also checks that the taxonomy comes from the same release. That covers a
+built-in name and a lineage table given by its path under a built-in table's file name
+(<code>gtdb_r226_metadata.tsv.gz</code>, say); a table of your own under another name cannot be
+matched to a release at this point. After profiling, MetaFlux checks the GTDB release once
+more, from the genome paths in sylph's output, whatever the files are called. A mistake
+stops the run with a message that says what to change.</p>
+<h2 id="databases-and-lineage-tables-set-up-once">Databases and lineage tables, set up once<a class="headerlink" href="#databases-and-lineage-tables-set-up-once" title="Permanent link">&para;</a></h2>
+<p>MetaFlux does not download sylph databases, just as it does not download a Kraken2
+index. The pre-built ones are listed on sylph's
+<a href="https://sylph-docs.github.io/pre%E2%80%90built-databases/">Pre-built databases</a> page.</p>
+<ul>
+<li><strong>Sketch density.</strong> MetaFlux sketches the reads at c 200, and a database must be built
+  at the same density or a coarser one. c 200 builds find low-coverage genomes best; c 1000
+  builds need about a fifth of the memory. A c 100 build would make sylph skip every
+  sample, so MetaFlux stops on it.</li>
+<li><strong>File types.</strong> Both <code>.syldb</code> and the two-stage <code>.syl2db</code> files work.</li>
+<li><strong>One database per family.</strong> Two GTDB releases, or the c 200 and c 1000 builds of one
+  release, share genomes and names, and listing both stops the run.</li>
+<li><strong>GTDB or GlobDB, not both.</strong> GlobDB already holds every genome of the GTDB database,
+  with the same lineage, under its accession without the version suffix
+  (<code>GCF_003096595</code> for GTDB's <code>GCF_003096595.1</code>), and adds genomes from MAG catalogues.
+  Listed together, each GTDB genome would be loaded twice. sylph would report it from one
+  copy or the other, and which one can change from sample to sample, so one genome could
+  end up on two rows, each with zeros where the other copy was reported: genome-level
+  counts, prevalence and diversity would be wrong. The pair would also need more memory
+  without adding a species, about 26 GB more with GTDB r232 at c 200. MetaFlux therefore
+  stops before the first job when both are listed, whether their taxonomies are given by
+  name or by path. List GlobDB alone (it covers GTDB) or GTDB alone; a fungal database
+  such as FungiRefSeq can go next to either.</li>
+<li><strong>No viral databases.</strong> IMG/VR and UHGV use viral ranks that do not fit the table
+  and are refused.</li>
+</ul>
+<p>Each database is paired with the sylph-tax taxonomy that names its genomes:</p>
+<table>
+<thead>
+<tr>
+<th>Database file</th>
+<th><code>taxonomy:</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gtdb-r232-c200-dbv1.syldb</code> or <code>gtdb-r232-c1000-dbv1.syldb</code></td>
+<td><code>GTDB_r232</code></td>
+</tr>
+<tr>
+<td><code>gtdb-r226-c200-dbv1.syldb</code> or <code>gtdb-r226-c1000-dbv1.syldb</code></td>
+<td><code>GTDB_r226</code></td>
+</tr>
+<tr>
+<td><code>globdb_r232_sylph_c200.syldb</code></td>
+<td><code>GlobDB_r232</code></td>
+</tr>
+<tr>
+<td><code>fungi-refseq-2025-10-11-c200-dbv1.syldb</code></td>
+<td><code>FungiRefSeq-latest</code></td>
+</tr>
+<tr>
+<td>a database you built</td>
+<td>the path of your own <code>accession&lt;TAB&gt;lineage</code> table (<code>.tsv</code> or <code>.tsv.gz</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>For the GlobDB file, sylph's Pre-built databases page sends you to the GlobDB website:
+<code>globdb_r232_sylph_c200.syldb</code> is on GlobDB's own download server, in the release's
+<code>taxonomic_profiling/</code> folder, next to GlobDB's copy of the lineage table.</p>
+<p>The built-in taxonomies read their lineage tables from <code>references.sylph_taxonomy_dir</code>.
+Fill that folder once, with the sylph-tax version MetaFlux pins in
+<code>workflow/envs/sylph.yaml</code> (sylph 1.0.0, sylph-tax 1.9.2):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>metaflux-sylph<span class="w"> </span>-f<span class="w"> </span>workflow/envs/sylph.yaml
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>conda<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>metaflux-sylph<span class="w"> </span>sylph-tax<span class="w"> </span>--no-config<span class="w"> </span>--taxonomy-dir<span class="w"> </span>/db/sylph_taxonomy<span class="w"> </span>download
+</code></pre></div>
+<p>This fetches every table sylph-tax knows, about 80 MB, from Zenodo and, for GlobDB r232,
+from the GlobDB server. One failed download stops the whole command. The tables can also
+be fetched one at a time, for example the two used above:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>wget<span class="w"> </span>-P<span class="w"> </span>/db/sylph_taxonomy<span class="w"> </span>https://zenodo.org/records/19646381/files/gtdb_r232_metadata.tsv.gz
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>wget<span class="w"> </span>-P<span class="w"> </span>/db/sylph_taxonomy<span class="w"> </span>https://zenodo.org/records/17330476/files/fungi_refseq_2025-10-11_metadata.tsv.gz
+</code></pre></div>
+<p>MetaFlux always calls sylph-tax with <code>--no-config --taxonomy-dir</code>, so nothing is read
+from or written to <code>~/.config/sylph-tax</code>.</p>
+<h2 id="what-you-get">What you get<a class="headerlink" href="#what-you-get" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>03.abundance/sylph_table.tsv</code></td>
+<td>the main table: estimated read pairs per genome and sample, and a last row <code>unassigned</code></td>
+</tr>
+<tr>
+<td><code>03.abundance/sylph_table.biom</code></td>
+<td>the same table in BIOM (HDF5) format</td>
+</tr>
+<tr>
+<td><code>03.abundance/sylph_table.genome_copies.tsv</code></td>
+<td>each genome's share of genome copies (%) among the detected genomes; same rows, no <code>unassigned</code></td>
+</tr>
+<tr>
+<td><code>03.abundance/sylph_genomes.tsv</code></td>
+<td>one row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI</td>
+</tr>
+<tr>
+<td><code>03.abundance/sylph_profile.tsv</code></td>
+<td>sylph's own output, unchanged: one row per sample and genome</td>
+</tr>
+<tr>
+<td><code>stats/sylph/sylph_summary.tsv</code></td>
+<td>one row per sample: read pairs after QC, how much of them the detected genomes explain, genomes found, flagged genomes</td>
+</tr>
+</tbody>
+</table>
+<p><code>stats/read_tracking.txt</code> is written as in every shotgun run; under <code>profiler: sylph</code> it
+has no Kraken2 columns and ends with <code>trimmed</code>. The MultiQC report gets a table section
+for sylph. <code>02.classification/sylph/</code> keeps the sketches, so a later run in the same
+folder with other databases does not sketch again.</p>
+<p>In <code>sylph_table.tsv</code>, line 1 is a comment that says what the numbers are and which
+databases they come from, and line 2 is the header, with <code>#OTU ID</code>, the samples and
+<code>taxonomy</code>. Each row ID is a genome accession, and the lineage has seven slots, the GTDB
+ranks from domain to species:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>#OTU ID sampleA sampleB taxonomy
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>GCF_000146045.2_R64 1520    0   d__Eukaryota;p__Ascomycota;c__Saccharomycetes;o__Saccharomycetales;f__Saccharomycetaceae;g__Saccharomyces;s__Saccharomyces cerevisiae
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>unassigned  0   98211   d__Unassigned;p__;c__;o__;f__;g__;s__
+</code></pre></div>
+<p>The first slot always holds the domain and is always written <code>d__</code>: <code>d__Bacteria</code>,
+<code>d__Archaea</code> or <code>d__Eukaryota</code>, and <code>d__Unassigned</code> on the <code>unassigned</code> row. GTDB has no
+kingdom rank, so there is no <code>k__</code> slot. The FungiRefSeq-latest lineage table writes its
+domain as <code>k__Eukaryota</code>, and the TaraEukaryoticSMAG table spells it <code>Eukarya</code> in some
+rows; MetaFlux writes both as <code>d__Eukaryota</code>, so every row uses the same seven prefixes.
+A lineage whose first rank is not a domain stops the run with a message that names the
+lineage table. The lineage of the Kraken2 table is described on the
+<a href="../../reference/output/#taxonomy-strings-in-the-final-tables">output files</a> page.</p>
+<p>With <code>profiler: both</code> the two tables do not line up column by column. <code>otu_table.tsv</code>
+has eight slots on any Kraken2 database, <code>d__ k__ p__ c__ o__ f__ g__ s__</code>, and this
+table seven, without <code>k__</code>; and the two databases can name the same organism
+differently. <em>Methanobrevibacter smithii</em> in the D6331 run SRR38976715 (BioProject
+PRJNA1474435; see <a href="../../about/test-datasets/#benchmark-data">Benchmark data</a>), as Kraken2
+names it with PlusPF <code>k2_pluspf_20260626</code> (above) and as sylph names it with GTDB r232
+(below):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>d__Archaea;k__Methanobacteriati;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanobrevibacter;s__Methanobrevibacter smithii
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>d__Archaea;p__Methanobacteriota;c__Methanobacteria;o__Methanobacteriales;f__Methanobacteriaceae;g__Methanocatella;s__Methanocatella smithii
+</code></pre></div>
+<p>No MetaFlux step joins the two tables. Compare them by rank name, not by column
+position.</p>
+<h2 id="reading-the-numbers">Reading the numbers<a class="headerlink" href="#reading-the-numbers" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Estimated read pairs, not counted ones.</strong> A value in <code>sylph_table.tsv</code> is sylph's
+  <code>Sequence_abundance</code>, the share of the sample's reads that genome explains, estimated
+  from its coverage, times the sample's read pairs after QC, rounded to a whole pair. No
+  read was assigned to the genome. Each column adds up to the <code>trimmed</code> count of
+  <code>stats/read_tracking.txt</code>, except by a few pairs per million in a sample sylph explains
+  to 100 % (<code>explained_capped: yes</code>). There the rounded genome rows can add up to
+  slightly more than <code>trimmed</code> (<code>unassigned</code> is then 0, and <code>logs/sylph_tables.log</code> says
+  so), or leave a few pairs over in <code>unassigned</code>.</li>
+<li><strong><code>unassigned</code> is a model estimate as well.</strong> MetaFlux runs <code>sylph profile -u</code>, which
+  estimates how much of each sample the detected genomes do not explain; that remainder
+  is the <code>unassigned</code> row. It depends on the database, since a fuller database explains
+  more. <code>unassigned</code> cannot be compared with Kraken2's unclassified read pairs. Leave the
+  row out before computing relative abundances of the detected genomes.</li>
+<li><strong>Read accuracy.</strong> The estimates also depend on sylph's estimate of read accuracy.
+  When the sample's genomes are covered too thinly for that estimate (common in shallow
+  samples, and in very diverse ones even when deeply sequenced: it happened in all ten
+  simulated CAMI II marine samples), sylph assumes 99.5 % instead; <code>read_accuracy</code> in the summary then reads
+  <code>fixed 99.5% (high diversity for the depth)</code>, after sylph's own words for this case
+  (high diversity compared to sequencing depth). That assumption moves every genome row
+  of the sample by one common factor, and the <code>unassigned</code> row with them; which genomes
+  are found, and their genome copies, do not change. On the four metagenomes of
+  BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
+  <a href="../../about/test-datasets/#shotgun-test-dataset">Shotgun test dataset</a>), where sylph's
+  own estimate was about 99.9 %, forcing 99.5 % raised the explained share by 12–14 % of
+  its value (3 to 8 percentage points). Compare explained shares, <code>unassigned</code> and
+  estimated pairs only between samples with the same <code>read_accuracy</code>. Otherwise leave
+  out <code>unassigned</code> and compare shares among the detected genomes, or use
+  <code>sylph_table.genome_copies.tsv</code>.</li>
+<li><strong>Capped samples.</strong> <code>explained_capped: yes</code> usually means that sylph's coverage
+  estimates added up to at least all of the sample's sequence (sylph does not report the
+  uncapped sum). sylph then shares 100 % among the detected genomes, as it does without
+  <code>-u</code>, so every genome's estimated read pairs in that sample are scaled down by that
+  unknown amount, and they change when a database
+  is added or removed, even for a genome whose coverage stays the same. Nothing is left
+  for <code>unassigned</code> to estimate. Compare a capped sample with others by shares among the
+  detected genomes or by genome copies, not by estimated pairs.</li>
+<li><strong>Genome copies are a different share.</strong> <code>sylph_table.genome_copies.tsv</code> gives each
+  genome's share of genome copies, roughly of cells, among the detected genomes only. A
+  genome that is large but present in few copies has a high read share and a low copy
+  share.</li>
+<li><strong>Names are kept as GTDB writes them.</strong> That includes placeholder species such as
+  <code>s__JABGUH01 sp018646675</code>, genera and species split with a suffix (<code>g__Blautia_A</code>;
+  <code>s__Escherichia coli_E</code> is a real, named species), and GTDB's own genus names
+  (<code>s__Methanocatella smithii</code> for the species long known as <em>Methanobrevibacter
+  smithii</em>). Comparisons at genus level are less affected than at species level. The
+  <code>name_status</code> column of <code>sylph_genomes.tsv</code> says for every genome whether its name is
+  a placeholder.</li>
+</ul>
+<h3 id="the-placeholder-genus-flag">The placeholder-genus flag<a class="headerlink" href="#the-placeholder-genus-flag" title="Permanent link">&para;</a></h3>
+<p>GTDB sometimes puts a genome in a genus known only by a code (a placeholder genus such as
+<code>g__G047199095</code>) while the genome's own FASTA header, written by whoever submitted it,
+names a Latin species of another genus. In GTDB r232 this is the case for some
+<em>Escherichia coli</em> assemblies that are new in that release: reads of an <em>E. coli</em> strain
+can land on such a genome, so that the strain appears under a placeholder name and not
+as <em>Escherichia coli</em>. MetaFlux renames and merges nothing. It flags the genome in
+<code>sylph_genomes.tsv</code> (<code>GTDB placeholder genus; genome labelled Escherichia coli</code>) and
+counts the flagged genomes of each sample in the summary. In the D6331 run SRR38976715
+it flagged two, GCA_047199095.1 and GCA_047199115.1.</p>
+<h2 id="reading-the-tables">Reading the tables<a class="headerlink" href="#reading-the-tables" title="Permanent link">&para;</a></h2>
+<p>The first line of each table is a comment, so skip it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">tab</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">read.delim</span><span class="p">(</span><span class="s">"03.abundance/sylph_table.tsv"</span><span class="p">,</span><span class="w"> </span><span class="n">skip</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="n">row.names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">,</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">                  </span><span class="n">check.names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w"> </span><span class="n">comment.char</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">""</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">tab</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">"03.abundance/sylph_table.tsv"</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+<p>Do not pass <code>comment="#"</code> to pandas: the header line itself starts with <code>#OTU ID</code>.</p>
+<p>phyloseq reads the BIOM file. Its <code>parse_taxonomy_greengenes</code> knows the prefixes <code>k__</code> to
+<code>s__</code> but not <code>d__</code>, so the first column comes out named <code>Rank1</code>; rename it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nf">library</span><span class="p">(</span><span class="n">phyloseq</span><span class="p">)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">ps</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">import_biom</span><span class="p">(</span><span class="s">"03.abundance/sylph_table.biom"</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">                  </span><span class="n">parseFunction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_taxonomy_greengenes</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nf">colnames</span><span class="p">(</span><span class="nf">tax_table</span><span class="p">(</span><span class="n">ps</span><span class="p">))[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s">"Domain"</span>
+</code></pre></div>
+<h2 id="settings-that-do-not-apply">Settings that do not apply<a class="headerlink" href="#settings-that-do-not-apply" title="Permanent link">&para;</a></h2>
+<p>Under <code>profiler: sylph</code>, <code>shotgun.extract_taxa</code> (it needs Kraken2's per-read output) and
+<code>shotgun.kmer_evidence</code> (it filters the Kraken2 report before Bracken) are switched off
+with a warning; under <code>both</code> they still act on the Kraken2 side. <code>shotgun.taxonomy_filter</code>
+and the <code>shotgun.kraken</code> and <code>shotgun.bracken</code> settings act on the Kraken2 chain only.
+The sylph tables are written unfiltered, so each column still adds up to the read pairs
+after QC (with the one exception under <a href="#reading-the-numbers">Reading the numbers</a>).</p>
+<h2 id="limits">Limits<a class="headerlink" href="#limits" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Sample names must not look like numbers.</strong> sylph-tax reads sample names with pandas,
+  which turns <code>001</code> into <code>1</code>, merges <code>01</code> with <code>1</code> and drops <code>NA</code>. MetaFlux stops at
+  start-up on such names; rename the files so that each name contains a letter (<code>S001</code>).
+  Names such as <code>12_3</code> are fine.</li>
+<li><strong>A sample with no read pairs left after QC stops the run</strong>, because sylph cannot
+  sketch an empty file. Remove it from <code>fastq_dir</code>, or profile it with Kraken2.</li>
+<li><strong>Adding sylph to a finished Kraken2 run</strong> needs a new <code>out_dir</code>, with <code>profiler: sylph</code>.
+  The trimmed reads of the finished run were deleted after use, so <code>both</code> in the same
+  folder would make them again and run Kraken2 again. MetaFlux stops and says so.</li>
+<li><strong>Lineages must start with a domain.</strong> Among the built-in taxonomies, only GlobDB r226
+  has genomes without one: 754 of them have <code>Unclassified</code> as their first rank
+  (<code>d__Unclassified</code>). MetaFlux therefore refuses GlobDB r226 at start-up: its taxonomy
+  (<code>GlobDB_r226</code>, or its lineage table given by its path), and any database whose file
+  name says GlobDB r226 (<code>globdb_r226_…</code>), whatever taxonomy it is paired with. Use
+  GlobDB r232 instead, the database <code>globdb_r232_sylph_c200.syldb</code> with
+  <code>taxonomy: GlobDB_r232</code>, which places every genome in a domain. A lineage table of
+  your own whose first rank is not a domain stops the run at <code>sylph_tables</code>, once sylph
+  detects one of its genomes.</li>
+<li><strong>Memory.</strong> sylph holds every database in memory, in a single <code>sylph_profile</code> job for
+  all samples. MetaFlux asks for 1.2 times the size of the database files plus 4 GB; set
+  <code>resources.mem_mb.sylph_profile</code> to a number to override it, for example on a cluster,
+  but keep it above about 1.1 times the size of the files, plus some headroom. GTDB r232
+  at c 200 with the fungal database is about 27 GB of files. With a few samples, most of
+  the job's time goes into reading the databases from disk. Do not size the job from
+  <code>benchmarks/sylph_profile.tsv</code>: sylph's memory climbs while it reads the databases and
+  peaks only in the last seconds of the job, and after its first 30 checks (about the
+  first 15 to 20 seconds) Snakemake records memory only every 30 seconds, so the recorded
+  <code>max_rss</code> usually misses the peak and can be far below it.</li>
+<li><strong>Memory under <code>both</code>.</strong> The <code>sylph_profile</code> job can start while Kraken2 jobs are
+  running. On a local run, Snakemake keeps their memory apart only when it is given a
+  cap, with <code>--resources mem_mb=...</code>. Give a cap at least as large as the <code>sylph_profile</code>
+  figure printed at start-up plus what the Kraken2 jobs declare. A smaller cap does not
+  stop the run: Snakemake lowers the job's request to the cap and runs it anyway.</li>
+<li><strong>Reproducibility.</strong> Sketches are made with one thread
+  (<code>resources.threads.sylph_sketch: 1</code>), because with more threads they differ slightly
+  from run to run; with one thread they are the same every time, also with PhiX or host
+  removal on. The thread count of <code>sylph_profile</code> changes no number. Genomes with
+  exactly the same abundance, common in mock communities, can come out in a different
+  order from run to run in <code>sylph_profile.tsv</code> and in sylph-tax's files, so sort those
+  before comparing two runs; the MetaFlux tables sort their own rows. Each sketch records
+  the path of the reads it was made from, so sketches of the same reads in two <code>out_dir</code>s
+  are not byte-identical.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
