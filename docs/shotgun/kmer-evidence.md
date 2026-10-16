@@ -278,9 +278,9 @@ genomes) and `k2_NCBI_reference_20251007` (one genome per NCBI species). A floor
 distinct minimizer per 1,000 classified read pairs** gave the best result that was safe
 everywhere:
 
-- species-level F1 rose by 0.065 on average (0.034 with PlusPF), against 0.0020 for the
+- species-level F1 rose by 0.066 on average (0.036 with PlusPF), against 0.0020 for the
   fixed default of 300 (0.0003 with PlusPF);
-- it removed 2,288 of 13,118 false species calls and 6 of 13,419 true ones (none with
+- it removed 2,288 of 13,115 false species calls and 6 of 13,419 true ones (none with
   PlusPF), and lowered no sample's F1;
 - it stayed safe when shallower sequencing was modelled, down to 1 % of the reads, while
   every fixed floor tested, from 300 to 10,000, lowered some samples' F1 at some depth.
@@ -419,22 +419,23 @@ Zymo lists the standard's *Fusobacterium* as *F. nucleatum* (strain 2/1/50A), bu
 (GTDB r232), MetaPhlAn 4 and Kraken2 with GTDB r226 or PlusPF `k2_pluspf_20260626` place
 most of these reads in *F. animalis*, a former subspecies of *F. nucleatum* now ranked as
 a species. It is therefore scored as *F. animalis*, and calls of *F. nucleatum*,
-*F. polymorphum* and *F. vincentii* count as false positives.
+*F. polymorphum* and *F. vincentii* count as false positives. *Homo sapiens*, from human
+DNA in the sample, is not scored.
 
 The run was processed twice through the pipeline with PlusPF `k2_pluspf_20251015`,
 Kraken2 confidence 0.15 and Bracken at the former fixed `-t 10`: once with the gate off
 and once with it on at a floor of 333. A floor of 300 gives the same species list on this
-run. At the current default threshold (`-t 265` for this run), only 3 of the 35 false
-positives in the table below have enough reads to pass (*F. nucleatum*, *F. polymorphum*
-and *Homo sapiens*), the gate removes none of them, and the threshold itself drops
-*Salmonella enterica*.
+run. At the current default threshold (`-t 265` for this run), only 2 of the 34 false
+positives in the table below have enough reads to pass (*F. nucleatum* and
+*F. polymorphum*), as does the unscored *Homo sapiens*; the gate removes none of them,
+and the threshold itself drops *Salmonella enterica*.
 
 | | Gate off | Gate on |
 |---|--:|--:|
 | True members recovered | 15 / 17 | **15 / 17** |
-| False-positive species | 35 | **23** |
-| Precision | 0.300 | **0.395** |
-| F1 | 0.448 | **0.545** |
+| False-positive species | 34 | **22** |
+| Precision | 0.306 | **0.405** |
+| F1 | 0.455 | **0.556** |
 
 - **No true member was removed.** *Salmonella enterica*, 0.01% of the standard and 134
   classified reads, has 3,547 distinct minimizers at a duplicity of 1.5, more than ten
@@ -444,18 +445,19 @@ and *Homo sapiens*), the gate removes none of them, and the threshold itself dro
   perfringens* at 0.0001%) have one Kraken2 read each, below Bracken's `-t 10`, so neither
   reaches the table in either run. Both have species entries in the database, so they were
   missed for lack of reads.
-- **Quantitative accuracy did not change.** L1 distance to the theoretical composition was
-  47.16 with and without the gate, Shannon *H* 2.146 and 2.145, and the Bray–Curtis
-  dissimilarity between the two profiles 0.00009. The 82 taxa the gate removed at 333
-  held 426 of the 5.3 million reads (81 taxa and 423 reads at 300). Any ordination or
-  differential-abundance test would give the same answer from both tables.
+- **Quantitative accuracy did not change.** With the human row left out, L1 distance to
+  the theoretical composition was 47.15 without the gate and 47.14 with it, Shannon *H*
+  2.145 and 2.144, and the Bray–Curtis dissimilarity between the two profiles 0.00009.
+  The 82 taxa the gate removed at 333 held 426 of the 5.3 million reads (81 taxa and 423
+  reads at 300). Any ordination or differential-abundance test would give the same answer
+  from both tables.
 - **Richness, on the other hand, improved substantially** — which is where the gate did its
   work on this dataset:
 
 | Observed richness | Truth | Gate off | Gate on |
 |---|--:|--:|--:|
-| Species | 17 | 50 (+194%) | **38 (+124%)** |
-| Genera | 17 | 26 (+53%) | **19 (+12%)** |
+| Species | 17 | 49 (+188%) | **37 (+118%)** |
+| Genera | 17 | 25 (+47%) | **18 (+6%)** |
 
 On this mock the gate changed which species are listed, not their abundances.
 If you report how many taxa you detected, or work with presence/absence, that matters. If
@@ -464,16 +466,18 @@ change your conclusions.
 
 ### Why richness is still over-estimated with the gate on
 
-With the gate on, 38 species are still reported against 17 in the standard. Most of the
-23 false positives are not the kind of call the gate is designed to remove.
+With the gate on, 37 species other than human are still reported against 17 in the
+standard. Most of the 22 false positives are not the kind of call the gate is designed to
+remove.
 
-Of the 23 false-positive species that survive, **19 are congeners of a genuine member** —
-and all four of the remainder are defensible:
+Of the 22 false-positive species that survive, **19 are congeners of a genuine member** —
+and the other three are defensible. The table also lists *Homo sapiens*, which is not
+scored:
 
 | Survivor | Reads after Bracken | Distinct minimizers | What it is |
 |---|--:|--:|---|
 | *Fusobacterium nucleatum*, *F. vincentii*, *F. polymorphum* | 180,835 | 947–29,678 | Close relatives of the true member, *F. animalis*; all four were subspecies of *F. nucleatum* until *F. animalis*, *F. vincentii* and *F. polymorphum* were raised to species rank. With `k2_pluspf_20251015`, Kraken2 gives *F. nucleatum* more reads than *F. animalis* (16,709 against 6,062) |
-| *Homo sapiens* | 965 | 10,062 | Trace human DNA from handling; present in the sample |
+| *Homo sapiens* | 965 | 10,062 | Trace human DNA from handling; present in the sample, a contaminant that is not scored |
 | *Shigella dysenteriae* | 839 | 1,117 | *Shigella* sits phylogenetically inside *E. coli*; the genomes are near-identical |
 | *Sphingomonas paucimobilis*, *Cutibacterium acnes* | 51 | 464–779 | Common extraction-kit and skin contaminants; plausibly present in the sample |
 | 16 further congeners of *Veillonella*, *Fusobacterium*, *Saccharomyces*, *Escherichia*, *Bacteroides*, *Candida*, *Clostridioides* | 1,874 | 400–5,380 | Close relatives of an abundant true member |
@@ -497,8 +501,8 @@ evidence problem:
 The residual inflation is almost entirely the second kind, which is a property of how
 finely the reference database splits closely related organisms — not something any
 k-mer counting method can detect. The practical consequence is visible in the table above:
-at **genus** rank, where those distinctions disappear, the gate brings richness from +53%
-to **+12%** of the true value.
+at **genus** rank, where those distinctions disappear, the gate brings richness from +47%
+to **+6%** of the true value.
 
 ### What this does not show
 

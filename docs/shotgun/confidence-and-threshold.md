@@ -26,24 +26,25 @@ Microbiome Standard (D6331), SRA run
 classified with PlusPF `k2_pluspf_20260626` at Kraken2 confidence 0.15, the v2.5.0
 defaults:
 
-| | Species reported | Precision | Recall | **F1** |
+| | Species scored | Precision | Recall | **F1** |
 |---|--:|--:|--:|--:|
-| Bracken's default, `-t 10` | 54 | 0.278 | 0.882 | 0.423 |
-| MetaFlux default, `threshold: auto` (`-t 265`) | 20 | 0.700 | 0.824 | **0.757** |
+| Bracken's default, `-t 10` | 53 | 0.283 | 0.882 | 0.429 |
+| MetaFlux default, `threshold: auto` (`-t 265`) | 19 | 0.737 | 0.824 | **0.778** |
 
 The mock's *Fusobacterium*, listed by Zymo as *F. nucleatum*, is scored as
 *F. animalis*, so calls of *F. nucleatum*, *F. polymorphum* and *F. vincentii* count as
-false positives ([Benchmark data](../about/test-datasets.md#benchmark-data) gives the
-reason).
+false positives. Bracken also reports *Homo sapiens* at both thresholds: human DNA in the
+sample, not part of the standard, so it is left out of the scores.
+[Benchmark data](../about/test-datasets.md#benchmark-data) gives the reasons for both.
 
 Recall fell slightly, from 0.88 to 0.82: *Salmonella enterica*, with 135 Kraken2 reads,
-fell below the threshold. Precision rose from 0.28 to 0.70. At `-t 10`, 39 of the 54
-species reported were not in the mock. Bracken reports a species only when Kraken2 gave
+fell below the threshold. Precision rose from 0.28 to 0.74. At `-t 10`, 38 of the 53
+species scored were not in the mock. Bracken reports a species only when Kraken2 gave
 it at least `-t` reads, so each of them had at least ten Kraken2 reads. Most of them
-(29 of the 39) are in the same genus as a member of the mock and share conserved
-regions with it; database cross-contamination is another source. Five of the six false
-species left at `-t 265` are *Fusobacterium* species closely related to the mock's
-*F. animalis*; the sixth is human.
+(29 of the 38) are in the same genus as a member of the mock and share conserved
+regions with it; database cross-contamination is another source. The five false species
+left at `-t 265` are all *Fusobacterium* species closely related to the mock's
+*F. animalis*.
 
 ## Kraken2 confidence — keep it at 0.15
 
@@ -167,8 +168,8 @@ little over a wide range of alpha: using 5×10⁻⁵ everywhere costs a mean of 
 against tuning each sample to its own best (median cost 0.014). In the first benchmark,
 Bracken's default of 10 cost up to **0.34 F1**.
 
-The D6331 mock is an exception: there the default costs 0.146 F1 against the optimum
-(0.757 against 0.903).
+The D6331 mock is an exception: there the default costs 0.125 F1 against the optimum
+(0.778 against 0.903).
 
 !!! note "Adjusting alpha for a known community"
 
@@ -200,8 +201,8 @@ abundance accuracy little.
 
 On the D6331 run, the L1 distance between the Bracken profile and the genomic-DNA
 composition in Zymo's manual (the sum of absolute differences, in percentage points) was
-40.88 at `-t 10` and 40.87 at `-t 265`, and the Bray–Curtis dissimilarity between the
-two profiles was 0.0009. The threshold changes **which taxa are named**, not **how much of
+40.86 at both `-t 10` and `-t 265`, and the Bray–Curtis dissimilarity between the two
+profiles was 0.0009. The threshold changes **which taxa are named**, not **how much of
 each is reported**. If your downstream work is ordination or differential abundance on
 already-good tables, expect little change. If it is species counts, richness, or
 presence/absence, expect a large one.
@@ -253,8 +254,10 @@ were not part of this check.
 **Comparator:** [MetaPhlAn 4](https://github.com/biobakery/MetaPhlAn), database
 `mpa_vJan26_CHOCOPhlAnSGB_202605`, on the same trimmed reads of the D6331 run. MetaPhlAn
 reported 14 of the 17 species and no false ones (F1 0.90). MetaFlux at its v2.5.0
-defaults (PlusPF `k2_pluspf_20260626`) reported the same 14 species and six false ones,
-five of them *Fusobacterium* species related to the mock's *F. animalis* (F1 0.76).
+defaults (PlusPF `k2_pluspf_20260626`) reported the same 14 species and five false ones,
+all of them *Fusobacterium* species related to the mock's *F. animalis* (F1 0.78).
+MetaFlux also reported *Homo sapiens*, from human DNA in the sample; it is not scored,
+and MetaPhlAn, whose database holds only microbial markers, cannot report it.
 
 ## References
 

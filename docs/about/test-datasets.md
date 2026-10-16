@@ -83,6 +83,13 @@ nearly all of its reads in *F. animalis*, formerly *F. nucleatum* subsp. *animal
 *F. animalis* is scored as the true member and calls of *F. nucleatum*, *F. polymorphum*
 and *F. vincentii* count as false positives.
 
+The mock also contains a little human DNA, a contaminant of the sample: 933 read pairs,
+0.02 % of the classified pairs with PlusPF `k2_pluspf_20260626`. Kraken2 reports it as
+*Homo sapiens* because PlusPF contains the human genome; MetaPhlAn cannot report it,
+because its database holds microbial markers only. It is not scored. MetaFlux's
+[host removal](../shotgun/decontamination.md#host-removal) is the step that removes such
+reads before classification.
+
 ## Check a public dataset before adopting it
 
 Assembling the five amplicon sets meant rejecting other candidates. The checks below are

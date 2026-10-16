@@ -41,9 +41,10 @@ SRA run SRR38976715 (BioProject PRJNA1474435; see
 [Benchmark data](../about/test-datasets.md#benchmark-data)), MetaPhlAn 4 with the
 database `mpa_vJan26_CHOCOPhlAnSGB_202605` reported 14 of the 17 species and no false
 ones (F1 0.90). MetaFlux at its default settings with PlusPF `k2_pluspf_20260626`
-reported the same 14 species and six false ones, five of them *Fusobacterium* species
-related to the mock's *F. animalis* (F1 0.76). MetaPhlAn's marker database is built for
-this kind of sample.
+reported the same 14 species and five false ones, all of them *Fusobacterium* species
+related to the mock's *F. animalis* (F1 0.78). It also reported *Homo sapiens*, from
+human DNA in the sample, which MetaPhlAn cannot report (its database holds microbial
+markers only); it is not scored.
 
 On environmental samples MetaPhlAn classifies far fewer reads. On the four metagenomes of
 BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
