@@ -11,17 +11,17 @@ Zenodo; the concept DOI in the README always resolves to the newest one.
 ### Taxonomy strings: `d__` is the domain, `k__` the kingdom
 
 SILVA 144 and NCBI now carry both a domain and a kingdom for prokaryotes. MetaFlux
-used to write the domain under `k__` and kept SILVA 144's kingdom in a side file. From
-this release on, `d__` is always the domain slot and `k__` always the kingdom slot, and
-a table carries a kingdom only where its reference defines one.
+used to write the domain under `k__`. From this release on, `d__` is always the domain
+slot and `k__` always the kingdom slot, and a table carries a kingdom only where its
+reference defines one.
 
 | Output | v2.4.0 | v2.5.0 |
 |---|---|---|
-| 16S, SILVA 144 | `k__Bacteria;p__Pseudomonadota;…` (kingdom in a side file) | `d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;…` |
+| 16S, default SILVA (138.2, now 144) | `k__Bacteria;p__Pseudomonadota;…` | `d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;…` |
 | 16S, SILVA 138.2; rpoB | `k__Bacteria;p__…` | `d__Bacteria;p__…` |
 | ITS; gyrB | unchanged | unchanged |
 | 18S, `sintax` | empty for an ASV with an uncertain supergroup | at least `d__Eukaryota` |
-| Kraken2, NCBI database | `k__Bacteria;p__…;s__coli` | `d__Bacteria;k__Pseudomonadati;p__…;s__Escherichia coli` |
+| Kraken2, NCBI database | `k__Bacteria;p__…;s__Escherichia coli` | `d__Bacteria;k__Pseudomonadati;p__…;s__Escherichia coli` |
 | Kraken2, a virus | `k__;p__Uroviricota;…;s__P37` | `d__Duplodnaviria;k__Heunggongvirae;p__Uroviricota;…;s__Peduovirus P37` |
 | Kraken2, GTDB database | `k__Archaea;p__…` | `d__Archaea;k__;p__…` |
 | sylph (new) | — | `d__Bacteria;p__…` |
@@ -30,8 +30,9 @@ a table carries a kingdom only where its reference defines one.
   and classified with the same cutoff as every other rank; the kingdom is written
   without SILVA's `--other` suffix (`amplicon.taxonomy.silva_other` says what to do
   with the other `--other` names). SILVA 138.2 stays available with
-  `references: {silva: {release: "138.2"}}`. `06.taxonomy/taxonomy_lineage_full.tsv`
-  is no longer written.
+  `references: {silva: {release: "138.2"}}`. The SILVA downloads of both releases are
+  checked against the md5 that SILVA or Zenodo publishes for them; a mismatch stops
+  the run.
 - **18S under `sintax`: the domain is classified first.** VSEARCH reads the SINTAX
   letters as a fixed top-down order, and PR2's own file puts the domain under the
   second letter, so an ASV lost its domain whenever its supergroup was uncertain.
@@ -41,9 +42,12 @@ a table carries a kingdom only where its reference defines one.
   have this problem; re-run them.
 - **The shotgun OTU table is built from the Bracken reports**, without kraken-biom:
   eight lineage slots on every Kraken2 database (`d__` to `s__`), NCBI's kingdoms kept,
-  a virus's realm in `d__`, species names complete, and a slot never filled from a
-  neighbouring branch of the tree. The counts are the same Bracken estimates as
-  before. In `otu_table.biom` the sample `Id` is the plain sample name.
+  a virus's realm in `d__`, species names complete (`Peduovirus P37`, not `P37`), and a
+  slot never filled from a neighbouring branch of the tree. At `tax_lev: S` the counts
+  are the same Bracken estimates as before. At `tax_lev` `P` to `G` the v2.4.0 table was
+  empty or nearly empty, without an error; it now holds one row per taxon at that rank,
+  with Bracken's re-estimated reads. In `otu_table.biom` the sample `Id` is the plain
+  sample name.
 - **`rdp` and `sintax` tables have one format** (`""` as the first header cell, `NA`
   for a rank the classifier did not reach), ITS tables made with `rdp` write the
   species as `Genus_epithet`, and the per-rank cells of `taxon_seq_table.txt` hold
@@ -61,8 +65,9 @@ user-supplied (`references.sylph_databases`, `references.sylph_taxonomy_dir`) an
 checked at start-up: the taxonomy must match the database's release, GlobDB r226 is
 refused (754 of its genomes have no domain), and a GTDB and a GlobDB database are
 refused in the same run (GlobDB already holds the GTDB genomes). Read extraction and
-the k-mer evidence gate need Kraken2's per-read output and are switched off under
-`sylph`. The sylph tables are written unfiltered.
+the k-mer evidence gate work on Kraken2's output and are switched off under `sylph`.
+The sylph tables are written unfiltered. To add sylph to a finished Kraken2 run, use a
+new output folder; MetaFlux stops otherwise and says why.
 
 ### Checks at start-up, before any job runs
 
@@ -82,9 +87,11 @@ the k-mer evidence gate need Kraken2's per-read output and are switched off unde
   every amplicon run; a pack for a marker of your own needs `reference_values`
   (`{}` checks the rank shape only). A pack whose SINTAX letters break VSEARCH's
   order stops too.
-- **Bracken rank.** `shotgun.bracken.tax_lev: D` is refused like `K` (Bracken files
-  the reads of taxa without the rank under the wrong taxon); `P`, `C`, `O` and `F`
-  give a warning. `tax_lev` is read only when Kraken2 runs.
+- **Bracken rank.** `shotgun.bracken.tax_lev` must be one of `P`, `C`, `O`, `F`, `G`
+  and `S`. `D` and `K` are refused (Bracken files the reads of taxa without the rank
+  under the wrong taxon), and so is any other value, such as a lower-case letter, which
+  used to fail in Bracken only after Kraken2 had run. `P`, `C`, `O` and `F` give a
+  warning. `tax_lev` is read only when Kraken2 runs.
 - `discard_min_support: true` is refused (YAML reads it as a yes/no value, not a
   number).
 
@@ -104,12 +111,13 @@ the k-mer evidence gate need Kraken2's per-read output and are switched off unde
 
 ### Output folders
 
-Two-digit folder numbers in both modes: amplicon `01.reads` … `07.phylogeny`, and the
-read-count files in `stats/` take the same two digits (`01.raw_reads.counts` …);
-shotgun `01.preprocessing`, `02.classification/kraken2/` and `02.classification/sylph/`
-(one folder per profiler; the k-mer evidence files move in with Kraken2's),
-`03.abundance`, `04.extracted_reads`. `stats/`, `logs/`, `benchmarks/` and `multiqc/`
-keep their names.
+Two-digit folder numbers in both modes: the amplicon folders `1.reads` … `7.phylogeny`
+become `01.reads` … `07.phylogeny`, and the read-count files in `stats/` take the same
+two digits (`01.raw_reads.counts` …). Shotgun mode already used two digits; its
+`02.classification/` now holds one folder per profiler, `kraken2/` (the Kraken2 files,
+until now directly in `02.classification/`, and the k-mer evidence files of
+`02b.evidence/`) and `sylph/`. `01.preprocessing`, `03.abundance`,
+`04.extracted_reads`, `stats/`, `logs/`, `benchmarks/` and `multiqc/` keep their names.
 
 ### Length probe, read extraction, read tracking
 
@@ -136,8 +144,8 @@ keep their names.
   The published floor of 1,000 unique k-mers converts to about 333 distinct
   minimizers, and the default rounds that down because the conversion is approximate.
   The gate is off by default, so the default OTU tables do not change; the evidence
-  table and the gated report written on every run now use 300. With the gate on,
-  species with 300 to 332 distinct minimizers now pass. The k-mer evidence page
+  table and the gated report written on every Kraken2 run now use 300. With the gate
+  on, species with 300 to 332 distinct minimizers now pass. The k-mer evidence page
   describes a floor scaled to sequencing depth.
 - **`amplicon.dada2.chimera.allow_one_off`:** the comment in `config/config.yaml` and
   the configuration page had the two settings the wrong way round. `false`, DADA2's
@@ -201,13 +209,21 @@ few calls at `min_boot`, as between two identical runs. The documentation's
 - New keys with safe defaults, so an old config parses unchanged: `shotgun.profiler`
   (`kraken2`), `references.sylph_databases` and `sylph_taxonomy_dir`,
   `amplicon.taxonomy.silva_other` (`verbatim`), `filter.discard_min_support` (50),
-  `filter.organelles` (`metaxa2`).
+  `filter.organelles` (`metaxa2`), and `resources` rows for the sylph rules.
 
 ### Documentation and repository
 
-New sylph page; the taxonomy, output, configuration, running and troubleshooting
-pages rewritten for the domain and kingdom slots, the start-up checks and the new
-folders; the docs deployment runs a strict build before publishing. The repository
+New sylph page; the marker, taxon-filter, output, configuration, running and
+troubleshooting pages rewritten for the domain and kingdom slots, the start-up checks
+and the new folders; the docs deployment runs a strict build before publishing. Every
+example names the dataset and the database build it comes from; the test-datasets
+page lists the shotgun test dataset and the benchmark data, with numbers from runs
+made with this release's defaults; the shotgun figures are recomputed on this
+release's runs, and the benchmark scorer was checked against OPAL. The threshold page
+and the config comment no longer advise a smaller `shotgun.bracken.threshold_alpha`
+for defined mixtures: on the ZymoBIOMICS D6331 mock the best value is 4.5 to 7 times
+the default of 5×10⁻⁵ (the page gave 2.4×10⁻⁵ before); the default is unchanged. The
+repository
 gains a pin file for every conda environment (`workflow/envs/*.linux-64.pin.txt`), a
 test suite (`tests/`), a dry-run matrix with tiny test data (`.test/`), a CI
 workflow that runs both with a strict docs build on every push, contribution

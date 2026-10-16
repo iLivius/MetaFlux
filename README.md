@@ -32,7 +32,7 @@ v2.5.0
 | [Configuration reference](https://iLivius.github.io/MetaFlux/reference/configuration/) | every key, default and trade-off |
 | [Output files](https://iLivius.github.io/MetaFlux/reference/output/) | what each run writes, and what reads it |
 | [Troubleshooting](https://iLivius.github.io/MetaFlux/troubleshooting/) | the failures worth knowing about in advance |
-| [Test datasets](https://iLivius.github.io/MetaFlux/about/test-datasets/) | the mock communities each marker is validated against |
+| [Test datasets](https://iLivius.github.io/MetaFlux/about/test-datasets/) | the public data each marker and shotgun mode are tested on, and the benchmark data |
 
 This README is deliberately short: it covers what MetaFlux is and how to get a first run
 going. Everything else — parameter reference, per-marker guidance, output semantics and
