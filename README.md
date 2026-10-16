@@ -70,13 +70,14 @@ Both modes run from the same command and the same config file, and produce a sin
         Metaxa2 / ITSx* │               │  Bracken abundance
         length filter   │               │  OTU table from Bracken
         multi-marker    │               │  KrakenTools per-taxon reads*
-        taxonomy        │               │
+        taxonomy        │               │  or sylph profile + sylph table†
                         ▼               ▼
               ASV table + taxonomy   OTU table + reports
                         └───────┬───────┘
                      read tracking + MultiQC
 
    * optional steps, toggled in config
+   † shotgun.profiler: sylph replaces Kraken2 onwards; both runs the two side by side
 ```
 
 What the workflow adds over running these tools by hand: `truncLen` chosen from the

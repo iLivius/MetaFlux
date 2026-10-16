@@ -235,7 +235,7 @@ consequences:
       used to count as half a pair).
 
     **Stops at start-up:** a filter token such as `k__Bacteria` (the message names the
-    one to write, `d__Bacteria`); `shotgun.bracken.tax_lev: D`, refused like `K`; a
+    one to write, `d__Bacteria`); a `shotgun.bracken.tax_lev` other than `P`, `C`, `O`, `F`, `G` or `S` (such as `D` or `K`); a
     marker pack in `config/markers/` written for an older MetaFlux (copy the shipped pack
     again and re-apply your change). See [Troubleshooting](../troubleshooting.md).
 
