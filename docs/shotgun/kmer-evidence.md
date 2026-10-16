@@ -216,6 +216,7 @@ distinct minimizers a species needs in the Kraken2 report to stay in the table.
 | Read pairs moved to another species | 4.9 % | 1.3 % | 5.8 % | 1.8 % |
 | Change in total read pairs | −0.01 % | +0.01 % | −0.01 % | −0.09 % |
 | Genomes detected by sylph in the same reads | 10 | 9 | 14 | 16 |
+| 16S rRNA clusters at 97 % in the same reads, no reference | 14 | 13 | 11 | 15 |
 
 - **The gate removes 14 to 22 species per sample and almost no reads.** The reads of a
   removed species go back to its parent taxon, and Bracken shares them among the
@@ -229,9 +230,16 @@ distinct minimizers a species needs in the Kraken2 report to stay in the table.
   species in the sample. Its read count passes the Bracken threshold; only the
   distinct-minimizer count shows how little species-specific sequence is behind it (more
   [below](#unchanged-f1-does-not-mean-an-unchanged-table)).
-- **Fewer species is the right direction for these samples.** sylph, run by MetaFlux on
-  the same reads in `both` mode against `gtdb-r232-c200-dbv1` and
-  `fungi-refseq-2025-10-11-c200-dbv1`, detects 9 to 16 genomes per sample.
+- **Fewer species is the right direction for these samples.** Two independent counts
+  from the same reads put these cultures at about 10 to 16 members each. sylph, run by
+  MetaFlux in `both` mode against `gtdb-r232-c200-dbv1` and
+  `fungi-refseq-2025-10-11-c200-dbv1`, detects 9 to 16 genomes per sample. The 16S rRNA
+  fragments in the reads, extracted with Metaxa2 2.2.3 and clustered at 97 % identity
+  among fragments that cover the same stretch of the gene, give 11 to 15 clusters per
+  sample (13 to 18 at 99 %; clusters of one fragment left out). This count needs no
+  reference database. Both counts are lower bounds: sylph misses organisms without a
+  close genome, and the 16S count sees only members with at least two of the 284 to 504
+  fragments in the busiest stretch, roughly those above 0.5 % of the 16S copies.
 - **The gate does not bring the list down to that size.** Most of what remains is a
   database problem. The most abundant organism in SRR39106521 and SRR39106523,
   *Pusillimonas noertemannii*, has no genome in PlusPF. Its reads are reported under
@@ -329,7 +337,7 @@ Limits of this rule:
   classified pairs), a floor of 1,673, sized on the shallowest sample with its host reads
   excluded, keeps 33–68 species per sample, against 66–104 at 300, and the species it
   removes hold 10–33 % of the read pairs, which move to relatives. That is still well
-  above the 9–16 genomes sylph finds. Compare `otu_table.tsv` with the gate off and on
+  above the 9–16 genomes sylph finds and the 11–15 16S clusters. Compare `otu_table.tsv` with the gate off and on
   before relying on it.
 
 ## Why the default is `enabled: false`
