@@ -11,6 +11,7 @@ message: "If you use MetaFlux in your work, please cite it as below, and cite th
 type: software
 title: "MetaFlux: a unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow"
 version: 2.5.0
+date-released: 2026-10-16
 authors:
   - family-names: Antonielli
     given-names: Livio

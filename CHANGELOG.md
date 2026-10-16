@@ -6,7 +6,7 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
-## 2.5.0 — unreleased
+## 2.5.0 — 2026-10-16
 
 ### Taxonomy strings: `d__` is the domain, `k__` the kingdom
 
