@@ -235,9 +235,9 @@ consequences:
       used to count as half a pair).
 
     **Stops at start-up:** a filter token such as `k__Bacteria` (the message names the
-    one to write, `d__Bacteria`); a `shotgun.bracken.tax_lev` other than `P`, `C`, `O`, `F`, `G` or `S` (such as `D` or `K`); a
-    marker pack in `config/markers/` written for an older MetaFlux (copy the shipped pack
-    again and re-apply your change). See [Troubleshooting](../troubleshooting.md).
+    one to write, `d__Bacteria`); a `shotgun.bracken.tax_lev` other than `P`, `C`, `O`,
+    `F`, `G` or `S` (such as `D` or `K`); a marker pack in `config/markers/` written for
+    an older MetaFlux (copy the shipped pack again and re-apply your change). See [Troubleshooting](../troubleshooting.md).
 
     **Reference files:** the SILVA 144 files are downloaded and built once, and the 18S
     PR2 SINTAX file is built once (neither existed in v2.4.0); the rpoB reference is
