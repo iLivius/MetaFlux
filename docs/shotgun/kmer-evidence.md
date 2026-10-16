@@ -171,7 +171,7 @@ KrakenUniq's unique k-mers:
     **In plain terms.** Kraken2 reads a sequence as overlapping 35-base k-mers, but it
     does not look each one up. For every k-mer it picks one 31-base piece inside it, the
     *minimizer*, and stores and counts only that. Neighbouring k-mers usually pick the
-    same piece, so a stretch of genome gives about three times fewer distinct minimizers
+    same piece, so a region of a genome gives about three times fewer distinct minimizers
     than distinct k-mers. The studies above counted unique k-mers and settled on about
     1,000. In a Kraken2 report the same amount of sequence shows up as about 333
     distinct minimizers. The default floor, **300**, is that figure rounded down, because
@@ -234,12 +234,13 @@ distinct minimizers a species needs in the Kraken2 report to stay in the table.
   from the same reads put these cultures at about 10 to 16 members each. sylph, run by
   MetaFlux in `both` mode against `gtdb-r232-c200-dbv1` and
   `fungi-refseq-2025-10-11-c200-dbv1`, detects 9 to 16 genomes per sample. The 16S rRNA
-  fragments in the reads, extracted with Metaxa2 2.2.3 and clustered at 97 % identity
-  among fragments that cover the same stretch of the gene, give 11 to 15 clusters per
-  sample (13 to 18 at 99 %; clusters of one fragment left out). This count needs no
-  reference database. Both counts are lower bounds: sylph misses organisms without a
-  close genome, and the 16S count sees only members with at least two of the 284 to 504
-  fragments in the busiest stretch, roughly those above 0.5 % of the 16S copies.
+  gene fragments in the reads were extracted with Metaxa2 2.2.3, and the fragments that
+  cover the same region of the gene (the region with the most fragments, 284 to 504 per
+  sample) were clustered at 97 % identity: 11 to 15 clusters per sample (13 to 18 at
+  99 %; single-fragment clusters excluded). This count does not use a reference
+  database. Both counts are lower bounds: sylph misses organisms without a closely
+  related reference genome, and the 16S count detects only members represented by at
+  least two fragments in that region, roughly those above 0.5 % of the 16S gene copies.
 - **The gate does not bring the list down to that size.** Most of what remains is a
   database problem. The most abundant organism in SRR39106521 and SRR39106523,
   *Pusillimonas noertemannii*, has no genome in PlusPF. Its reads are reported under
