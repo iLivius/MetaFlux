@@ -40,7 +40,7 @@ snakemake -n --cores 1 --configfile .test/config/16S_rdp_silva144.yaml
 |---|---|
 | `config/*.yaml` | One config per case that must pass. Each sets only the keys that differ from the template `config/config.yaml`, which Snakemake loads underneath it as in a real run; the header comment of each file says what the case covers. |
 | `config/expected_stop/*.yaml` | Configs that must stop at start-up. Each carries a `# EXPECT:` line with the fragment of the stop message the runner looks for. |
-| `data/<marker>/` | The first 300 read pairs of two samples of each public test dataset (16S, ITS, 18S, gyrB, rpoB) and of two wastewater samples for shotgun mode, as `{sample}_R1/_R2.fastq.gz`. Enough for Snakemake to find the samples; far too few for any result to mean anything. |
+| `data/<marker>/` | The first 300 read pairs of two samples of each public test dataset (16S, ITS, 18S, gyrB, rpoB; for COI, two slices of 300 pairs of the one mock run) and of two wastewater samples for shotgun mode, as `{sample}_R1/_R2.fastq.gz`. Enough for Snakemake to find the samples; far too few for any result to mean anything. |
 | `primers/<marker>/` | The forward and reverse primer FASTA of each marker, as used on the full test datasets. |
 | `stubs/kraken2_db/` | A stand-in Kraken2 database folder (see below). |
 | `stubs/sylph/`, `stubs/sylph_taxonomy/` | Stand-in sylph database files and sylph-tax lineage tables (see below). |
@@ -61,9 +61,11 @@ Amplicon, one config per marker, method and SILVA release that MetaFlux offers:
 | `18S_rdp`, `18S_sintax` | 18S | rdp, sintax | – | the PR2 downloads and the PR2 SINTAX conversion |
 | `gyrB_rdp` | gyrB | rdp | – | fixed amplicon length, manual truncation and length window |
 | `rpoB_rdp` | rpoB | rdp | – | the FROGS archive download and conversion |
+| `COI_sintax` | COI | sintax | – | the MIDORI2 and bacterial COX1 downloads, the MIDORI2 conversion, the COI screens |
 
 gyrB and rpoB have no SINTAX reference, so `method: sintax` is refused for them at
-start-up; that refusal is one of the expected-stop cases rather than a matrix cell.
+start-up, and COI has no rdp trainset, so `method: rdp` is refused for it; those
+refusals are expected-stop cases rather than matrix cells.
 
 Shotgun, one config per profiler:
 
@@ -79,6 +81,7 @@ Expected stops (`config/expected_stop/`):
 |---|---|---|
 | `16S_old_tokens` | filter tokens that write the domain under `k__`, as configs up to v2.4.0 did | `write d__Bacteria` |
 | `gyrB_sintax` | `method: sintax` on a marker without a SINTAX reference | `method: sintax is not available` |
+| `COI_rdp` | `method: rdp` on a marker without an rdp trainset | `method: rdp is not available` |
 | `shotgun_tax_lev_D` | Bracken at the domain rank | `tax_lev: D is not allowed` |
 
 ## The stand-in databases
@@ -121,6 +124,6 @@ files, and the stubs give them exactly what they ask for:
 Copy the closest config, change its header comment, `out_dir` and the keys the case
 needs, and run `bash .test/run_dry_runs.sh`. For a case that must stop at start-up,
 put it under `config/expected_stop/` with a `# EXPECT:` line quoting a fragment of
-the stop message, as the three there do. Keep the data as it is: a few hundred read
+the stop message, as the four there do. Keep the data as it is: a few hundred read
 pairs per sample are enough for Snakemake to find the samples, and the repository
 should stay small.

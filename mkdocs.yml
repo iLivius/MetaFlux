@@ -92,6 +92,8 @@ nav:
           - 18S rRNA: amplicon/markers/18S.md
           - gyrB: amplicon/markers/gyrb.md
           - rpoB: amplicon/markers/rpob.md
+          - COI: amplicon/markers/coi.md
+          - Bacterial COX1 reference set (COI): amplicon/markers/bacterial-cox1.md
       - Amplicon length and truncation: amplicon/length-and-truncation.md
       - Keeping and discarding taxa: amplicon/taxon-filter.md
       - Phylogeny (16S): amplicon/phylogeny.md

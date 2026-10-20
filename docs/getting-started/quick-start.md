@@ -37,7 +37,7 @@ lists the same ones:
 | Setting | What it decides |
 |---------|-----------------|
 | `mode` | `amplicon` or `shotgun` — see [choosing a mode](choosing-a-mode.md) |
-| `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB` or `rpoB` (amplicon runs only) |
+| `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB`, `rpoB` or `COI` (amplicon runs only) |
 | `shotgun.profiler` | `kraken2` (the default), `sylph` or `both` (shotgun runs only) — see [sylph](../shotgun/sylph.md) |
 | `input.fastq_dir` | The directory holding the paired FASTQ files |
 | `output.out_dir` | Where every result is written |
@@ -87,7 +87,8 @@ What is checked before the first job starts:
   `{sample}` — that a rule is instantiated over, once per sample).
 - Amplicon: `amplicon.type` matches a marker; both primer FASTA files exist;
   `taxonomy.method` is available for that marker (`gyrB` and `rpoB` have no SINTAX
-  reference, so only `rdp` works for them); the statistic the length probe needs is
+  reference, so only `rdp` works for them, and `COI` has no `rdp` trainset, so only
+  `sintax` works for it); the statistic the length probe needs is
   present in `probe_length_stat`.
 - Shotgun: the `kraken_db` directory exists when Kraken2 runs, and the sylph databases
   and their lineage tables are in place when sylph runs.

@@ -171,15 +171,16 @@ marker. There are two such cases, handled differently on purpose:
 
 | You asked for | On these markers | What happens |
 |---|---|---|
-| `extraction.enabled: true` | 18S, gyrB, rpoB | **warning, the run continues** with extraction off |
+| `extraction.enabled: true` | 18S, gyrB, rpoB, COI | **warning, the run continues** with extraction off |
 | `taxonomy.method: sintax` | gyrB, rpoB | **error, the run stops** |
+| `taxonomy.method: rdp` | COI | **error, the run stops** |
 
 #### Region extraction
 
 Metaxa2 cuts the ribosomal gene out of a 16S ASV; ITSx cuts ITS1 or ITS2 out of a
-fungal one. gyrB and rpoB are protein-coding genes, so neither tool applies to them,
-and the 18S pack declares no extractor either. All three say `extractor: none`, and the
-workflow builds no extraction step at all for them.
+fungal one. gyrB, rpoB and COI are protein-coding genes, so neither tool applies to
+them, and the 18S pack declares no extractor either. All four say `extractor: none`, and
+the workflow builds no extraction step at all for them.
 
 If your config still says `extraction.enabled: true`, the pipeline would go looking for
 `seqs_extracted.fasta` — a file no rule produces — and Snakemake would stop with a
@@ -211,6 +212,15 @@ This case stops the run instead of falling back. Switching off a step that could
 run changes no result; classifying with a method other than the one requested would
 change the results without notice.
 
+COI is the mirror case: MIDORI2 is classified with SINTAX only, because DADA2's
+`assignTaxonomy` would need about 225 GB of memory for it at species level, so the COI
+pack leaves `taxonomy_refdb` empty and `method: rdp` stops the run in the same way:
+
+```text
+[MetaFlux] marker COI has no rdp training set, so
+amplicon.taxonomy.method: rdp is not available for it. Use method: sintax.
+```
+
 ## The five settings that define a run
 
 Most of the file is tuning that can stay at its defaults. Five settings describe
@@ -219,7 +229,7 @@ what the analysis actually is, the ones the box at the top of the template lists
 | Setting | Choices |
 |---|---|
 | `mode` | `amplicon` or `shotgun` |
-| `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB`, `rpoB` (amplicon mode only) |
+| `amplicon.type` | `16S`, `ITS`, `18S`, `gyrB`, `rpoB`, `COI` (amplicon mode only) |
 | `shotgun.profiler` | `kraken2` (the default), `sylph` or `both` (shotgun mode only; see [Profiler](#profiler) below) |
 | `input.fastq_dir` | where the paired FASTQs are |
 | `output.out_dir` | where results go |
@@ -331,8 +341,8 @@ BBTools conda package, so neither the download nor the index is needed there.
 
 ### Marker databases are declared by the marker packs, not here
 
-SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8 and FROGS are **not** listed in the
-config. Each marker pack (`workflow/markers/<type>.yaml`) declares its own database
+SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8, FROGS, MIDORI2 and the bacterial COX1
+set are **not** listed in the config. Each marker pack (`workflow/markers/<type>.yaml`) declares its own database
 filenames and download URLs, and MetaFlux fetches (and where needed converts) them
 on first use into `refdb_root`. An entry under `references` is needed only to
 choose the SILVA release for 16S (see [SILVA release](#silva-release-16s) below) or to
@@ -364,13 +374,19 @@ the pack's declared filename. The full set of relocatable keys:
 | `pr2.sintax` | 18S | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` (built from `pr2.utax` with the domain moved to the SINTAX letter `d:`, not downloaded; `method: sintax` only; see below) |
 | `gyrb.dada2` | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` |
 | `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` (the DADA2 trainset converted from the FROGS archive, with the domain written `d__`; see below) |
+| `midori2.raw` | COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz` (MIDORI2's SINTAX file as published, extracted from its zip) |
+| `midori2.taxonomy` | COI | `midori2/GB273/taxonomy/nodes.dmp` (MIDORI2's NCBI taxonomy snapshot; `names.dmp` is read from the same folder) |
+| `midori2.sintax` | COI | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` (built from the three files above and the MIDORI2 list of the bacterial COX1 set, not downloaded; see below) |
+| `bacterial_cox1.fasta` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` (whole genes of the bacterial COX1 set) |
+| `bacterial_cox1.fragments` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` |
+| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (MIDORI2 records that are bacterial COX1; those marked `removed` are left out of `midori2.sintax`) |
 
 The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 `silva_other: strip`, `other-verbatim` becomes `other-stripped`.
 
 #### Reference files MetaFlux builds itself
 
-Four of these keys point at files MetaFlux builds rather than downloads:
+Five of these keys point at files MetaFlux builds rather than downloads:
 
 | Key | Built from | By rule |
 |---|---|---|
@@ -378,6 +394,7 @@ Four of these keys point at files MetaFlux builds rather than downloads:
 | `silva.sintax` | `silva.train`, the training set of the chosen release | `convert_silva_sintax` |
 | `pr2.sintax` | `pr2.utax`, PR2's UTAX download | `convert_pr2_sintax` |
 | `rpob.frogs` | the FROGS rpoB archive, downloaded by `fetch_rpob_archive` | `convert_rpob_to_dada2` |
+| `midori2.sintax` | `midori2.raw`, `midori2.taxonomy` and `bacterial_cox1.midori2_list` | `prepare_midori2_coi_sintax` |
 
 A path given for one of them is where MetaFlux writes the file it builds. MetaFlux
 rebuilds such a file whenever its input or its conversion script is newer than it (a
@@ -417,7 +434,7 @@ being ignored — so a leftover value is visible rather than silently misleading
 
 ```yaml
 amplicon:
-  type: 16S             # 16S | ITS | 18S | gyrB | rpoB
+  type: 16S             # 16S | ITS | 18S | gyrB | rpoB | COI
   its_region: ITS2      # ITS1 | ITS2 (ignored unless type == ITS)
   seed: 42
 ```
@@ -486,6 +503,7 @@ measurement automatically, and reusing the same primers across runs reuses it.
     16S: p95
     18S: p95
     rpoB: p95
+    COI: p95
   min_overlap: 12
 ```
 
@@ -496,7 +514,7 @@ and R2 truncation points still leave the pair able to merge.
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `expected_length` | Amplicon size used for the truncation overlap check | `auto` | `auto` measures it from the reference database; an integer states it directly; a `[min, max]` pair states a window and the **maximum** is used for the overlap check. |
-| `probe_length_stat.<key>` | Which statistic of the measured length distribution `auto` should take | `p95` for `16S`, `18S` and `rpoB` | One of `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`. |
+| `probe_length_stat.<key>` | Which statistic of the measured length distribution `auto` should take | `p95` for `16S`, `18S`, `rpoB` and `COI` | One of `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`. |
 | `min_overlap` | Bases of forward/reverse overlap the truncation picker must preserve | `12` | A design constraint only. The overlap actually enforced when pairs are merged is `dada2.merge.min_overlap`. |
 
 **What `auto` does per marker.** Markers whose reference is a full-length gene are
@@ -511,13 +529,14 @@ already cut to amplicon length are measured directly.
 | 18S | In-silico PCR | SILVA-Eukaryotic 18S | `18S` |
 | gyrB | Direct read — DD7RZ8 already ships trimmed amplicons | DD7RZ8 | `16S` (deliberate reuse) |
 | rpoB | In-silico PCR — FROGS ships full-length genes | FROGS RefSeq rpoB | `rpoB` |
+| COI | In-silico PCR — MIDORI2 holds whole barcodes and whole genes | the converted MIDORI2 (`midori2.sintax`) | `COI` |
 
-!!! warning "Keep all three `probe_length_stat` keys"
+!!! warning "Keep all four `probe_length_stat` keys"
 
     For every marker except ITS, MetaFlux checks at start-up that the key its
     pack names is present in `probe_length_stat`, whatever `expected_length` is set
     to, and exits with the missing key name if it is not. gyrB reads the `16S`
-    key — that is a deliberate reuse, not a typo. Deleting any of the three
+    key — that is a deliberate reuse, not a typo. Deleting any of the four
     entries breaks the markers that point at it.
 
 !!! warning "18S V9 must be sized manually"
@@ -680,9 +699,9 @@ empty table.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `enabled` | Runs the marker's region extractor over the ASVs, trimming each to the target region and dropping ASVs the extractor cannot place | `true` | Metaxa2 for 16S, ITSx for ITS. 18S, gyrB and rpoB have no extractor. For 16S the organelle filter (`taxonomy.filter.organelles`) works from Metaxa2's call, so with `false` it does nothing and `metaxa2_origin` in `asv_table_unfiltered.txt` is `NA`. |
+| `enabled` | Runs the marker's region extractor over the ASVs, trimming each to the target region and dropping ASVs the extractor cannot place | `true` | Metaxa2 for 16S, ITSx for ITS. 18S, gyrB, rpoB and COI have no extractor. For 16S the organelle filter (`taxonomy.filter.organelles`) works from Metaxa2's call, so with `false` it does nothing and `metaxa2_origin` in `asv_table_unfiltered.txt` is `NA`. |
 
-Markers with no extractor (`18S`, `gyrB`, `rpoB`) should be run with
+Markers with no extractor (`18S`, `gyrB`, `rpoB`, `COI`) should be run with
 `enabled: false`. Left `true`, MetaFlux prints a warning and forces it off rather
 than asking the workflow graph for a file no rule produces. The ASV length filter
 still runs either way.
@@ -700,18 +719,20 @@ still runs either way.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `method` | Which classifier assigns taxonomy | `sintax` | `rdp` is DADA2's `assignTaxonomy` (plus `addSpecies` for 16S); `sintax` is `vsearch --sintax`, which uses roughly 2–3 GB regardless of ASV count. Both paths apply the same taxon filter and write the same tables. |
+| `method` | Which classifier assigns taxonomy | `sintax` | `rdp` is DADA2's `assignTaxonomy` (plus `addSpecies` for 16S); `sintax` is `vsearch --sintax`, which uses roughly 2–3 GB regardless of ASV count (about 8 GB against MIDORI2 for COI). Both paths apply the same taxon filter and write the same tables. |
 | `min_boot` | RDP bootstrap confidence a rank must reach to be reported | `80` | Read only by the `rdp` path. Range 0–100. |
 | `sintax_cutoff` | SINTAX confidence a rank must reach to be reported | `0.8` | Read only by the `sintax` path. Range 0–1; 0.8 is roughly equivalent to `min_boot: 80`. |
 | `try_rc` | Also tries the reverse complement of each ASV during classification | `true` | Read only by the `rdp` path. The `sintax` path always searches both strands. |
 | `silva_other` | What to do with SILVA 144's `X--other` names (a clade that does not contain the type of taxon X but belongs to it) | `verbatim` | `verbatim` keeps the names; the filter and `addSpecies` then treat `X--other` as `X`. `strip` removes the suffix before training, so the two become one taxon. The kingdom is always written without the suffix, whichever value is set. No effect with SILVA 138.2 or other markers. See [16S rRNA](../amplicon/markers/16S.md#the-other-suffix-amplicontaxonomysilva_other). |
 
-!!! warning "gyrB and rpoB are rdp-only"
+!!! warning "gyrB and rpoB are rdp-only, COI is sintax-only"
 
     The DD7RZ8 and FROGS releases ship a DADA2 trainset with no SINTAX build, so
     those packs declare no SINTAX reference. `method: sintax` for either marker is
     refused at start-up with a message naming the marker, rather than failing later
-    on a missing path.
+    on a missing path. The COI pack declares no `rdp` trainset (one trained on MIDORI2
+    would need about 225 GB of memory at species level), so `method: rdp` is refused
+    for COI in the same way.
 
 ### Taxon filter
 
@@ -754,6 +775,7 @@ reference cannot hold in that slot (`k__Fungi` on 16S). See
 | 18S | `[d__Eukaryota]` (PR2 ranks) — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S](../amplicon/markers/18S.md) | `[]` |
 | gyrB | no recommended default — paralogs are removed with `discard: [other]` on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter | |
 | rpoB | no recommended default — FROGS RefSeq has no equivalent contamination to remove | |
+| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COX1 is moved by the off-target guard (`amplicon.coi`), not by a token |
 
 Contaminants a blank extraction control reveals go in `discard`, e.g.
 `discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]`. A
@@ -767,6 +789,26 @@ The full treatment is on
     Configs written before the token lists used `include_pattern` /
     `exclude_pattern` regexes. Those keys now stop the run with instructions,
     rather than being ignored and leaving the filter silently disabled.
+
+### COI screens
+
+```yaml
+  coi:
+    frame_check: true
+    length_tolerance: 9
+    offtarget_guard: true
+```
+
+Read only when `type: COI`. Rule `coi_screens` measures every ASV for both screens and
+writes `06.taxonomy/coi_screens.tsv`; the taxonomy step applies them before the taxon
+filter. A screen switched off still measures, so the table says what it would have done.
+See [COI](../amplicon/markers/coi.md#the-coi-screens).
+
+| Key | What it does | Default | Notes |
+|---|---|---|---|
+| `frame_check` | Removes ASVs with TAA or TAG in the run's reading frame, or whose length differs from the run's reference length by anything but whole codons (pseudogenes, NUMTs, artefacts) | `true` | The run's frame and reference length are taken from the ASVs themselves (the frame open in most reads; the most frequent length among open ASVs). Removed ASVs stay in `asv_table_unfiltered.txt` as `removed_frame`. |
+| `length_tolerance` | Largest length difference from the run's reference length, in bases, that the frame check accepts | `9` | Three codons. Must be a multiple of 3 and not negative; anything else stops the run at start-up. |
+| `offtarget_guard` | Moves ASVs closer to the bacterial COX1 set (B) than to MIDORI2 (E) out of the main tables, into `06.taxonomy/bacterial_cox1_asvs.tsv` | `true` | *Wolbachia* and other bacterial COX1. Moved ASVs stay in `asv_table_unfiltered.txt` as `moved_bacterial_cox1`. |
 
 ### DADA2 — tier 1, operational parameters
 
@@ -1163,6 +1205,7 @@ so they are what a cluster executor turns into job requests.
 | `dada_length_filter` | amplicon | 2 | |
 | `target_extract` | amplicon | 8 | Metaxa2 or ITSx. |
 | `assign_taxonomy` | amplicon | 8 | With a fixed `amplicon.seed` the result does not depend on this value (for `sintax` from v2.5.0 on). |
+| `coi_screens` | amplicon | 8 | COI only: VSEARCH against MIDORI2 (E) and the bacterial COX1 set (B). |
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |
@@ -1198,7 +1241,8 @@ so they are what a cluster executor turns into job requests.
 | `dada_seqtab` | amplicon | 16000 | The heaviest amplicon step: error learning, denoising, merging and chimera removal all happen here across every sample at once. |
 | `dada_length_filter` | amplicon | 4000 | |
 | `target_extract` | amplicon | 8000 | |
-| `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count. |
+| `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count, except against MIDORI2 for COI, where it was measured at 8.3 GB. |
+| `coi_screens` | amplicon | 12000 | COI only: VSEARCH holds MIDORI2 GB273 (2.1 billion bases) and its k-mer index; 8.4 GB measured at the peak, with 717 ASVs on 8 threads, in about a minute. |
 | `aggregate_read_counts` | shared | 2000 | Present in the config template but not read — the rule declares no `mem_mb`; see the note below. |
 | `phylo_input` | amplicon | 2000 | Two small text tables in, one FASTA out. |
 | `phylo_align` | amplicon | 4000 | |

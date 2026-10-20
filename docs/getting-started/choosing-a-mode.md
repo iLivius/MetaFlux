@@ -4,7 +4,8 @@ MetaFlux runs one of two pipelines. The choice follows from how the library was 
 
 - **`amplicon`** — a marker gene was PCR-amplified with a specific primer pair, and
   those amplicons were sequenced. 16S rRNA for bacteria and archaea, ITS for fungi,
-  18S rRNA for eukaryotes, or the protein-coding markers gyrB and rpoB.
+  18S rRNA for eukaryotes, the protein-coding markers gyrB and rpoB for bacteria, or
+  COI for animals.
 - **`shotgun`** — total DNA was fragmented and sequenced without any target-specific
   amplification, so the reads come from everywhere in every genome present.
 
@@ -120,7 +121,7 @@ config never mentions primers. It can be ignored, or silenced by setting both to
 
 **Amplicon** needs, on top of the shared input and output paths:
 
-- `amplicon.type` — which marker (`16S`, `ITS`, `18S`, `gyrB`, `rpoB`). This selects
+- `amplicon.type` — which marker (`16S`, `ITS`, `18S`, `gyrB`, `rpoB`, `COI`). This selects
   the reference databases, whether a region extractor runs, and which taxonomy
   methods are available.
 - `amplicon.primers.fwd` and `.rev` — the primer sequences as FASTA files. Both must

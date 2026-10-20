@@ -2,8 +2,8 @@
 
 Amplicon mode takes raw paired-end Illumina metabarcoding reads and returns a table of
 exact amplicon sequence variants (ASVs) with a taxonomic assignment for each one. The
-denoising engine is DADA2; five markers are supported — 16S rRNA, ITS, 18S rRNA, gyrB and
-rpoB — and the marker is what decides which reference databases are used, whether a
+denoising engine is DADA2; six markers are supported — 16S rRNA, ITS, 18S rRNA, gyrB,
+rpoB and COI — and the marker is what decides which reference databases are used, whether a
 region extractor runs, and which classifiers are available.
 
 Two config keys define the run:
@@ -11,7 +11,7 @@ Two config keys define the run:
 ```yaml
 mode: amplicon
 amplicon:
-  type: 16S          # 16S | ITS | 18S | gyrB | rpoB
+  type: 16S          # 16S | ITS | 18S | gyrB | rpoB | COI
 ```
 
 Everything else is either a path (input reads, output directory, primer FASTAs) or
@@ -319,7 +319,7 @@ extractor:
 |--------|-----------|-------|
 | 16S | Metaxa2 | Run with `-t all` (all domains). Every extracted sequence is kept; pruning is left to the taxonomy filter in step 9, which also uses Metaxa2's own call to remove mitochondria and chloroplasts (`metaxa2_origin.tsv`). |
 | ITS | ITSx | Run with `-t all --only_full F`. Partial detections must be kept: a targeted ITS1 or ITS2 amplicon never contains the full ITS region. The region kept is the one named by `amplicon.its_region`. |
-| 18S, gyrB, rpoB | *none* | No extractor exists in MetaFlux for these. Extraction is forced off with a warning if the config still asks for it. |
+| 18S, gyrB, rpoB, COI | *none* | No extractor exists in MetaFlux for these. Extraction is forced off with a warning if the config still asks for it. |
 
 Both extractors write `seqs_extracted.fasta` and `seqtab_extracted_head_names.txt` into
 `05.dada2/`, alongside the extractor's own report (`metaxa2_extraction.results.txt` or
@@ -379,15 +379,17 @@ The window logic is covered in full on the
 
 | Method | Tool | Threshold key | Available for |
 |--------|------|---------------|---------------|
-| `rdp` | DADA2 `assignTaxonomy` (naive Bayesian RDP classifier), plus `addSpecies` for 16S | `min_boot` (default `80`) | all five markers |
-| `sintax` | `vsearch --sintax` | `sintax_cutoff` (default `0.8`, roughly equivalent to `min_boot: 80`) | 16S, ITS, 18S |
+| `rdp` | DADA2 `assignTaxonomy` (naive Bayesian RDP classifier), plus `addSpecies` for 16S | `min_boot` (default `80`) | 16S, ITS, 18S, gyrB, rpoB |
+| `sintax` | `vsearch --sintax` | `sintax_cutoff` (default `0.8`, roughly equivalent to `min_boot: 80`) | 16S, ITS, 18S, COI |
 
 gyrB and rpoB are RDP-only: their reference releases ship a DADA2 training set and no
 SINTAX build, so `method: sintax` is rejected at start-up with a clear message rather than
-failing later.
+failing later. COI is SINTAX-only, for the opposite reason: a DADA2 classifier trained on
+MIDORI2 would need about 225 GB of memory at species level, so `method: rdp` is rejected
+in the same way.
 
 The reference database follows from the marker — SILVA for 16S, UNITE for ITS, PR2 for 18S,
-DD7RZ8 for gyrB, FROGS RefSeq for rpoB — and is fetched on first use. Some of them arrive
+DD7RZ8 for gyrB, FROGS RefSeq for rpoB, MIDORI2 for COI — and is fetched on first use. Some of them arrive
 by way of a local conversion step rather than a plain download: for 16S,
 `convert_silva_train` writes SILVA 144's training set with its kingdom names without
 SILVA's `--other` suffix and `convert_silva_sintax` builds the SINTAX database from it;
@@ -458,7 +460,9 @@ expected: it shows which step consumed the reads.
 
 ## What changes between markers
 
-Everything above is the same for all five markers except the four columns below.
+Everything above is the same for all six markers except the four columns below, and the
+two COI screens (a reading-frame check and an off-target guard against bacterial COX1)
+that run before the taxon filter in COI runs.
 
 | Marker | Probe substrate and mode | Extractor | Taxonomy reference | Methods |
 |--------|--------------------------|-----------|--------------------|---------|
@@ -467,6 +471,7 @@ Everything above is the same for all five markers except the four columns below.
 | [18S](markers/18S.md) | SILVA-Euk, in-silico PCR | none | PR2 | rdp, sintax |
 | [gyrB](markers/gyrb.md) | DD7RZ8, direct | none | DD7RZ8 | rdp only |
 | [rpoB](markers/rpob.md) | FROGS RefSeq, in-silico PCR | none | FROGS RefSeq | rdp only |
+| [COI](markers/coi.md) | MIDORI2, in-silico PCR | none | MIDORI2 (converted) | sintax only |
 
 Start with the [marker pages](markers/index.md) before setting up a run: each one covers
 the primers the reference was built for, the filter tokens that make sense for it, and the

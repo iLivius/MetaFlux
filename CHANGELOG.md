@@ -6,6 +6,47 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
+## 2.6.0 — [date to be set at release]
+
+### COI, a new amplicon marker
+
+`amplicon.type: COI` runs the mitochondrial COI gene, the animal barcode, through the
+amplicon path and classifies it with SINTAX against MIDORI2 (release GB273, UNIQ NUC_SP
+variant). `method: rdp` is refused for COI: a DADA2 classifier trained on MIDORI2 would
+need about 225 GB of memory at species level.
+
+- **The reference** is downloaded from MIDORI2's Zenodo record (zip MD5 and FASTA SHA-256
+  checked) and converted once: the domain moves to `d:`, the kingdom (Metazoa, Fungi,
+  Viridiplantae) is added from MIDORI2's own NCBI taxonomy snapshot, the taxid suffixes
+  go, placeholder ranks and interim species names ("sp.", BOLD codes) are left out of the
+  headers, and the MIDORI2 records that are bacterial COX1 filed under eukaryote names
+  are removed. `keep: [k__Metazoa]` keeps the animals of a run.
+- **Two COI screens** run before the taxon filter, both on by default (`amplicon.coi`):
+  a reading-frame check removes ASVs with a TAA or TAG in the run's frame, or a length
+  that is not whole codons away from the run's reference length (pseudogenes, NUMTs,
+  artefacts); an off-target guard moves the ASVs closer to a set of bacterial COX1 genes
+  (B) than to MIDORI2 (E) to `06.taxonomy/bacterial_cox1_asvs.tsv`, *Wolbachia* above
+  all. `06.taxonomy/coi_screens.tsv` holds the measurements behind both;
+  `asv_table_unfiltered.txt` marks the ASVs `removed_frame` or `moved_bacterial_cox1`;
+  the read-tracking table has the columns `post_frame_check` and `post_bacterial_cox1`.
+- **Species flags.** `06.taxonomy/coi_asv_flags.tsv` says, per kept ASV, how far a
+  species call can be trusted (`low_identity` below 98 %, `shared_sequence` when a
+  record of another named species is as close) and flags ASVs farther than 80 % from
+  everything in MIDORI2.
+- **The bacterial COX1 set** (`bacterial_cox1_gtdb-r232.v1`, Zenodo [DOI]) was built for
+  this release from the 199,923 species representatives of GTDB R232; how, and how it
+  was tested, is on the new manual page "Bacterial COX1 reference set (COI)".
+
+### What runs again in a folder made with v2.5.0
+
+For the other markers, two steps run again, because their scripts gained the COI code
+and Snakemake reruns a step whose script changed: `assign_taxonomy` (under `sintax`) and
+`aggregate_read_counts`, and the steps that read their tables (the phylogeny, when it is
+switched on). Their results do not change: on the 18S run of 120 samples made with
+v2.5.0, the four tables of `06.taxonomy/` and `stats/read_tracking.txt` came out
+byte for byte the same. A run started with `--rerun-triggers mtime params input
+software-env` skips them.
+
 ## 2.5.0 — 2026-10-16
 
 ### Taxonomy strings: `d__` is the domain, `k__` the kingdom

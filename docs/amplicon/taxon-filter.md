@@ -229,7 +229,7 @@ What the filter takes from Metaxa2, and what it does not:
   three let through.
 
 It can only act where Metaxa2 ran: 16S with `extraction.enabled: true`, and
-`filter.enabled: true`. For ITS, 18S, gyrB and rpoB, or with extraction off, the setting
+`filter.enabled: true`. For ITS, 18S, gyrB, rpoB and COI, or with extraction off, the setting
 is inactive and the run says so once at start-up, instead of failing:
 
 ```text
@@ -335,14 +335,14 @@ The rank prefixes, and the markers whose strings have each rank:
 
 | Rank | Prefix | Markers |
 |------|--------|---------|
-| Domain | `d__` | 16S, 18S, rpoB |
-| Kingdom | `k__` | 16S on SILVA 144, ITS |
-| Phylum | `p__` | 16S, ITS, gyrB, rpoB |
-| Class | `c__` | all five |
-| Order | `o__` | all five |
-| Family | `f__` | all five |
-| Genus | `g__` | all five |
-| Species | `s__` | all five; on 16S under `rdp` only |
+| Domain | `d__` | 16S, 18S, rpoB, COI |
+| Kingdom | `k__` | 16S on SILVA 144, ITS, COI (not for protists) |
+| Phylum | `p__` | 16S, ITS, gyrB, rpoB, COI |
+| Class | `c__` | all six |
+| Order | `o__` | all six |
+| Family | `f__` | all six |
+| Genus | `g__` | all six |
+| Species | `s__` | all six; on 16S under `rdp` only |
 
 gyrB's first slot is its gene tag, `gyrB` or `other`, with no prefix. 18S has PR2's own
 ranks between the domain and the class: Supergroup `sg__`, Division `dv__`, Subdivision
@@ -352,8 +352,8 @@ field, so a subdivision-level token only exists on the `rdp` path.
 Species-level tokens need extra care, because the exact form follows the reference and
 not the pipeline: SILVA (16S) via `rdp` yields a binomial with a space, e.g.
 `s__Bacillus subtilis`, while UNITE (ITS, under both methods), PR2 (18S), the
-GTDB-derived gyrB reference and the NCBI RefSeq-derived rpoB reference use an
-underscore, e.g. `s__Staphylococcus_simiae`. Copy, do not retype.
+GTDB-derived gyrB reference, the NCBI RefSeq-derived rpoB reference and the converted
+MIDORI2 (COI) use an underscore, e.g. `s__Staphylococcus_simiae`. Copy, do not retype.
 
 !!! tip
 

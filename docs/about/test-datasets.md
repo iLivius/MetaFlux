@@ -21,8 +21,9 @@ difference between them holds even where the absolute counts have since moved.
 | 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
 | gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
 | rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
+| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod BINs, MiSeq 2×300 | 1 | SRR8082166 | BF3 / BR2 | MIDORI2 GB273 + bacterial COX1 set gtdb-r232.v1 |
 
-The three mock-community sets (ITS, gyrB, rpoB) have known composition, so they check
+The four mock-community sets (ITS, gyrB, rpoB, COI) have known composition, so they check
 taxonomy as well as mechanics. The ITS run (UNITE release 19.02.2025, `method: sintax`)
 recovers four of the expected yeast genera — *Hanseniaspora*, *Rhodotorula*,
 *Debaryomyces*, *Yamadazyma* — but stops at class (Saccharomycetes) for two ASVs that
@@ -37,6 +38,15 @@ its most abundant species. See
 [the merge-parameter section below](#effect-of-moving-the-merge-parameters-to-dada2s-defaults)
 for how this same gap shows up under the other `dada2.merge` setting too, as a different
 set of ASVs carrying a similar fraction of reads.
+
+The COI run (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) uses one library, split
+into two pseudo-samples of alternate read pairs because MetaFlux stops on a run with a
+single sample, with R1 and R2 swapped because every R1 of this library carries the reverse
+primer. 359 of the 374 specimens are recovered by an ASV at least 97 % identical to their
+barcode, and the ASVs that match a specimen hold 99.3 % of the reads of the final table. The
+off-target guard moves 22 bacterial ASVs (0.5 % of the reads), 12 of which SINTAX had called
+a stink bug that is not in the mock; the frame check removes 165 ASVs (0.6 % of the reads),
+none of them the only ASV of a specimen. See [COI](../amplicon/markers/coi.md#validation).
 
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —
@@ -92,7 +102,7 @@ reads before classification.
 
 ## Check a public dataset before adopting it
 
-Assembling the five amplicon sets meant rejecting other candidates. The checks below are
+Assembling the six amplicon sets meant rejecting other candidates. The checks below are
 the ones that caught them. A dataset can fail in other ways too, so check its run table
 and a sample of its reads before building a run on it.
 
@@ -101,6 +111,8 @@ and a sample of its reads before building a run on it.
 | **Do the reads still carry their primers?** | On a few thousand reads from more than one sample, check that R1 starts with the forward primer and R2 with the reverse primer, allowing for degenerate bases. The commonest 22-mer at the 5′ end of R1 shows what is there instead: if it changes with the organisms in each sample, the primer is gone. | [PRJNA1138067](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1138067), ITS2 mocks of two fungi in different proportions. The archived reads carry no primer: each read starts at the first base after its primer site, and the commonest 5′ 22-mers of R1 are the 5.8S sequences of the two fungi (75% and 21% of reads in SRR29900459). MetaFlux trims primers with `--discard-untrimmed`, so a library like this loses every read at that step. |
 | **Is it really paired?** | In the SRA run table, check that `spots_with_mates` is not 0 and that `avgLength` matches the stated read length and layout: a 2×300 paired run reads about 600, not about 300. | A 16S V5–V7 deposit labelled `PAIRED`. The forward and reverse reads of each sample were deposited as two separate runs with one read per spot (`spots_with_mates` 0, `avgLength` at most 300), so each run downloads as one mate only. fasterq-dump writes a single FASTQ for such a run and reports the second read of every spot as zero-length. |
 | **Is it the platform and layout you expect?** | Read the platform and layout fields of the ENA or SRA run table, not a paper or a summary of the study. | [PRJEB23971](https://www.ebi.ac.uk/ena/browser/view/PRJEB23971), 18S V4: 454 GS FLX Titanium, single-end. [PRJEB24936](https://www.ebi.ac.uk/ena/browser/view/PRJEB24936), rpoB and 16S mock communities on Illumina MiSeq, deposited as single-end reads: the rpoB mock runs average 431–434 bases per read, the length of the whole amplicon, so the pairs had already been merged. |
+| **Are the quality values real?** | Look at the quality string of a few reads: a run that shows one value at every base was rewritten somewhere on the way. | The COI mock runs of [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) as ENA serves them carry Q30 at every base; downloaded from the SRA with sra-tools (prefetch, fasterq-dump), the same runs have their real values (Q7–Q38). DADA2 learns its error model from the quality values, so the ENA files would give it nothing to learn from. |
+| **Which read carries which primer?** | On a few thousand pairs, count how often R1 starts with the forward and how often with the reverse primer. | SRR8082166, the BF3/BR2 run of the COI mock: every R1 starts with BR2. With `orientation: fixed` such a library loses all its reads at primer trimming; swap R1 and R2 of each sample. |
 
 ## Effect of moving the merge parameters to DADA2's defaults
 

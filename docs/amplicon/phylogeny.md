@@ -93,7 +93,7 @@ published reason, and those reasons are not the same as each other:
   signal, and we found no study validating UniFrac or Faith's PD from short 18S
   amplicons. It is **deferred pending validation**, not excluded on principle.
 
-Protein-coding markers (gyrB, rpoB, and COI when it arrives) would additionally need
+Protein-coding markers (gyrB, rpoB and COI) would additionally need
 **codon-aware alignment** and a codon or amino-acid substitution model — a plain
 nucleotide alignment of a coding sequence inserts frameshift-breaking gaps that become
 spurious branch length. That is a separate module, not a configuration option.

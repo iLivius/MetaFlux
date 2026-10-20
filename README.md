@@ -26,7 +26,7 @@ v2.5.0
 | [Installation](https://iLivius.github.io/MetaFlux/getting-started/installation/) | environments, reference databases, Kraken2 index |
 | [Quick start](https://iLivius.github.io/MetaFlux/getting-started/quick-start/) | first run, start to finish |
 | [Amplicon mode](https://iLivius.github.io/MetaFlux/amplicon/overview/) | the DADA2 pipeline, step by step |
-| [Markers](https://iLivius.github.io/MetaFlux/amplicon/markers/) | 16S · ITS · 18S · gyrB · rpoB, one page each |
+| [Markers](https://iLivius.github.io/MetaFlux/amplicon/markers/) | 16S · ITS · 18S · gyrB · rpoB · COI, one page each |
 | [Phylogeny (16S)](https://iLivius.github.io/MetaFlux/amplicon/phylogeny/) | optional ASV tree, exported unrooted, for Faith's PD and UniFrac in R |
 | [Shotgun mode](https://iLivius.github.io/MetaFlux/shotgun/overview/) | Kraken2 + Bracken or sylph profiling |
 | [Configuration reference](https://iLivius.github.io/MetaFlux/reference/configuration/) | every key, default and trade-off |
@@ -45,10 +45,10 @@ paired-end short reads through to a taxonomically annotated abundance table. It
 runs in one of two modes, selected by a single config key:
 
 - **`amplicon`** — a [DADA2](https://benjjneb.github.io/dada2/)-based pipeline for
-  multi-marker metabarcoding (16S rRNA, ITS, 18S rRNA, gyrB, rpoB): PhiX removal,
+  multi-marker metabarcoding (16S rRNA, ITS, 18S rRNA, gyrB, rpoB, COI): PhiX removal,
   primer trimming, exact ASV inference, optional marker-region extraction, length
   filtering, and taxonomic assignment against SILVA (16S), UNITE (ITS), PR2 (18S),
-  DD7RZ8 (gyrB), or FROGS (rpoB).
+  DD7RZ8 (gyrB), FROGS (rpoB), or MIDORI2 (COI).
 - **`shotgun`** — a [Kraken2](https://github.com/DerrickWood/kraken2) +
   [Bracken](https://github.com/jenniferlu717/Bracken) pipeline (or
   [sylph](https://github.com/bluenote-1577/sylph), chosen with `shotgun.profiler`) for
@@ -136,6 +136,7 @@ are cached under `refdb/`. Shotgun mode needs, supplied by hand, a Kraken2 index
 | PR2 (DADA2 + UTAX) + SILVA-Euk | amplicon (18S) | auto-fetched on first run |
 | DD7RZ8 (DADA2 trainset) | amplicon (gyrB) | auto-fetched on first run |
 | FROGS RefSeq (converted to DADA2) | amplicon (rpoB) | auto-fetched and converted on first run |
+| MIDORI2 (SINTAX) + bacterial COX1 set (GTDB R232) | amplicon (COI) | auto-fetched (checksummed) and converted on first run |
 | **Kraken2 / Bracken index** | shotgun (`kraken2` or `both`) | **user-supplied** |
 | **sylph databases + sylph-tax lineage tables** | shotgun (`sylph` or `both`) | **user-supplied** |
 | Host genome(s) | shotgun (optional) | user-supplied, path or URL |

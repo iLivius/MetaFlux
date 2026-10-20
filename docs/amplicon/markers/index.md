@@ -1,11 +1,12 @@
 # Amplicon markers
 
 MetaFlux runs one marker per amplicon run, chosen with `amplicon.type` in the config:
-`16S`, `ITS`, `18S`, `gyrB` or `rpoB`. Everything that differs between markers — which
+`16S`, `ITS`, `18S`, `gyrB`, `rpoB` or `COI`. Everything that differs between markers — which
 reference the amplicon-length probe measures, which database the classifier uses, whether
 a target-region extractor exists, how many taxonomic ranks the output carries — is
 declared in a small YAML file called a *marker pack*, one per marker, under
-`workflow/markers/`. The rest of the amplicon pipeline is the same code for all five.
+`workflow/markers/`. The rest of the amplicon pipeline is the same code for all six,
+apart from the two COI screens (see [COI](coi.md#the-coi-screens)).
 
 Marker packs hold facts about the marker, never run settings. Primers, expected lengths,
 truncation values and taxon filters live in the run config; they are the things that change
@@ -22,7 +23,8 @@ from one experiment to the next. A pack is read separately and is never merged i
     `workflow/rules/amplicon/10_refdb.smk`. That is how UNITE, the UNITE UCHIME
     subregions, the SILVA 144 training set (whose kingdom names lose SILVA's `--other`
     suffix), the SILVA SINTAX builds, the 18S PR2 SINTAX file (whose domain moves to the
-    letter `d:`) and the FROGS rpoB build are handled.
+    letter `d:`), the FROGS rpoB build and the COI files (MIDORI2, its taxonomy snapshot
+    and the bacterial COX1 set) are handled.
 
     A pack in `config/markers/` replaces the shipped pack completely, so after an
     upgrade copy the shipped pack again and re-apply your change: every pack must
@@ -30,7 +32,7 @@ from one experiment to the next. A pack is read separately and is never merged i
     and a copy made for an older MetaFlux, which has none, stops the run at start-up,
     whichever marker the run uses.
 
-## The five markers side by side
+## The six markers side by side
 
 | Marker | What it is, what it resolves | `probe_mode` | Why that mode | Taxonomy reference | SINTAX build? | Extractor | Ranks |
 |---|---|---|---|---|---|---|---|
@@ -39,6 +41,7 @@ from one experiment to the next. A pack is read separately and is never merged i
 | **18S** | Eukaryotic SSU rRNA; protists and other micro-eukaryotes | `pcr` | The probe substrate (SILVA-Euk v132) is full-length SSU | PR2 v5.1.1 SSU DADA2 file (`pr2_dada2`) | Yes — `pr2_sintax`, PR2 v5.1.1's UTAX file (`pr2_utax`) with its domain moved to the SINTAX letter `d:`, built by `convert_pr2_sintax`. `rdp` and `sintax` both available | none | 9 under `rdp`, 8 under `sintax` |
 | **gyrB** | DNA gyrase subunit B; protein-coding, single-copy, higher intra-genus resolution than 16S | `direct` | The DD7RZ8 v6 trainset is already primer-trimmed in-silico amplicons (~247 bp), not whole genes | DD7RZ8 v6 trainset, GTDB r226 (`gyrb_dada2`) — the same file is the probe substrate | **No.** `rdp` only | none | 7 (first rank is a paralog tag, not a taxon) |
 | **rpoB** | RNA polymerase subunit B; protein-coding, single-copy in almost all bacteria, and assigns far more ASVs to species than a 16S V3–V4 amplicon does. Not a strain marker — the reference stops at species, so the output does too | `pcr` | The FROGS RefSeq build ships full-length rpoB genes (~4 kb), so in-silico PCR recovers the amplicon window, ~387 bp once the two primers are trimmed off (~435 bp including them) | FROGS RefSeq rpoB build 20240707, converted to a DADA2 trainset (`rpob_frogs`) — the same file is the probe substrate | **No.** `rdp` only | none | 7 |
+| **COI** | Mitochondrial cytochrome c oxidase subunit I; the animal barcode, species-level for most animals | `pcr` | MIDORI2 holds whole barcodes (about 650 bp) and whole genes, so the amplicon window has to be cut out with the primers | MIDORI2 GB273 UNIQ NUC_SP SINTAX file, *converted* (`midori2_coi_sintax`: domain moved to `d:`, kingdom added from MIDORI2's NCBI snapshot, placeholder ranks, interim species names and bacterial COX1 records left out) — the same file is the probe substrate | Yes — `midori2_coi_sintax` itself. **`sintax` only**: no `rdp` trainset (it would need about 225 GB of memory at species level) | none | 8 |
 
 Names in backticks are the pack's internal reference symbols. They belong to the
 `workflow/markers/*.yaml` packs, which use them to name the probe substrate
@@ -79,6 +82,12 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 | 18S | `pr2_sintax` | `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` | `sintax` database — *converted* from `pr2_utax` (the domain moved to the letter `d:`) | `pr2.sintax` |
 | gyrB | `gyrb_dada2` | `gyrb/train_set_gyrB_v6.fa.gz` | probe substrate + `rdp` trainset | `gyrb.dada2` |
 | rpoB | `rpob_frogs` | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | probe substrate + `rdp` trainset — *converted* from the FROGS archive (the domain written `d__`) | `rpob.frogs` |
+| COI | `midori2_coi_raw` | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz` | MIDORI2's SINTAX file as published — *extracted* from a `.zip`; the input of `midori2_coi_sintax` | `midori2.raw` |
+| COI | `midori2_taxonomy` | `midori2/GB273/taxonomy/nodes.dmp` (and `names.dmp`) | MIDORI2's NCBI taxonomy snapshot, for the kingdom — *extracted* from a `.zip` | `midori2.taxonomy` |
+| COI | `bacterial_cox1` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` | identity B of the off-target guard (whole genes) | `bacterial_cox1.fasta` |
+| COI | `bacterial_cox1_fragments` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` | identity B of the off-target guard (fragments) | `bacterial_cox1.fragments` |
+| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records that are bacterial COX1; the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
+| COI | `midori2_coi_sintax` | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | probe substrate, `sintax` database and identity E of the off-target guard — *converted* from `midori2_coi_raw` with `midori2_taxonomy` and `bacterial_cox1_midori2_list` | `midori2.sintax` |
 
 The 16S rows are those of the default release, SILVA 144; `other-verbatim` becomes
 `other-stripped` with `amplicon.taxonomy.silva_other: strip`. With
@@ -110,8 +119,9 @@ those, keep the ones in which the reverse-complemented reverse primer matches, t
 it and everything downstream. Neither match is anchored — the references are whole
 genes, so the primers bind inside them.
 What survives is the set of amplicons those primers would produce from that reference, and
-their lengths are the distribution. This is the mode for 16S, 18S and rpoB, because SILVA,
-SILVA-Euk and the FROGS rpoB build all contain whole genes. For rpoB a third pass leaves
+their lengths are the distribution. This is the mode for 16S, 18S, rpoB and COI, because
+SILVA, SILVA-Euk, the FROGS rpoB build and MIDORI2 all contain whole genes or whole
+barcodes. For rpoB a third pass leaves
 out of the statistics the products that still hold a second forward-primer site (see
 [A primer that matches twice](../length-and-truncation.md#a-primer-that-matches-twice)).
 
@@ -150,8 +160,9 @@ For 16S and ITS, MetaFlux can isolate the target region within each ASV before t
 assigned — Metaxa2 for 16S, ITSx for ITS. This is the `target_extract` rule, switched on
 with `amplicon.extraction.enabled`.
 
-18S, gyrB and rpoB have `extractor: none`. There is no equivalent tool for gyrB or rpoB,
-and for 18S the pack deliberately does not use Metaxa2 even though it could handle SSU.
+18S, gyrB, rpoB and COI have `extractor: none`. There is no equivalent tool for gyrB,
+rpoB or COI, and for 18S the pack deliberately does not use Metaxa2 even though it could
+handle SSU.
 Those markers define no `target_extract` rule at all, so if the config still asks for
 extraction the workflow would otherwise go looking for a file nothing produces. Instead
 the setting is overridden at start-up and the reason is printed:
@@ -162,7 +173,7 @@ the setting is overridden at start-up and the reason is printed:
 
 Nothing else changes. The ASV length filter still runs, and it is what keeps ASVs inside
 the window derived from the probe distribution. Setting `extraction.enabled: false`
-explicitly for these three markers has exactly the same effect and avoids the warning.
+explicitly for these four markers has exactly the same effect and avoids the warning.
 
 ## Taxonomy methods per marker
 
@@ -177,11 +188,17 @@ somewhere deep in the taxonomy rule:
 [MetaFlux] marker gyrB has no SINTAX reference database, so amplicon.taxonomy.method: sintax is not available for it. Use method: rdp.
 ```
 
+COI is the opposite case: MIDORI2 is classified with SINTAX only, because DADA2's
+`assignTaxonomy` would need about 225 GB of memory for it at species level, so the COI
+pack leaves `taxonomy_refdb` empty and `method: rdp` stops the run at start-up with the
+mirror message.
+
 DADA2's `addSpecies` step, which adds a species call on top of the genus-level
 assignment, applies to 16S only — it is the one marker whose pack names a
-`taxonomy_species_db`. The other four have no second species step because their single
+`taxonomy_species_db`. The other five have no second species step because their single
 reference already carries a species rank: PR2 for 18S, DD7RZ8 for gyrB, the converted
-FROGS build for rpoB, and UNITE's native `s__Genus_species` for ITS.
+FROGS build for rpoB, the converted MIDORI2 for COI, and UNITE's native
+`s__Genus_species` for ITS.
 
 ## Rank models
 
@@ -200,6 +217,7 @@ differ:
 | 18S, `sintax` | Domain, Supergroup, Division_Subdivision, Class, Order, Family, Genus, Species |
 | gyrB | Gene (the paralog tag), Phylum, Class, Order, Family, Genus, Species |
 | rpoB | Domain, Phylum, Class, Order, Family, Genus, Species |
+| COI | Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species (the kingdom is added from MIDORI2's NCBI snapshot; protists have none) |
 
 The prefix of each rank, and the shotgun tables next to these, are in
 [taxonomy strings in the final tables](../../reference/output.md#taxonomy-strings-in-the-final-tables).
@@ -211,7 +229,7 @@ to what a rank *means* rather than to the letter code in the reference, so a `d_
 `sg__` or `c__` … `s__` token works under either method; a Division token does not (see
 [18S rRNA](18S.md#pr2-ships-two-rank-depths)).
 
-Two prefix styles exist. Under `bare` (16S, 18S) the reference values carry no prefix and
+Two prefix styles exist. Under `bare` (16S, 18S, COI) the reference values carry no prefix and
 the builder adds them. Under `embedded` (ITS, gyrB, rpoB) the values already arrive with
 their prefixes attached (`k__Fungi` in UNITE, `d__Bacteria` in the converted FROGS file)
 and are emitted verbatim. Either way the taxonomy strings in the final table look the
@@ -262,6 +280,7 @@ The shipped packs declare:
 | 18S | Domain: `one_of` PR2's eight domain values (Eukaryota, Bacteria, Archaea and the organelle tags `Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`); Supergroup: `not_one_of` the same eight |
 | gyrB | Gene: `one_of [gyrB, other]` |
 | rpoB | Domain: `one_of [Bacteria]` |
+| COI | Domain: `one_of [Eukaryota]`; Kingdom: `one_of [Metazoa, Fungi, Viridiplantae]` |
 
 With the rank shape, these rules catch a reference whose ranks have shifted: SILVA's own
 144 download, whose kingdoms carry `--other`; a SILVA 138.2 file used as 144, with its
@@ -294,6 +313,8 @@ When you write a pack of your own:
 - [18S rRNA](18S.md) — eukaryotes, probed on SILVA-Euk and classified on PR2, 9 ranks under `rdp` and 8 under `sintax`
 - [gyrB](gyrb.md) — DD7RZ8, direct probe, paralog tag, `rdp` only
 - [rpoB](rpob.md) — FROGS RefSeq, in-silico PCR probe, `rdp` only
+- [COI](coi.md) — MIDORI2, in-silico PCR probe, `sintax` only, reading-frame check and off-target guard
+- [Bacterial COX1 reference set (COI)](bacterial-cox1.md) — how the bacterial set behind the off-target guard was built and tested
 
 For how the probe distribution becomes truncation lengths and an ASV length window, see
 [amplicon length and truncation](../length-and-truncation.md). For the whole amplicon

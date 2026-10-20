@@ -34,6 +34,8 @@ out_dir/
 ├── 06.taxonomy/      # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
 │                     # asv_table_unfiltered.txt (every ASV, removed ones included)
 │                     # (+ _sintax_raw.tsv on the sintax path)
+│                     # (+ coi_screens.tsv, bacterial_cox1_asvs.tsv,
+│                     #    coi_asv_flags.tsv for COI)
 ├── 07.phylogeny/     # alignment + unrooted tree  (only when phylogeny.enabled: true)
 ├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/,
 │                     # taxonomy_reference_check.json
@@ -92,7 +94,7 @@ no rule in the workflow reads them.
 With extraction switched off, the middle column does not exist and the length
 filter runs straight on the DADA2 output. Extraction is off whenever
 `amplicon.extraction.enabled` is `false`, and is forced off (with a warning) for
-markers that have no region extractor — 18S, gyrB and rpoB.
+markers that have no region extractor — 18S, gyrB, rpoB and COI.
 
 **The extras.** `read.counts` is a TSV written by `dada_seqtab`: one row per
 sample, columns `stripped`, `filtered`, `denoised`, `merged`, `non_chimeric`. It
@@ -136,8 +138,9 @@ columns. `metaxa2_origin` is Metaxa2's call for the ASV (`mitochondria`,
 `chloroplast`, `bacteria`, `archaea`, `eukaryota`, `uncertain`), or `NA` when
 Metaxa2 did not run (markers other than 16S, or extraction off) or made no call.
 `filter_status` is `kept` or the first filter step that removed the ASV, in the order
-the steps run: `removed_keep`, `removed_discard`, `removed_best_hit`,
-`removed_organelle`. The `kept` rows are exactly `asv_table.txt`, and the read
+the steps run: for COI first `removed_frame` (the reading-frame check) and
+`moved_bacterial_cox1` (the off-target guard), then `removed_keep`, `removed_discard`,
+`removed_best_hit`, `removed_organelle`. The `kept` rows are exactly `asv_table.txt`, and the read
 counts of all rows add up to the `post_length_filter` column of
 `stats/read_tracking.txt`. Use it when the removed ASVs matter, for instance to
 compare how many organelle reads two primer pairs pick up — see
@@ -172,6 +175,16 @@ The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-h
 check and, for 16S, the organelle filter) has already been applied when these tables
 are written, so the ASVs it removed are absent here, except from
 `asv_table_unfiltered.txt` — see [keeping and discarding taxa](../amplicon/taxon-filter.md).
+
+**COI only.** Three more files, from the COI screens (see
+[COI](../amplicon/markers/coi.md#the-coi-screens)). Nothing in the pipeline reads the last
+two.
+
+| File | Written by | Rows | Contents |
+|---|---|---|---|
+| `coi_screens.tsv` | `coi_screens` | every ASV that reached the filter | length, open reading frames, `frame_ok`, `length_ok`, B and the closest bacterial gene with its GTDB taxonomy, E, the closest MIDORI2 record, and the species of every record tied at that identity (joined by a vertical bar), and the verdict (`frame`, `bacterial`, `pass`); read by `assign_taxonomy` |
+| `bacterial_cox1_asvs.tsv` | `assign_taxonomy` | the ASVs the off-target guard moved | counts per sample, what SINTAX had called the ASV, B, the closest bacterial gene and its taxonomy, E, the closest MIDORI2 record, the sequence |
+| `coi_asv_flags.tsv` | `assign_taxonomy` | the ASVs of `asv_table.txt` | E, the closest MIDORI2 record and species, `species_flag` (`ok`, `low_identity`, `shared_sequence`, `no_species`) and `far_from_midori2` (1 when E is below 80 %) |
 
 ### `07.phylogeny/`
 
@@ -226,11 +239,14 @@ order:
 
 ```text
 raw → [nophix] → stripped → filtered → denoised → merged → non_chimeric
-    → [post_extraction] → post_length_filter → post_taxonomy_filter
+    → [post_extraction] → post_length_filter
+    → [post_frame_check → post_bacterial_cox1] → post_taxonomy_filter
 ```
 
 `nophix` appears only when PhiX removal ran, `post_extraction` only when the
-extraction step ran. The last column counts reads still present after the
+extraction step ran, and `post_frame_check` and `post_bacterial_cox1` only in COI runs:
+the reads left after the reading-frame check, and after the off-target guard moved the
+bacterial COX1 ASVs out (their reads are in `06.taxonomy/bacterial_cox1_asvs.tsv`). The last column counts reads still present after the
 contaminant filter, so the drop between `post_length_filter` and
 `post_taxonomy_filter` is exactly what the taxon filter removed: the keep/discard
 lists, the best-hit check and, for 16S, the organelle filter.
