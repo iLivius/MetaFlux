@@ -212,10 +212,11 @@ visible.
 - **Why a comparison and not an identity floor.** Bacterial amplicons and animal sequences
   whose relatives are missing from MIDORI2 fall in the same range of identities to
   MIDORI2: a floor that catches 95 % of the bacterial amplicons also removes 36–87 % of the
-  animal sequences whose family is missing. In the final test of the bacterial set, the
-  comparison recognised 98.4 % of 936 bacterial amplicons from genomes not used to build its
-  rules (99.9 % for BF3/BR2, 88.2 % for Leray-XT, 93.5 % for fwhF2/fwhR2n), 96.0 % when the
-  amplicon's whole genus was left out of the set, and moved 0.08 % or less of 10,008
+  animal sequences whose family is missing. In the final test of the bacterial set, 936
+  bacterial amplicons from genomes not used to build its rules were each compared with their
+  own species left out of the set, as for a bacterium whose species GTDB lacks: the
+  comparison recognised 98.4 % of them (99.9 % for BF3/BR2, 88.2 % for Leray-XT, 93.5 % for
+  fwhF2/fwhR2n), and 96.0 % with the whole genus left out. It moved 0.08 % or less of 10,008
   eukaryotic inserts whose species, genus, family or order was left out of MIDORI2. How the
   set was built and tested is on [Bacterial COX1 reference set (COI)](bacterial-cox1.md).
 - **What it cannot catch.** A bacterial lineage that is missing from the set but has a

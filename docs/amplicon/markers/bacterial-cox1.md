@@ -134,9 +134,11 @@ gene, the shares are almost the same: 78.0 %, 64.6 % and 1.4 % (weighted to GTDB
 A single primer that binds is not enough: a product forms only when both primers of a pair
 bind. An in-silico PCR on the development sample therefore counted a genome as amplified by a
 primer pair when both primers bind its DNA, facing each other, and the stretch between them has
-the expected length (418, 313 and 205 bp for the three pairs, ± 30 bp). Each primer could have
-at most one mismatch, the last two bases at its 3′ end had to match, and insertions or
-deletions were not allowed. The table gives the share of genomes amplified in each group.
+the expected length (418, 313 and 205 bp for the three pairs, ± 30 bp). For the table, each
+primer could have at most one mismatch, so that it counts the products likely to form in a
+real PCR; the last two bases at its 3′ end had to match, and insertions or deletions were not
+allowed. The tests of B > E below use every product with up to three mismatches, so that they
+include more distant amplicons. The table gives the share of genomes amplified in each group.
 
 Share of genomes that give a PCR product with each primer pair:
 
@@ -263,7 +265,7 @@ development tests, which used the following design.
   and once as the bacterial reference for the other half, so that no query could find its
   own species (or genus). MIDORI2 was cleaned with the reference half only.
 - **Eukaryotic queries** were genuine COI sequences from MIDORI2, compared after every record
-  of their own species, genus, family or order had been removed from MIDORI2, to mimic
+  of their own species, genus, family or order had been left out of MIDORI2, to mimic
   organisms that the reference lacks.
 
 The bacterial reference in these tests was made of in-silico PCR products, not of whole
@@ -327,8 +329,8 @@ The build uses these predictions as they are and does not predict genes again, s
 in the set can be traced to GTDB's annotation of the release.
 
 Only species representatives are used. Recognition does not need the query's own species: in
-the development tests, with the species removed from the bacterial reference, 94 % of the
-bacterial amplicons were still recognised, and 78 % with the genus removed. One genome per
+the development tests, with the species left out of the bacterial reference, 94 % of the
+bacterial amplicons were still recognised, and 78 % with the genus left out. One genome per
 species is therefore enough, and the other 700,000 genomes of the release would multiply the
 size of the set with little gain.
 
@@ -722,39 +724,99 @@ under the host's name are a separate problem, which this step addresses.
 ### Step 7. Final test
 
 The rules were fixed before the R232 build, except the evidence rule of step 6 and its use
-in check 5.4, which were revised during the build; the final test came after that
-revision. The R232 set is tested once, before release:
+in check 5.4, which were revised during the build; the final test came after that revision.
+It is run once, before release, on genomes and MIDORI2 records not used to set any rule, and
+it asks how the set handles bacteria and eukaryotes that the references do not contain.
 
-- **Bacterial amplicons, species removed.** In-silico PCR products of the three primer pairs
-  from 3,476 R232 species representatives that are not in the development sample, chosen
-  with the development design and a new random seed (all 176 such Rickettsiales, 3,000
-  other bacteria and 300 archaea). The PCR allowed up to three mismatches per primer and
-  gave 936 products with an intact reading frame: 803 of BF3/BR2, 102 of Leray-XT and 31 of
-  fwhF2/fwhR2n. Each query's species is removed from the set; measured is the share with
-  B > E.
-- **Bacterial amplicons, genus removed.** The same, with the query's genus removed, to mimic
-  bacteria of genera absent from GTDB.
-- **Eukaryotic sequences.** 3,336 MIDORI2 GB273 records not used during development (1,000
-  at the species and genus levels, 858 at the family level and 478 at the order level, up to
-  250 taxa per group: arthropods, chordates, other animals, other eukaryotes), each cut to
-  the inserts of the three primer pairs (10,008 inserts), with its species, genus, family
-  or order removed from MIDORI2; measured is the share wrongly with B > E. At the order
-  level, and for the non-animal families, development had already used every eligible
-  taxon, so these taxa are tested again with records not used before.
-- **Known contaminants.** As a check that nothing was lost, the contaminants found during
-  development must still be rejected. Unlike the other tests, this one uses development data.
+#### Bacterial amplicons
 
-The release is published if the results are close to those of development, by
-criteria fixed before the test:
+- **Test genomes.** 3,476 R232 species representatives that are not in the development
+  sample, chosen with the development design and a new random seed: all 176 such
+  Rickettsiales (4 of them *Wolbachia*), 3,000 other bacteria drawn per phylum, and 300
+  archaea. All the Rickettsiales are taken, as in development, because the order holds
+  *Wolbachia*, *Rickettsia* and other symbionts of arthropods.
+- **In-silico PCR.** The rules of development: both primers bind, facing each other, the
+  insert between them is within 30 bp of the expected length, a primer may have up to three
+  mismatches but none in its last two bases at the 3′ end, and insertions and deletions are
+  not allowed. Three mismatches is permissive, on purpose: the test gets more amplicons, and
+  more distant ones. The products with an intact reading frame under the bacterial code are
+  the queries. The PCR is run on the genes that GTDB predicted in each genome, not on the
+  genome sequence, which the build does not download: an amplicon lies inside the COX1 gene,
+  and in development this missed only the products in genes broken by a frameshift or an
+  internal stop (10 of 1,259, 0.8 %).
+- **Why most genomes give no product.** 738 of the 3,476 genomes gave a product, 936
+  products in all: 803 of BF3/BR2, 102 of Leray-XT and 31 of fwhF2/fwhR2n. A genome gives one
+  product per primer pair, or more when it carries several COX1 genes.
+    - Almost all products come from family-A genes, the family of the mitochondrial enzyme
+      (928 of the 936 from subtype A1), and 1,648 of the test genomes (47 %) have no family-A
+      gene in the set.
+    - Where there is one, the primers decide. BF3/BR2 gives a product in a fifth of the
+      other bacteria (610 of 3,000), but in only 86 (2.9 %) with at most one mismatch per
+      primer, close to the 3.2 % of the development table. Leray-XT and fwhF2/fwhR2n give
+      one in hardly any bacteria outside the Rickettsiales.
+    - With at most one mismatch per primer, the products likely to form in a real PCR, 181
+      of the 936 remain.
 
-- for the bacterial amplicons with the species removed, a recognised share of at least 90 %
+Genomes giving a product, with up to three mismatches per primer (in brackets: at most one):
+
+| Genomes | BF3/BR2 | Leray-XT | fwhF2/fwhR2n |
+|---|---|---|---|
+| *Wolbachia* (4) | 4 (4) | 4 (4) | 3 (0) |
+| other Rickettsiales (172) | 72 (45) | 73 (31) | 25 (0) |
+| other bacteria (3,000) | 610 (86) | 17 (3) | 3 (0) |
+| archaea (300) | 7 (1) | 0 | 0 |
+
+- **Each amplicon is tested with its own species left out of the set.** Every test genome
+  is a GTDB species representative, so its own genes are in the set: its amplicon would find
+  itself at 100 % identity and pass without telling anything. A bacterium in a real library
+  is rarely the genome that GTDB holds; often its species is missing, sometimes its genus. B
+  is therefore computed without the genes of the amplicon's own species, and, in a second
+  run, without those of its whole genus, as for a bacterium of a genus absent from GTDB. The
+  search keeps up to 3,000 hits per amplicon, and the hits to the genes left out are
+  skipped.
+- **The same on the MIDORI2 side.** Step 6 removes from MIDORI2 the bacterial records filed
+  under eukaryote names, which it finds through the genes of the set. A removed record whose
+  closest gene belongs to the amplicon's own species (or genus) is put back for that
+  amplicon, as if that species were missing from GTDB. This is the cautious choice: through
+  the genes of other species, step 6 might still have removed the record. E is computed
+  against MIDORI2 with these records back.
+- **Measured** is the share of amplicons with B > E: those that MetaFlux would recognise as
+  bacterial.
+
+#### Eukaryotic sequences
+
+- **Test records.** 3,336 MIDORI2 GB273 records not used during development: 1,000 at the
+  species level, 1,000 at the genus level, 858 at the family level and 478 at the order
+  level, up to 250 taxa per group (arthropods, chordates, other animals, other eukaryotes).
+  At the order level, and for the non-animal families, development had already used every
+  eligible taxon, so these taxa are tested again with records not used before.
+- **Each insert is tested with its own taxon left out of MIDORI2.** Each record is cut to
+  the inserts of the three primer pairs (10,008 inserts). For each insert, every record of
+  its own species (genus, family or order) is left out of MIDORI2, as for an animal that
+  MIDORI2 does not contain, and B is computed against the whole set.
+- **Measured** is the share with B > E: genuine eukaryotic sequences that MetaFlux would
+  wrongly move to the table of bacterial COX1.
+
+#### Known contaminants
+
+As a check that nothing was lost, the contaminants found during development must still be
+rejected. Unlike the other tests, this one uses development data.
+
+#### Release criteria and results
+
+The release is published if the results are close to those of development, by criteria
+fixed before the test:
+
+- for the bacterial amplicons with the species left out, a recognised share of at least 90 %
   for BF3/BR2, 85 % for Leray-XT and 80 % for fwhF2/fwhR2n;
 - for the eukaryotic sequences, at most 0.5 % moved to the bacterial side at any of the four
   levels.
 
-**Results.** All criteria were met; the full table is in the README.
+All criteria were met; the full table is in the README. Each value below is the share of
+bacterial amplicons with B > E, with the amplicon's species or genus left out as described
+above, next to the same measurement in development (with the species left out).
 
-| Bacterial amplicons recognised (B > E) | species removed | genus removed | development (species removed) |
+| Bacterial amplicons recognised (B > E) | species left out | genus left out | development (species left out) |
 |---|---|---|---|
 | all (936) | 98.4 % | 96.0 % | 94 % |
 | BF3/BR2 (803) | 99.9 % | 98.8 % | 96 % |
@@ -764,18 +826,21 @@ criteria fixed before the test:
 | other Rickettsiales (178) | 93.3 % | 87.1 % | |
 | at most 1 mismatch per primer (181) | 95.6 % | 89.5 % | |
 
-- **Eukaryotic sequences moved to the bacterial side:** 0.03 % with the species removed from
-  MIDORI2, 0 % with the genus removed, 0.08 % with the family removed and 0 % with the order
-  removed: three inserts of 10,008, all far from both references (E 59–71 %, B 60–73 %).
+- **Eukaryotic sequences moved to the bacterial side:** 0.03 % with the species left out of
+  MIDORI2 (1 insert of 3,000), 0 % with the genus left out, 0.08 % with the family left out
+  (2 of 2,574) and 0 % with the order left out. All three are far from both references
+  (E 59–71 %, B 60–73 %).
 - **Known contaminants:** all three stay out of the set.
 - **The *Wolbachia* figures rest on 11 amplicons from four genomes.** The three that were
-  missed come from one genome, whose own record in MIDORI2 (filed as the pseudoscorpion
-  *Neobisium carcinoides*) step 6 removes in the release. The test puts back every record
-  removed only because of the query's own species, as if that species were absent from
-  GTDB, and that record (98–99 % identical) then beats the closest other *Wolbachia* gene
-  (90–92 %). With the genus removed, every *Wolbachia* record of MIDORI2 comes back and no
-  *Wolbachia* amplicon wins, as in development (0.7 %): a *Wolbachia* lineage missing from
-  the set is recognised only if MIDORI2 holds no record of it under an animal's name.
+  missed come from one genome, *Wolbachia* sp964277405. Its own COX1 is in MIDORI2 as a
+  record filed under the pseudoscorpion *Neobisium carcinoides*; step 6 removes that record
+  in the release, but the test puts it back, as described above. With the species left out,
+  the closest bacterial gene is another *Wolbachia* at 90–92 % (B), while the record matches
+  at 98–99 % (E), so E wins. The BF3/BR2 amplicon of *Wolbachia* sp051710285, by contrast,
+  has B 97 % and E 85 %. With the genus left out, every *Wolbachia* record of MIDORI2 comes
+  back and no *Wolbachia* amplicon wins, as in development (0.7 %): a *Wolbachia* lineage
+  missing from the set is recognised only if MIDORI2 holds no record of it under an animal's
+  name.
 
 Any rule changed after this test makes a new version.
 
@@ -828,7 +893,7 @@ cite the release by its version DOI, together with GTDB (Parks et al. 2025) and 
 | 6 | gene's evidence | bacterial: closest gene of another genome ≥ 80 % and at least as close as the closest certainly mitochondrial record; mitochondrial: certainly mitochondrial record ≥ 80 % and closer; otherwise none |
 | 6 | record's evidence | likelihood ratio of its TGA/TGG counts, bacterial gene (TGA error rate 0.01 per tryptophan codon) vs genuine COI (TGA share of its family, or of the lowest higher rank with ≥ 200 tryptophan codons); ≥ 20 bacterial, ≤ 1/20 mitochondrial; none where TGA is a mitochondrial stop |
 | 6 | MIDORI2 record removed | at least one line of evidence bacterial and none mitochondrial; otherwise listed and kept |
-| 7 | release criteria | species removed: ≥ 90 % (BF3/BR2), ≥ 85 % (Leray-XT), ≥ 80 % (fwhF2/fwhR2n) recognised; eukaryotes: ≤ 0.5 % moved at each level |
+| 7 | release criteria | species left out: ≥ 90 % (BF3/BR2), ≥ 85 % (Leray-XT), ≥ 80 % (fwhF2/fwhR2n) recognised; eukaryotes: ≤ 0.5 % moved at each level |
 | README | sensitivity | verdict changes when each value moves: GC limits ± 0.02, fragment floor ± 50 amino acids, identity limits ± 2 points, model coverage ± 0.10, oxidase score ± 20 bits; step 6: error rate 0.003 and 0.03, likelihood-ratio threshold 10 and 50, 100 and 500 tryptophan codons per lineage |
 
 ## Copy number
