@@ -21,7 +21,7 @@ difference between them holds even where the absolute counts have since moved.
 | 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
 | gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
 | rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
-| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod BINs, MiSeq 2×300 | 1 | SRR8082166 | BF3 / BR2 | MIDORI2 GB273 + bacterial COX1 set gtdb-r232.v1 |
+| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod BINs, MiSeq 2×300 | 1 per primer pair | SRR8082166, SRR8082178, SRR8082148 | BF3 / BR2, mlCOIintF-XT / jgHCO2198 (Leray-XT), fwhF2 / fwhR2n | MIDORI2 GB273 + bacterial COX1 set gtdb-r232.v1 |
 
 The four mock-community sets (ITS, gyrB, rpoB, COI) have known composition, so they check
 taxonomy as well as mechanics. The ITS run (UNITE release 19.02.2025, `method: sintax`)
@@ -39,14 +39,16 @@ its most abundant species. See
 for how this same gap shows up under the other `dada2.merge` setting too, as a different
 set of ASVs carrying a similar fraction of reads.
 
-The COI run (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) uses one library, split
-into two pseudo-samples of alternate read pairs because MetaFlux stops on a run with a
-single sample, with R1 and R2 swapped because every R1 of this library carries the reverse
-primer. 359 of the 374 specimens are recovered by an ASV at least 97 % identical to their
-barcode, and the ASVs that match a specimen hold 99.3 % of the reads of the final table. The
-off-target guard moves 22 bacterial ASVs (0.5 % of the reads), 12 of which SINTAX had called
-a stink bug that is not in the mock; the frame check removes 165 ASVs (0.6 % of the reads),
-none of them the only ASV of a specimen. See [COI](../amplicon/markers/coi.md#validation).
+The COI runs (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) use one library per
+primer pair, each split into two pseudo-samples of alternate read pairs because MetaFlux
+stops on a run with a single sample; in the BF3/BR2 and fwhF2/fwhR2n libraries every R1
+carries the reverse primer, so R1 and R2 were swapped. 359 (BF3/BR2), 353 (Leray-XT) and 362
+(fwhF2/fwhR2n) of the 374 specimens are recovered by an ASV at least 97 % identical to their
+barcode, and the ASVs that match a specimen hold 99.2–99.4 % of the reads of the final
+tables. The off-target guard moves 12–22 bacterial ASVs per run (0.07–0.5 % of the reads),
+29 of which SINTAX had called a stink bug that is not in the mock; the frame check removes
+0.1–0.5 % of the reads, and no specimen lost its only ASV to either screen. See
+[COI](../amplicon/markers/coi.md#validation).
 
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —

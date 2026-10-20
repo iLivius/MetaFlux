@@ -22,9 +22,9 @@ need about 225 GB of memory at species level.
   headers, and the MIDORI2 records that are bacterial COX1 filed under eukaryote names
   are removed. `keep: [k__Metazoa]` keeps the animals of a run.
 - **Two COI screens** run before the taxon filter, both on by default (`amplicon.coi`):
-  a reading-frame check removes ASVs with a TAA or TAG in the run's frame, or a length
-  that is not whole codons away from the run's reference length (pseudogenes, NUMTs,
-  artefacts); an off-target guard moves the ASVs closer to a set of bacterial COX1 genes
+  a reading-frame check removes ASVs with a TAA or TAG in the run's frame (allowing
+  for a primer cut a base off at the ASV's start), or a length too far from the run's
+  reference length (pseudogenes, NUMTs, artefacts); an off-target guard moves the ASVs closer to a set of bacterial COX1 genes
   (B) than to MIDORI2 (E) to `06.taxonomy/bacterial_cox1_asvs.tsv`, *Wolbachia* above
   all. `06.taxonomy/coi_screens.tsv` holds the measurements behind both;
   `asv_table_unfiltered.txt` marks the ASVs `removed_frame` or `moved_bacterial_cox1`;

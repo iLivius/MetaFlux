@@ -155,14 +155,26 @@ screen would have done.
 
 ### Reading-frame check (`amplicon.coi.frame_check`)
 
-Every ASV starts right after the forward primer, so all ASVs of a run share one codon
+Every ASV starts right after the forward primer, so the ASVs of a run share one codon
 phase. MetaFlux takes as the run's reading frame the frame free of TAA and TAG, the stop
 codons of every animal mitochondrial code, in most reads, and as the reference length the
 most frequent length, by reads, of the ASVs open in that frame. An ASV passes when
 
-- it has no TAA or TAG in the run's frame, and
-- its length differs from the reference length by whole codons only, by at most
-  `length_tolerance` bases (default 9, three codons).
+- it has no TAA or TAG in the run's frame, or in the frame that an offset of its start
+  gives it, and
+- its length is within `length_tolerance` bases (default 9, three codons) of the reference
+  length.
+
+The offset matters with primers that match some templates imperfectly. Cutadapt can then
+cut a base before or after the end of the primer, the same way for every read of that
+template, and the ASV starts one base early or late: it is one base longer or shorter, and
+open in the neighbouring frame. On the Leray-XT run of the insect mock (below), whose
+primers carry inosines, this happened to 9 % of the reads, among them the only ASVs of 26
+specimens.
+The frame an offset of *d* bases gives is the run's frame plus *d*, so an ASV one base
+short is tested in the frame before the run's. A frameshift inside an ASV, as in a
+pseudogene or an indel artefact, leaves stop codons in both frames, one on each side of the
+shift.
 
 TGA is not used, because it codes for tryptophan in animal and fungal mitochondria, and
 neither are AGA and AGG, stops in the vertebrate code only, so the check works the same for
@@ -249,34 +261,43 @@ other species, and it also removed 1.6 % of the right ones.
 
 ## Validation
 
-The BF3/BR2 run of the insect mock of Elbrecht et al. (2019) (SRR8082166: bulk abdomens of
-374 arthropod BINs, 918,986 read pairs) was run with the defaults above and
-`keep: [k__Metazoa]`, and its ASVs were compared with the 374 specimen barcodes. The library
-was split into two pseudo-samples of alternate read pairs, because MetaFlux stops on a run
-with a single sample (`dada_seqtab`); the R1 and R2 files were swapped (see the warning
-above).
+The three primer-pair runs of the insect mock of Elbrecht et al. (2019) (bulk abdomens of
+374 arthropod BINs; SRR8082166 BF3/BR2, SRR8082178 Leray-XT, SRR8082148 fwhF2/fwhR2n) were
+run with the defaults above and `keep: [k__Metazoa]`, and their ASVs were compared with the
+374 specimen barcodes. Each library was split into two pseudo-samples of alternate read
+pairs, because MetaFlux stops on a run with a single sample (`dada_seqtab`); in the BF3/BR2
+and fwhF2/fwhR2n libraries every R1 carries the reverse primer, so their R1 and R2 files
+were swapped (see the warning above).
 
-- **Reading frame.** 99.5 % of the reads after the length filter are open in frame 1 (the
-  second base after the primer), and the most frequent length among them is 418 bp, the
-  BF3/BR2 insert.
-- **Frame check.** It removed 165 of the 717 ASVs, with 3,791 reads (0.6 %), and none of
-  them was the only ASV of a mock specimen: the 14 that match a specimen at 97 % or more are
-  length or frame variants of a kept ASV.
-- **Off-target guard.** It moved 22 ASVs, with 3,073 reads (0.5 %), to
-  `bacterial_cox1_asvs.tsv`: 18 closest to *Wolbachia*, 2 to *Mesenet*, 1 to *Rickettsia*,
-  1 to another bacterium. SINTAX had called 12 of them, with 1,879 reads, the stink bug
-  *Picromerus bidens*, which is not in the mock, at species level: MIDORI2 holds a
-  *Wolbachia*-like record under that name (KR036430.1, no TGA among five tryptophan codons),
-  and `keep: [k__Metazoa]` would have kept them.
-- **What is left.** 526 ASVs with 631,678 reads. 423 of them, with 99.3 % of the reads, are
-  at least 97 % identical to a specimen barcode, and 359 of the 374 specimens are recovered
-  at 97 % or more (354 of them identically). The 15 others have no ASV within 97 %.
-- **Species flags.** Of the 526 kept ASVs, 294 are `ok`, 192 `no_species`, 23
-  `shared_sequence` and 17 `low_identity`; none is far from MIDORI2.
+| | BF3/BR2 | Leray-XT | fwhF2/fwhR2n |
+|---|---|---|---|
+| reads after the length filter (ASVs) | 638,836 (717) | 901,120 (687) | 1,202,686 (782) |
+| reference length, run frame | 418 bp, frame 1 | 313 bp, frame 1 | 205 bp, frame 1 |
+| removed by the frame check | 151 ASVs, 0.52 % of reads | 90, 0.22 % | 48, 0.11 % |
+| moved by the off-target guard | 22 ASVs, 0.48 % | 20, 0.24 % | 12, 0.07 % |
+| removed by `keep: [k__Metazoa]` | 4 ASVs, 0.05 % | 5, 0.01 % | 6, 0.01 % |
+| kept | 540 ASVs | 572 | 716 |
+| reads of kept ASVs within 97 % of a specimen | 99.2 % | 99.4 % | 99.2 % |
+| specimens recovered at ≥ 97 % (identical) | 359 (354) | 353 (348) | 362 (361) |
 
-The Leray-XT and fwhF2/fwhR2n runs of the same mock (SRR8082178, SRR8082148) have not been
-run through MetaFlux yet; for those pairs the off-target guard is so far tested in silico
-only (see [Bacterial COX1 reference set (COI)](bacterial-cox1.md#step-7-final-test)).
+- **Nothing a specimen needed was removed.** No specimen that was missed has an ASV within
+  97 % among those the two screens took out. The few removed ASVs that match a specimen
+  (11, 2 and 2) are length variants of a kept ASV or carry a stop codon.
+- **The offset of the frame check.** In the Leray-XT run, 9 % of the reads, among them
+  the only ASVs of 26 specimens, belong to ASVs open in frame 0, most of them one base
+  short: their first base went with the primer, which cutadapt cut one base too far for
+  these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (12
+  specimens). Without the offset rule the frame check would have removed them.
+- **The off-target guard.** It moved 54 ASVs over the three runs, most closest to
+  *Wolbachia* (43), the others to *Rickettsia*, *Mesenet*, *Tisiphia* and one other
+  bacterium. SINTAX had called 29 of them, with 3,953 reads, the stink bug *Picromerus
+  bidens*, which is not in the mock, at species level: MIDORI2 holds a *Wolbachia*-like
+  record under that name (KR036430.1, no TGA among five tryptophan codons), and
+  `keep: [k__Metazoa]` would have kept them.
+- **Species flags.** Of the kept ASVs, 55 % (BF3/BR2), 49 % (Leray-XT) and 39 %
+  (fwhF2/fwhR2n) are `ok`, and `low_identity` and `shared_sequence` together flag 8–11 %;
+  the others have no species call, more of them the shorter the amplicon. None is far from
+  MIDORI2.
 
 ## References
 

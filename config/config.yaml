@@ -298,10 +298,11 @@ amplicon:
   # it (removed_frame, moved_bacterial_cox1); 06.taxonomy/coi_screens.tsv holds the
   # measurements behind each decision. See docs/amplicon/markers/coi.md.
   coi:
-    frame_check: true                         # remove ASVs with a TAA/TAG in the run's reading frame,
-                                              # or whose length differs from the run's reference length
-                                              # by anything but whole codons (pseudogenes, NUMTs,
-                                              # artefacts). false = measure and report, remove nothing.
+    frame_check: true                         # remove ASVs with a TAA/TAG in the run's reading frame
+                                              # (allowing for a primer cut a base off at the ASV's start),
+                                              # or whose length is too far from the run's reference length
+                                              # (pseudogenes, NUMTs, artefacts). false = measure and report,
+                                              # remove nothing.
     length_tolerance: 9                       # frame_check: largest length difference, in bases, from the
                                               # run's reference length (default three codons)
     offtarget_guard: true                     # move ASVs that are closer to bacterial COX1 (B) than to

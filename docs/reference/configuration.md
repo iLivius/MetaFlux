@@ -806,7 +806,7 @@ See [COI](../amplicon/markers/coi.md#the-coi-screens).
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `frame_check` | Removes ASVs with TAA or TAG in the run's reading frame, or whose length differs from the run's reference length by anything but whole codons (pseudogenes, NUMTs, artefacts) | `true` | The run's frame and reference length are taken from the ASVs themselves (the frame open in most reads; the most frequent length among open ASVs). Removed ASVs stay in `asv_table_unfiltered.txt` as `removed_frame`. |
+| `frame_check` | Removes ASVs with TAA or TAG in the run's reading frame (or in the frame an offset of the ASV's start implies), or whose length is too far from the run's reference length (pseudogenes, NUMTs, artefacts) | `true` | The run's frame and reference length are taken from the ASVs themselves (the frame open in most reads; the most frequent length among open ASVs). Removed ASVs stay in `asv_table_unfiltered.txt` as `removed_frame`. |
 | `length_tolerance` | Largest length difference from the run's reference length, in bases, that the frame check accepts | `9` | Three codons. Must be a multiple of 3 and not negative; anything else stops the run at start-up. |
 | `offtarget_guard` | Moves ASVs closer to the bacterial COX1 set (B) than to MIDORI2 (E) out of the main tables, into `06.taxonomy/bacterial_cox1_asvs.tsv` | `true` | *Wolbachia* and other bacterial COX1. Moved ASVs stay in `asv_table_unfiltered.txt` as `moved_bacterial_cox1`. |
 

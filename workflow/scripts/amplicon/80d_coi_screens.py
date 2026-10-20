@@ -23,15 +23,21 @@ Why COI needs them
     keeps every ASV with the step that removed it.
 
 The reading-frame check (amplicon.coi.frame_check)
-    Every ASV starts right after the forward primer (cutadapt removed it), so all
-    ASVs of a run share the same codon phase. The run's reading frame is the one
+    Every ASV starts right after the forward primer (cutadapt removed it), so the
+    ASVs of a run share one codon phase, give or take an offset at the start. The run's reading frame is the one
     of the three frames that is free of TAA and TAG (the stop codons of every
     animal mitochondrial code) in the largest number of reads. The reference
     length is the most frequent ASV length, by reads, among ASVs open in that
     frame. An ASV passes when
-      - it has no TAA or TAG in the run's reading frame, and
-      - its length differs from the reference length by a multiple of 3, by at
-        most amplicon.coi.length_tolerance bases (default 9, three codons).
+      - it has no TAA or TAG in the run's reading frame, or in the frame that an
+        offset of its start would give it (its length minus the reference
+        length, added to the run's frame): cutadapt can cut a base before or
+        after the end of a primer that matches its template imperfectly, the same
+        way for every read of that template; and
+      - its length is within amplicon.coi.length_tolerance bases (default 9, three
+        codons) of the reference length.
+    A frameshift inside the ASV (a pseudogene, an indel artefact) leaves stop
+    codons in both frames, one on each side of the shift (frame_and_length()).
     TGA (tryptophan in animal and fungal mitochondria) and AGA/AGG (stops in the
     vertebrate code only) are not used, so the check works the same for
     invertebrates and vertebrates. Measured on MIDORI2 GB273 inserts of BF3/BR2,
@@ -145,6 +151,30 @@ def open_frames(sequence):
     return frames
 
 
+def frame_and_length(length, frames, run_frame, reference_length, tolerance):
+    """(frame_ok, length_ok) of one ASV, the two conditions of the frame check.
+
+    length            the ASV's length
+    frames            its open frames (open_frames())
+    run_frame         the run's reading frame; reference_length its reference length
+    A genuine ASV can differ from the reference length by a base or two at either
+    end: when a primer matches its template imperfectly, cutadapt can cut one base
+    before or after the primer's end, the same way for every read of that template
+    (seen on the Leray-XT run of the insect mock, whose primers carry inosines: the
+    ASVs of many specimens came out one base short, open in the frame next to the
+    run's). An offset at the 3' end
+    leaves the frame as it is; an offset of d bases at the 5' end moves it to
+    (run_frame + d) mod 3. The ASV is therefore in frame when it is open in either,
+    and its length is acceptable when it is within `tolerance` bases of the
+    reference length. A frameshift INSIDE the ASV (a pseudogene, or an indel
+    artefact) leaves stop codons in both frames, one on each side of the shift.
+    """
+    offset = length - reference_length
+    frame_ok = run_frame in frames or (run_frame + offset) % 3 in frames
+    length_ok = abs(offset) <= tolerance
+    return frame_ok, length_ok
+
+
 def acgt_identity(query_row, target_row):
     """Identity (%) over A/C/G/T columns and internal gaps, and the columns counted."""
     same = 0
@@ -239,9 +269,8 @@ with out_path.open("w") as out:
     out.write("\t".join(COLUMNS) + "\n")
     for asv_id in asv_ids:
         length = len(sequences[asv_id])
-        frame_ok = run_frame in frames_of[asv_id]
-        offset = length - reference_length
-        length_ok = offset % 3 == 0 and abs(offset) <= length_tolerance
+        frame_ok, length_ok = frame_and_length(length, frames_of[asv_id], run_frame,
+                                               reference_length, length_tolerance)
         b_identity, b_gene = best_b.get(asv_id, (0.0, ""))
         e_identity, e_record, e_species = best_e.get(asv_id, (0.0, "", []))
         if frame_check and not (frame_ok and length_ok):

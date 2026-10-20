@@ -8,8 +8,10 @@ What is tested
     records of the removal list are dropped, and the report counts all of it. The
     script stops on a removal list made for another MIDORI2 release.
   - the per-ASV measurements of workflow/scripts/amplicon/80d_coi_screens.py: the
-    open reading frames (TAA/TAG only), the A/C/G/T identity (N columns left out,
-    internal gaps counted) and the species name read from a SINTAX label.
+    open reading frames (TAA/TAG only), the frame and length conditions of the
+    frame check (an offset of the ASV's start allowed, a frameshift inside not),
+    the A/C/G/T identity (N columns left out, internal gaps counted) and the
+    species name read from a SINTAX label.
   - the shipped COI pack: SINTAX letters in VSEARCH's order, rank lists of equal
     length, reference_values naming ranks of the model.
 """
@@ -98,6 +100,23 @@ def test_screen_measurements():
     assert identity == pytest.approx(100 * 5 / 6)
     assert screens.species_of("X1;tax=d:Eukaryota,k:Metazoa,g:Musca,s:Musca_domestica;") == "Musca_domestica"
     assert screens.species_of("X2;tax=d:Eukaryota;") == ""
+
+
+def test_frame_and_length():
+    screens = load_functions(SCREENS, ["frame_and_length"])
+    # run frame 1, reference length 313 (Leray-XT)
+    assert screens.frame_and_length(313, [1], 1, 313, 9) == (True, True)
+    # one base short at the start: open in frame 0, the frame before the run's
+    assert screens.frame_and_length(312, [0], 1, 313, 9) == (True, True)
+    # one base short at the end: still open in the run's frame
+    assert screens.frame_and_length(312, [1], 1, 313, 9) == (True, True)
+    # one base long at the start: open in frame 2
+    assert screens.frame_and_length(314, [2], 1, 313, 9) == (True, True)
+    # a frameshift inside: stops in both frames
+    assert screens.frame_and_length(312, [2], 1, 313, 9) == (False, True)
+    assert screens.frame_and_length(312, [], 1, 313, 9) == (False, True)
+    # whole codons too far away
+    assert screens.frame_and_length(301, [1], 1, 313, 9) == (True, False)
 
 
 def test_coi_pack_rank_model():
