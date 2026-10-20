@@ -1,0 +1,22 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: method rdp on COI, which
+# has no rdp training set (MIDORI2 is classified with SINTAX only). The runner
+# (.test/run_dry_runs.sh) expects the message fragment on the next line.
+# EXPECT: method: rdp is not available
+mode: amplicon
+input:
+  fastq_dir: .test/data/COI
+output:
+  out_dir: .test/out/expected_stop_COI_rdp
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: COI
+  primers:
+    fwd: .test/primers/COI/fwd_primer.fasta
+    rev: .test/primers/COI/rev_primer.fasta
+  extraction:
+    enabled: false
+  taxonomy:
+    method: rdp

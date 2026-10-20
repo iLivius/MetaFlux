@@ -115,13 +115,15 @@ references:
 # Amplicon-only configuration — ignored when mode: shotgun
 # ═══════════════════════════════════════════════════════════════
 amplicon:
-  type: 16S                                   # 16S | ITS | 18S | gyrB | rpoB
+  type: 16S                                   # 16S | ITS | 18S | gyrB | rpoB | COI
                                               # 18S: probed on SILVA-Euk, classified on PR2;
                                               # no region extractor (extraction is forced off).
                                               # gyrB: probed direct (DD7RZ8 is pre-trimmed);
                                               # rpoB: probed by in-silico PCR (FROGS is full-length).
                                               # Both gyrB/rpoB are rdp-only (no SINTAX build) and
                                               # have no region extractor (extraction is forced off).
+                                              # COI: probed and classified on MIDORI2 (sintax only;
+                                              # no rdp training set); no region extractor.
                                               # Remember to set taxonomy.filter for the marker
                                               # (18S: keep [d__Eukaryota]).
   its_region: ITS2                            # ITS1 | ITS2 (ignored unless type == ITS)
@@ -172,6 +174,7 @@ amplicon:
     16S: p95                                  # min | q1 | median | q3 | p95 | p99 | max
     18S: p95                                  # 18S V4 has a ragged upper tail — p95 keeps the overlap constraint permissive
     rpoB: p95                                 # required whenever rpoB runs, auto or not
+    COI: p95                                  # required whenever COI runs, auto or not
                                               # ITS: overlap constraint not checked (truncLen overridden to c(0,0))
   min_overlap: 12                             # design overlap in bp — truncLen constraint ONLY
                                               # (runtime mergePairs uses dada2.merge.min_overlap)

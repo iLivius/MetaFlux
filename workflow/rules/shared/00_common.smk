@@ -947,6 +947,19 @@ if MODE == "amplicon":
     SILVA_EUK            = _ref_path("silva_euk",         "silva_euk", "fasta")
     GYRB_DADA2           = _ref_path("gyrb_dada2",        "gyrb",  "dada2")
     RPOB_FROGS           = _ref_path("rpob_frogs",        "rpob",  "frogs")
+    # COI. MIDORI2's own SINTAX file and its NCBI taxonomy snapshot are downloaded
+    # (rules fetch_midori2_coi / fetch_midori2_taxonomy); the bacterial COX1 set
+    # comes with its list of MIDORI2 records to remove (fetch_bacterial_cox1); the
+    # file VSEARCH classifies against, midori2_coi_sintax, is built from the three
+    # (prepare_midori2_coi_sintax), not downloaded. MIDORI2_TAXONOMY is the path of
+    # nodes.dmp; names.dmp comes out of the same zip into the same folder.
+    MIDORI2_COI_RAW      = _ref_path("midori2_coi_raw",    "midori2", "raw")
+    MIDORI2_TAXONOMY     = _ref_path("midori2_taxonomy",   "midori2", "taxonomy")
+    MIDORI2_NAMES        = MIDORI2_TAXONOMY.parent / "names.dmp"
+    MIDORI2_COI_SINTAX   = _ref_path("midori2_coi_sintax", "midori2", "sintax")  # built, not downloaded
+    BACTERIAL_COX1       = _ref_path("bacterial_cox1",           "bacterial_cox1", "fasta")
+    BACTERIAL_COX1_FRAGMENTS = _ref_path("bacterial_cox1_fragments", "bacterial_cox1", "fragments")
+    BACTERIAL_COX1_MIDORI2_LIST = _ref_path("bacterial_cox1_midori2_list", "bacterial_cox1", "midori2_list")
 
     # Marker profiles reference DBs by symbol; resolve symbol → Path here.
     REF_PATHS = {
@@ -963,6 +976,12 @@ if MODE == "amplicon":
         "silva_euk":         SILVA_EUK,
         "gyrb_dada2":        GYRB_DADA2,
         "rpob_frogs":        RPOB_FROGS,
+        "midori2_coi_raw":   MIDORI2_COI_RAW,
+        "midori2_taxonomy":  MIDORI2_TAXONOMY,
+        "midori2_coi_sintax": MIDORI2_COI_SINTAX,
+        "bacterial_cox1":    BACTERIAL_COX1,
+        "bacterial_cox1_fragments":    BACTERIAL_COX1_FRAGMENTS,
+        "bacterial_cox1_midori2_list": BACTERIAL_COX1_MIDORI2_LIST,
     }
 
     # ── SILVA training set (only for a release whose download needs preparing) ──
@@ -1181,8 +1200,12 @@ if MODE == "amplicon":
         )
         EXTRACTION_ENABLED = False
 
-    # RDP path (method: rdp)
-    TAXONOMY_REFDB      = REF_PATHS[PROFILE["taxonomy_refdb"]]
+    # RDP path (method: rdp). A marker classified by SINTAX only (COI: DADA2's
+    # assignTaxonomy would need about 225 GB of memory for MIDORI2 at species level)
+    # leaves taxonomy_refdb null, and this stays None; the method guard below
+    # refuses method: rdp for such a marker, as it refuses sintax for gyrB and rpoB.
+    _rdp_sym            = PROFILE["taxonomy_refdb"]
+    TAXONOMY_REFDB      = REF_PATHS[_rdp_sym] if _rdp_sym else None
     TAXONOMY_SPECIES_DB = (
         [str(REF_PATHS[PROFILE["taxonomy_species_db"]])]
         if PROFILE["taxonomy_species_db"] else []
@@ -1395,6 +1418,13 @@ if MODE == "amplicon":
         sys.exit(
             f"[MetaFlux] marker {AMPLICON_TYPE} has no SINTAX reference database, so "
             f"amplicon.taxonomy.method: sintax is not available for it. Use method: rdp."
+        )
+    # The mirror case: a marker classified by SINTAX only (COI) has no rdp training
+    # set, so method: rdp would reach the rdp rule with no reference to give it.
+    if TAXONOMY_METHOD == "rdp" and TAXONOMY_REFDB is None:
+        sys.exit(
+            f"[MetaFlux] marker {AMPLICON_TYPE} has no rdp training set, so "
+            f"amplicon.taxonomy.method: rdp is not available for it. Use method: sintax."
         )
 
     # ── SINTAX letters: VSEARCH's fixed rank order ──

@@ -310,6 +310,168 @@ rule convert_pr2_sintax:
         "../../scripts/refdb/pr2_utax_domain_first.py"
 
 
+# ── COI references: MIDORI2 and the bacterial COX1 set ────────────────────
+# MIDORI2 publishes each release on Zenodo as zips that bundle every gene and
+# format; COI needs one FASTA out of the SINTAX_sp zip (584 MB) and the NCBI
+# taxonomy snapshot the release was built with (69 MB). The bacterial COX1 set
+# (built for MetaFlux from GTDB R232, see the manual page on it) is three plain
+# files of its own Zenodo record. None of this fits the generated fetch loop
+# below (a zip member, several files, SHA-256 checks), so all three downloads have
+# their own rule (Tier 1), and the file VSEARCH classifies against is built from
+# them by prepare_midori2_coi_sintax (Tier 2).
+#
+# Checksums, so that a changed file behind the same URL or a broken download never
+# reaches the classifier: every zip against the MD5 Zenodo lists for it, the
+# extracted MIDORI2 FASTA against the SHA-256 MIDORI2's own release_sha256.txt
+# lists, and each file of the bacterial set against its release's SHA256SUMS. All
+# values are in COI.yaml. On a mismatch the rule deletes what it wrote and fails,
+# naming the file and both checksums.
+_COI_REFS = MARKERS["COI"]["references"]
+
+# MIDORI2's COI SINTAX file (UNIQ NUC_SP variant), exactly as MIDORI2 publishes it.
+#   in : the SINTAX_sp zip of the MIDORI2 release (Zenodo)
+#   out: MIDORI2_COI_RAW (midori2_coi_raw), read only by prepare_midori2_coi_sintax
+rule fetch_midori2_coi:
+    output:
+        fasta = MIDORI2_COI_RAW,
+    params:
+        url    = _COI_REFS["midori2_coi_raw"]["url"],
+        member = _COI_REFS["midori2_coi_raw"]["member"],
+        md5    = _COI_REFS["midori2_coi_raw"]["md5"],
+        sha256 = _COI_REFS["midori2_coi_raw"]["sha256"],
+    log:
+        LOGS / "refdb" / "fetch_midori2_coi.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        r"""
+        mkdir -p $(dirname {output.fasta})
+        tmp=$(mktemp -d -p $(dirname {output.fasta}))
+        trap 'rm -rf "$tmp"' EXIT
+        wget -O $tmp/midori2.zip "{params.url}" > {log} 2>&1
+        got=$(md5sum $tmp/midori2.zip | cut -d' ' -f1)
+        if [ "$got" != "{params.md5}" ]; then
+            echo "md5 mismatch for the MIDORI2 zip: expected {params.md5}, got $got" >> {log}
+            exit 1
+        fi
+        unzip -p $tmp/midori2.zip "{params.member}" > $tmp/member.fasta.gz
+        got=$(sha256sum $tmp/member.fasta.gz | cut -d' ' -f1)
+        if [ "$got" != "{params.sha256}" ]; then
+            echo "sha256 mismatch for {params.member}: expected {params.sha256}, got $got" >> {log}
+            exit 1
+        fi
+        mv $tmp/member.fasta.gz {output.fasta}
+        echo "md5 and sha256 OK" >> {log}
+        """
+
+
+# The NCBI taxonomy snapshot MIDORI2 built the release with (nodes.dmp, names.dmp).
+# MetaFlux reads it once, to give every record its kingdom.
+#   in : the KRAKEN2_taxonomy zip of the MIDORI2 release (Zenodo)
+#   out: MIDORI2_TAXONOMY (nodes.dmp) and MIDORI2_NAMES (names.dmp), read only by
+#        prepare_midori2_coi_sintax
+rule fetch_midori2_taxonomy:
+    output:
+        nodes = MIDORI2_TAXONOMY,
+        names = MIDORI2_NAMES,
+    params:
+        url = _COI_REFS["midori2_taxonomy"]["url"],
+        md5 = _COI_REFS["midori2_taxonomy"]["md5"],
+    log:
+        LOGS / "refdb" / "fetch_midori2_taxonomy.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        r"""
+        mkdir -p $(dirname {output.nodes})
+        tmp=$(mktemp -d -p $(dirname {output.nodes}))
+        trap 'rm -rf "$tmp"' EXIT
+        wget -O $tmp/taxonomy.zip "{params.url}" > {log} 2>&1
+        got=$(md5sum $tmp/taxonomy.zip | cut -d' ' -f1)
+        if [ "$got" != "{params.md5}" ]; then
+            echo "md5 mismatch for the MIDORI2 taxonomy zip: expected {params.md5}, got $got" >> {log}
+            exit 1
+        fi
+        unzip -p $tmp/taxonomy.zip nodes.dmp > $tmp/nodes.dmp
+        unzip -p $tmp/taxonomy.zip names.dmp > $tmp/names.dmp
+        mv $tmp/nodes.dmp {output.nodes}
+        mv $tmp/names.dmp {output.names}
+        echo "md5 OK" >> {log}
+        """
+
+
+# The bacterial COX1 set: whole genes, fragments, and the MIDORI2 records that are
+# bacterial COX1 under eukaryote names.
+#   out: BACTERIAL_COX1, BACTERIAL_COX1_FRAGMENTS (read by the off-target guard of
+#        rule coi_screens) and BACTERIAL_COX1_MIDORI2_LIST (read by
+#        prepare_midori2_coi_sintax)
+rule fetch_bacterial_cox1:
+    output:
+        fasta     = BACTERIAL_COX1,
+        fragments = BACTERIAL_COX1_FRAGMENTS,
+        midori2   = BACTERIAL_COX1_MIDORI2_LIST,
+    params:
+        url_fasta       = _COI_REFS["bacterial_cox1"].get("url", ""),
+        url_fragments   = _COI_REFS["bacterial_cox1_fragments"].get("url", ""),
+        url_midori2     = _COI_REFS["bacterial_cox1_midori2_list"].get("url", ""),
+        sha256_fasta     = _COI_REFS["bacterial_cox1"].get("sha256", ""),
+        sha256_fragments = _COI_REFS["bacterial_cox1_fragments"].get("sha256", ""),
+        sha256_midori2   = _COI_REFS["bacterial_cox1_midori2_list"].get("sha256", ""),
+    log:
+        LOGS / "refdb" / "fetch_bacterial_cox1.log",
+    conda:
+        "../../envs/bowtie2.yaml"
+    shell:
+        r"""
+        if [ -z "{params.url_fasta}" ] || [ -z "{params.sha256_fasta}" ]; then
+            echo "COI.yaml names no Zenodo URL or SHA-256 for the bacterial COX1 set yet;" \
+                 "place the release files at the paths of COI.yaml (or set" \
+                 "references.bacterial_cox1.* in the run config)." > {log}
+            exit 1
+        fi
+        mkdir -p $(dirname {output.fasta})
+        fetch() {{
+            wget -O "$1.tmp" "$2" >> {log} 2>&1
+            got=$(sha256sum "$1.tmp" | cut -d' ' -f1)
+            if [ "$got" != "$3" ]; then
+                echo "sha256 mismatch for $1: expected $3, got $got" >> {log}
+                rm -f "$1.tmp"
+                exit 1
+            fi
+            mv "$1.tmp" "$1"
+        }}
+        fetch {output.fasta}     "{params.url_fasta}"     {params.sha256_fasta}
+        fetch {output.fragments} "{params.url_fragments}" {params.sha256_fragments}
+        fetch {output.midori2}   "{params.url_midori2}"   {params.sha256_midori2}
+        echo "sha256 OK for all three files" >> {log}
+        """
+
+
+# The SINTAX file COI is classified against. What the conversion does, and why, is
+# in the script's header: domain to d:, kingdom from the taxonomy snapshot, taxid
+# suffixes removed, placeholder ranks and interim species names left out, bacterial
+# COX1 records removed. It also writes a report of every count it changed, next to
+# the FASTA.
+#   in : the three files fetched above
+#   out: MIDORI2_COI_SINTAX (midori2_coi_sintax), read by check_taxonomy_reference,
+#        the length probe (expected_length: auto), assign_taxonomy and coi_screens
+rule prepare_midori2_coi_sintax:
+    input:
+        fasta   = MIDORI2_COI_RAW,
+        nodes   = MIDORI2_TAXONOMY,
+        names   = MIDORI2_NAMES,
+        removal = BACTERIAL_COX1_MIDORI2_LIST,
+    output:
+        fasta  = MIDORI2_COI_SINTAX,
+        report = MIDORI2_COI_SINTAX.parent / MIDORI2_COI_SINTAX.name.replace(".fasta.gz", ".report.tsv"),
+    log:
+        LOGS / "refdb" / "prepare_midori2_coi_sintax.log",
+    conda:
+        "../../envs/python_utils.yaml"
+    script:
+        "../../scripts/refdb/midori2_to_metaflux_sintax.py"
+
+
 # ── Check the taxonomy reference against the marker pack ──────────────────
 # A classifier never checks what a rank MEANS: assignTaxonomy names the columns of
 # its result from the pack's tax_levels in order, and VSEARCH reads the SINTAX

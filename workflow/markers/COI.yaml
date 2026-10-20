@@ -1,0 +1,96 @@
+# MetaFlux marker pack: COI (mitochondrial cytochrome c oxidase subunit I).
+# See 16S.yaml for what belongs in a pack and what does not.
+#
+# The animal barcode gene. Reference: MIDORI2 (Leray et al. 2022), the curated
+# collection of eukaryotic mitochondrial genes built from GenBank, release GB273,
+# variant UNIQ NUC_SP (every unique sequence of each species, records whose species
+# name is incomplete included). MetaFlux classifies COI with VSEARCH SINTAX only:
+# DADA2's assignTaxonomy would need about 225 GB of memory for this reference at
+# species level.
+#
+#   - probe_mode: pcr — MIDORI2 records are whole barcodes (about 650 bp) or whole
+#     genes; the in-silico PCR of the run's primers cuts the amplicon out of them.
+#   - no region extractor — there is no COI equivalent of Metaxa2/ITSx.
+probe_mode:          pcr
+probe_ref:           midori2_coi_sintax
+probe_ref_tag:       midori2_gb273_uniq_nuc_sp_co1
+probe_stat_key:      COI              # amplicon.probe_length_stat.COI feeds auto mode
+
+# sintax path only (see above). No species step: the reference carries species.
+taxonomy_refdb:      null
+taxonomy_species_db: null
+taxonomy_sintax_db:  midori2_coi_sintax
+
+extractor:           none
+
+# Rank model. After conversion (10_refdb.smk prepare_midori2_coi_sintax, script
+# refdb/midori2_to_metaflux_sintax.py) a header reads
+#   >KU746593.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Sarcophagidae,g:Sarcophaga,s:Sarcophaga_munronis;
+# MIDORI2 itself writes the domain under k: and has no kingdom; the conversion
+# moves the domain to d: and adds the kingdom from MIDORI2's own NCBI taxonomy
+# snapshot (MetaFlux's rule: k__ only from the reference's own classification).
+# Protists have no kingdom in NCBI, so their records carry no k: field. Placeholder
+# ranks and interim species names are left out of the header (see the script).
+# "bare" = the names carry no prefix; MetaFlux adds d__, k__ ... itself.
+tax_levels:    [Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species]
+rank_letters:  [d, k, p, c, o, f, g, s]
+rank_prefixes: [d__, k__, p__, c__, o__, f__, g__, s__]
+prefix_style:  bare
+
+# What the converted file must hold, checked header by header before any
+# classification (rule check_taxonomy_reference; see 16S.yaml for the rule format).
+# MIDORI2 holds eukaryotes only. The three NCBI kingdoms of eukaryotes are the only
+# names allowed in the kingdom rank: a phylum there would mean that the domain was
+# not moved to d: (MIDORI2's own file pinned in place of the converted one).
+reference_values:
+  Domain:  {one_of: [Eukaryota]}
+  Kingdom: {one_of: [Metazoa, Fungi, Viridiplantae]}
+
+# The references.
+#   midori2_coi_raw       MIDORI2's SINTAX file of the release, as MIDORI2 publishes it,
+#                         extracted from the SINTAX_sp zip of the Zenodo record
+#                         (rule fetch_midori2_coi). md5: of the zip, as Zenodo lists it;
+#                         sha256: of the extracted FASTA, as MIDORI2's own
+#                         release_sha256.txt lists it.
+#   midori2_taxonomy      nodes.dmp and names.dmp of MIDORI2's taxonomy zip (the NCBI
+#                         snapshot MIDORI2 was built with), for the kingdom.
+#   bacterial_cox1        the bacterial COX1 reference set built for MetaFlux from GTDB
+#   bacterial_cox1_fragments    R232: whole genes, fragments, and the list of MIDORI2
+#   bacterial_cox1_midori2_list records that are bacterial COX1 under eukaryote names.
+#                         The list is used by the conversion (records marked "removed"
+#                         are dropped), the genes by the off-target guard (identity B).
+#                         Three files of one Zenodo record, each checked against the
+#                         SHA-256 the record's SHA256SUMS lists.
+#   midori2_coi_sintax    the converted file: classified against, probed, and the
+#                         reference of the guard's identity E.
+# `archive:` marks every entry here as handled by its own rule in 10_refdb.smk (zip
+# extraction, or several files of one record), so no generic fetch rule is made.
+# The two Zenodo records are versioned: a new MIDORI2 release or a new build of the
+# bacterial set is a new version DOI, and this pack names exactly one of each.
+references:
+  midori2_coi_raw:
+    archive: zip
+    file:    midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz
+    url:     https://zenodo.org/records/22685701/files/MIDORI2_GB273_SINTAX_sp.zip?download=1
+    member:  SINTAX_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz
+    md5:     f9bd98cd0a201663b1e0bd1447419b99
+    sha256:  367e7946d2a45ec3a344b147b956ddfedd6b72d837055900857397aba6e00365
+    doi:     10.5281/zenodo.22685701
+  midori2_taxonomy:
+    archive: zip
+    file:    midori2/GB273/taxonomy/nodes.dmp
+    url:     https://zenodo.org/records/22685701/files/MIDORI2_GB273_KRAKEN2_taxonomy.zip?download=1
+    md5:     fb562910696f35a6bbaf867263d236aa
+    doi:     10.5281/zenodo.22685701
+  # [Zenodo URLs, DOI and SHA-256 to be filled in when the release is published.]
+  bacterial_cox1:
+    archive: files
+    file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz
+  bacterial_cox1_fragments:
+    archive: files
+    file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz
+  bacterial_cox1_midori2_list:
+    archive: files
+    file:    bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv
+  midori2_coi_sintax:
+    file:    midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz
