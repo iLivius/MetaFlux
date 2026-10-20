@@ -13,7 +13,14 @@ rather than having to open half a dozen separate log files.
 
 Columns (left to right):
   raw → nophix → stripped → filtered → denoised → merged → non_chimeric
-  [→ post_extraction] → post_length_filter → post_taxonomy_filter
+  [→ post_extraction] → post_length_filter [→ post_frame_check → post_bacterial_cox1]
+  → post_taxonomy_filter
+
+The two COI columns (COI runs only) are the reads still present after the COI
+screens of the taxonomy step: the frame check (pseudogenes, NUMTs) and the
+off-target guard (bacterial COX1 moved to 06.taxonomy/bacterial_cox1_asvs.tsv).
+They come from asv_table_unfiltered.txt, whose filter_status column names the
+step that removed each ASV (removed_frame, moved_bacterial_cox1).
 
 Pipeline order: dada_seqtab → target_extract (optional) → dada_length_filter
                 → assign_taxonomy. When extraction is disabled, post_extraction
@@ -108,6 +115,26 @@ def parse_asv_table_colsums(path: Path) -> dict[str, int]:
     return result
 
 
+def parse_removed_by_status(path: Path, statuses: tuple[str, ...]) -> dict[str, dict[str, int]]:
+    """Reads per sample of the ASVs that asv_table_unfiltered.txt labels with each of
+    the given filter_status values → {status: {sample: reads}}.
+    Columns: "" (ASV id), samples..., taxonomy, metaxa2_origin, filter_status."""
+    result: dict[str, dict[str, int]] = {status: {} for status in statuses}
+    with path.open() as fh:
+        header = [_unq(h) for h in fh.readline().rstrip("\n").split("\t")]
+        sample_cols = header[1:-3]
+        for status in statuses:
+            result[status] = {name: 0 for name in sample_cols}
+        for line in fh:
+            cols = line.rstrip("\n").split("\t")
+            status = _unq(cols[-1])
+            if status not in result:
+                continue
+            for i, name in enumerate(sample_cols):
+                result[status][name] += int(cols[i + 1]) if cols[i + 1] else 0
+    return result
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 sm = snakemake  # noqa: F821
 
@@ -125,6 +152,13 @@ stripped_counts = parse_stage_counts(Path(sm.input.stripped_counts))
 dada2_counts    = parse_dada2_counts(Path(sm.input.dada2_counts))
 lenfilt_counts  = parse_seqtab_rowsums(Path(sm.input.seqtab_lenfilt))
 tax_counts      = parse_asv_table_colsums(Path(sm.input.asv_table))
+# COI only (see the module docstring): reads removed by the frame check and moved
+# by the off-target guard, per sample.
+coi_screens = bool(getattr(sm.params, "coi_screens", False))
+coi_removed = {}
+if coi_screens:
+    coi_removed = parse_removed_by_status(Path(sm.input.asv_table_unfiltered),
+                                          ("removed_frame", "moved_bacterial_cox1"))
 
 if extraction_enabled and sm.input.seqtab_extracted:
     extracted_counts = parse_seqtab_rowsums(
@@ -140,7 +174,10 @@ if remove_phix:
 stages += ["stripped", "filtered", "denoised", "merged", "non_chimeric"]
 if extraction_enabled:
     stages.append("post_extraction")
-stages += ["post_length_filter", "post_taxonomy_filter"]
+stages.append("post_length_filter")
+if coi_screens:
+    stages += ["post_frame_check", "post_bacterial_cox1"]
+stages.append("post_taxonomy_filter")
 
 out_path = Path(sm.output.counts)
 out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -166,6 +203,15 @@ with out_path.open("w") as out:
         if extraction_enabled:
             row.append(str(extracted_counts.get(s, "NA")))
         row.append(str(lenfilt_counts.get(s, "NA")))
+        if coi_screens:
+            # reads after each screen = reads after the length filter minus what the
+            # screens took, one after the other (the frame check runs first)
+            if s in lenfilt_counts:
+                after_frame = lenfilt_counts[s] - coi_removed["removed_frame"].get(s, 0)
+                after_guard = after_frame - coi_removed["moved_bacterial_cox1"].get(s, 0)
+                row += [str(after_frame), str(after_guard)]
+            else:
+                row += ["NA", "NA"]
         row.append(str(tax_counts.get(s, "NA")))
         out.write("\t".join(row) + "\n")
 

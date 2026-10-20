@@ -1404,6 +1404,36 @@ if MODE == "amplicon":
         _organelle_note = "inactive — amplicon.taxonomy.filter.enabled is false"
     sys.stderr.write(f"[MetaFlux] organelle filter: {_organelle_note}\n")
 
+    # ── COI screens (COI only) ──
+    # Rule coi_screens (80_taxonomy.smk, script 80d_coi_screens.py) measures, for
+    # every ASV, its reading frame and length (pseudogenes, NUMTs) and its identity
+    # to the bacterial COX1 set (B) and to the cleaned MIDORI2 (E). The taxonomy
+    # step (80c) then removes the ASVs that fail the frame check (removed_frame) and
+    # moves those with B > E to 06.taxonomy/bacterial_cox1_asvs.tsv
+    # (moved_bacterial_cox1), before keep/discard, so a bacterial COX1 ASV that
+    # SINTAX called an animal is never counted as one. The rule runs on every COI
+    # run, also with both screens off: it then only measures, and the table still
+    # says what each screen would have done. The two switches are independent of
+    # amplicon.taxonomy.filter.enabled, which concerns the token lists.
+    COI_SCREENS = AMPLICON_TYPE == "COI"
+    _coi_cfg = amp_cfg.get("coi") or {}
+    COI_FRAME_CHECK = bool(_coi_cfg.get("frame_check", True))
+    COI_OFFTARGET_GUARD = bool(_coi_cfg.get("offtarget_guard", True))
+    COI_LENGTH_TOLERANCE = int(_coi_cfg.get("length_tolerance", 9))
+    if COI_LENGTH_TOLERANCE < 0 or COI_LENGTH_TOLERANCE % 3 != 0:
+        sys.exit(
+            f"[MetaFlux] amplicon.coi.length_tolerance must be a non-negative multiple of 3 "
+            f"(whole codons; got {COI_LENGTH_TOLERANCE})."
+        )
+    COI_SCREENS_TSV      = OUT / "06.taxonomy" / "coi_screens.tsv"
+    BACTERIAL_COX1_ASVS  = OUT / "06.taxonomy" / "bacterial_cox1_asvs.tsv"
+    COI_ASV_FLAGS        = OUT / "06.taxonomy" / "coi_asv_flags.tsv"
+    if COI_SCREENS:
+        sys.stderr.write(
+            f"[MetaFlux] COI screens: frame check {'on' if COI_FRAME_CHECK else 'off (measured only)'}, "
+            f"off-target guard {'on' if COI_OFFTARGET_GUARD else 'off (measured only)'}\n"
+        )
+
     # Taxonomy method — validated at parse time
     TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
     if TAXONOMY_METHOD not in ("rdp", "sintax"):
@@ -3165,6 +3195,11 @@ def _amplicon_targets():
         # MultiQC aggregate
         OUT / "multiqc" / "multiqc_report.html",
     ]
+    # COI only: the screens' measurements (rule coi_screens) and the two tables the
+    # taxonomy step writes from them (same rule as the tables above, so the last two
+    # add no job).
+    if COI_SCREENS:
+        targets += [COI_SCREENS_TSV, BACTERIAL_COX1_ASVS, COI_ASV_FLAGS]
     # Optional 16S phylogeny (stage 85). ONE target is registered, and it is the QC
     # report rather than the tree — which needs explaining, because it looks like the
     # tree has been left unregistered by mistake.

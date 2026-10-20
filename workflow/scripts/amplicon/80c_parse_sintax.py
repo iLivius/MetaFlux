@@ -377,6 +377,56 @@ n_before = len(filtered_ids)
 # removed_organelle. removed_organelle therefore means "only Metaxa2 caught it".
 filter_status: dict[str, str] = {aid: "kept" for aid in shared_ids}
 
+# ── COI screens (COI only) ─────────────────────────────────────────────────
+# Rule coi_screens (80d_coi_screens.py) has measured every ASV and written a
+# verdict that already takes amplicon.coi.frame_check / offtarget_guard into
+# account: "frame" (no open reading frame in the run's frame, or a length that is
+# not whole codons away from the run's reference length), "bacterial" (closer to
+# the bacterial COX1 set than to MIDORI2, B > E) or "pass". The two screens run
+# here, BEFORE keep/discard, for two reasons: a bacterial COX1 ASV that SINTAX
+# called an animal must end up in bacterial_cox1_asvs.tsv as moved, not in the
+# tables as kept by k__Metazoa; and a pseudogene must not reach the token lists.
+# They are independent of filter.enabled, which concerns the token lists only.
+coi_input = sm.input.get("coi_screens")
+coi_screens: dict[str, dict[str, str]] = {}
+coi_moved: list[str] = []
+if coi_input:
+    with open(coi_input) as fh:
+        coi_header = fh.readline().rstrip("\n").split("\t")
+        for line in fh:
+            coi_row = dict(zip(coi_header, line.rstrip("\n").split("\t")))
+            coi_screens[coi_row["asv_id"]] = coi_row
+    missing_screens = [aid for aid in shared_ids if aid not in coi_screens]
+    if missing_screens:
+        logmsg(f"ERROR: {len(missing_screens)} ASVs have no row in {coi_input}")
+        log.close()
+        sys.exit(f"[assign_taxonomy/sintax] {len(missing_screens)} ASVs have no row in "
+                 f"{coi_input} (first: {missing_screens[0]}); rerun rule coi_screens")
+    for aid in filtered_ids:
+        if coi_screens[aid]["verdict"] == "frame":
+            filter_status[aid] = "removed_frame"
+        elif coi_screens[aid]["verdict"] == "bacterial":
+            filter_status[aid] = "moved_bacterial_cox1"
+    removed_frame_ids = [aid for aid in filtered_ids if filter_status[aid] == "removed_frame"]
+    coi_moved = [aid for aid in filtered_ids if filter_status[aid] == "moved_bacterial_cox1"]
+    filtered_ids = [aid for aid in filtered_ids if filter_status[aid] == "kept"]
+    logmsg(f"COI frame check: {len(removed_frame_ids)} ASV(s), {reads_of(removed_frame_ids)} reads "
+           f"removed (switch {'on' if getattr(sm.params, 'coi_frame_check', False) else 'off'})")
+    logmsg(f"COI off-target guard: {len(coi_moved)} ASV(s), {reads_of(coi_moved)} reads moved to "
+           f"bacterial_cox1_asvs.tsv (switch {'on' if getattr(sm.params, 'coi_offtarget_guard', False) else 'off'})")
+    for aid in coi_moved:
+        logmsg(f"    {aid}: B {coi_screens[aid]['B']} % to {coi_screens[aid]['best_bacterial_gene']} "
+               f"({coi_screens[aid]['best_bacterial_taxonomy']}), E {coi_screens[aid]['E']} %, "
+               f"{reads_of([aid])} reads (SINTAX: {tax_strings[aid] or 'unclassified'})")
+    if n_before > 0 and not filtered_ids:
+        msg = (f"the COI screens removed or moved ALL {n_before} ASVs ({len(removed_frame_ids)} by "
+               f"the frame check, {len(coi_moved)} as bacterial COX1). That usually means primers or "
+               f"reads that are not COI; see logs/coi_screens.log and 06.taxonomy/coi_screens.tsv.")
+        logmsg("ERROR: " + msg)
+        log.close()
+        sys.exit(f"[assign_taxonomy/sintax] {msg}")
+    n_before = len(filtered_ids)
+
 if filter_enabled:
     if filter_keep:
         for aid in filtered_ids:
@@ -563,6 +613,81 @@ def write_unfiltered_table(path: Path, row_ids: list[str]) -> None:
 # Every ASV that entered the filter, in the same order as asv_table.txt, so the
 # kept rows of this table are asv_table.txt itself plus the two extra columns.
 write_unfiltered_table(out_unfilt, shared_ids)
+
+
+# ── Outputs (e) and (f), COI only ─────────────────────────────────────────
+def cell(value: str) -> str:
+    """A text value quoted, or a bare NA when it is missing (R's write.table style)."""
+    return "NA" if value in ("", "NA") else q(value)
+
+
+def species_flag(asv_id: str) -> str:
+    """How much a species call can be trusted, from the best MIDORI2 hits.
+
+    The flag says nothing about the call itself; it adds what SINTAX's
+    confidence cannot show (see "Species flags" on the COI marker page):
+      no_species       SINTAX called no species;
+      low_identity     the best MIDORI2 hit is less than 98 % identical: the
+                       species, or a close relative, may be missing from MIDORI2;
+      shared_sequence  records of another named species are as close as the best
+                       hit (sister species with shared haplotypes, synonyms,
+                       mislabelled records): the species cannot be told apart
+                       with this amplicon;
+      ok               none of the above.
+    Records without a species name (interim names were left out of the
+    reference) are not counted as another species.
+    """
+    called = sintax_result.get(asv_id, {}).get("s", "")
+    if not called:
+        return "no_species"
+    screen = coi_screens[asv_id]
+    best_identity = float(screen["E"]) if screen["E"] not in ("", "NA") else 0.0
+    if best_identity < 98.0:
+        return "low_identity"
+    tied = [name for name in screen["best_midori2_species"].split("|")
+            if name not in ("", "NA", "no_species")]
+    if any(name != called for name in tied):
+        return "shared_sequence"
+    return "ok"
+
+
+if coi_input:
+    # (e) bacterial_cox1_asvs.tsv: the ASVs the off-target guard moved out of the
+    #     tables above, with their counts, what SINTAX had called them, B, E and
+    #     the closest bacterial gene. Nothing downstream reads it.
+    with open(sm.output.bacterial_cox1_asvs, "w") as fh:
+        fh.write("\t".join([q("")] + [q(s) for s in samples]
+                           + [q(c) for c in ("sintax_taxonomy", "B", "best_bacterial_gene",
+                                             "best_bacterial_taxonomy", "E", "best_midori2_record",
+                                             "sequence")]) + "\n")
+        for aid in coi_moved:
+            screen = coi_screens[aid]
+            fh.write("\t".join([q(aid)] + counts[aid]
+                               + [cell(tax_strings[aid]), screen["B"], cell(screen["best_bacterial_gene"]),
+                                  cell(screen["best_bacterial_taxonomy"]), screen["E"],
+                                  cell(screen["best_midori2_record"]), q(fasta[aid])]) + "\n")
+    # (f) coi_asv_flags.tsv: one row per ASV of asv_table.txt, with E (the best
+    #     identity to MIDORI2), the best record and its species, the species flag
+    #     and far_from_midori2 (E below 80 %: an ASV of a lineage MIDORI2 covers
+    #     poorly, or a bacterium the bacterial set does not contain; flagged, not
+    #     removed). Nothing downstream reads it.
+    with open(sm.output.coi_asv_flags, "w") as fh:
+        fh.write("\t".join([q(c) for c in ("", "E", "best_midori2_record", "best_midori2_species",
+                                           "species_flag", "far_from_midori2")]) + "\n")
+        for aid in filtered_ids:
+            screen = coi_screens[aid]
+            e_value = screen["E"]
+            if e_value in ("", "NA"):
+                far = "NA"
+            else:
+                far = "1" if float(e_value) < 80.0 else "0"
+            fh.write("\t".join([q(aid), e_value, cell(screen["best_midori2_record"]),
+                                cell(screen["best_midori2_species"]), q(species_flag(aid)), far]) + "\n")
+    flag_counts: dict[str, int] = {}
+    for aid in filtered_ids:
+        flag = species_flag(aid)
+        flag_counts[flag] = flag_counts.get(flag, 0) + 1
+    logmsg(f"COI species flags of the kept ASVs: {flag_counts}")
 
 logmsg(f"DONE. Outputs written to {out_asv.parent}")
 log.close()

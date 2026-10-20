@@ -292,6 +292,23 @@ amplicon:
       # organelles included, whatever this is set to.
       organelles: metaxa2
 
+  # COI only (ignored for every other marker): two screens of rule coi_screens,
+  # applied by the taxonomy step before keep/discard. Both are on by default.
+  # 06.taxonomy/asv_table_unfiltered.txt keeps every ASV, with the step that removed
+  # it (removed_frame, moved_bacterial_cox1); 06.taxonomy/coi_screens.tsv holds the
+  # measurements behind each decision. See docs/amplicon/markers/coi.md.
+  coi:
+    frame_check: true                         # remove ASVs with a TAA/TAG in the run's reading frame,
+                                              # or whose length differs from the run's reference length
+                                              # by anything but whole codons (pseudogenes, NUMTs,
+                                              # artefacts). false = measure and report, remove nothing.
+    length_tolerance: 9                       # frame_check: largest length difference, in bases, from the
+                                              # run's reference length (default three codons)
+    offtarget_guard: true                     # move ASVs that are closer to bacterial COX1 (B) than to
+                                              # MIDORI2 (E) out of the main tables, into
+                                              # 06.taxonomy/bacterial_cox1_asvs.tsv (Wolbachia and other
+                                              # bacterial COX1). false = measure and report, move nothing.
+
   dada2:
     pool: false                               # false | "pseudo" | true
 
@@ -676,6 +693,7 @@ resources:
     dada_length_filter: 2
     target_extract: 8
     assign_taxonomy: 8
+    coi_screens: 8                            # COI only: VSEARCH against MIDORI2 and the bacterial COX1 set
     aggregate_read_counts: 2
     # phylogeny (optional, 16S only — see amplicon.phylogeny)
     phylo_input: 1                            # reads two text tables, writes a FASTA
@@ -740,6 +758,7 @@ resources:
     dada_length_filter: 4000
     target_extract: 8000
     assign_taxonomy: 16000
+    coi_screens: 12000                        # COI only: VSEARCH holds MIDORI2 GB273 and its k-mer index (8.4 GB measured)
     aggregate_read_counts: 2000
     # phylogeny (optional, 16S only)
     phylo_input: 2000                         # two small text tables -> one FASTA

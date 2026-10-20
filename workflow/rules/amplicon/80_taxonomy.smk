@@ -74,6 +74,44 @@ if TAXONOMY_METHOD == "rdp":
             "../../scripts/amplicon/80a_assign_taxonomy.R"
 
 else:  # sintax
+    # COI screens (COI only; COI is classified by SINTAX only, so the rule lives in
+    # this branch). For every ASV of the final set: its reading frame and length
+    # (the frame check, against pseudogenes and NUMTs) and its A/C/G/T identity to
+    # the bacterial COX1 set (B) and to the cleaned MIDORI2 (E), for the off-target
+    # guard and the species flags. It decides nothing itself: assign_taxonomy reads
+    # the table and applies amplicon.coi.frame_check / offtarget_guard inside its
+    # filter chain, so asv_table_unfiltered.txt keeps every ASV with the step that
+    # removed it. Why and how, with the numbers behind the defaults, in the header
+    # of 80d_coi_screens.py and on docs/amplicon/markers/coi.md.
+    #   in : the length-filtered ASVs and their counts (the same files
+    #        assign_taxonomy reads), MIDORI2_COI_SINTAX, the bacterial COX1 set
+    #   out: COI_SCREENS_TSV, read only by assign_taxonomy below; kept as a record
+    #        of every measurement behind the two screens
+    if COI_SCREENS:
+        rule coi_screens:
+            input:
+                seqs      = _seqs_for_taxonomy,
+                seqtab    = _seqtab_for_taxonomy,
+                midori2   = MIDORI2_COI_SINTAX,
+                bacterial = BACTERIAL_COX1,
+                fragments = BACTERIAL_COX1_FRAGMENTS,
+            output:
+                table = COI_SCREENS_TSV,
+            params:
+                frame_check        = COI_FRAME_CHECK,
+                offtarget_guard    = COI_OFFTARGET_GUARD,
+                length_tolerance   = COI_LENGTH_TOLERANCE,
+                min_query_coverage = 0.8,
+            log:
+                LOGS / "coi_screens.log",
+            conda:
+                "../../envs/vsearch.yaml"
+            threads: lambda wc: threads_for("coi_screens")
+            resources:
+                mem_mb = lambda wc: mem_mb_for("coi_screens"),
+            script:
+                "../../scripts/amplicon/80d_coi_screens.py"
+
     # SINTAX path (the shipped default): vsearch --sintax is a k-mer-based
     # classifier that reports a bootstrap-like confidence per rank; sintax_cutoff
     # (0-1) is the confidence threshold a rank must clear to be reported, playing
@@ -90,14 +128,26 @@ else:  # sintax
             reference_check = OUT / "stats" / "taxonomy_reference_check.json",
             # Metaxa2's origin call per ASV — same as the rdp rule above.
             **({"metaxa2_origin": METAXA2_ORIGIN_TSV} if METAXA2_RUNS else {}),
+            # COI only: the frame check and off-target guard measurements (rule
+            # coi_screens above).
+            **({"coi_screens": COI_SCREENS_TSV} if COI_SCREENS else {}),
         output:
             asv_table       = OUT / "06.taxonomy" / "asv_table.txt",
             asv_table_seqs  = OUT / "06.taxonomy" / "asv_table_seqs.txt",
             taxon_seq_table = OUT / "06.taxonomy" / "taxon_seq_table.txt",
             # Every ASV that reached the filter, with metaxa2_origin and filter_status.
             asv_table_unfiltered = OUT / "06.taxonomy" / "asv_table_unfiltered.txt",
+            # COI only: the ASVs the off-target guard moved out of the tables above,
+            # and the per-ASV flags (species identity, distance to MIDORI2).
+            **({"bacterial_cox1_asvs": BACTERIAL_COX1_ASVS,
+                "coi_asv_flags": COI_ASV_FLAGS} if COI_SCREENS else {}),
         params:
             amp_type        = AMPLICON_TYPE,
+            # COI only. Given only to COI runs, so that the params of every other
+            # marker stay as they were and their existing output folders are not
+            # rerun because of a changed parameter list.
+            **({"coi_frame_check": COI_FRAME_CHECK,
+                "coi_offtarget_guard": COI_OFFTARGET_GUARD} if COI_SCREENS else {}),
             sintax_cutoff   = _tax_cfg["sintax_cutoff"],
             # sintax rank model — differs from the rdp one for markers whose two
             # reference files disagree on depth (see MARKERS in 00_common.smk).
@@ -143,12 +193,18 @@ rule aggregate_read_counts:
         asv_table        = OUT / "06.taxonomy" / "asv_table.txt",
         # nophix_counts only present when PhiX removal runs
         **({"nophix_counts": OUT / "stats" / "02.nophix_reads.counts"} if REMOVE_PHIX else {}),
+        # COI only: the filter_status of every ASV, for the reads the frame check
+        # removed and the off-target guard moved (columns post_frame_check and
+        # post_bacterial_cox1).
+        **({"asv_table_unfiltered": OUT / "06.taxonomy" / "asv_table_unfiltered.txt"} if COI_SCREENS else {}),
     output:
         counts = OUT / "stats" / "read_tracking.txt",
     params:
         extraction_enabled = EXTRACTION_ENABLED,
         remove_phix        = REMOVE_PHIX,
         samples            = SAMPLES,
+        # Given to COI runs only, so the params of every other marker stay as they were.
+        **({"coi_screens": True} if COI_SCREENS else {}),
     log:
         LOGS / "aggregate_read_counts.log",
     # Standard library only; the env pins the interpreter instead of using the host's.
