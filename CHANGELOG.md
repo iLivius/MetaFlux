@@ -37,15 +37,160 @@ need about 225 GB of memory at species level.
   this release from the 199,923 species representatives of GTDB R232; how, and how it
   was tested, is on the new manual page "Bacterial COX1 reference set (COI)".
 
+### Mixed orientation: reversed pairs swapped back, and kept once
+
+With `amplicon.primers.orientation: mixed`, `trim_primers` runs a second Cutadapt pass
+with the primers swapped, for the pairs whose R1 carries the reverse primer. Two things
+change in it. With `orientation: fixed`, the default, Cutadapt gets the same arguments
+and writes the same reads as in v2.5.0.
+
+- **The two mates of a reversed pair are swapped, not reverse-complemented.** Every
+  version since v1.0.0 reverse-complemented each mate. That put the reads on the right
+  strand but left R1 on the 3′ end of the amplicon and R2 on the 5′ end, so DADA2's
+  `mergePairs` (with `trim_overhang: true`, the default) kept only the stretch where the
+  two overlap. Now the pair's R2 goes to the R1 file and its R1 to the R2 file, and the
+  pair reaches DADA2 like the pairs of the first pass. On the BF3/BR2 COI insect mock
+  (SRR8082166, in which every R1 carries the reverse primer), none of the merged reads
+  came within 9 bp of the full 418 bp with the old handling, against 99.4 % now.
+- **Both 5′ calls need 10 primer bases** (`--overlap 10`, under `mixed` only). Both
+  passes read every pair, and Cutadapt counts a 5′ primer as found when a read starts
+  with the primer's last three bases. Where the start of each primer resembles the end
+  of the other, a pair passed both and was written twice, once with its mates the wrong
+  way round and most of a primer still on: 13–17 % of the pairs in the two BF3/BR2
+  libraries of the COI mock, 0.3 % in the rpoB and 0.04 % in the gyrB test set, 2 pairs
+  in the 18S test set, none in the 16S and ITS test sets. With 10 bases, 1 pair in
+  SRR8082166 and 32 in the gyrB test set are still written twice. The cost is the pairs
+  whose primer is found from only 3 to 9 of its bases at the start of a mate, which are
+  now dropped: 0.006–0.15 % of the pairs in the test sets of the shipped markers. In
+  those pairs the mate cut short is hardly ever a cleanly trimmed amplicon read.
+
+For a user of `mixed`: reversed pairs now merge to the full amplicon and are no longer
+written twice, so the tables of a `mixed` run change; re-run such folders (see below).
+In a truly mixed library the R1 file now holds read 1 of the pairs that came the right
+way round and read 2 of the reversed ones, and DADA2 fits its R1 and R2 error models to
+that blend. [To be settled before release, from validation V1b: what the blend changes
+in ASVs, reads and recovered mock specimens, against separate error models per
+orientation, on a genuinely mixed library.] The Cutadapt section of the MultiQC report
+shows the first pass only. A library in which every pair is swapped is better run with
+its two input files swapped and `fixed`: Cutadapt then reads every pair once, and its
+report covers all the reads.
+
+### Amplicon runs with a single sample
+
+A run with one sample no longer stops at `dada_seqtab`. Given one sample, DADA2's
+`derepFastq()`, `dada()` and `mergePairs()` return that sample's result on its own
+instead of a list with one result per sample, and the read tracking of `dada_seqtab`
+stopped on it (had it got further, the sequence tables would have named the sample
+"1"). `dada_seqtab` now puts a lone result back into a one-element list named after the
+sample. With one sample, `pool` has nothing to pool: DADA2 denoises it on its own. With
+two or more samples nothing changes: on the 16S test set the sequence tables, the FASTA,
+the read counts and the error-plot PNGs came out byte for byte the same.
+`CONTRIBUTING.md` adds a real run with a single sample to the release checks, since the
+unit tests and the dry runs never run R.
+
+### k-mer evidence floor `auto`, sized to each sample's depth
+
+`shotgun.kmer_evidence.min_distinct_minimizers: auto` gives each sample its own floor,
+worked out after Kraken2 from the sample's own report: (classified read pairs −
+*Homo sapiens* read pairs) / 1,000, at most 6,500. A species stays when its distinct
+minimizers reach the unrounded floor; `min_reads` and the 1 % safety rail work as
+before. The human read pairs are left out because PlusPF holds the human genome and
+host removal is off by default (the row is recognised by taxid 9606 and its name, so
+nothing is left out on a GTDB-based index, where 9606 is another taxon). The cap is
+there because MetaFlux's benchmark stops at 6.5 million classified pairs.
+`logs/kmer_evidence/{sample}.log` gives the classified pairs, the human pairs left out
+and the floor; the reasons of the evidence table and the plot give the floor rounded
+up, marked `(auto)`. The evidence table keeps its columns.
+
+- **Opt-in; 300 stays the default.** On MetaFlux's benchmark `auto` raised species F1
+  more than 300 did and lowered no sample's F1, but three quarters of that gain came
+  from one real mock community; it changes the table far more than 300 does, and it
+  assumes paired 2×150 bp reads. See "Scaling the floor with depth" on the k-mer
+  evidence page before switching to it.
+- **With a whole number nothing changes.** The rule gets the same number as before. On
+  the four test-dataset reports and the MBARC-26 report, at floors 0, 300 and 1,000
+  with the gate on and off, the evidence table, the gated report, the plot and the log
+  are byte for byte those of v2.5.0.
+- **The setting is checked more strictly at start-up.** A whole number (also written
+  `300.0` or `"300"`) or `auto`, in any mix of capitals and with spaces around it, is
+  accepted. A fraction (v2.5.0 cut `300.5` to 300 without a word) and `true`/`false`
+  (read as 1 and 0) now stop the run, with one message that says what is allowed;
+  other text and an empty value, which stopped v2.5.0 with a Python traceback, get the
+  same message. A negative number stops the run as before. A config with such a value
+  needs a whole number or `auto`.
+
 ### What runs again in a folder made with v2.5.0
 
-For the other markers, two steps run again, because their scripts gained the COI code
-and Snakemake reruns a step whose script changed: `assign_taxonomy` (under `sintax`) and
-`aggregate_read_counts`, and the steps that read their tables (the phylogeny, when it is
-switched on). Their results do not change: on the 18S run of 120 samples made with
-v2.5.0, the four tables of `06.taxonomy/` and `stats/read_tracking.txt` came out
-byte for byte the same. A run started with `--rerun-triggers mtime params input
-software-env` skips them.
+What runs again depends on how you get v2.6.0, because Snakemake goes by two kinds of
+evidence. It keeps a record of every finished step in `.snakemake/`, inside the MetaFlux
+folder it is started from: the step's command, its parameters, the list of its input
+files and its software environment. A step whose record no longer matches runs again. A
+step that runs a script is judged by the script file's date instead: it runs again
+whenever the script is newer than the step's outputs, whatever the script says. Every
+step after a step that runs again runs again too.
+
+**Updating the MetaFlux folder that made the output folder (`git pull`).** Git gives a
+new date only to the files it changes, and Snakemake has the records.
+
+- Amplicon mode, every marker, both orientation settings: `trim_primers` and every step
+  after it run again, because its command changed: falco on the trimmed reads, the
+  stripped-read counts, `pick_trunclen`, DADA2, the extraction where it runs, the
+  taxonomy, the read tracking, the phylogeny and MultiQC. The raw-read links, counts
+  and QC, the PhiX removal, the primer files, the reference databases and the length
+  probe are kept. (The scripts of `dada_seqtab`, `assign_taxonomy` under `sintax` and
+  `aggregate_read_counts` changed too; those steps come after `trim_primers` anyway.)
+- Shotgun mode with Kraken2 (`profiler: kraken2` or `both`): `kmer_evidence` runs again
+  for every sample, because its script changed, and with the gate on
+  (`kmer_evidence.enabled: true`) so do `bracken` and `finalize_otu_table`. Kraken2 does
+  not run again.
+- Every folder, in both modes and with every profiler: MultiQC runs again, because the
+  release changes the version its report shows, in `workflow/multiqc_config.yaml`,
+  which is one of MultiQC's inputs. [To be settled before release: this holds once the
+  version line of that file is bumped, as at every release so far; if it is left as
+  it is, write instead that with `profiler: sylph` nothing runs again, and take
+  MultiQC out of the `git pull` case of "Skipping the reruns".]
+
+**Starting from a fresh clone, a release archive or a second worktree.** All its files
+are newer than the old outputs (a clone or a worktree dates every file when it is made,
+a release archive at the time of the release commit), and it has no records of the old
+folder. So every step that runs a script runs again, with everything after it, whether
+v2.6.0 changed that script or not: in amplicon mode the quality plots of the trimmed
+reads, `pick_trunclen` and everything after it (fetching the reference databases and
+computing the length probe again unless `refdb/` was carried over), in shotgun mode the
+k-mer evidence, the sylph tables, the OTU table, the read tracking and MultiQC. A step
+without a script has nothing to be compared with, so `trim_primers` does not run again,
+and a changed setting goes unnoticed.
+
+**Results.** With `orientation: fixed` the steps that run again give the results of
+v2.5.0, except that under `method: rdp` a few bootstrap values, and now and then a
+lineage, can move, as between any two identical runs (DADA2's `assignTaxonomy` breaks
+exact ties at random; see the troubleshooting page). Each change was checked on its
+own: under `fixed`, `trim_primers` writes the same reads as v2.5.0 (30 samples: the five
+test sets and four COI mock libraries); with two or more samples, `dada_seqtab` writes
+the same tables (16S test set); with the COI code, the 18S run of 120 samples made with
+v2.5.0 gave the four tables of `06.taxonomy/` and `stats/read_tracking.txt` byte for
+byte the same; at the default floor of 300 the k-mer evidence files are byte for byte
+those of v2.5.0. [To be settled before release, from validation V4: the seven v2.5.0
+acceptance runs made again with v2.6.0 into new folders, every table compared byte for
+byte with v2.5.0, and each difference under `rdp` explained.] With
+`orientation: mixed` the results change on purpose: let the steps run, and in a folder
+opened from a fresh clone, a release archive or a new worktree add
+`--forcerun trim_primers`, or DADA2 runs again on the reads v2.5.0 trimmed.
+
+**Skipping the reruns.** `--rerun-triggers mtime params input software-env` leaves out
+the check of commands and script dates. With it only MultiQC runs again: after a
+`git pull` the release has changed its settings file, `workflow/multiqc_config.yaml`,
+and in a fresh clone that file is newer than the old report; Snakemake checks the input
+files of a step whatever `--rerun-triggers` says. The option holds only for the run it
+is given to: Snakemake keeps the old records, so a later run without it finds the same
+changes. Give it to every later run on that output folder, or let the steps run once;
+while it is given, a later change of a command or a script, a future fix included,
+goes unnoticed too. Do not use it with `orientation: mixed`: the step it
+skips is the fix. From a fresh clone with this option, a changed setting is not noticed
+either, since there is no record to compare it with: switching such a folder to
+`min_distinct_minimizers: auto` then needs `--forcerun kmer_evidence`. The "Running
+MetaFlux" page of the documentation explains these checks ("What happens on a
+re-run").
 
 ## 2.5.0 — 2026-10-16
 
