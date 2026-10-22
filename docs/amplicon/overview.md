@@ -127,11 +127,66 @@ the reverse one. Because the 5′ call uses `--discard-untrimmed`, a single fixe
 pass would silently throw away every swapped pair — often half the data.
 
 Setting `amplicon.primers.orientation: mixed` adds a second Cutadapt pass over the same
-input with the primers swapped (`-g rev -G fwd`, then `-a fwd_rc -A rev_rc`). Its output is
-reverse-complemented with seqtk so it matches the orientation of the first pass, and then
-concatenated onto it. Both 5′ calls require a recognisable primer on each mate and drop
-the pair otherwise, so a correctly oriented pair is claimed only by the first pass and a
-swapped pair only by the second — nothing is counted twice.
+input with the primers swapped (`-g rev -G fwd`, then `-a fwd_rc -A rev_rc`). A pair this
+pass keeps still has its mates the other way round, its R1 being the reverse read, so the
+two mates are swapped back: the pair's R2 goes to the R1 file and its R1 to the R2 file,
+after the pairs of the first pass. A swapped pair then reaches DADA2 as the pairs of the
+first pass do, with its forward read in R1, starting right after the forward primer, and
+its reverse read in R2.
+
+The mates are swapped, not reverse-complemented. Reverse-complementing each mate, which
+is what MetaFlux did up to v2.5.0, puts both reads on the right strand but leaves R1
+covering the 3′ end of the amplicon and R2 the 5′ end. `mergePairs`, with
+`amplicon.dada2.merge.trim_overhang` at its default `true`, then trims away whatever one
+read extends past the other and keeps only the stretch where the two overlap: on a
+418-bp COI amplicon in which every R1 carries the reverse primer, none of the merged
+reads came within 9 bp of the full length that way, against 99.4 % with the mates
+swapped (99.1 % at exactly 418 bp).
+
+**Some pairs are kept by both passes.** The two passes read the same input, and each keeps
+a pair when its 5′ call finds a primer on both mates. Cutadapt counts a primer as found
+when the read merely starts with the primer's last three bases (Cutadapt's default
+minimum overlap), or when the whole primer turns up anywhere in the read within the
+error rate. So a pair can pass the call meant for the other orientation by chance, with
+only those few bases cut, and is then written twice: once as it should be, and once with
+its mates the wrong way round and most of a primer still on. If DADA2 merges that wrong
+copy, the result is the reverse complement of the amplicon, or of part of it, with
+primer remnants on. How often this happens depends on the primers. Measured at the
+default settings (the second number is how many pairs `fixed` keeps from the same reads,
+with the two files in their right orientation):
+
+| Primers | Library | Pairs written twice |
+|---|---|---|
+| COI BF3/BR2 | insect mock (SRR8082166), every R1 carries BR2 | 120,930 of 910,014 (13.3 %) |
+| COI BF3/BR2 | another library of the same mock (SRR8082198), R1 carries BF3 | 115,376 of 676,377 (17.1 %) |
+| COI fwhF2/fwhR2n | the same mock (SRR8082148), every R1 carries fwhR2n | 1,875 of 1,383,136 (0.14 %) |
+| rpoB, Univ_rpoB_deg | [rpoB test set](../about/test-datasets.md), 5 mocks | 487 of 157,641 (0.3 %) |
+| gyrB, F64/R353 | [gyrB test set](../about/test-datasets.md), 5 mocks | 113 of 318,145 (0.04 %) |
+| 18S, TAReuk454FWD1/TAReukREV3 | [18S test set](../about/test-datasets.md), 4 samples | 2 of 908,768 |
+| 16S 799F/1175R, ITS3/ITS4 | their [test sets](../about/test-datasets.md), 6 samples each | none |
+
+BF3/BR2 is the extreme case because of how the two primers end. BF3 ends in HCG, which
+matches the start of a BR2 read whenever the read's degenerate third base is a G (TCG),
+and BR2 ends in YCA, which matches the start of a BF3 read whenever its third base is an
+A (CCA). In the two BF3/BR2 libraries above, 42 % and 61 % of the BR2 reads start with
+TCG, and 31 % and 28 % of the BF3 reads with CCA.
+
+What the swap means for DADA2: in a truly mixed library, the R1 file holds sequencer
+read 1 of the pairs that came in the right way round and sequencer read 2 of the swapped
+ones, and the R2 file the other way round. DADA2 learns one error model for all the R1
+reads of a run and one for all the R2 reads ([step 6](#6-asv-inference)), because read 2
+is usually the noisier of the two; in a mixed library each model is fitted to a blend of
+both reads instead, and the truncation lengths ([step 5](#5-truncation-length-selection))
+are chosen from the same blended quality profiles. [To be settled before release, from
+validation V1b: what one blended error model per direction changes in ASVs, reads and
+recovered mock specimens, against separate error models per orientation, measured on a
+genuinely mixed library.]
+
+A library in which every pair is swapped needs no second pass: swap the two input files
+of each sample (R1 ↔ R2) and keep `fixed`. The second pass would keep exactly the pairs
+that `fixed` keeps on the swapped files, but the first pass would add the pairs it keeps
+by chance (13 % more pairs with BF3/BR2, above). With the files swapped, Cutadapt runs
+one pass, nothing is written twice, and its report describes all the reads.
 
 !!! tip
 
@@ -140,8 +195,12 @@ swapped pair only by the second — nothing is counted twice.
     `stats/read_tracking.txt` and in the Cutadapt section of the MultiQC report.
 
 Per-sample Cutadapt statistics are written as JSON to `stats/cutadapt/` — one file for the
-5′ call and one for the 3′ call of the first pass. The swap-pass calls are logged but not
-reported separately.
+5′ call and one for the 3′ call of the first pass. The second pass writes its Cutadapt
+reports only to `logs/trim_primers/{sample}.log`, so with `mixed` the Cutadapt section of
+the MultiQC report describes the first pass alone, and there the pairs that only the second
+pass keeps count as discarded. `stats/03.stripped_reads.counts` and the `stripped` column of
+`stats/read_tracking.txt` count the pairs of both passes, and a pair kept by both twice:
+a `stripped` count above the `nophix` (or `raw`) count can only come from such pairs.
 
 ## 3. Per-stage QC
 

@@ -147,7 +147,16 @@ amplicon:
   primers:
     fwd: /path/to/fwd_primer.fasta
     rev: /path/to/rev_primer.fasta
-    orientation: fixed                        # fixed | mixed (mixed enables swap pass in cutadapt)
+    orientation: fixed                        # fixed | mixed
+                                              # fixed: every R1 starts with the forward primer.
+                                              # mixed: some pairs came the other way round (their R1
+                                              #   starts with the reverse primer). A second cutadapt
+                                              #   pass with the primers swapped keeps those pairs and
+                                              #   swaps their two mates back, so their forward read
+                                              #   reaches DADA2 as R1. A pair can match both passes
+                                              #   by chance and is then kept twice (13-17 % of the
+                                              #   pairs with the COI primers BF3/BR2). If EVERY pair
+                                              #   is swapped, swap the two input files and keep fixed.
 
   expected_length: auto                       # int | [min,max] | "auto"
                                               # 16S auto: in-silico PCR against SILVA; uses probe_length_stat.16S.

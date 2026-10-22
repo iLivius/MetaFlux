@@ -204,16 +204,48 @@ rule revcomp_primers:
 #   Pass A: -g fwd -G rev   +   -a rev_rc -A fwd_rc
 #   Pass B (swap, only if orientation=mixed):
 #           -g rev -G fwd   +   -a fwd_rc -A rev_rc
-#   Then revcomp pass-B output and concat with pass-A.
+#   Then swap the two mates of every pass-B pair (its R2 becomes R1) and
+#   concatenate with pass A.
 #
 # Why pass B exists: some library preps come back with reads in mixed
 # orientation — part of a sample's R1 file is actually a reverse read, and part
 # of R2 is actually a forward read. Trimming with the forward primer alone
 # (pass A only) simply loses those flipped pairs as "primer not found". Setting
 # amplicon.primers.orientation: mixed adds pass B, which re-tries with the
-# primers swapped, then reverse-complements its output so it lines back up with
-# pass A's orientation before the two are concatenated into one output file.
-# With orientation: fixed (the default), only pass A runs.
+# primers swapped. A pair that pass B keeps still has its mates the other way
+# round, so its two mates are swapped back before the two passes are
+# concatenated into one pair of output files: the recovered pair then has its
+# forward read in R1, starting right after the forward primer, and its reverse
+# read in R2, like the pairs of pass A, which is what DADA2's merging step
+# expects. Nothing is reverse-complemented; the comment at the concatenation
+# step below says why that would be wrong. With orientation: fixed (the
+# default), only pass A runs.
+#
+# A pair can be kept by both passes, and is then written twice. Pass B reads
+# every input pair, not only the ones pass A dropped, and a 5' call counts its
+# primer as found when a read merely starts with the primer's last three bases
+# (Cutadapt's default minimum overlap) or holds the whole primer anywhere within
+# the error rate. So a pair can pass the call meant for the other orientation
+# by chance: one copy is then right, and the other has its mates the wrong way
+# round and most of a primer still on. It also counts twice in
+# 03.stripped_reads.counts. Measured at the default settings: no pair in the
+# 16S and ITS test sets, 2 in the 18S set, 0.04 % of the gyrB and 0.3 % of the
+# rpoB pairs, but 13-17 % with the COI primers BF3/BR2, because each of the two
+# ends in three bases that the start of the other matches in many reads (28-61 %
+# in the two libraries measured). The amplicon overview gives the figures. This
+# rule does not remove such pairs: the overview tells users with a library in
+# which every pair is swapped to swap the two input files and keep
+# orientation: fixed.
+#
+# What the swap means for DADA2 in a truly mixed library: the output R1 file
+# holds sequencer read 1 of the pairs that came in the right way round and
+# sequencer read 2 of the swapped ones (and R2 the other way round). DADA2
+# learns one error model for all R1 reads and one for all R2 reads
+# (dada_seqtab), and pick_trunclen reads one quality profile per direction, so
+# both see a blend of the two sequencing reads instead of one read each. When
+# every pair is swapped, the pass-B part of the output is exactly what
+# orientation: fixed gives on the two input files swapped, and pass A adds only
+# the pairs it keeps by chance.
 rule trim_primers:
     input:
         # r1/r2 resolve to 02.no_phix when REMOVE_PHIX else the raw FASTQs.
@@ -326,17 +358,32 @@ rule trim_primers:
                      $tmpdir/{wildcards.sample}_pb5_R2.fq.gz \
                      >> {log} 2>&1
 
-            # Reverse-complement pass-B output so it matches pass-A orientation.
-            zcat $tmpdir/{wildcards.sample}_pb3_R1.fq.gz | seqtk seq -r - | gzip \
-                > $tmpdir/{wildcards.sample}_pb3_R1_rc.fq.gz
-            zcat $tmpdir/{wildcards.sample}_pb3_R2.fq.gz | seqtk seq -r - | gzip \
-                > $tmpdir/{wildcards.sample}_pb3_R2_rc.fq.gz
-
-            # Concat pass-A + reverse-complemented pass-B (same orientation).
+            # Concatenate pass A and pass B, swapping the mates of every pass-B
+            # pair. A pass-B pair came in the other way round: its R1 is the reverse
+            # read (it started with the reverse primer) and its R2 the forward read.
+            # So the output R1 gets pass-B R2 and the output R2 gets pass-B R1, and
+            # the recovered pair has its forward read in R1, starting right after
+            # the forward primer, as DADA2 expects. Both output files keep the same
+            # pair order, and that order is all DADA2 uses to pair the mates
+            # (dada_filter leaves filterAndTrim's matchIDs at its default, FALSE),
+            # so an R1 record that keeps the name it had as read 2 is harmless. A
+            # pair that both passes kept (see the rule header) is written twice here.
+            #
+            # MetaFlux up to v2.5.0 reverse-complemented each pass-B mate instead
+            # (seqtk seq -r). That gives the right strand but the wrong pair
+            # geometry: R1 then covers the 3' end of the amplicon and R2 the 5' end,
+            # and mergePairs with trimOverhang keeps only the stretch where the two
+            # overlap. (Their quality strings also run backwards, so truncation cuts
+            # the best bases, but the geometry alone is enough: the result was the
+            # same without truncation.) On the 418-bp BF3/BR2 COI amplicon of an
+            # insect mock in which every R1 carries the reverse primer (SRA run
+            # SRR8082166), none of the merged reads came within 9 bp of the full
+            # 418 bp that way, against 99.4 % with the mates swapped (99.1 % at
+            # exactly 418 bp).
             cat $tmpdir/{wildcards.sample}_after3p_R1.fq.gz \
-                $tmpdir/{wildcards.sample}_pb3_R1_rc.fq.gz > {output.r1}
+                $tmpdir/{wildcards.sample}_pb3_R2.fq.gz > {output.r1}
             cat $tmpdir/{wildcards.sample}_after3p_R2.fq.gz \
-                $tmpdir/{wildcards.sample}_pb3_R2_rc.fq.gz > {output.r2}
+                $tmpdir/{wildcards.sample}_pb3_R1.fq.gz > {output.r2}
         else
             mv $tmpdir/{wildcards.sample}_after3p_R1.fq.gz {output.r1}
             mv $tmpdir/{wildcards.sample}_after3p_R2.fq.gz {output.r2}
