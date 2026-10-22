@@ -85,6 +85,20 @@ runs, the stand-in databases and how to add a config. A real run on the test dat
 (`docs/about/test-datasets.md`) is still the final check for anything that changes
 results; the CI cannot run tools.
 
+Before a release, make one more real run: amplicon mode with a single sample. Copy the
+read pair of one sample of a test dataset into a folder of its own, point
+`input.fastq_dir` at it and `output.out_dir` at a new, empty folder; any marker will
+do, since the step being checked is DADA2's. Never point `output.out_dir` at the
+folder of a finished run: Snakemake would run that sample's steps again there and then
+rebuild the run's tables from that one sample. It worked when the run finishes and
+`stats/read_tracking.txt` has one row, named after the sample, with a number in every
+column (an `NA` there means a step lost the sample's name). None of the checks above
+can see this case: the unit tests cover the Python parts only, and the dry runs plan
+the jobs without running them, so no R script runs. Yet one sample is exactly where
+DADA2 behaves differently: given one sample, `derepFastq()`, `dada()` and
+`mergePairs()` return that sample's result on its own instead of a list with one
+result per sample, and `dada_seqtab` has to put it back into a list.
+
 ## How the code is written
 
 MetaFlux's readers are biologists with some coding ability, and every line is read and

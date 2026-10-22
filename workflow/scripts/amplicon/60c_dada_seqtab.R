@@ -138,6 +138,34 @@ message("[dada_seqtab] Error plots written.")
 message("[dada_seqtab] Dereplicating...")
 derep_r1 <- derepFastq(filt_r1, verbose = TRUE)
 derep_r2 <- derepFastq(filt_r2, verbose = TRUE)
+# A run with ONE sample. derepFastq() here, and dada() and mergePairs() below, give
+# back a list with one result per sample, named after the samples. With a single
+# sample, each of them returns that sample's result on its own instead, not inside a
+# list (each function does this itself; dada() and mergePairs() do it even when they
+# are handed a one-element list). Left like that, the lone results of dada() and
+# mergePairs() break two steps further down:
+#   - the read tracking at the end runs sapply() over the samples in dada_r1 and in
+#     mergers; over a lone result it runs over that result's parts instead, and the
+#     job stops with an error in getUniques();
+#   - makeSequenceTable() takes the name of each table row from its list element;
+#     the lone data frame of mergePairs() has no name, so the sample would be called
+#     "1" in the two sequence tables written below, and in every table built from
+#     them later.
+# So right after each of the three calls, a lone result is put back into a
+# one-element list named after the sample, and every later step works as in a run
+# with many samples. Each guard tests what DADA2 returned (one derep object, one
+# dada object, one data frame) rather than counting the samples, so it would stay
+# right if a later DADA2 release returned a list for one sample too. With two or
+# more samples DADA2 returns lists, and the three guards change nothing.
+#
+# The lone result of derepFastq() does no harm by itself: dada() and mergePairs()
+# accept one and put it into a list themselves, and the read tracking never reads
+# it. But DADA2 refuses to rename one, so the two names() lines below would only
+# print the warning "derep-class objects cannot be renamed" and leave it without
+# the sample's name. Putting it into a list first lets them name it, as in a run
+# with many samples.
+if (inherits(derep_r1, "derep")) derep_r1 <- list(derep_r1)
+if (inherits(derep_r2, "derep")) derep_r2 <- list(derep_r2)
 names(derep_r1) <- sample_names
 names(derep_r2) <- sample_names
 
@@ -154,11 +182,17 @@ names(derep_r2) <- sample_names
 #   "pseudo" — a middle ground: samples are still denoised individually, but
 #            using a prior built from a first, pooled pass, at a fraction of
 #            full pooling's cost.
+# With a single sample there is nothing to pool: dada() then denoises it on its
+# own whatever pool says (the log line below still prints the configured value).
 message("[dada_seqtab] Denoising (pool=", pool, ", OMEGA_A=", omega_a, ")...")
 dada_r1 <- dada(derep_r1, err = err_r1, multithread = threads,
                  pool = pool, OMEGA_A = omega_a, verbose = TRUE)
 dada_r2 <- dada(derep_r2, err = err_r2, multithread = threads,
                  pool = pool, OMEGA_A = omega_a, verbose = TRUE)
+# One sample: dada() returns one dada object, not a list; put it back into a
+# one-element list named after the sample (see "A run with ONE sample" above).
+if (inherits(dada_r1, "dada")) dada_r1 <- setNames(list(dada_r1), sample_names)
+if (inherits(dada_r2, "dada")) dada_r2 <- setNames(list(dada_r2), sample_names)
 
 # ── Merge paired reads ───────────────────────────────────────────
 # trimOverhang handles reads that run past the far end of the amplicon into
@@ -176,6 +210,10 @@ mergers <- mergePairs(
   trimOverhang    = trim_overhang,
   verbose         = TRUE
 )
+# One sample: mergePairs() returns one data frame, not a list of them; put it back
+# into a one-element list named after the sample, which makeSequenceTable() below
+# uses as the row name (see "A run with ONE sample" above).
+if (is.data.frame(mergers)) mergers <- setNames(list(mergers), sample_names)
 
 # ── Build the sequence table ─────────────────────────────────────
 # Columns (ASVs) come back ordered by decreasing total abundance across
