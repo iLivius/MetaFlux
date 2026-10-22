@@ -111,10 +111,11 @@ with the forward primer alone simply loses them. Setting
 `amplicon.primers.orientation: mixed` adds a second Cutadapt pass with the
 primers swapped. The two mates of each pair it keeps are swapped back, so that
 its forward read is in R1 again, and the result is concatenated with the first
-pass, so the swapped reads rejoin the main set instead of being discarded. A pair
-can match both passes by chance and is then kept twice, which with some primer
-pairs is common, so a library in which every pair is swapped is better handled by
-swapping its two files and keeping `fixed` (see
+pass, so the swapped reads rejoin the main set instead of being discarded. Because
+both passes read every pair, both 5′ calls then need at least 10 primer bases, so
+that a pair is not kept by both by chance. A library in which every pair is
+swapped is still better handled by swapping its two files and keeping `fixed`:
+Cutadapt then runs once and its report covers all the reads (see
 [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)).
 With `orientation: fixed` only the first pass runs. The reverse-complemented
 primer sequences both passes need are built once by the `revcomp_primers` rule.

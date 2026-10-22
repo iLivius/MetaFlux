@@ -205,7 +205,8 @@ rule revcomp_primers:
 #   Pass B (swap, only if orientation=mixed):
 #           -g rev -G fwd   +   -a fwd_rc -A rev_rc
 #   Then swap the two mates of every pass-B pair (its R2 becomes R1) and
-#   concatenate with pass A.
+#   concatenate with pass A. Under orientation=mixed the two 5' calls (-g/-G)
+#   also need at least 10 primer bases (--overlap 10; see below).
 #
 # Why pass B exists: some library preps come back with reads in mixed
 # orientation — part of a sample's R1 file is actually a reverse read, and part
@@ -221,21 +222,39 @@ rule revcomp_primers:
 # step below says why that would be wrong. With orientation: fixed (the
 # default), only pass A runs.
 #
-# A pair can be kept by both passes, and is then written twice. Pass B reads
-# every input pair, not only the ones pass A dropped, and a 5' call counts its
-# primer as found when a read merely starts with the primer's last three bases
-# (Cutadapt's default minimum overlap) or holds the whole primer anywhere within
-# the error rate. So a pair can pass the call meant for the other orientation
-# by chance: one copy is then right, and the other has its mates the wrong way
-# round and most of a primer still on. It also counts twice in
-# 03.stripped_reads.counts. Measured at the default settings: no pair in the
-# 16S and ITS test sets, 2 in the 18S set, 0.04 % of the gyrB and 0.3 % of the
-# rpoB pairs, but 13-17 % with the COI primers BF3/BR2, because each of the two
-# ends in three bases that the start of the other matches in many reads (28-61 %
-# in the two libraries measured). The amplicon overview gives the figures. This
-# rule does not remove such pairs: the overview tells users with a library in
-# which every pair is swapped to swap the two input files and keep
-# orientation: fixed.
+# Why the 5' calls need 10 primer bases under mixed. Both passes read every
+# input pair, not only the ones pass A dropped. By default Cutadapt counts a 5'
+# primer as found as soon as a read starts with the primer's last three bases
+# (minimum overlap 3, because a read may begin partway into its primer), or
+# when the whole primer turns up anywhere in the read within the error rate.
+# With some primer pairs the start of each primer resembles the end of the
+# other: the COI primer BF3 ends in HCG, which a BR2 read matches whenever its
+# degenerate third base is a G (TCG), and BR2 ends in YCA, which a BF3 read
+# matches whenever its third base is an A (CCA). A pair could then also pass
+# the call meant for the other orientation, with only those three bases cut,
+# and was written twice: once right, and once with its mates the wrong way
+# round and most of a primer still on. Every version up to v2.5.0 did this.
+# Measured with Cutadapt's default, 13.3 % and 17.1 % of the pairs of two
+# BF3/BR2 libraries of an insect mock were written twice, 0.14 % with the COI
+# primers fwhF2/fwhR2n, 0.31 % in the rpoB test set, 0.04 % in the gyrB set,
+# 2 pairs in the 18S set and none in the 16S and ITS sets. With 10 bases, 1
+# pair is left in one BF3/BR2 library and 32 in the gyrB set, whose primers are
+# highly degenerate: pairs in which the other orientation's primer still
+# matches 10 or more of its bases; none elsewhere. The 3' calls keep
+# Cutadapt's default: a read that runs through a short amplicon into the far
+# primer can legitimately end a few bases into it. A primer shorter than 10
+# bases needs all of its bases (Cutadapt caps the minimum at the primer's
+# length).
+#
+# What the 10 bases cost: the pairs in which a primer is found only from 3 to 9
+# of its bases at the start of a read, which orientation: fixed keeps. That is
+# 0.006-0.15 % of the pairs in the test sets of the five shipped markers and at
+# most 0.06 % in the four COI libraries measured. Hardly any of them are
+# cleanly trimmed amplicon reads: the read cut short carries the rest of a
+# primer that differs from the given one by more than the error rate allows, or
+# it is a read of something else, such as a low-complexity read. The amplicon
+# overview gives the measurements. With orientation: fixed the one pass keeps
+# Cutadapt's default and runs exactly as in v2.5.0.
 #
 # What the swap means for DADA2 in a truly mixed library: the output R1 file
 # holds sequencer read 1 of the pairs that came in the right way round and
@@ -243,9 +262,9 @@ rule revcomp_primers:
 # learns one error model for all R1 reads and one for all R2 reads
 # (dada_seqtab), and pick_trunclen reads one quality profile per direction, so
 # both see a blend of the two sequencing reads instead of one read each. When
-# every pair is swapped, the pass-B part of the output is exactly what
-# orientation: fixed gives on the two input files swapped, and pass A adds only
-# the pairs it keeps by chance.
+# every pair is swapped, the pass-B part of the output is what orientation:
+# fixed gives on the two input files swapped, less the few pairs the 10-base
+# rule drops, and pass A adds almost nothing.
 rule trim_primers:
     input:
         # r1/r2 resolve to 02.no_phix when REMOVE_PHIX else the raw FASTQs.
@@ -304,10 +323,23 @@ rule trim_primers:
         ln -sf "$(realpath {input.r1})" $tmpdir/{wildcards.sample}_5prime_R1.fastq.gz
         ln -sf "$(realpath {input.r2})" $tmpdir/{wildcards.sample}_5prime_R2.fastq.gz
 
+        # Under orientation: mixed both 5' calls need at least 10 bases of their
+        # primer (--overlap 10) instead of Cutadapt's default of 3, so that a pair
+        # is not kept by both passes through a chance match of a few bases (see
+        # the rule header). Under orientation: fixed the variable stays empty, so
+        # pass A gets exactly the options it had in v2.5.0. It is used unquoted on
+        # purpose: empty, it adds nothing to the command line (quoted, it would
+        # hand Cutadapt an empty argument); set, it gives the two words --overlap
+        # and 10.
+        overlap_5p=""
+        if [ "{params.orientation}" = "mixed" ]; then
+            overlap_5p="--overlap 10"
+        fi
+
         # ---- Pass A 5': assume R1=fwd, R2=rev ----
         cutadapt -j {threads} \
                  -g file:{input.fwd} -G file:{input.rev} \
-                 -e {params.max_err} --pair-filter=any \
+                 -e {params.max_err} --pair-filter=any $overlap_5p \
                  --minimum-length {params.min_len} --discard-untrimmed \
                  --json {output.json_pa5} \
                  -o $tmpdir/{wildcards.sample}_after5p_R1.fq.gz \
@@ -340,7 +372,7 @@ rule trim_primers:
             # not exposed to MultiQC. Tmp paths use sample name to avoid clashes.)
             cutadapt -j {threads} \
                      -g file:{input.rev} -G file:{input.fwd} \
-                     -e {params.max_err} --pair-filter=any \
+                     -e {params.max_err} --pair-filter=any $overlap_5p \
                      --minimum-length {params.min_len} --discard-untrimmed \
                      -o $tmpdir/{wildcards.sample}_pb5_R1.fq.gz \
                      -p $tmpdir/{wildcards.sample}_pb5_R2.fq.gz \
@@ -367,7 +399,8 @@ rule trim_primers:
             # pair order, and that order is all DADA2 uses to pair the mates
             # (dada_filter leaves filterAndTrim's matchIDs at its default, FALSE),
             # so an R1 record that keeps the name it had as read 2 is harmless. A
-            # pair that both passes kept (see the rule header) is written twice here.
+            # pair that both passes kept is written twice here; the 10-base rule of
+            # the 5' calls makes that rare (see the rule header).
             #
             # MetaFlux up to v2.5.0 reverse-complemented each pass-B mate instead
             # (seqtk seq -r). That gives the right strand but the wrong pair

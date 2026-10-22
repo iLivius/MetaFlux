@@ -153,10 +153,13 @@ amplicon:
                                               #   starts with the reverse primer). A second cutadapt
                                               #   pass with the primers swapped keeps those pairs and
                                               #   swaps their two mates back, so their forward read
-                                              #   reaches DADA2 as R1. A pair can match both passes
-                                              #   by chance and is then kept twice (13-17 % of the
-                                              #   pairs with the COI primers BF3/BR2). If EVERY pair
-                                              #   is swapped, swap the two input files and keep fixed.
+                                              #   reaches DADA2 as R1. Both passes then need at least
+                                              #   10 bases of each 5' primer (cutadapt's default is 3),
+                                              #   so that a pair is not kept by both by chance; the
+                                              #   pairs whose primer is found from only 3 to 9 of its
+                                              #   bases are dropped (0.006-0.15 % in the test sets).
+                                              #   fixed keeps the default. If EVERY pair is swapped,
+                                              #   swap the two input files and keep fixed.
 
   expected_length: auto                       # int | [min,max] | "auto"
                                               # 16S auto: in-silico PCR against SILVA; uses probe_length_stat.16S.
