@@ -59,9 +59,9 @@ The same checks run on GitHub for every push and pull request
 
 ```bash
 # 1. The unit tests of the pure-Python parts (start-up checks, reference check,
-#    OTU-table builder, read-tracking parsers, taxon lookup). Needs pytest and
-#    PyYAML; the OTU-table tests also need biom-format and numpy (the packages of
-#    workflow/envs/biom.yaml) and are skipped without them.
+#    OTU-table builder, read-tracking parsers, taxon lookup, k-mer evidence gate).
+#    Needs pytest and PyYAML; the OTU-table tests also need biom-format and numpy
+#    (the packages of workflow/envs/biom.yaml) and are skipped without them.
 pytest tests
 
 # 2. The dry-run matrix: every marker, method, SILVA release and shotgun profiler

@@ -1,0 +1,16 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: a k-mer evidence floor
+# that is neither a whole number nor the word auto (here "automatic"), which MetaFlux
+# refuses rather than guess what was meant. The runner (.test/run_dry_runs.sh) expects
+# the message fragment on the next line.
+# EXPECT: min_distinct_minimizers must be a whole number >= 0 (the default is 300) or the word auto
+mode: shotgun
+input:
+  fastq_dir: .test/data/shotgun
+output:
+  out_dir: .test/out/expected_stop_shotgun_kmer_floor_word
+references:
+  kraken_db: .test/stubs/kraken2_db
+shotgun:
+  profiler: kraken2
+  kmer_evidence:
+    min_distinct_minimizers: automatic

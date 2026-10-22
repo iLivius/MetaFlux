@@ -67,13 +67,15 @@ gyrB and rpoB have no SINTAX reference, so `method: sintax` is refused for them 
 start-up, and COI has no rdp trainset, so `method: rdp` is refused for it; those
 refusals are expected-stop cases rather than matrix cells.
 
-Shotgun, one config per profiler:
+Shotgun, one config per profiler, and one for the `auto` floor of the k-mer evidence
+gate:
 
 | Config | Profiler | Also covers |
 |---|---|---|
 | `shotgun_kraken2` | Kraken2 + Bracken | the k-mer evidence gate, the taxon filter, read extraction |
 | `shotgun_sylph` | sylph | two databases with built-in sylph-tax taxonomies |
 | `shotgun_both` | both | host removal with the stand-in host genome, the taxon filter, read extraction |
+| `shotgun_kmer_auto` | Kraken2 + Bracken | the k-mer evidence gate with `min_distinct_minimizers: auto`, at `tax_lev: G`, so the start-up warning for a gate below species is printed for `auto` |
 
 Expected stops (`config/expected_stop/`):
 
@@ -83,6 +85,7 @@ Expected stops (`config/expected_stop/`):
 | `gyrB_sintax` | `method: sintax` on a marker without a SINTAX reference | `method: sintax is not available` |
 | `COI_rdp` | `method: rdp` on a marker without an rdp trainset | `method: rdp is not available` |
 | `shotgun_tax_lev_D` | Bracken at the domain rank | `tax_lev: D is not allowed` |
+| `shotgun_kmer_floor_word` | a k-mer evidence floor that is neither a whole number nor `auto` | `min_distinct_minimizers must be a whole number >= 0 (the default is 300) or the word auto` |
 
 ## The stand-in databases
 
@@ -124,6 +127,6 @@ files, and the stubs give them exactly what they ask for:
 Copy the closest config, change its header comment, `out_dir` and the keys the case
 needs, and run `bash .test/run_dry_runs.sh`. For a case that must stop at start-up,
 put it under `config/expected_stop/` with a `# EXPECT:` line quoting a fragment of
-the stop message, as the four there do. Keep the data as it is: a few hundred read
+the stop message, as the ones there do. Keep the data as it is: a few hundred read
 pairs per sample are enough for Snakemake to find the samples, and the repository
 should stay small.

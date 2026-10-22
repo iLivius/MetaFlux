@@ -63,8 +63,9 @@ Output, all three written on every run whether or not the gate is switched on:
      what the gate would do. Whether Bracken actually reads this file or the original
      is decided by shotgun.kmer_evidence.enabled (see rule bracken, 45_abundance.smk).
   3. {sample}_evidence.png — reads against distinct minimizers, log-log, one point per
-     taxon, coloured by verdict, with the threshold drawn on. An outlier becomes
-     something you see rather than something you compute.
+     taxon, coloured by verdict, with the threshold drawn on (with auto, the sample's
+     own floor, labelled as such). An outlier becomes something you see rather than
+     something you compute.
 
 HOW A TAXON IS REMOVED — AND WHY IT IS NOT JUST A DELETED LINE
 --------------------------------------------------------------
@@ -125,10 +126,57 @@ Treat 300 as a low, cautious floor. The only direct comparison, Oskolkov 2026
 (Suppl. Fig. S6), ran Kraken2 and KrakenUniq on the same data and found that Kraken2
 needed two to three times MORE distinct minimizers than KrakenUniq needed unique
 k-mers, where the conversion above predicts about three times fewer. At 300 the gate
-removes only the calls with the least distinct sequence behind them. A floor sized to
-sequencing depth (about one distinct minimizer per 1,000 classified read pairs, host
-excluded, in the shallowest sample; at most 6,500) is described in
-docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth.
+removes only the calls with the least distinct sequence behind them. The setting
+`auto` sizes the floor to each sample's sequencing depth instead; see the next section.
+
+THE FLOOR: A NUMBER, OR auto
+----------------------------
+shotgun.kmer_evidence.min_distinct_minimizers is either a whole number or the word
+auto; 00_common.smk checks which before any job runs, and hands this script an int or
+the text "auto".
+
+A number is one floor for every sample of the run, used exactly as written (300 by
+default).
+
+auto gives every sample its own floor. It is worked out here, from the sample's own
+report, because how many read pairs Kraken2 classified is only known once it has run:
+
+    classified pairs  = clade reads of the root row (taxid 1)
+    human pairs       = clade reads of the Homo sapiens row (taxid 9606), 0 if absent
+    floor             = min(6,500, (classified pairs - human pairs) / 1,000)
+
+Why a floor that grows with depth. A species that is really present leaves more
+distinct minimizers the deeper a sample is sequenced, so a fixed floor is lenient on
+deep samples and strict on shallow ones. On MetaFlux's benchmark (42 samples of known
+composition; docs/shotgun/kmer-evidence.md, section "Scaling the floor with depth"),
+one distinct minimizer per 1,000 classified read pairs was the best rule that lowered
+no sample's species F1, at full depth and at modelled shallower depths. The 1,000 and
+the cap are constants below rather than config keys: changing either one means
+validating the rule again.
+
+Why the human reads are left out. PlusPF contains the human genome and host removal
+is off by default, so human reads would raise the floor without adding any microbial
+evidence. This is MetaFlux's own addition to the rule, not something the benchmark
+tested: there, the host reads left in a sample counted as classified. The row is
+recognised by its taxid AND its name, because the taxids of a GTDB-based index are not
+NCBI's: in k2_gtdb_genome_reps_20250609, taxid 9606 is the archaeal genus
+Thermococcus_A, whose reads must not be taken for human ones. No other host is looked
+for. PlusPF holds no host genome except the human one (no other animal, no plant), so
+reads of other hosts (a plant, a mouse) mostly stay unclassified and do not count; with
+a database that holds other host genomes they do count, which the docs page says.
+
+Why the cap. The benchmark stops at 6.5 million classified pairs. Beyond that, a floor
+that kept growing with depth would eventually exceed what a real species with a small
+species-specific part of its genome can reach (in the benchmark's depth model this
+began at about 10 million pairs), so the floor stops at 6,500.
+
+How the floor is applied: exactly as the rule was evaluated, a taxon passes when its
+distinct minimizers >= the unrounded floor (2266.931, not a rounded 2267). The counts
+are whole numbers, so this is the same test as "at least the floor rounded UP", and the
+rounded-up number is what the evidence table's reasons, the plot and the log show. The
+min_reads floor and the 1 % safety rail work as with a number; the rail's share is
+still the taxon's clade reads over ALL classified reads, human ones included, as in
+the benchmark.
 
 CONSUMED BY
 -----------
@@ -138,6 +186,8 @@ otu_table.biom / otu_table.tsv — so the pipeline's normal output table IS the
 corrected table, not a side artefact. The TSV and PNG are terminal outputs: nothing
 downstream reads them.
 """
+import math
+
 import matplotlib
 
 matplotlib.use("Agg")  # render to file only — no display on a compute node
@@ -154,12 +204,36 @@ out_plot       = str(sm.output.plot)
 
 sample         = str(sm.params.sample)
 target_rank    = str(sm.params.rank)              # shotgun.bracken.tax_lev — the rank Bracken will report
-min_distinct   = int(sm.params.min_distinct)      # distinct-minimizer floor
+floor_setting  = sm.params.min_distinct           # distinct-minimizer floor: a whole number, or the
+                                                  # text "auto" (worked out per sample further down,
+                                                  # once the report has been read)
 min_reads      = int(sm.params.min_reads)         # clade-read floor, applied together with the above
 protect_frac   = float(sm.params.protect_frac)    # never prune a taxon holding more than this share of classified reads
 gate_enabled   = bool(sm.params.enabled)          # labels the log and the figure title; the gated
                                                   # report itself is written either way. What this
                                                   # flag really decides lives in rule bracken.
+
+# The fixed numbers of the auto floor, and how the human row is recognised (see
+# "THE FLOOR: A NUMBER, OR auto" in the docstring, and MetaFlux's benchmark in
+# docs/shotgun/kmer-evidence.md, section "Scaling the floor with depth"). Each one says
+# below where it comes from, because only the 1,000 was fitted and tested on the
+# benchmark. The two numbers are constants rather than config keys on purpose:
+# changing either one means validating the rule again.
+AUTO_PAIRS_PER_MINIMIZER = 1000             # one distinct minimizer per 1,000 classified read
+                                            # pairs: fitted on the benchmark, the best rate that
+                                            # lowered no sample's species F1.
+AUTO_FLOOR_CAP           = 6500             # the floor never goes above this. Not fitted: it is
+                                            # where the benchmark's data end (its deepest sample
+                                            # has 6.5 million classified pairs). Beyond it, a
+                                            # floor that kept growing would eventually exceed
+                                            # what a real species with a small species-specific
+                                            # part of its genome can reach.
+HUMAN_TAXID              = "9606"           # Homo sapiens in NCBI's taxonomy (PlusPF). Leaving
+HUMAN_NAME               = "Homo sapiens"   # its reads out is MetaFlux's own choice, so that
+                                            # they do not raise the floor; the benchmark did not
+                                            # test it (there, host reads counted as classified).
+                                            # The name is matched too: in a GTDB-based index,
+                                            # 9606 is another taxon (Thermococcus_A in r226).
 
 log = open(sm.log[0], "w")
 
@@ -258,6 +332,40 @@ if total_classified == 0:
     logmsg(f"WARNING: no root row (taxid 1) or zero classified reads in {report_path}; "
            f"the abundance safety rail cannot fire.")
 
+# ─────────────────── The distinct-minimizer floor of this sample ───────────────────
+# A number from the config is used as it is, for every sample. With auto the floor is
+# worked out here from this sample's own counts (see "THE FLOOR: A NUMBER, OR auto" in
+# the docstring): the classified read pairs (total_classified, the root row, just
+# above) less the read pairs Kraken2 placed under Homo sapiens, one distinct minimizer
+# per AUTO_PAIRS_PER_MINIMIZER of them, at most AUTO_FLOOR_CAP. Kraken2 counts a read
+# pair once, so these counts are pairs, the unit the rule was fitted in.
+# Two values come out of this block:
+#   min_distinct  the floor the keep/prune decision below uses: the configured number
+#                 (an int), or the auto floor unrounded (a float, such as 2266.931), so
+#                 that the test is exactly the one the benchmark evaluated
+#   floor_label   how the evidence table's reasons and the plot's legend write the
+#                 floor: the number itself, or the auto floor rounded UP followed by
+#                 "(auto)". The counts are whole numbers, so "at least 2266.931" and
+#                 "at least 2267" are the same test, and the rounded-up number is
+#                 exactly the smallest count that passes. Rounding to the nearest
+#                 number instead could print a reason such as "2267 < 2267".
+floor_is_auto = (floor_setting == "auto")
+if floor_is_auto:
+    human_pairs = 0
+    human_row_found = False
+    for row in rows:
+        if row["taxid"] == HUMAN_TAXID and row["name"] == HUMAN_NAME:
+            human_pairs = row["clade_reads"]
+            human_row_found = True
+            break
+    non_human_pairs = total_classified - human_pairs
+    floor_uncapped  = non_human_pairs / AUTO_PAIRS_PER_MINIMIZER
+    min_distinct    = min(AUTO_FLOOR_CAP, floor_uncapped)
+    floor_label     = f"{math.ceil(min_distinct)} (auto)"
+else:
+    min_distinct    = int(floor_setting)
+    floor_label     = str(min_distinct)
+
 # ─────────────────── Score every taxon at the target rank ───────────────────
 # Candidates are rows whose rank code is EXACTLY the Bracken target rank — 'S', not
 # 'S1'. Sub-rank rows (strains) are not scored in their own right; they are carried
@@ -265,7 +373,9 @@ if total_classified == 0:
 #
 # A candidate passes when it clears BOTH floors (this is how aMeta pairs its two
 # filters), or when it is too abundant to remove on a heuristic. Order matters only
-# for the reason string; the outcome is the same either way.
+# for the reason string; the outcome is the same either way. With auto, min_distinct
+# is this sample's own floor, unrounded (see the block above); the read floor and the
+# safety rail do not change.
 candidates = [i for i, row in enumerate(rows) if row["rank"] == target_rank]
 
 verdicts = {}   # row index -> (decision, reason)
@@ -292,9 +402,12 @@ for i in candidates:
         # pairs on 182 distinct minimizers, which Bracken inflated to 69,992 read pairs,
         # 3% of the sample) is exactly the kind of taxon a Bracken-based rail would have
         # rescued.
+        #
+        # With auto the denominator stays ALL classified reads: the human read pairs
+        # are left out of the floor, not out of this share, as in the benchmark.
         verdicts[i] = ("keep", f"protected: {share * 100:.2f}% of classified reads")
     elif row["distinct_min"] < min_distinct:
-        verdicts[i] = ("prune", f"distinct minimizers {row['distinct_min']} < {min_distinct}")
+        verdicts[i] = ("prune", f"distinct minimizers {row['distinct_min']} < {floor_label}")
     else:
         verdicts[i] = ("prune", f"clade reads {row['clade_reads']} < {min_reads}")
 
@@ -420,7 +533,8 @@ with open(out_evidence, "w") as fh:
 # Reads against distinct minimizers, both on log scales because both span several
 # orders of magnitude across a metagenome. Real organisms sit on a broad diagonal
 # band; taxa held up by a handful of shared k-mers sit well below it. The horizontal
-# line is the threshold, so what the gate removes is the region beneath it.
+# line is the threshold, so what the gate removes is the region beneath it. With auto
+# it is drawn at this sample's own floor, and the legend says "(auto)".
 kept_x  = [rows[i]["clade_reads"]  for i in candidates if verdicts[i][0] == "keep"]
 kept_y  = [rows[i]["distinct_min"] for i in candidates if verdicts[i][0] == "keep"]
 cut_x   = [rows[i]["clade_reads"]  for i in candidates if verdicts[i][0] == "prune"]
@@ -432,7 +546,7 @@ fig, ax = plt.subplots(figsize=(7, 5.5))
 ax.scatter(kept_x, kept_y, s=18, alpha=0.6, color="#2a7f62", label=f"keep (n={len(kept_x)})")
 ax.scatter(cut_x,  cut_y,  s=18, alpha=0.6, color="#c1442e", label=f"prune (n={len(cut_x)})")
 ax.axhline(min_distinct, color="#444444", linestyle="--", linewidth=1,
-           label=f"threshold = {min_distinct}")
+           label=f"threshold = {floor_label}")
 if min_reads > 0:
     ax.axvline(min_reads, color="#444444", linestyle=":", linewidth=1,
                label=f"read floor = {min_reads}")
@@ -470,8 +584,24 @@ share_all     = (reads_pruned / total_classified * 100) if total_classified else
 protected     = [i for i in candidates if verdicts[i][1].startswith("protected")]
 
 logmsg(f"sample={sample} rank={target_rank} "
-       f"min_distinct_minimizers={min_distinct} min_reads={min_reads} "
+       f"min_distinct_minimizers={floor_setting} min_reads={min_reads} "
        f"never_prune_above_fraction={protect_frac}")
+# With auto, say how this sample's floor was worked out: the classified read pairs,
+# the human read pairs left out, the unrounded floor, and whether the cap applied, so
+# the number can be checked by hand against the report.
+if floor_is_auto:
+    if human_row_found:
+        human_text = f"less {human_pairs} Homo sapiens read pairs (taxid {HUMAN_TAXID})"
+    else:
+        human_text = "no Homo sapiens row in the report, so no read pairs left out"
+    if floor_uncapped > AUTO_FLOOR_CAP:
+        cap_text = f", above the cap of {AUTO_FLOOR_CAP}, so the floor is {AUTO_FLOOR_CAP}"
+    else:
+        cap_text = ""
+    logmsg(f"auto floor: {total_classified} classified read pairs, {human_text}: "
+           f"{non_human_pairs} / {AUTO_PAIRS_PER_MINIMIZER} = {floor_uncapped:.3f}{cap_text}. "
+           f"A taxon at rank {target_rank} needs at least {math.ceil(min_distinct)} "
+           f"distinct minimizers.")
 logmsg(f"taxa at rank {target_rank}: {len(candidates)} -> kept {n_keep}, pruned {len(pruned)}")
 logmsg(f"rows removed from the report (taxa plus their sub-rank children): {len(drop)}")
 logmsg(f"reads under pruned taxa: {reads_pruned} — {share_rank:.2f}% of the "

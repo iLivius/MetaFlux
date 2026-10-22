@@ -36,8 +36,10 @@
 #
 # All the parsing, scoring and subtree-pruning logic lives in
 # scripts/shotgun/40a_kmer_evidence.py — see that script's docstring for the two
-# details that have to be right (prune whole subtrees; hand the reads to the parent)
-# and for the k-mer/minimizer unit conversion behind the default threshold.
+# details that have to be right (prune whole subtrees; hand the reads to the parent),
+# for the k-mer/minimizer unit conversion behind the default threshold, and for the
+# auto floor (min_distinct_minimizers: auto), which the script works out for each
+# sample from that sample's own report.
 #
 # priority: 3, the same band as kraken2 — this is cheap bookkeeping on a file that
 # already exists, and running it promptly keeps bracken unblocked.
@@ -53,6 +55,8 @@ rule kmer_evidence:
         sample       = "{sample}",
         # Gate at whatever rank Bracken is going to report, so the rows being scored
         # are exactly the rows that become table rows. All resolved in 00_common.smk.
+        # min_distinct is a whole number, or the text "auto" (the script then sizes
+        # the floor to the sample's depth).
         rank         = TAX_LEV,
         min_distinct = KMER_MIN_DISTINCT,
         min_reads    = KMER_MIN_READS,

@@ -1107,6 +1107,28 @@ target rank. Bracken databases ship k-mer distributions for several read lengths
 out of the fastp JSON and picks the closest one, because applying a 150 bp
 distribution to 100 bp reads biases the redistribution.
 
+### Species-level k-mer evidence
+
+```yaml
+  kmer_evidence:
+    enabled: false
+    min_distinct_minimizers: 300
+    min_reads: 0
+    never_prune_above_fraction: 0.01
+```
+
+| Key | What it does | Default | Notes |
+|---|---|---|---|
+| `enabled` | Whether Bracken reads the gated report (the Kraken2 report without the taxa that have too little k-mer evidence) instead of Kraken2's own | `false` | The evidence table, the gated report and the plot are written either way, so `false` changes nothing in the pipeline. Switched off with a warning under `profiler: sylph`. |
+| `min_distinct_minimizers` | The floor: how many distinct minimizers a taxon at `tax_lev` needs to stay | `300` | A whole number is one floor for every sample of the run; 300 is the published 1,000 unique k-mers converted to Kraken2's minimizers and rounded down. `auto` gives each sample its own floor, from its depth: (classified read pairs − *Homo sapiens* read pairs) / 1,000, at most 6,500, worked out after Kraken2 and written to `logs/kmer_evidence/{sample}.log`. `auto` is opt-in: its gain on MetaFlux's benchmark rests mostly on one real mock community, it changes the table much more than 300 does, and it assumes paired 2×150 bp reads. Any other value stops the run at start-up. See [Scaling the floor with depth](../shotgun/kmer-evidence.md#scaling-the-floor-with-depth). |
+| `min_reads` | A clade-read floor, applied together with the one above: a taxon must clear both | `0` | `0` judges on k-mer evidence alone; `200` reproduces aMeta's pair of filters. |
+| `never_prune_above_fraction` | Safety rail: a taxon holding more than this share of the classified reads is never removed | `0.01` | The share is Kraken2's clade reads over all classified reads, not the taxon's share of the final Bracken table, so the rail rarely fires. |
+
+The gate sits between Kraken2 and Bracken: it filters Bracken's input and does not
+replace Bracken, so with `enabled: true` the corrected counts reach `otu_table.tsv`. A
+removed taxon's reads go to its parent, for Bracken to share among the relatives that
+passed. See [Species-level k-mer evidence](../shotgun/kmer-evidence.md).
+
 ### OTU-table taxon filter
 
 ```yaml

@@ -364,7 +364,7 @@ or `both`) and `sylph/` when sylph runs (`sylph` or `both`; see
 | `{sample}_report.txt` | Kraken2's tree report. |
 | `{sample}_output.txt` | Kraken2's per-read assignment — one line per read pair. Large, and only useful for read extraction and troubleshooting. |
 | `{sample}_R1.fastq.gz`, `_R2` | The reads Kraken2 managed to classify. Kept, because per-taxon extraction reads them. |
-| `{sample}_species_evidence.tsv`, `{sample}_report_gated.txt` | The k-mer evidence of every taxon at the Bracken rank, and the Kraken2 report without the taxa that fail it. Written on every run; Bracken reads the gated report only when `shotgun.kmer_evidence.enabled` is `true`. See [species-level k-mer evidence](../shotgun/kmer-evidence.md). |
+| `{sample}_species_evidence.tsv`, `{sample}_report_gated.txt` | The k-mer evidence of every taxon at the Bracken rank, and the Kraken2 report without the taxa that fail it. Written on every run; Bracken reads the gated report only when `shotgun.kmer_evidence.enabled` is `true`. The `reason` column of the evidence table gives the floor a removed taxon failed; with `min_distinct_minimizers: auto` that is the sample's own floor, rounded up and marked `(auto)`, and `logs/kmer_evidence/{sample}.log` shows how it was worked out (the classified read pairs, the *Homo sapiens* read pairs left out, the floor). `stats/kmer_evidence/{sample}_evidence.png` draws the floor on a plot of reads against distinct minimizers. See [species-level k-mer evidence](../shotgun/kmer-evidence.md). |
 
 !!! warning "The Kraken2 report has extra columns"
 

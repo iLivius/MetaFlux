@@ -107,7 +107,7 @@ and the verdict with its reason.
 shotgun:
   kmer_evidence:
     enabled: false                     # report only; pipeline unchanged
-    min_distinct_minimizers: 300       # the floor; see the unit conversion below
+    min_distinct_minimizers: 300       # the floor: a whole number, or auto (see below)
     min_reads: 0                       # extra read floor, applied together with the above
     never_prune_above_fraction: 0.01   # safety rail
 ```
@@ -297,50 +297,132 @@ everywhere:
 
 This is the same order of magnitude as KrakenUniq's slope (about 670 distinct minimizers
 per million read pairs once converted), but the number itself comes from MetaFlux's
-benchmark. As a starting point:
+benchmark.
 
-| Classified read pairs in the shallowest sample, host excluded | `min_distinct_minimizers` |
+#### `min_distinct_minimizers: auto`
+
+`auto` applies this rule for you, sample by sample:
+
+```yaml
+shotgun:
+  kmer_evidence:
+    enabled: true
+    min_distinct_minimizers: auto
+```
+
+After Kraken2 has run, rule `kmer_evidence` works out each sample's floor from that
+sample's own Kraken2 report:
+
+```text
+classified pairs   clade reads of the root row
+human pairs        clade reads of the Homo sapiens row (0 if the report has none)
+floor              (classified pairs − human pairs) / 1,000, at most 6,500
+```
+
+| Classified read pairs, human excluded | Floor set by `auto` |
 |--:|--:|
+| 150,000 | 150 |
 | 500,000 | 500 |
 | 1 million | 1,000 |
 | 2 million | 2,000 |
 | 5 million | 5,000 |
 | 6.5 million or more | 6,500 |
 
-Each sample's classified count is in `stats/read_tracking.txt` (column `classified`) and
-in its Bracken log (`[bracken] auto threshold: 5e-05 x N classified read pairs`).
-MetaFlux applies one floor to every sample in a run, so size it on the shallowest sample;
-the deeper samples then get a more lenient floor than they could take. Below about
-500,000 classified pairs the scaled floor gains little. Use it even when it comes out
-lower than the default of 300: in benchmark samples thinned to 26,000–195,000 classified
-pairs, the fixed floor of 300 lowered some samples' F1 and the scaled floor lowered none.
+- **One floor per sample.** With a number, MetaFlux applies that one floor to every
+  sample of the run. With `auto`, each sample is judged against its own floor, so a deep
+  sample gets a higher floor than a shallow one in the same run. The four samples of the
+  [test dataset](#what-it-does-on-real-data) get floors of 1,673 to 3,458.
+- **A species stays when its count reaches the floor**: distinct minimizers ≥ the
+  unrounded floor (1,672.619 in the example below), as in the benchmark, and it must also
+  clear `min_reads`. The 1 % safety rail works as with a number; its share is of all
+  classified reads, human ones included.
+- **Human reads are left out.** PlusPF contains the human genome and host removal is off
+  by default, so human reads would raise the floor without adding any microbial
+  evidence. This is MetaFlux's addition to the rule: in the benchmark, the host reads
+  left in a sample counted as classified. The row is recognised by its taxid (9606) and
+  its name, so a database whose taxids are not NCBI's (a GTDB-based one) is not affected.
+  Reads of other hosts are not subtracted. With PlusPF they mostly stay unclassified; a
+  database that holds other host genomes classifies them, and they then raise the floor:
+  remove the host first ([Decontamination](decontamination.md#host-removal)) or set a
+  number.
+- **The cap of 6,500.** The benchmark stops at 6.5 million classified pairs. A floor that
+  keeps growing with depth eventually exceeds what a real species with a small
+  species-specific part of its genome can reach; in the model this began at about 10
+  million pairs.
+- **Shallow samples.** Below about 500,000 classified pairs the scaled floor gains little,
+  and below 300,000 `auto` sets it lower than the default of 300. That is intended: in
+  benchmark samples thinned to 26,000–195,000 classified pairs, the fixed floor of 300
+  lowered some samples' F1 and the scaled floor lowered none.
+- **Where to see the floor.** Each sample's log, `logs/kmer_evidence/{sample}.log`, shows
+  how its floor was worked out:
 
-Limits of this rule:
+    ```text
+    [kmer_evidence] auto floor: 1673810 classified read pairs, less 1191 Homo sapiens read pairs (taxid 9606): 1672619 / 1000 = 1672.619. A taxon at rank S needs at least 1673 distinct minimizers.
+    ```
 
-- **It rests on limited data.** Three quarters of the F1 gain came from the one real mock
-  community; on the simulated CAMI samples it was 0.01–0.03. The shallower depths were
-  modelled from the observed counts, not sequenced.
-- **Do not go above 1.5 per 1,000 pairs.** At that rate rare true species start to be
-  removed (92 of 13,419 true calls), and from 2 per 1,000 some samples' F1 falls even at
-  full depth.
-- **Do not go above 6,500 for deeper samples.** The benchmark stops at 6.5 million
-  classified pairs. A floor that keeps growing with depth eventually exceeds what a real
-  species with a small species-specific part of its genome can reach; in the model this
-  began at about 10 million pairs.
-- **Exclude host reads.** PlusPF contains the human genome and host removal is off by
-  default, so host reads would raise the floor without adding any microbial evidence.
-  Subtract the read pairs Kraken2 assigned to the host (for human, the *Homo sapiens*
-  row of the report), or remove the host first ([Decontamination](decontamination.md#host-removal)).
+    The evidence table gives the floor in its `reason` column (for *Sphingobium
+    wenxiniae* in that sample, `distinct minimizers 1664 < 1673 (auto)`), and the plot
+    draws it, labelled `(auto)`.
+    Both show it rounded up: the counts are whole numbers, so "at least 1,672.619" and
+    "at least 1,673" are the same test.
+
+To size a number by hand instead, for instance to judge every sample of a run against the
+same floor, divide the classified read pairs of the shallowest sample, less its human
+read pairs, by 1,000. Each sample's classified count is in `stats/read_tracking.txt`
+(column `classified`), and its human read pairs are in the *Homo sapiens* row of its
+Kraken2 report. The deeper samples then get a more lenient floor than they could take.
+
+#### Why `auto` is not the default
+
+`auto` is opt-in, and the default stays 300:
+
+- **Its gain rests mostly on one real mock community.** Three quarters of the F1 gain came
+  from the ZymoBIOMICS D6331 sample; on the three simulated CAMI II sets (41 samples) the
+  mean gain per set was 0.01–0.03.
+- **Part of its safety was modelled, not measured.** The shallower depths were modelled
+  from the observed counts, not sequenced, and no benchmark sample is deeper than 6.5
+  million classified pairs, which is why there is a cap.
+- **It changes the table much more than 300 does** (the last point under
+  [Limits of the rule](#limits-of-the-rule)).
+
+#### Measured at known depths and on deeper samples
+
+What `auto` does on samples sequenced at known depths, and on samples deeper than any
+in the benchmark:
+
+[V3 result: measured depth ladder. CAMI II marine sample 0 at 2, 5, 10 and 16.6 million read pairs, four samples in one run with PlusPF and the gate on, once with `auto` and once with 300: species precision, recall and F1 against the corrected gold standard, compared with what the depth model predicted for these depths.]
+
+[V3 result: deep mock. MBARC-26 (51.9 million classified pairs, 26 known genomes): which known members the floor of 300, `auto` (capped at 6,500) and an uncapped floor (about 51,850) would remove.]
+
+[V3 result: deep soils. The Schoenbuch forest soils with PlusPF: how much `auto` removes in deep, diverse samples.]
+
+#### Limits of the rule
+
+These hold with `auto` and with a number sized by hand:
+
+- **It rests on limited data** (see [Why `auto` is not the default](#why-auto-is-not-the-default)).
+- **Do not go above 1.5 per 1,000 pairs** when you size a number by hand; `auto` uses 1
+  per 1,000. At 1.5 rare true species start to be removed (92 of 13,419 true calls), and
+  from 2 per 1,000 some samples' F1 falls even at full depth.
+- **Do not go above 6,500**, by hand either, for the reason `auto` stops there (the cap,
+  above).
+- **Host reads.** `auto` leaves out the *Homo sapiens* read pairs only. When you size a
+  number by hand, subtract the read pairs Kraken2 assigned to the host (for human, the
+  *Homo sapiens* row of the report), or remove the host first
+  ([Decontamination](decontamination.md#host-removal)).
 - **Library layout.** The rule assumes paired 2×150 bp Illumina reads with little mate
   overlap and few duplicates. Shorter reads, single-end data, overlapping mates and
   duplicate-rich libraries give fewer distinct minimizers per read pair, so the same
-  floor is stricter for them; use a lower value.
+  floor is stricter for them; use a lower number rather than `auto`.
 - **It changes the table more than 300 does.** On the test dataset above (1.7–3.5 million
-  classified pairs), a floor of 1,673, sized on the shallowest sample with its host reads
-  excluded, keeps 33–68 species per sample, against 66–104 at 300, and the species it
-  removes hold 10–33 % of the read pairs, which move to relatives. That is still well
-  above the 9–16 genomes sylph finds. Compare `otu_table.tsv` with the gate off and on
-  before relying on it.
+  classified pairs), one floor of 1,673 for all four samples, sized on the shallowest
+  with its human reads excluded, keeps 33–68 species per sample, against 66–104 at 300,
+  and the species it removes hold 10–33 % of the read pairs, which move to relatives.
+  That is still well above the 9–16 genomes sylph finds. `auto` gives the three deeper
+  samples higher floors (2,176 to 3,458), so there it removes at least as much. Compare
+  `otu_table.tsv` with the gate off and on before relying on it.
+
+    [V3 result: test dataset with `auto`. PRJNA1477390, gate on with `auto`: the floor of each sample (1,673, 2,176, 2,267 and 3,458), the species kept in `otu_table.tsv`, against 300 and the single floor of 1,673, and the change in total read pairs (the row the table at 300 has). Every statement on lost reads was measured at 300. The kmer_evidence logs estimate the read pairs Bracken will drop at 2.85–4.34 % of the classified pairs with `auto`, against 0.10–0.22 % at 300, where the measured change was between −0.09 and +0.01 %. If the measured change with `auto` is not small, revise "usually a small fraction of the sample" in the warning under "How a taxon is removed" and in the comment of `min_distinct_minimizers` in `config/config.yaml`. Check the *Homo sapiens* row: in the Kraken2 reports it has 605 to 1,743 distinct minimizers, below the `auto` floor of every sample, so the gate removes it.]
 
 ## Why the default is `enabled: false`
 
@@ -609,6 +691,11 @@ separable cluster to find, so the rule just removes the bottom few percent of *a
 sample. Worse, because the line is fitted per sample, the same species can fall on
 opposite sides of it in different samples of one study.
 
-The conclusion for the design: use one fixed floor for every sample of a run, so that
-every sample is judged against the same number, and treat the trend line as a *ranking
-for the eye* rather than a test.
+The conclusion for the design: judge every species against a floor that is not fitted to
+the evidence of the other species in its sample, and treat the trend line as a *ranking
+for the eye* rather than a test. The floor is one fixed number for every sample of a run
+or, with `auto`, a number set by the read pairs Kraken2 classified in the sample, human
+ones left out. With `auto` the same species can therefore get different verdicts in
+samples of different depth. That is intended: the deeper the sample, the more distinct
+minimizers a species that is really present leaves (see
+[Scaling the floor with depth](#scaling-the-floor-with-depth)).

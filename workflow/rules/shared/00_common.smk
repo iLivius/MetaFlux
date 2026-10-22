@@ -886,6 +886,60 @@ def _check_shotgun_filter_tokens(keep, discard, rank_sets, filter_enabled):
     return problems, warnings
 
 
+# ── The floor of the k-mer evidence gate (shotgun.kmer_evidence.min_distinct_minimizers) ──
+def _kmer_floor_setting(value):
+    """Check the distinct-minimizer floor of the k-mer evidence gate and return it in
+    the form rule kmer_evidence passes to its script.
+
+    What it is for: rule kmer_evidence (40_kmer_evidence.smk) removes a taxon whose
+    count of distinct minimizers is below this floor. The setting is either
+      - a whole number >= 0: one floor for every sample of the run (300 by default), or
+      - the word auto: the script (40a_kmer_evidence.py) works out each sample's own
+        floor from that sample's classified read pairs. That can only happen once
+        Kraken2 has run, so here the word is only recognised and passed on.
+    Input: the value as YAML read it from the config.
+    Output: the number as an int, or the text "auto"; the shotgun block below stores it
+    in KMER_MIN_DISTINCT. A number comes out as the same int that MetaFlux v2.5.0 gave
+    the rule, so a run with a number has the same params as before, and Snakemake has
+    no reason to run the step again on account of the setting.
+
+    Accepted: auto in any mix of capitals and with spaces around it ("Auto", " auto ");
+    a whole number, also written 300.0 or "300", which MetaFlux has always read as 300.
+    Everything else stops the run, with one message that says what is allowed:
+    a negative number; a number with a fraction (300.5 used to be cut to 300 without a
+    word); true, false, yes or no (YAML reads them as true and false, which Python
+    would count as 1 and 0); any other text, such as "automatic".
+    """
+    stop_message = ("[MetaFlux] shotgun.kmer_evidence.min_distinct_minimizers must be a "
+                    "whole number >= 0 (the default is 300) or the word auto, got "
+                    f"{value!r}")
+
+    # The word auto, in any mix of capitals, with spaces around it or not.
+    if isinstance(value, str) and value.strip().lower() == "auto":
+        return "auto"
+
+    # true/false/yes/no: refused here, because the number check below would let them
+    # through (Python counts True as the number 1).
+    if isinstance(value, bool):
+        sys.exit(stop_message)
+
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, float) and value.is_integer():
+        number = int(value)                  # 300.0 -> 300
+    elif isinstance(value, str):
+        try:
+            number = int(value)              # "300" or " 300 " -> 300
+        except ValueError:
+            sys.exit(stop_message)
+    else:
+        sys.exit(stop_message)               # 300.5, a list, an empty value (null) ...
+
+    if number < 0:
+        sys.exit(stop_message)
+    return number
+
+
 # ────────────────────── Amplicon-only globals ──────────────────
 # Runs only when mode: amplicon. Everything from here down to the matching `else:`
 # (shotgun globals) is normally never even evaluated on a shotgun run — this whole
@@ -2215,15 +2269,18 @@ else:  # MODE == "shotgun"
     # The floor of 300 distinct minimizers must match config/config.yaml, whose
     # comment explains it: the published 1,000 unique k-mers converted to Kraken2's
     # minimizers (about 333) and rounded down, because the conversion is approximate.
+    # KMER_MIN_DISTINCT is that number, or the text "auto", with which the script
+    # works out a floor for each sample from its own depth, after Kraken2 has run;
+    # _kmer_floor_setting() (above, before the amplicon block) checks the value and
+    # stops the run on anything else.
     _kmer_cfg          = sht_cfg.get("kmer_evidence", {}) or {}
     KMER_GATE_ENABLED  = bool(_kmer_cfg.get("enabled", False))
-    KMER_MIN_DISTINCT  = int(_kmer_cfg.get("min_distinct_minimizers", 300))
+    KMER_MIN_DISTINCT  = _kmer_floor_setting(_kmer_cfg.get("min_distinct_minimizers", 300))
     KMER_MIN_READS     = int(_kmer_cfg.get("min_reads", 0))
     KMER_PROTECT_FRAC  = float(_kmer_cfg.get("never_prune_above_fraction", 0.01))
 
-    if KMER_MIN_DISTINCT < 0 or KMER_MIN_READS < 0:
-        sys.exit("[MetaFlux] shotgun.kmer_evidence: min_distinct_minimizers and "
-                 "min_reads must be >= 0")
+    if KMER_MIN_READS < 0:
+        sys.exit("[MetaFlux] shotgun.kmer_evidence.min_reads must be >= 0")
     if not 0 < KMER_PROTECT_FRAC <= 1:
         sys.exit("[MetaFlux] shotgun.kmer_evidence.never_prune_above_fraction must be "
                  f"a fraction in (0, 1], got {KMER_PROTECT_FRAC}")
@@ -2240,14 +2297,23 @@ else:  # MODE == "shotgun"
         KMER_GATE_ENABLED = False
 
     # The default threshold is converted from species-level literature (see the
-    # config comment). Pointed at any coarser rank it is far too permissive to mean
-    # anything — a genus pools every species under it — so say so rather than let it
-    # look like a considered choice.
+    # config comment), and the auto floor was fitted on the species calls of
+    # MetaFlux's benchmark. Pointed at any coarser rank either one is far too
+    # permissive to mean anything — a genus pools every species under it — so say so
+    # rather than let it look like a considered choice. A number keeps the wording it
+    # always had; auto gets its own, since "auto was derived for species" would not
+    # say what was derived.
     if KMER_GATE_ENABLED and TAX_LEV != "S":
+        if KMER_MIN_DISTINCT == "auto":
+            _kmer_floor_origin = ("min_distinct_minimizers: auto sizes the floor with a rule "
+                                  "fitted on SPECIES calls")
+        else:
+            _kmer_floor_origin = (f"min_distinct_minimizers={KMER_MIN_DISTINCT} was derived "
+                                  f"for SPECIES")
         sys.stderr.write(
             f"[MetaFlux] warning: shotgun.kmer_evidence is enabled at rank {TAX_LEV}, but "
-            f"min_distinct_minimizers={KMER_MIN_DISTINCT} was derived for SPECIES. Check the "
-            f"evidence tables before trusting the pruned output at this rank.\n"
+            f"{_kmer_floor_origin}. Check the evidence tables before trusting the pruned "
+            f"output at this rank.\n"
         )
 
     # ── OTU-table taxon filter (shotgun counterpart of amplicon keep/discard) ──

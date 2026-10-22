@@ -632,10 +632,28 @@ shotgun:
     # Kraken2 needed two to three times MORE distinct minimizers than KrakenUniq
     # needed unique k-mers, where the conversion predicts about three times fewer.
     # At 300 the gate removes only the calls with the least distinct sequence behind
-    # them. A floor sized to sequencing depth (about one per 1,000 classified read
-    # pairs, host excluded, in the shallowest sample; at most 6,500) is described in
-    # docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth.
-    # Check k and l on the first line of your database's inspect.txt.
+    # them. Check k and l on the first line of your database's inspect.txt.
+    #
+    #   <whole number>  one floor for every sample of the run (300, the default)
+    #   auto            a floor sized to each sample's own sequencing depth, worked
+    #                   out after Kraken2 from that sample's report:
+    #                     floor = (classified read pairs - Homo sapiens read pairs) / 1,000,
+    #                     at most 6,500
+    #
+    # WHAT auto DOES. Each sample gets its own floor, so a deep sample is judged
+    # against a higher one than a shallow sample in the same run. The Homo sapiens
+    # read pairs are left out because PlusPF holds the human genome and host removal
+    # is off by default: human reads would raise the floor without adding microbial
+    # evidence (other hosts are not subtracted; with PlusPF their reads mostly stay
+    # unclassified). The cap is there because MetaFlux's benchmark stops at 6.5
+    # million classified pairs, and a floor that kept growing would in the end exceed
+    # what a real species with little species-specific sequence can reach. The floor
+    # used is written to logs/kmer_evidence/{sample}.log.
+    # WHY auto IS NOT THE DEFAULT. On the benchmark it raised species F1 more than 300
+    # did and lowered no sample's F1, but three quarters of that gain came from one
+    # real mock community, and it changes the table far more than 300 does. It also
+    # assumes paired 2x150 bp reads. See
+    # docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth before switching to it.
     min_distinct_minimizers: 300
 
     # Clade-read floor, applied together with the above (a taxon must clear both).

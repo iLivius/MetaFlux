@@ -1,0 +1,20 @@
+# Dry-run config of the CI matrix: shotgun, Kraken2 + Bracken, with the k-mer evidence gate on and its floor set to auto (a floor per sample from its own depth), at rank G so that the start-up warning for a gate below species is printed for auto too.
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. The databases under .test/stubs/ are
+# stand-ins that satisfy the start-up checks of a dry run and nothing more; see
+# .test/README.md.
+mode: shotgun
+input:
+  fastq_dir: .test/data/shotgun
+output:
+  out_dir: .test/out/shotgun_kmer_auto
+references:
+  kraken_db: .test/stubs/kraken2_db
+shotgun:
+  profiler: kraken2
+  bracken:
+    tax_lev: G
+  kmer_evidence:
+    enabled: true
+    min_distinct_minimizers: auto
