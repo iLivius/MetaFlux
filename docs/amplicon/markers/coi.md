@@ -66,13 +66,22 @@ smaller NUC variant), so MetaFlux ships no trainset for COI.
 
 !!! warning "Check which read carries which primer"
 
-    In some COI libraries every R1 starts with the reverse primer; the BF3/BR2 run of the
-    insect mock used for validation (below) is one. With `orientation: fixed` such a
-    library loses all its reads at primer trimming. Swap the two files of each sample
-    (R1 ↔ R2) and keep `orientation: fixed`. [To be settled before release:
-    `orientation: mixed` reverse-complements both mates of a swapped pair instead of
-    swapping them, and for an amplicon longer than the overlap of the two reads, such as
-    the 418-bp BF3/BR2 insert, DADA2 then keeps only that overlap.]
+    In some COI libraries every R1 starts with the reverse primer; the BF3/BR2 and
+    fwhF2/fwhR2n runs of the insect mock used for validation (below) are two of them.
+    With `orientation: fixed` such a library loses most of its reads at primer trimming,
+    but not all. Cutadapt counts a 5′ primer as found when a read starts with the
+    primer's last three bases, and the end of each BF3/BR2 primer resembles the start of
+    the other, so a `fixed` run on the BF3/BR2 files as distributed keeps about 13 % of
+    the pairs, the wrong way round and with most of a primer still on (0.14 % with
+    fwhF2/fwhR2n).
+
+    For a library in which every pair is swapped, swap the two files of each sample
+    (R1 ↔ R2) and keep `orientation: fixed`. That is the recommended way: Cutadapt then
+    reads every pair once, and its report in MultiQC describes all the reads.
+    `orientation: mixed` is for libraries that really are mixed, with pairs in both
+    orientations, and from v2.6.0 on it handles them: it swaps the two mates of each
+    reversed pair back, so that DADA2 merges them to the full amplicon. See
+    [the mixed-orientation second pass](../overview.md#the-mixed-orientation-second-pass).
 
 ## The reference database: MIDORI2
 
@@ -170,7 +179,9 @@ cut a base before or after the end of the primer, the same way for every read of
 template, and the ASV starts one base early or late: it is one base longer or shorter, and
 open in the neighbouring frame. On the Leray-XT run of the insect mock (below), whose
 primers carry inosines, this happened to 9 % of the reads, among them the only ASVs of 26
-specimens.
+specimens. [To be settled before release, from validation V5: these two numbers, from
+the Leray-XT run as one sample; the ones shown come from the earlier run with two
+pseudo-samples.]
 The frame an offset of *d* bases gives is the run's frame plus *d*, so an ASV one base
 short is tested in the frame before the run's. A frameshift inside an ASV, as in a
 pseudogene or an indel artefact, leaves stop codons in both frames, one on each side of the
@@ -264,11 +275,15 @@ other species, and it also removed 1.6 % of the right ones.
 
 The three primer-pair runs of the insect mock of Elbrecht et al. (2019) (bulk abdomens of
 374 arthropod BINs; SRR8082166 BF3/BR2, SRR8082178 Leray-XT, SRR8082148 fwhF2/fwhR2n) were
-run with the defaults above and `keep: [k__Metazoa]`, and their ASVs were compared with the
-374 specimen barcodes. Each library was split into two pseudo-samples of alternate read
-pairs, because MetaFlux stops on a run with a single sample (`dada_seqtab`); in the BF3/BR2
-and fwhF2/fwhR2n libraries every R1 carries the reverse primer, so their R1 and R2 files
-were swapped (see the warning above).
+each run as one sample, with the defaults above and `keep: [k__Metazoa]`, and their ASVs
+were compared with the 374 specimen barcodes. In the BF3/BR2 and fwhF2/fwhR2n libraries
+every R1 carries the reverse primer, so their two files were swapped and the runs kept
+`orientation: fixed`, as the warning above recommends; the Leray-XT library, whose R1
+carries the forward primer, ran with `fixed` as distributed.
+
+[To be settled before release, from validation V5: the table and the four points below,
+measured again on the runs just described. The values now shown come from the earlier
+runs, in which each library was split into two pseudo-samples of alternate read pairs.]
 
 | | BF3/BR2 | Leray-XT | fwhF2/fwhR2n |
 |---|---|---|---|

@@ -40,15 +40,18 @@ for how this same gap shows up under the other `dada2.merge` setting too, as a d
 set of ASVs carrying a similar fraction of reads.
 
 The COI runs (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) use one library per
-primer pair, each split into two pseudo-samples of alternate read pairs because MetaFlux
-stops on a run with a single sample; in the BF3/BR2 and fwhF2/fwhR2n libraries every R1
-carries the reverse primer, so R1 and R2 were swapped. 359 (BF3/BR2), 353 (Leray-XT) and 362
-(fwhF2/fwhR2n) of the 374 specimens are recovered by an ASV at least 97 % identical to their
-barcode, and the ASVs that match a specimen hold 99.2–99.4 % of the reads of the final
-tables. The off-target guard moves 12–22 bacterial ASVs per run (0.07–0.5 % of the reads),
-29 of which SINTAX had called a stink bug that is not in the mock; the frame check removes
-0.1–0.5 % of the reads, and no specimen lost its only ASV to either screen. See
-[COI](../amplicon/markers/coi.md#validation).
+primer pair, each run as one sample. In the BF3/BR2 and fwhF2/fwhR2n libraries every R1
+carries the reverse primer, so their R1 and R2 files were swapped and the runs kept
+`orientation: fixed`; the Leray-XT library ran with `fixed` as distributed.
+[To be settled before release, from validation V5: the numbers of the next two
+sentences, from the runs just described; the ones shown come from the earlier runs, in
+which each library was split into two pseudo-samples of alternate read pairs.] 359
+(BF3/BR2), 353 (Leray-XT) and 362 (fwhF2/fwhR2n) of the 374 specimens are recovered by an
+ASV at least 97 % identical to their barcode, and the ASVs that match a specimen hold
+99.2–99.4 % of the reads of the final tables. The off-target guard moves 12–22 bacterial
+ASVs per run (0.07–0.5 % of the reads), 29 of which SINTAX had called a stink bug that is
+not in the mock; the frame check removes 0.1–0.5 % of the reads, and no specimen lost its
+only ASV to either screen. See [COI](../amplicon/markers/coi.md#validation).
 
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —
@@ -114,7 +117,7 @@ and a sample of its reads before building a run on it.
 | **Is it really paired?** | In the SRA run table, check that `spots_with_mates` is not 0 and that `avgLength` matches the stated read length and layout: a 2×300 paired run reads about 600, not about 300. | A 16S V5–V7 deposit labelled `PAIRED`. The forward and reverse reads of each sample were deposited as two separate runs with one read per spot (`spots_with_mates` 0, `avgLength` at most 300), so each run downloads as one mate only. fasterq-dump writes a single FASTQ for such a run and reports the second read of every spot as zero-length. |
 | **Is it the platform and layout you expect?** | Read the platform and layout fields of the ENA or SRA run table, not a paper or a summary of the study. | [PRJEB23971](https://www.ebi.ac.uk/ena/browser/view/PRJEB23971), 18S V4: 454 GS FLX Titanium, single-end. [PRJEB24936](https://www.ebi.ac.uk/ena/browser/view/PRJEB24936), rpoB and 16S mock communities on Illumina MiSeq, deposited as single-end reads: the rpoB mock runs average 431–434 bases per read, the length of the whole amplicon, so the pairs had already been merged. |
 | **Are the quality values real?** | Look at the quality string of a few reads: a run that shows one value at every base was rewritten somewhere on the way. | The COI mock runs of [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) as ENA serves them carry Q30 at every base; downloaded from the SRA with sra-tools (prefetch, fasterq-dump), the same runs have their real values (Q7–Q38). DADA2 learns its error model from the quality values, so the ENA files would give it nothing to learn from. |
-| **Which read carries which primer?** | On a few thousand pairs, count how often R1 starts with the forward and how often with the reverse primer. | SRR8082166, the BF3/BR2 run of the COI mock: every R1 starts with BR2. With `orientation: fixed` such a library loses all its reads at primer trimming; swap R1 and R2 of each sample. |
+| **Which read carries which primer?** | On a few thousand pairs, count how often R1 starts with the forward and how often with the reverse primer. | SRR8082166, the BF3/BR2 run of the COI mock: every R1 starts with BR2. With `orientation: fixed` such a library loses most of its reads at primer trimming, but keeps about 13 % of its pairs the wrong way round, through a chance match of the primers' last three bases; swap R1 and R2 of each sample and keep `fixed` (see [COI](../amplicon/markers/coi.md)). |
 
 ## Effect of moving the merge parameters to DADA2's defaults
 
