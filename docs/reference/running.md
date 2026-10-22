@@ -164,19 +164,37 @@ the one setting where it does something `--cores` does not.
 ## What happens on a re-run
 
 Snakemake only rebuilds what is missing or out of date. Re-running a completed
-workflow with no changes does nothing at all and says so. Three practical
-consequences:
+workflow from the same MetaFlux folder with no changes does nothing at all and says
+so. Four practical consequences:
 
-- **A deleted or edited output is rebuilt, and only what is needed to rebuild it
-  runs.** Deleting `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy`; the DADA2
-  steps upstream are already satisfied and are skipped.
-- **Changing the config can be enough to mark a step out of date.** Current
-  Snakemake versions consider more than file timestamps: a changed rule parameter, a
-  changed script, or a changed conda environment also count. Because the contaminant
-  keep/discard lists reach `assign_taxonomy` as rule parameters, editing them
-  re-runs the taxonomy step alone and leaves the denoising untouched. Adding
-  `--rerun-triggers mtime` restricts the comparison to timestamps only.
-- **A dry run shows what would run.** `-n` prints the jobs a re-run would execute.
+- **A deleted output is rebuilt, with the steps that read it.** Deleting
+  `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy` and the steps that read its
+  tables; the DADA2 steps upstream are already satisfied and are skipped. An output
+  edited by hand is not rebuilt, because it is now newer than the files it was made
+  from; the steps that read it run again, on the edited file.
+- **A changed command, setting or environment, or a newer script, marks a step out of
+  date.** Snakemake keeps a record of every finished step in `.snakemake/`, inside the
+  folder it is started from (for MetaFlux, the MetaFlux folder): the text of the step's
+  command, comments included, its parameters, the list of its input files, and its
+  conda environment with its pin file. A step whose record no longer matches runs
+  again, and so does every step after it. A step that runs a script is judged by the
+  script file's date instead of its text: it runs again whenever the script is newer
+  than its outputs. Because the contaminant keep/discard lists reach `assign_taxonomy`
+  as rule parameters, editing them re-runs the taxonomy step and the steps after it,
+  and leaves the denoising untouched. `--rerun-triggers mtime params input
+  software-env` leaves out the command and script checks; `--rerun-triggers mtime`
+  leaves out everything except the dates of each step's input files, which Snakemake
+  always checks. Either holds only for the run it is given to: the records keep the
+  old state, so a later run without it finds the same changes.
+- **The records belong to the MetaFlux folder, not to the output folder.** A fresh
+  clone, an unpacked release or a second worktree has no records of output folders
+  made from another MetaFlux folder, and its files are newer than the outputs made
+  before it. Pointed at such an output folder, it runs every step that runs a script
+  again, with the steps after it, but notices no change to a command or a setting.
+  Re-run an output folder from the MetaFlux folder that made it, brought up to date
+  with `git pull`.
+- **A dry run shows what would run.** `-n` prints the jobs a re-run would execute,
+  each with the reason.
 
 !!! note "Re-running an output folder made with v2.4.0"
 
@@ -193,12 +211,14 @@ consequences:
     already in `refdb/` (downloaded and built again, same content) and, in BioProject
     mode, the download of the SRA runs. Only `samples.tsv` is kept, the one step without
     a conda environment whose file kept its name. To keep the SRA runs and the reference
-    files already on disk, start the run once with `--rerun-triggers mtime params input
-    code`: it leaves the software-environment trigger out, and everything that moved runs
-    again anyway. The old folders and count files, the old files directly in
-    `02.classification/`, and `03.abundance/otu_table.raw.biom` (v2.4.0's intermediate
-    table, which a run made with `--notemp` keeps) are left as they are and can be
-    deleted.
+    downloads already on disk, give `--rerun-triggers mtime params input code` to that
+    run and to every later run on the same output folder: it leaves the
+    software-environment trigger out, and everything that moved runs again anyway.
+    Snakemake keeps the old records of the steps it skips, so a later run without the
+    option would still rebuild them. The old folders and count files, the old files
+    directly in `02.classification/`, and `03.abundance/otu_table.raw.biom` (v2.4.0's
+    intermediate table, which a run made with `--notemp` keeps) are left as they are and
+    can be deleted.
 
     **Results that change on purpose:**
 
@@ -245,15 +265,17 @@ consequences:
     138.2 SINTAX file is rebuilt under its old name, with the same content, so a refdb
     folder shared with a v2.4.0 checkout keeps working for both.
 
-Two caches deliberately sit outside this machinery and survive across runs:
-reference databases under `refdb/`, and the amplicon-length probe result under
+Two caches survive across runs and across output folders as long as they stay on
+disk: reference databases under `refdb/`, and the amplicon-length probe result under
 `refdb/cache/` inside the MetaFlux checkout — that second path is fixed and does
 not follow `references.refdb_root`. The probe's filename encodes the marker, its
 reference (for 16S also the lineages left out of the statistics; for rpoB
 `_excl-second-site`, because products that hold a second forward-primer site are left
 out), and a hash of both primer sequences, so it is reused whenever those are unchanged
-and recomputed when a primer changes. See [output files](output.md) for what a run
-writes where.
+and recomputed when a primer changes. A fresh clone starts without them (unless
+`references.refdb_root` points at a folder outside it, which then keeps serving the
+reference databases); they are fetched or computed again when a step that needs them
+has to run. See [output files](output.md) for what a run writes where.
 
 ## Two mode-specific notes
 
