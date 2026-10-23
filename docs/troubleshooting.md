@@ -497,8 +497,10 @@ reads DADA2 learned from, half were reverse-complemented, with their quality run
 backwards, and 7 % still began with 17 bases of the primer; the R1 model had not
 converged after 172 rounds and 10.5 hours when the run was stopped. The same pairs
 trimmed with v2.6.0 converged in 6 and 5 rounds. `pick_trunclen` had shown the problem
-first: with the poor bases of half the reads at the start, the lower quartile of the
-quality is below the threshold from the first cycle on, so the quality-based cut lands at
+first: with the poor last bases of the reversed reads now at the start of the read, the
+lower quartile of the quality is below the Q20 threshold at the very first cycle (18 in
+R1; 16 and 18 in the first two cycles of R2) and at or above it afterwards, and
+`pick_trunclen` cuts before the first cycle that fails, so the quality-based cut lands at
 0 (`Primary cuts at Q1>=20.0: R1=0, R2=0` and `WARNING: very short primary cuts` in
 `logs/pick_trunclen.log`) and the truncation lengths come from `raise_trunc` alone
 (270 / 160 here).
