@@ -167,11 +167,18 @@ Snakemake only rebuilds what is missing or out of date. Re-running a completed
 workflow from the same MetaFlux folder with no changes does nothing at all and says
 so. Four practical consequences:
 
-- **A deleted output is rebuilt, with the steps that read it.** Deleting
-  `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy` and the steps that read its
-  tables; the DADA2 steps upstream are already satisfied and are skipped. An output
-  edited by hand is not rebuilt, because it is now newer than the files it was made
-  from; the steps that read it run again, on the edited file.
+- **A deleted output is rebuilt if the run asks for it, with the steps that read
+  it.** Deleting `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy` and the steps
+  that read its tables; the DADA2 steps upstream are already satisfied and are
+  skipped. The files a run asks for are the ones listed in `_amplicon_targets()` and
+  `_shotgun_targets()` in `workflow/rules/shared/00_common.smk`. A deleted file that
+  is not on that list goes unnoticed: it is made again only when a step that reads it
+  has to run anyway, or when the step that writes it runs again. The phylogeny's tree
+  (the run asks for its QC report instead) and Cutadapt's JSON reports (only MultiQC
+  reads them) are two such files; `--forcerun` with the name of the step that writes
+  one makes it again, and the steps after that step run too. An output edited by hand
+  is not rebuilt, because it is now newer than the files it was made from; the steps
+  that read it run again, on the edited file.
 - **A changed command, setting or environment, or a newer script, marks a step out of
   date.** Snakemake keeps a record of every finished step in `.snakemake/`, inside the
   folder it is started from (for MetaFlux, the MetaFlux folder): the text of the step's
