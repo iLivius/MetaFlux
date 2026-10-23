@@ -151,9 +151,13 @@ other than a parent's direct count ever changes.
     of the reads that move, not all: part of them cross genus or family boundaries.
 
     **Some reads are still lost.** If *every* species under a genus fails, Bracken has
-    nothing left at the target rank to redistribute to, and drops those reads, usually a
-    small fraction of the sample. Crediting the parent is much better than deleting rows
-    outright, but it is not conservation.
+    nothing left at the target rank to redistribute to, and drops those reads; the same
+    happens one level up when every species of a family or an order fails. At the
+    default floor of 300 that is a small fraction of the sample: on the
+    [test dataset](#what-it-does-on-real-data) the table lost at most 0.09 % of its read
+    pairs. With `auto` it was 2.7 to 15.1 % of the same tables, because a whole order
+    failed in two of them (see [Limits of the rule](#limits-of-the-rule)). Crediting the
+    parent is much better than deleting rows outright, but it is not conservation.
 
 ## Choosing a threshold
 
@@ -213,7 +217,7 @@ distinct minimizers a species needs in the Kraken2 report to stay in the table.
 | Species in `otu_table.tsv`, gate off | 99 | 80 | 116 | 120 |
 | Species, gate on (floor 300) | 84 | 66 | 94 | 104 |
 | Genera, gate off → on | 39 → 34 | 31 → 28 | 46 → 39 | 52 → 44 |
-| Read pairs moved to another species | 4.9 % | 1.3 % | 5.8 % | 1.8 % |
+| Read pairs held by the removed species | 4.9 % | 1.3 % | 5.8 % | 1.8 % |
 | Change in total read pairs | −0.01 % | +0.01 % | −0.01 % | −0.09 % |
 | Genomes detected by sylph in the same reads | 10 | 9 | 14 | 16 |
 | Species above 1 % of `otu_table.tsv`, gate off | 21 | 10 | 23 | 12 |
@@ -263,12 +267,14 @@ the gate-off table held by the species that the floor removes.
 
 A lower floor keeps the species with 200 to 300 distinct minimizers, 7 to 11 more per
 sample. These samples have no known composition, so they cannot show whether those
-species are real. A higher floor removes many more species but also moves a large share
-of the table: at 3,000, 13 to 42 % of the read pairs end up under a different species. On
+species are real. A higher floor removes many more species, and those species hold a
+large share of the table: at 3,000, 13 to 42 % of the read pairs. Part of them moves to
+other species and part leaves the table (measured with `auto`, whose floors on these
+samples run from 1,673 to 3,458: see [Limits of the rule](#limits-of-the-rule)). On
 benchmark communities of known composition, a fixed floor of 10,000 already lowered some
 samples' F1 by removing true species, and lower fixed floors did the same once shallower
 sequencing was modelled (3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to
-the depth of the sample avoids this; see the next section.
+the depth of the sample avoids removing true species that way; see the next section.
 
 ### Scaling the floor with depth
 
@@ -344,7 +350,9 @@ floor              (classified pairs − human pairs) / 1,000, at most 6,500
   Reads of other hosts are not subtracted. With PlusPF they mostly stay unclassified; a
   database that holds other host genomes classifies them, and they then raise the floor:
   remove the host first ([Decontamination](decontamination.md#host-removal)) or set a
-  number.
+  number. The *Homo sapiens* row itself is still judged against the floor: in all four
+  samples of the test dataset it fails (605 to 1,743 distinct minimizers) and leaves the
+  table with its read pairs, where at 300 it stays.
 - **The cap of 6,500.** The benchmark stops at 6.5 million classified pairs. A floor that
   keeps growing with depth eventually exceeds what a real species with a small
   species-specific part of its genome can reach; in the model this began at about 10
@@ -352,7 +360,10 @@ floor              (classified pairs − human pairs) / 1,000, at most 6,500
 - **Shallow samples.** Below about 500,000 classified pairs the scaled floor gains little,
   and below 300,000 `auto` sets it lower than the default of 300. That is intended: in
   benchmark samples thinned to 26,000–195,000 classified pairs, the fixed floor of 300
-  lowered some samples' F1 and the scaled floor lowered none.
+  lowered some samples' F1 and the scaled floor lowered none. On the one benchmark
+  sample really run at 0.76 million classified pairs, `auto` (floor 759) and 300 removed
+  the same three false species
+  ([below](#measured-at-known-depths-and-on-deeper-samples)).
 - **Where to see the floor.** Each sample's log, `logs/kmer_evidence/{sample}.log`, shows
   how its floor was worked out:
 
@@ -370,7 +381,12 @@ To size a number by hand instead, for instance to judge every sample of a run ag
 same floor, divide the classified read pairs of the shallowest sample, less its human
 read pairs, by 1,000. Each sample's classified count is in `stats/read_tracking.txt`
 (column `classified`), and its human read pairs are in the *Homo sapiens* row of its
-Kraken2 report. The deeper samples then get a more lenient floor than they could take.
+Kraken2 report. The deeper samples are then judged against a lower floor than `auto`
+would set them: more lenient where their extra depth is spread over the community, but
+not where it sits on one dominant organism, whose reads raise `auto`'s floor for the
+other species without adding to their evidence (see the end of this page). On the test
+dataset the single floor of 1,673 keeps 41, 33, 45 and 68 species where `auto` keeps 35,
+25, 45 and 61.
 
 #### Why `auto` is not the default
 
@@ -379,10 +395,16 @@ Kraken2 report. The deeper samples then get a more lenient floor than they could
 - **Its gain rests mostly on one real mock community.** Three quarters of the F1 gain came
   from the ZymoBIOMICS D6331 sample; on the three simulated CAMI II sets (41 samples) the
   mean gain per set was 0.01–0.03.
-- **Part of its safety was modelled, not measured.** The shallower depths were modelled
-  from the observed counts, not sequenced, and no benchmark sample is deeper than 6.5
-  million classified pairs, which is why there is a cap.
-- **It changes the table much more than 300 does** (the last point under
+- **Part of its safety was modelled, not measured.** For the benchmark samples the
+  shallower depths were modelled from the observed counts, not sequenced. One of them
+  was then subsampled to three shallower depths and run for real with PlusPF, and
+  behaved largely as the model predicted
+  ([below](#measured-at-known-depths-and-on-deeper-samples)); the other 41 rest on the
+  model. No benchmark sample is deeper than 6.5 million classified pairs, which is why
+  there is a cap.
+- **It changes the table much more than 300 does, and read pairs leave the table**: 2.7
+  to 15.1 % of the read pairs on the test dataset, against at most 0.09 % at 300, most of
+  them from an organism with no close reference genome (the last point under
   [Limits of the rule](#limits-of-the-rule)).
 
 #### Measured at known depths and on deeper samples
@@ -390,11 +412,101 @@ Kraken2 report. The deeper samples then get a more lenient floor than they could
 What `auto` does on samples sequenced at known depths, and on samples deeper than any
 in the benchmark:
 
-[To be settled before release, from validation V3: measured depth ladder. CAMI II marine sample 0 at 2, 5, 10 and 16.6 million read pairs, four samples in one run with PlusPF and the gate on, once with `auto` and once with 300: species precision, recall and F1 against the corrected gold standard, compared with what the depth model predicted for these depths.]
+**Measured at four depths.** CAMI II marine sample 0, one of the benchmark samples, was
+subsampled to 2, 5 and 10 million read pairs and run together with its full 16.6
+million, with the settings of its benchmark run (PlusPF `k2_pluspf_20260626`, Kraken2
+confidence 0.15): once with the gate off, once at 300 and once with `auto`. After
+quality filtering, Kraken2 classified 0.76, 1.90, 3.79 and 6.31 million pairs. Species
+were scored as in the benchmark, against the sample's 252 gold-standard species:
 
-[To be settled before release, from validation V3: deep mock. MBARC-26 (51.9 million classified pairs, 26 known genomes): which known members the floor of 300, `auto` (capped at 6,500) and an uncapped floor (about 51,850) would remove.]
+| Classified read pairs | 0.76 M | 1.90 M | 3.79 M | 6.31 M |
+|---|--:|--:|--:|--:|
+| Floor set by `auto` | 759 | 1,896 | 3,788 | 6,309 |
+| True / false species, gate off | 217 / 71 | 216 / 69 | 216 / 68 | 216 / 68 |
+| True / false species, 300 | 217 / 68 | 216 / 67 | 216 / 66 | 216 / 67 |
+| True / false species, `auto` | 217 / 68 | 216 / 64 | 216 / 63 | 216 / 61 |
+| Recall, every arm | 0.861 | 0.857 | 0.857 | 0.857 |
+| Precision, gate off → 300 → `auto` | 0.754 → 0.761 → 0.761 | 0.758 → 0.763 → 0.771 | 0.761 → 0.766 → 0.774 | 0.761 → 0.763 → 0.780 |
+| Species-level F1, gate off | 0.804 | 0.804 | 0.806 | 0.806 |
+| F1 change, 300 | +0.0045 | +0.0030 | +0.0030 | +0.0015 |
+| F1 change, `auto` | +0.0045 | +0.0076 | +0.0076 | +0.0107 |
+| True / false species, `auto`, as the depth model predicted | 216 / 66 | 216 / 64 | 216 / 63 | the model's starting point |
 
-[To be settled before release, from validation V3: deep soils. The Schoenbuch forest soils with PlusPF: how much `auto` removes in deep, diverse samples.]
+- **No true species was removed**, at any depth, by either floor: recall is the same in
+  the three arms of every rung. Relative to its floor, the true species closest to
+  removal was *Aliivibrio wodanis* at full depth, 7,263 distinct minimizers against
+  6,309 (1.15 times the floor); at 0.76 million the weakest true species,
+  *Synechococcus* sp. WH 8020, had 1,186 against 759.
+- **The depth model held where it was really tested.** The model starts from the
+  full-depth run and thins its calls to a shallower depth, so the 6.31 M column is its
+  starting point, not a test, and the two middle rungs are the real tests: at 1.90 and
+  3.79 million it gave the true and false species of `auto` exactly, and the true
+  species kept the distinct minimizers it predicted for them (median within 1 %). At
+  0.76 million it was off in two ways. Species near Bracken's read threshold come and go
+  by chance when reads are subsampled (six crossed it at 0.76 million, one at 1.90),
+  which the model cannot see and no floor can correct; and three false species had 1.6
+  to 3.6 times fewer distinct minimizers than the model gave them, so at that depth 300
+  removed as many false species as `auto` did.
+- **The read pairs in the table hardly changed**: by less than 0.05 %, with either floor,
+  at every depth.
+
+This is one simulated sample on one index: it measures the depths the benchmark only
+modelled, for this sample, and says nothing about the other 41 benchmark samples.
+
+**A deep mock community.** MBARC-26 is a mock of 23 bacteria and 3 archaea with known
+genomes ([Singer et al., 2016](https://pmc.ncbi.nlm.nih.gov/articles/PMC5037974/)), here
+in the library sequenced by
+[Hardwick et al. (2018)](https://doi.org/10.1038/s41467-018-05555-0) (SRA run
+SRR6392275). With PlusPF `k2_pluspf_20260626` it has 51.9 million classified read pairs,
+eight times the deepest benchmark sample, so `auto` sets the cap, 6,500; without the cap
+the floor would be 51,851. The gate was run on the existing Kraken2 report and Bracken
+was not run again, so what follows is which species each floor keeps, not how the read
+counts move.
+
+| Floor | Members removed, of 26 | Other species rows of the report kept, of 729 |
+|---|---|--:|
+| 300 | *Nocardiopsis dassonvillei* | 105 |
+| `auto` (the cap, 6,500) | *N. dassonvillei* | 3 |
+| Without the cap (51,851) | *N. dassonvillei*, *Escherichia coli* | 1 |
+
+- *N. dassonvillei* has 15 read pairs from Kraken2 in this library and 264 distinct
+  minimizers, so every floor removes it from the report: the one true member a floor
+  removed in these tests, and a very thin one. *E. coli* K-12 has 713 read pairs and
+  9,450 distinct minimizers, a member that is there and that a floor growing without
+  limit would remove from the report; the cap keeps it.
+- **The final table keeps the same species at every floor**, the same as with the gate
+  off: Bracken's read threshold at this depth (`-t 2593`) already leaves out both thin
+  members, and the other 24 members, and *Lysobacter enzymogenes*, which is not in the
+  mock (154,092 distinct minimizers), pass every floor.
+- The library has 2×125 bp reads, shorter than the 2×150 bp the rule assumes (see
+  [Limits of the rule](#limits-of-the-rule)), so the floor is relatively stricter here
+  than on the benchmark; it still removed no member that Bracken keeps.
+
+**Deep, diverse soils.** Seven forest soils from the Schönbuch, Germany (BioProject
+PRJNA717813; the O, A and B horizons of a Cambisol, a Podsol and a Stagnosol), with 50
+to 108 million read pairs after quality filtering, of which PlusPF `k2_pluspf_20260626`
+classified only 4.0 to 8.6 million. `auto` set floors of 3,953 to 6,500, the cap in four
+of them. Their composition is not known, so this shows how much `auto` removes, not
+whether it is right. As for the mock, the gate was run on the existing reports and
+Bracken was not run again.
+
+- **Most species rows of the report go, few species of the table.** `auto` removed 59 to
+  76 % of the species rows of each Kraken2 report (300: 9 to 13 %); those rows held 0.13
+  to 0.22 % of the classified reads. Of the 39 to 69 species per soil in the final table
+  with the gate off, it removed none in three soils and one to three in the other four,
+  all of them kept at 300: *Kribbella* sp. NBC_01484 in four soils (425 to 856 read
+  pairs from Kraken2, 2,300 to 3,703 distinct minimizers) and two *Bradyrhizobium*
+  species in one.
+- **Those species held up to 5.6 % of a table, and that is the most a table can lose.**
+  Bracken had raised *Kribbella* sp. NBC_01484 from its 425 to 856 read pairs to
+  67,000–172,000; the three species removed from one soil held 5.6 % of its table, the
+  one species removed from each of the other three 1.1 to 2.6 %. A species that passes
+  the gate never loses read pairs when its relatives are removed, so the loss is at most
+  this share; how much of it moves to relatives and how much leaves the table was not
+  measured.
+- **The cap changed no species of the table.** Without it the four capped soils would get
+  floors of 7,007 to 8,607, and 42 to 232 more species rows of their reports would go,
+  none of them in the final table.
 
 #### Limits of the rule
 
@@ -403,7 +515,9 @@ These hold with `auto` and with a number sized by hand:
 - **It rests on limited data** (see [Why `auto` is not the default](#why-auto-is-not-the-default)).
 - **Do not go above 1.5 per 1,000 pairs** when you size a number by hand; `auto` uses 1
   per 1,000. At 1.5 rare true species start to be removed (92 of 13,419 true calls), and
-  from 2 per 1,000 some samples' F1 falls even at full depth.
+  from 2 per 1,000 some samples' F1 falls even at full depth. On the CAMI II sample
+  measured at full depth (above), 1.5 per 1,000 would set the floor at 9,462 and remove a
+  true species, *Aliivibrio wodanis* (7,263 distinct minimizers).
 - **Do not go above 6,500**, by hand either, for the reason `auto` stops there (the cap,
   above).
 - **Host reads.** `auto` leaves out the *Homo sapiens* read pairs only. When you size a
@@ -414,15 +528,55 @@ These hold with `auto` and with a number sized by hand:
   overlap and few duplicates. Shorter reads, single-end data, overlapping mates and
   duplicate-rich libraries give fewer distinct minimizers per read pair, so the same
   floor is stricter for them; use a lower number rather than `auto`.
-- **It changes the table more than 300 does.** On the test dataset above (1.7–3.5 million
-  classified pairs), one floor of 1,673 for all four samples, sized on the shallowest
-  with its human reads excluded, keeps 33–68 species per sample, against 66–104 at 300,
-  and the species it removes hold 10–33 % of the read pairs, which move to relatives.
-  That is still well above the 9–16 genomes sylph finds. `auto` gives the three deeper
-  samples higher floors (2,176 to 3,458), so there it removes at least as much. Compare
-  `otu_table.tsv` with the gate off and on before relying on it.
+- **The floor follows the depth of the whole sample, not the reads of each species.** In
+  a sample dominated by one organism, the other species face a higher floor without
+  having more reads of their own; an example is at the end of this page.
+- **It changes the table more than 300 does, and read pairs leave the table.** On the
+  test dataset above (1.7–3.5 million classified pairs), `auto` keeps 25–61 species per
+  sample, against 66–104 at 300, and 2.7–15.1 % of the read pairs leave the table,
+  against at most 0.09 % at 300:
 
-    [To be settled before release, from validation V3: test dataset with `auto`. PRJNA1477390, gate on with `auto`: the floor of each sample (1,673, 2,176, 2,267 and 3,458), the species kept in `otu_table.tsv`, against 300 and the single floor of 1,673, and the change in total read pairs (the row the table at 300 has). Every statement on lost reads was measured at 300. The kmer_evidence logs estimate the read pairs Bracken will drop at 2.85–4.34 % of the classified pairs with `auto`, against 0.10–0.22 % at 300, where the measured change was between −0.09 and +0.01 %. If the measured change with `auto` is not small, revise "usually a small fraction of the sample" in the warning under "How a taxon is removed" and in the comment of `min_distinct_minimizers` in `config/config.yaml`. Check the *Homo sapiens* row: in the Kraken2 reports it has 605 to 1,743 distinct minimizers, below the `auto` floor of every sample, so the gate removes it.]
+    | | SRR39106521 | SRR39106522 | SRR39106523 | SRR39106524 |
+    |---|--:|--:|--:|--:|
+    | Classified read pairs | 2,268,774 | 3,458,847 | 1,673,810 | 2,177,429 |
+    | *Homo sapiens* read pairs, left out | 1,843 | 1,721 | 1,191 | 1,451 |
+    | Floor set by `auto` | 2,267 | 3,458 | 1,673 | 2,176 |
+    | Species in `otu_table.tsv`, gate off | 99 | 80 | 116 | 120 |
+    | Species, 300 | 84 | 66 | 94 | 104 |
+    | Species, one floor of 1,673 for every sample | 41 | 33 | 45 | 68 |
+    | Species, `auto` | 35 | 25 | 45 | 61 |
+    | Genera, gate off → `auto` | 39 → 12 | 31 → 10 | 46 → 18 | 52 → 23 |
+    | Read pairs held by the species `auto` removes | 29 % | 13 % | 33 % | 14 % |
+    | Change in total read pairs, 300 | −0.01 % | +0.01 % | −0.01 % | −0.09 % |
+    | Change in total read pairs, `auto` | −15.1 % | −11.1 % | −4.2 % | −2.7 % |
+
+    - Of the read pairs the removed species held, 15 to 87 % went to species that
+      stayed; the rest left the table, because no species of their genus, family or
+      order was left to take them.
+    - Most of what left belongs to one order, Sphingomonadales. In SRR39106521 and
+      SRR39106522 every one of its 24 and 23 species fails (the strongest,
+      *Novosphingobium pentaromativorans*, has 2,174 and 2,156 distinct minimizers
+      against floors of 2,267 and 3,458), and the whole order, 16 and 11 % of the two
+      tables, is dropped; the rest of each table changes by less than 1 %. Where one
+      species of the order passes, it collects most of the order's reads: in
+      SRR39106523 *N. pentaromativorans* goes from 40,710 to 283,996 read pairs, on
+      about the same distinct-minimizer count as in the two samples that drop it.
+    - The order seems to be a real member of these communities without a close
+      reference genome, not a spurious call. That is a reading of two indirect signs,
+      not a measured truth: the 16S rRNA gene fragments in the same reads, classified
+      by Metaxa2 against SILVA, put 13–21 % of them in the order, and sylph finds no
+      genome of the order in any sample. Kraken2 then spreads its reads over many named
+      species, none with much species-specific sequence, and the floor removes them
+      all.
+    - `auto` also removes *Homo sapiens* from all four samples (605 to 1,743 distinct
+      minimizers, below its sample's floor in all four); at 300 the row stays. A user
+      who reads human contamination off `otu_table.tsv` loses it.
+    - The 25–61 species left are still well above the 9–16 genomes sylph finds. Compare
+      `otu_table.tsv` with the gate off and on before relying on `auto`, and do not take
+      the estimate of dropped read pairs in `logs/kmer_evidence/{sample}.log` for the
+      measured change: with `auto` it was 3.5 and 3.9 times too low in the two samples
+      that lose a whole order, because it only sees the reads Kraken2 assigned, not
+      those Bracken moves.
 
 ## Why the default is `enabled: false`
 
@@ -696,6 +850,14 @@ the evidence of the other species in its sample, and treat the trend line as a *
 for the eye* rather than a test. The floor is one fixed number for every sample of a run
 or, with `auto`, a number set by the read pairs Kraken2 classified in the sample, human
 ones left out. With `auto` the same species can therefore get different verdicts in
-samples of different depth. That is intended: the deeper the sample, the more distinct
-minimizers a species that is really present leaves (see
-[Scaling the floor with depth](#scaling-the-floor-with-depth)).
+samples of different depth. That is intended when the whole community was sequenced
+deeper: a species that is really present then leaves more distinct minimizers (see
+[Scaling the floor with depth](#scaling-the-floor-with-depth)). But the floor follows
+the depth of the whole sample, not the reads of each species, so a species with the same
+reads in a deeper sample, where it is a smaller share, faces a higher floor. In the test
+dataset *Novosphingobium pentaromativorans* has 2,156 to 2,195 distinct minimizers in
+all four samples, on 2,955 to 3,550 read pairs from Kraken2; `auto` keeps it in the two
+samples with floors of 1,673 and 2,176 and removes it from the two with floors of 2,267
+and 3,458. In the deepest of the four, 57 % of the classified pairs belong to one
+species, *Achromobacter denitrificans*, which raises the floor for everything else
+without adding to their evidence.

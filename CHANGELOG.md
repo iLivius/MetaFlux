@@ -113,10 +113,15 @@ and the floor; the reasons of the evidence table and the plot give the floor rou
 up, marked `(auto)`. The evidence table keeps its columns.
 
 - **Opt-in; 300 stays the default.** On MetaFlux's benchmark `auto` raised species F1
-  more than 300 did and lowered no sample's F1, but three quarters of that gain came
-  from one real mock community; it changes the table far more than 300 does, and it
-  assumes paired 2×150 bp reads. See "Scaling the floor with depth" on the k-mer
-  evidence page before switching to it.
+  more than 300 did and lowered no sample's F1, and on one CAMI II sample run at four
+  real depths (0.76 to 6.31 million classified pairs) it removed no true species; but
+  three quarters of the benchmark gain came from one real mock community, and it
+  changes the table far more than 300 does. On the four test-dataset samples it keeps
+  25–61 species against 66–104, and 2.7–15.1 % of the read pairs leave the table,
+  against at most 0.09 % at 300, most of them from one order that seems to be really
+  there (the 16S fragments in the same reads say so) but has no close reference genome.
+  That read loss is why `auto` stays opt-in. It also assumes paired 2×150 bp reads. See
+  "Scaling the floor with depth" on the k-mer evidence page before switching to it.
 - **With a whole number nothing changes.** The rule gets the same number as before. On
   the four test-dataset reports and the MBARC-26 report, at floors 0, 300 and 1,000
   with the gate on and off, the evidence table, the gated report, the plot and the log

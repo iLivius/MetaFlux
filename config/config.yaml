@@ -612,10 +612,14 @@ shotgun:
 
     # Distinct-minimizer floor. A taxon below this is removed and its reads are
     # handed back to its parent for Bracken to redistribute among the relatives
-    # that passed, rather than deleted. That preserves nearly all of them but not
-    # quite all: if EVERY species under a genus fails, Bracken has nowhere at the
-    # target rank to send that genus's reads and drops them, usually a small fraction
-    # of the sample. Check the per-sample logs for your own data.
+    # that passed, rather than deleted. How many of them survive depends on the
+    # floor: if EVERY species under a genus fails, Bracken has nowhere at the
+    # target rank to send that genus's reads and drops them. At 300 that is a small
+    # fraction of the sample (the table lost at most 0.09 % of its read pairs on the
+    # test dataset); with auto it was 2.7-15.1 % of the same tables, because a whole
+    # order failed. Compare 03.abundance with the gate off for your own data: the
+    # estimate in logs/kmer_evidence/{sample}.log counts Kraken2's reads only, and
+    # was 3.5-3.9 times too low where an order failed.
     #
     # UNITS — the easy mistake. Published thresholds are in unique K-MERS:
     #   KrakenUniq (Breitwieser, Baker & Salzberg 2018): ~2,000 per million reads, or
@@ -653,8 +657,10 @@ shotgun:
     # used is written to logs/kmer_evidence/{sample}.log.
     # WHY auto IS NOT THE DEFAULT. On the benchmark it raised species F1 more than 300
     # did and lowered no sample's F1, but three quarters of that gain came from one
-    # real mock community, and it changes the table far more than 300 does. It also
-    # assumes paired 2x150 bp reads. See
+    # real mock community, and it changes the table far more than 300 does: on the
+    # test dataset it keeps 25-61 species per sample against 66-104, and 2.7-15.1 % of
+    # the read pairs leave the table, against at most 0.09 % at 300. It also assumes
+    # paired 2x150 bp reads. See
     # docs/shotgun/kmer-evidence.md#scaling-the-floor-with-depth before switching to it.
     min_distinct_minimizers: 300
 
