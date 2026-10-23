@@ -269,12 +269,13 @@ A lower floor keeps the species with 200 to 300 distinct minimizers, 7 to 11 mor
 sample. These samples have no known composition, so they cannot show whether those
 species are real. A higher floor removes many more species, and those species hold a
 large share of the table: at 3,000, 13 to 42 % of the read pairs. Part of them moves to
-other species and part leaves the table (measured with `auto`, whose floors on these
-samples run from 1,673 to 3,458: see [Limits of the rule](#limits-of-the-rule)). On
-benchmark communities of known composition, a fixed floor of 10,000 already lowered some
-samples' F1 by removing true species, and lower fixed floors did the same once shallower
-sequencing was modelled (3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to
-the depth of the sample avoids removing true species that way; see the next section.
+other species and part leaves the table; how the two parts split was measured with
+`auto`, whose floors on these samples run from 1,673 to 3,458 (see
+[Limits of the rule](#limits-of-the-rule), below). On benchmark communities of known
+composition, a fixed floor of 10,000 already lowered some samples' F1 by removing true
+species, and lower fixed floors did the same once shallower sequencing was modelled
+(3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to the depth of the sample
+avoids removing true species that way; see the next section.
 
 ### Scaling the floor with depth
 
@@ -382,11 +383,12 @@ same floor, divide the classified read pairs of the shallowest sample, less its 
 read pairs, by 1,000. Each sample's classified count is in `stats/read_tracking.txt`
 (column `classified`), and its human read pairs are in the *Homo sapiens* row of its
 Kraken2 report. The deeper samples are then judged against a lower floor than `auto`
-would set them: more lenient where their extra depth is spread over the community, but
-not where it sits on one dominant organism, whose reads raise `auto`'s floor for the
-other species without adding to their evidence (see the end of this page). On the test
-dataset the single floor of 1,673 keeps 41, 33, 45 and 68 species where `auto` keeps 35,
-25, 45 and 61.
+would give them. Where their extra depth is spread over the whole community, that lower
+floor is more lenient than their depth warrants; where the extra depth sits on one
+dominant organism, whose reads raise `auto`'s floor for the other species without
+adding to their evidence (see the end of this page), the lower floor is the fairer one.
+On the test dataset the single floor of 1,673 keeps 41, 33, 45 and 68 species where
+`auto` keeps 35, 25, 45 and 61.
 
 #### Why `auto` is not the default
 
@@ -440,8 +442,8 @@ were scored as in the benchmark, against the sample's 252 gold-standard species:
 - **The depth model held where it was really tested.** The model starts from the
   full-depth run and thins its calls to a shallower depth, so the 6.31 M column is its
   starting point, not a test, and the two middle rungs are the real tests: at 1.90 and
-  3.79 million it gave the true and false species of `auto` exactly, and the true
-  species kept the distinct minimizers it predicted for them (median within 1 %). At
+  3.79 million it gave the numbers of true and false species of `auto` exactly, and the
+  true species kept the distinct minimizers it predicted for them (median within 1 %). At
   0.76 million it was off in two ways. Species near Bracken's read threshold come and go
   by chance when reads are subsampled (six crossed it at 0.76 million, one at 1.90),
   which the model cannot see and no floor can correct; and three false species had 1.6
@@ -483,12 +485,12 @@ counts move.
   than on the benchmark; it still removed no member that Bracken keeps.
 
 **Deep, diverse soils.** Seven forest soils from the Schönbuch, Germany (BioProject
-PRJNA717813; the O, A and B horizons of a Cambisol, a Podsol and a Stagnosol), with 50
-to 108 million read pairs after quality filtering, of which PlusPF `k2_pluspf_20260626`
-classified only 4.0 to 8.6 million. `auto` set floors of 3,953 to 6,500, the cap in four
-of them. Their composition is not known, so this shows how much `auto` removes, not
-whether it is right. As for the mock, the gate was run on the existing reports and
-Bracken was not run again.
+PRJNA717813; the O, A and B horizons of a Cambisol and the O and A horizons of a Podsol
+and a Stagnosol), with 50 to 108 million read pairs after quality filtering, of which
+PlusPF `k2_pluspf_20260626` classified only 4.0 to 8.6 million. `auto` set floors of
+3,953 to 6,500, the cap in four of them. Their composition is not known, so this shows
+how much `auto` removes, not whether it is right. As for the mock, the gate was run on
+the existing reports and Bracken was not run again.
 
 - **Most species rows of the report go, few species of the table.** `auto` removed 59 to
   76 % of the species rows of each Kraken2 report (300: 9 to 13 %); those rows held 0.13
@@ -516,7 +518,7 @@ These hold with `auto` and with a number sized by hand:
 - **Do not go above 1.5 per 1,000 pairs** when you size a number by hand; `auto` uses 1
   per 1,000. At 1.5 rare true species start to be removed (92 of 13,419 true calls), and
   from 2 per 1,000 some samples' F1 falls even at full depth. On the CAMI II sample
-  measured at full depth (above), 1.5 per 1,000 would set the floor at 9,462 and remove a
+  measured at full depth (above), 1.5 per 1,000 would set the floor at 9,463 and remove a
   true species, *Aliivibrio wodanis* (7,263 distinct minimizers).
 - **Do not go above 6,500**, by hand either, for the reason `auto` stops there (the cap,
   above).
@@ -557,13 +559,14 @@ These hold with `auto` and with a number sized by hand:
       SRR39106522 every one of its 24 and 23 species fails (the strongest,
       *Novosphingobium pentaromativorans*, has 2,174 and 2,156 distinct minimizers
       against floors of 2,267 and 3,458), and the whole order, 16 and 11 % of the two
-      tables, is dropped; the rest of each table changes by less than 1 %. Where one
-      species of the order passes, it collects most of the order's reads: in
-      SRR39106523 *N. pentaromativorans* goes from 40,710 to 283,996 read pairs, on
-      about the same distinct-minimizer count as in the two samples that drop it.
+      tables, is dropped; the rest of each table changes by about 1 % or less (+19,800
+      and −854 read pairs). Where one species of the order passes, it collects most of
+      the order's reads: in SRR39106523 *N. pentaromativorans* goes from 40,710 to
+      283,996 read pairs, on about the same distinct-minimizer count as in the two
+      samples that drop it.
     - The order seems to be a real member of these communities without a close
-      reference genome, not a spurious call. That is a reading of two indirect signs,
-      not a measured truth: the 16S rRNA gene fragments in the same reads, classified
+      reference genome, not a spurious call. That reading rests on two indirect signs,
+      not on a measurement: the 16S rRNA gene fragments in the same reads, classified
       by Metaxa2 against SILVA, put 13–21 % of them in the order, and sylph finds no
       genome of the order in any sample. Kraken2 then spreads its reads over many named
       species, none with much species-specific sequence, and the floor removes them
@@ -583,12 +586,14 @@ These hold with `auto` and with a number sized by hand:
 The gate is off by default because a correctly scaled
 [Bracken threshold](confidence-and-threshold.md) already removes most of what it would
 remove. It has been run on 46 samples: the D6331 mock, the four PRJNA1477390 metagenomes
-and 41 CAMI II samples. In gate-on/gate-off runs of CAMI II samples at several depths
-with PlusPF `k2_pluspf_20251015`, the gate changed species-level F1 by a mean of
-**+0.0009** at the depth-scaled threshold, and by zero on the strain-madness and
-rhizosphere samples at every depth tested. At the former fixed `-t 10` the mean was
-**+0.0079**, about nine times more. So the gate mainly helps when the Bracken threshold is
-not scaled to depth; with a scaled threshold it adds little.
+and 41 CAMI II samples, and on the existing Kraken2 reports of the MBARC-26 mock and
+seven forest soils ([above](#measured-at-known-depths-and-on-deeper-samples)). In
+gate-on/gate-off runs of CAMI II samples at several depths with PlusPF
+`k2_pluspf_20251015`, the gate changed species-level F1 by a mean of **+0.0009** at the
+depth-scaled threshold, and by zero on the strain-madness and rhizosphere samples at
+every depth tested. At the former fixed `-t 10` the mean was **+0.0079**, about nine
+times more. So the gate mainly helps when the Bracken threshold is not scaled to depth;
+with a scaled threshold it adds little.
 
 !!! note "Which database build those two numbers come from"
 
@@ -650,7 +655,10 @@ numbers that matter for choosing a threshold are on the
 [confidence and threshold](confidence-and-threshold.md) page. The result for this gate:
 once the Bracken threshold is scaled to depth it adds at most 0.002 F1 (PlusPF
 `k2_pluspf_20251015`), but it still removes calls like JS425 above, which a read-count
-threshold cannot detect.
+threshold cannot detect. The second mock on this page, MBARC-26, and the seven forest
+soils were used only to test the `auto` floor beyond the benchmark's depth
+([above](#measured-at-known-depths-and-on-deeper-samples)); they do not enter these
+scores.
 
 One real mock community: the [ZymoBIOMICS Gut Microbiome
 Standard (D6331)](https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf),
@@ -752,7 +760,7 @@ to **+6%** of the true value.
 
 ### What this does not show
 
-!!! warning "On the mock the gate removed no true species; on CAMI II it changed F1 very little"
+!!! warning "On D6331 the gate removed no true species; on CAMI II it changed F1 very little"
 
     Every organism in D6331 has a species-level entry in the database used. When that is
     true, classification is already close to correct, most false positives are a thin
@@ -770,8 +778,10 @@ page covers what one mock cannot: larger and more even communities (marine, 256�
 species per sample), several samples at several depths, communities with genomes absent
 from the reference (rhizosphere: only 165 of its 307 gold-standard species, 54 %, are in
 PlusPF `k2_pluspf_20260626`), and sample types beyond gut and wastewater. It agrees with
-the D6331 result that the gate removes no true species at full sequencing depth, and it
-shows that once the Bracken threshold is scaled to depth the gate changes F1 very little.
+the D6331 result that the gate removes no true species from the final table at full
+sequencing depth (on MBARC-26 it removed one thin member from the Kraken2 report, which
+Bracken's read threshold drops anyway), and it shows that once the Bracken threshold is
+scaled to depth the gate changes F1 very little.
 
 Still untested: everything above used short-read Illumina data. Long-read or hybrid data,
 and sample types with sparser reference coverage than rhizosphere, have not been tried. If
