@@ -227,11 +227,44 @@ the files swapped, Cutadapt runs one pass and its report describes all the reads
 
 Per-sample Cutadapt statistics are written as JSON to `stats/cutadapt/` — one file for the
 5′ call and one for the 3′ call of the first pass. The second pass writes its Cutadapt
-reports only to `logs/trim_primers/{sample}.log`, so with `mixed` the Cutadapt section of
+reports to `logs/trim_primers/{sample}.log`, so with `mixed` the Cutadapt section of
 the MultiQC report describes the first pass alone, and there the pairs that only the second
 pass keeps count as discarded. `stats/03.stripped_reads.counts` and the `stripped` column of
 `stats/read_tracking.txt` count the pairs of both passes, so the rare pair kept by both
 counts twice.
+
+With `mixed`, `stats/orientation/{sample}.tsv` shows how the pairs of each sample split
+between the two orientations: the read pairs that went into primer trimming, the pairs the
+first pass kept as they were sequenced, the pairs the second pass kept and swapped, and
+each as a percentage of the pairs that went in. The counts are those of the two 5′ calls,
+where the orientation of a pair is decided, taken from Cutadapt's own reports. The 3′ calls
+after them can still drop a pair that ends up shorter than `min_length`, so the two kept
+columns can add up to a little more than the pairs in `03.stripped/`; the difference is the
+pairs those calls dropped. The rare pair kept by both passes counts in both columns, as it
+counts twice in `03.stripped/`. Nothing in the pipeline reads the file; the
+[output reference](../reference/output.md#stats) lists its columns.
+
+The file also makes sure that the swap and the 10-base rule reach output folders trimmed
+before they existed. A folder trimmed with `mixed` by MetaFlux v2.5.0 or earlier has no
+such file, and a run with `mixed` asks for it, so primer trimming runs again for every
+sample, and so does every step after it: the trimmed reads with their QC and read counts,
+the truncation lengths, DADA2, the region extraction and the phylogeny where they run,
+the taxonomy, the read tracking and the MultiQC report are made again. The PhiX removal
+and the QC and counts of the raw reads are kept, and so are the reference files and the
+length probe when the run starts from the MetaFlux folder that made the output folder. A
+fresh clone, an unpacked release or a second worktree looks for the probe, and by default
+the references, in its own `refdb/` folder, so from there the probe is computed again and
+the references are fetched again, unless the old `refdb/` was carried over.
+
+Primer trimming runs again whichever MetaFlux folder the run starts from, and whatever
+`--rerun-triggers` says. Without the file it would not always happen. Snakemake notices a
+changed command only by comparing it with its record of the step (what it wrote down when
+the step finished), kept in `.snakemake/` inside the MetaFlux folder it runs from, and a
+fresh clone, an unpacked release or a second worktree has no records of the output
+folder. From there, DADA2 and the steps after it would still run again, because their
+scripts are newer than the old outputs, but on the reads the old version trimmed, and
+without a word. A folder trimmed with `fixed` has no such file and is not asked for one,
+so nothing runs again because of it.
 
 ## 3. Per-stage QC
 

@@ -206,7 +206,8 @@ rule revcomp_primers:
 #           -g rev -G fwd   +   -a fwd_rc -A rev_rc
 #   Then swap the two mates of every pass-B pair (its R2 becomes R1) and
 #   concatenate with pass A. Under orientation=mixed the two 5' calls (-g/-G)
-#   also need at least 10 primer bases (--overlap 10; see below).
+#   also need at least 10 primer bases (--overlap 10; see below), and the rule
+#   writes one more file, the orientation table (stats/orientation/; see below).
 #
 # Why pass B exists: some library preps come back with reads in mixed
 # orientation — part of a sample's R1 file is actually a reverse read, and part
@@ -265,6 +266,43 @@ rule revcomp_primers:
 # every pair is swapped, the pass-B part of the output is what orientation:
 # fixed gives on the two input files swapped, less the few pairs the 10-base
 # rule drops, and pass A adds almost nothing.
+#
+# The orientation table (orientation: mixed only). Under mixed the rule also
+# writes stats/orientation/{sample}.tsv: the read pairs that went into primer
+# trimming, the pairs pass A kept as they were sequenced (forward primer in
+# R1), the pairs pass B kept and wrote with their mates swapped (reverse primer
+# in R1), and each as a percentage of the pairs that went in. The counts come
+# from Cutadapt's own reports of the two 5' calls, which is where the
+# orientation of a pair is decided: pass A's JSON report (json_pa5, the one
+# MultiQC reads) and a JSON report of pass B written to the temporary folder,
+# which is deleted with it. The 3' calls after them can still drop a pair that
+# ends up shorter than min_length, so the two kept columns can add up to a
+# little more than the pairs written to 03.stripped/: the difference is the
+# pairs those two calls dropped. The rare pair kept by both passes counts in
+# both columns, and each pass writes its own copy of it to 03.stripped/, so it
+# adds nothing to that difference.
+#
+# No rule reads the table, and MultiQC does not see it (in amplicon mode it
+# scans stats/falco/, stats/cutadapt/ and, with PhiX removal, logs/rm_phix/;
+# see _multiqc_scan_dirs() in 90_report.smk). It is there for two reasons.
+# It shows how each sample's pairs split between the two orientations, which
+# the MultiQC report cannot (it shows pass A alone). And it makes the
+# orientation fix reach every output folder trimmed with mixed by MetaFlux
+# v2.5.0 or earlier. Such a folder has no table, and _amplicon_targets()
+# (00_common.smk) asks for it under mixed, so Snakemake runs trim_primers
+# again for every sample, and every step after it, whichever MetaFlux folder
+# the run starts from. Without the table that would not always happen.
+# Snakemake notices a changed shell command only by comparing it with its
+# record of the step (what it wrote down when the step finished), kept in
+# .snakemake/ inside the MetaFlux folder it runs from; a fresh clone, an
+# unpacked release or a second worktree has no records of the output folder.
+# All its scripts are newer than the old outputs,
+# though, and Snakemake reruns a script step whose script is newer, so DADA2
+# and the steps after it would run again on the reads trimmed the old way,
+# without a word. A missing file that the run asks for is made whatever
+# Snakemake's records and --rerun-triggers say. Under fixed the rule has no
+# such output and the run asks for no such file, so nothing changes for fixed
+# folders.
 rule trim_primers:
     input:
         # r1/r2 resolve to 02.no_phix when REMOVE_PHIX else the raw FASTQs.
@@ -278,10 +316,26 @@ rule trim_primers:
         r2       = OUT / "03.stripped" / "{sample}_R2.fastq.gz",
         json_pa5 = OUT / "stats" / "cutadapt" / "{sample}.passA_5prime.cutadapt.json",
         json_pa3 = OUT / "stats" / "cutadapt" / "{sample}.passA_3prime.cutadapt.json",
+        # The orientation table, under orientation: mixed only (see the rule
+        # header). The two stars add the dictionary's entry to the outputs as if it
+        # were written here by name. Under fixed the dictionary is empty, and the
+        # rule keeps exactly the four outputs above, as in v2.5.0.
+        **({"orientation_table": OUT / "stats" / "orientation" / "{sample}.tsv"}
+           if ORIENTATION == "mixed" else {}),
     params:
         orientation = ORIENTATION,
         max_err     = config["amplicon"]["cutadapt"]["max_error_rate"],
         min_len     = config["amplicon"]["cutadapt"]["min_length"],
+        # Where the shell writes the orientation table: that output under mixed,
+        # an empty text under fixed, where the shell never uses it. The shell
+        # cannot name {output.orientation_table} itself, because under fixed the
+        # rule has no such output and Snakemake would stop on the unknown name, so
+        # the path is taken from the job's outputs here. Snakemake keeps no record
+        # of a param worked out from the outputs, so this one leaves the records of
+        # fixed folders as they were.
+        orientation_table = lambda wildcards, output: (
+            output.orientation_table if ORIENTATION == "mixed" else ""
+        ),
     log:
         LOGS / "trim_primers" / "{sample}.log",
     benchmark:
@@ -368,12 +422,15 @@ rule trim_primers:
             echo "[trim_primers] orientation=mixed → running swap pass" >> {log}
 
             # ---- Pass B (swap) 5': assume R1=rev, R2=fwd ----
-            # (Swap-pass cutadapt logs go through the same JSON-less log file;
-            # not exposed to MultiQC. Tmp paths use sample name to avoid clashes.)
+            # Its text report goes to the rule's log, like that of the 3' call
+            # below. Its JSON report goes to the temporary folder, which is deleted
+            # at the end: only the orientation table below reads it, and MultiQC
+            # never sees it. (Tmp paths use the sample name to avoid clashes.)
             cutadapt -j {threads} \
                      -g file:{input.rev} -G file:{input.fwd} \
                      -e {params.max_err} --pair-filter=any $overlap_5p \
                      --minimum-length {params.min_len} --discard-untrimmed \
+                     --json $tmpdir/{wildcards.sample}.passB_5prime.cutadapt.json \
                      -o $tmpdir/{wildcards.sample}_pb5_R1.fq.gz \
                      -p $tmpdir/{wildcards.sample}_pb5_R2.fq.gz \
                      {input.r1} {input.r2} \
@@ -417,6 +474,62 @@ rule trim_primers:
                 $tmpdir/{wildcards.sample}_pb3_R2.fq.gz > {output.r1}
             cat $tmpdir/{wildcards.sample}_after3p_R2.fq.gz \
                 $tmpdir/{wildcards.sample}_pb3_R1.fq.gz > {output.r2}
+
+            # The orientation table (see the rule header), written last, once the
+            # trimmed reads are complete: the pairs that went in, the pairs each
+            # pass kept, and their shares, from the JSON reports of the two 5'
+            # calls. The path is quoted because under fixed it is empty, and bash
+            # reads the whole command, this branch included, before it runs any of
+            # it. The small program below runs in the Python of the Cutadapt
+            # environment (Cutadapt is a Python program, so that environment always
+            # has one). Its code must contain no curly braces (Snakemake would read
+            # them as placeholders), no single quotes (they would end the bash
+            # string that holds it) and no three double quotes in a row (they would
+            # end the shell string of the rule, so its function is explained in a
+            # comment, not a docstring).
+            mkdir -p "$(dirname "{params.orientation_table}")"
+            python -c '
+import json
+import sys
+
+pass_a_report_path = sys.argv[1]
+pass_b_report_path = sys.argv[2]
+sample = sys.argv[3]
+table_path = sys.argv[4]
+
+# Cutadapt counts read pairs: "input" is the pairs a call read, "output" the
+# pairs it kept (a primer found at the start of both mates, and both mates
+# still at least min_length long after the cut).
+with open(pass_a_report_path) as report:
+    pass_a_counts = json.load(report)["read_counts"]
+with open(pass_b_report_path) as report:
+    pass_b_counts = json.load(report)["read_counts"]
+
+# Both passes read the same input pairs, so pass A gives the pairs that went in.
+pairs_in = pass_a_counts["input"]
+kept_as_sequenced = pass_a_counts["output"]
+kept_swapped = pass_b_counts["output"]
+
+
+# A count as a percentage of the pairs that went in, with two decimals, or NA
+# for a sample that had no pairs to trim.
+def percent_of_input(count):
+    if pairs_in == 0:
+        return "NA"
+    return "%.2f" % (100 * count / pairs_in)
+
+
+header = ["sample", "read_pairs_in",
+          "kept_as_sequenced", "pct_as_sequenced",
+          "kept_swapped", "pct_swapped"]
+row = [sample, str(pairs_in),
+       str(kept_as_sequenced), percent_of_input(kept_as_sequenced),
+       str(kept_swapped), percent_of_input(kept_swapped)]
+with open(table_path, "w") as table:
+    table.write("\t".join(header) + "\n")
+    table.write("\t".join(row) + "\n")
+' {output.json_pa5} $tmpdir/{wildcards.sample}.passB_5prime.cutadapt.json \
+  {wildcards.sample} "{params.orientation_table}"
         else
             mv $tmpdir/{wildcards.sample}_after3p_R1.fq.gz {output.r1}
             mv $tmpdir/{wildcards.sample}_after3p_R2.fq.gz {output.r2}

@@ -3261,6 +3261,20 @@ def _amplicon_targets():
         # MultiQC aggregate
         OUT / "multiqc" / "multiqc_report.html",
     ]
+    # The orientation table of trim_primers, one per sample, only under orientation:
+    # mixed (see "The orientation table" above rule trim_primers in 30_preprocess.smk).
+    # No rule reads it. It is asked for here because Snakemake makes a missing file
+    # only when the run asks for it, or when a step that has to run anyway needs it:
+    # an output folder trimmed with mixed by MetaFlux v2.5.0 or earlier has no table,
+    # so asking for it makes trim_primers run again there, with every step after it,
+    # whether or not Snakemake has records of that folder and whatever
+    # --rerun-triggers says. That is what brings the orientation fix to such a folder.
+    # Under fixed nothing is added, so a fixed run asks for exactly the files it asked
+    # for before.
+    if ORIENTATION == "mixed":
+        targets += [
+            *expand(OUT / "stats" / "orientation" / "{sample}.tsv", sample=SAMPLES),
+        ]
     # COI only: the screens' measurements (rule coi_screens) and the two tables the
     # taxonomy step writes from them (same rule as the tables above, so the last two
     # add no job).
