@@ -65,8 +65,9 @@ and writes the same reads as in v2.5.0.
   sets, and at most 0.06 % in the four COI mock libraries. In those pairs the mate cut
   short is hardly ever a cleanly trimmed amplicon read.
 
-For a user of `mixed`: reversed pairs now merge to the full amplicon and are no longer
-written twice, so the tables of a `mixed` run change; re-run such folders (see below).
+For a user of `mixed`: reversed pairs now merge to the full amplicon and are hardly
+ever written twice, so the tables of a `mixed` run change; re-run such folders (see
+below).
 In a truly mixed library the R1 file now holds read 1 of the pairs that came the right
 way round and read 2 of the reversed ones, and DADA2 fits its R1 and R2 error models to
 that blend. [To be settled before release, from validation V1b: what the blend changes
@@ -126,9 +127,9 @@ What runs again depends on how you get v2.6.0, because Snakemake goes by two kin
 evidence. It keeps a record of every finished step in `.snakemake/`, inside the MetaFlux
 folder it is started from: the step's command, its parameters, the list of its input
 files and its software environment. A step whose record no longer matches runs again. A
-step that runs a script is judged by the script file's date instead: it runs again
-whenever the script is newer than the step's outputs, whatever the script says. Every
-step after a step that runs again runs again too.
+step that runs a script is judged by the script file's date instead of its text: it
+runs again whenever the script is newer than the step's outputs, whatever the script
+says. Every step after a step that runs again runs again too.
 
 **Updating the MetaFlux folder that made the output folder (`git pull`).** Git gives a
 new date only to the files it changes, and Snakemake has the records.
@@ -148,8 +149,10 @@ new date only to the files it changes, and Snakemake has the records.
   release changes the version its report shows, in `workflow/multiqc_config.yaml`,
   which is one of MultiQC's inputs. [To be settled before release: this holds once the
   version line of that file is bumped, as at every release so far; if it is left as
-  it is, write instead that with `profiler: sylph` nothing runs again, and take
-  MultiQC out of the `git pull` case of "Skipping the reruns".]
+  it is, write instead that with `profiler: sylph` nothing runs again, add MultiQC to
+  the gate-on case of the shotgun bullet above (it reads Bracken's reports, so it
+  runs again after Bracken), and take MultiQC out of the `git pull` case of
+  "Skipping the reruns".]
 
 **Starting from a fresh clone, a release archive or a second worktree.** All its files
 are newer than the old outputs (a clone or a worktree dates every file when it is made,
