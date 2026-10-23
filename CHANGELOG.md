@@ -85,9 +85,17 @@ ever written twice, so the tables of a `mixed` run change; re-run such folders, 
 MetaFlux processes them again from primer trimming on (see below).
 In a truly mixed library the R1 file now holds read 1 of the pairs that came the right
 way round and read 2 of the reversed ones, and DADA2 fits its R1 and R2 error models to
-that blend. [To be settled before release, from validation V1b: what the blend changes
-in ASVs, reads and recovered mock specimens, against separate error models per
-orientation, on a genuinely mixed library.] The Cutadapt section of the MultiQC report
+that blend. On a genuinely mixed library (two BF3/BR2 libraries of the COI insect mock
+in opposite orientations, 1.6 million pairs as one sample) the blend recovered 363 of
+the 374 specimens against 364 for the two libraries run on their own, with 600 kept ASVs
+shared of 654 and 664 and tables almost identical (Bray-Curtis dissimilarity 0.011 on
+specimen proportions, on a 0-to-1 scale); it kept 7 % fewer reads, lost at DADA2's
+quality filter because the truncation lengths are chosen on the blended quality
+profile, and that is an upper bound, since the two libraries also come from two
+sequencing runs. With the old handling the same library gave no result: DADA2's error
+model had not converged after 172 rounds and 10.5 hours, on reads of which half were
+reverse-complemented and 7 % still carried most of a primer (see the troubleshooting
+page). The Cutadapt section of the MultiQC report
 shows the first pass only. A library in which every pair is swapped is better run with
 its two input files swapped and `fixed`: Cutadapt then reads every pair once, and its
 report covers all the reads.
