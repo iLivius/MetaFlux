@@ -32,7 +32,7 @@ from GTDB R232 and tested once on data not used during development (step 7).
 | | |
 |---|---|
 | Release | `bacterial_cox1_gtdb-r232.v1` (Zenodo DOI: [To be settled before release]) |
-| Source | GTDB R232 (released 15 April 2026): 199,923 species representatives, 189,801 bacterial and 10,122 archaeal |
+| Source | GTDB R232: 199,923 species representatives, 189,801 bacterial and 10,122 archaeal |
 | Genes | GTDB's own gene predictions, made with Prodigal 2.6.3 (Hyatt et al. 2010), file `gtdb_proteins_nt_reps_r232.tar.gz`; the build runs no gene prediction of its own |
 | Content | subunit-I genes of the heme-copper oxidase superfamily, as DNA: whole genes in one file, fragments of at least 200 amino acids in a second file |
 | Size | 242,698 whole genes (121 MB compressed) and 31,710 fragments (11 MB) from 123,356 genomes; counts per step in the release README |
@@ -1024,8 +1024,8 @@ Possible improvements:
 
 ## References
 
-Numbers will be assigned when these entries are added to
-[Citation and references](../../about/citation.md).
+References cited on this page. The tools MetaFlux runs, and the references of the COI
+marker itself, are on [Citation and references](../../about/citation.md).
 
 - Baldo, L., et al. (2006). Multilocus sequence typing system for the endosymbiont *Wolbachia
   pipientis*. *Applied and Environmental Microbiology* 72:7098–7110.

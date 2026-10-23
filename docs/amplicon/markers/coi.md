@@ -30,7 +30,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | Rank model | `Domain;Kingdom;Phylum;Class;Order;Family;Genus;Species` |
 | COI screens | reading-frame check and off-target guard, both on by default (`amplicon.coi`) |
 | Primers | none are shipped; validated with BF3/BR2, Leray-XT and fwhF2/fwhR2n (below) |
-| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes (71 to 86 s for 683 to 909 ASVs on 8 threads, in all 14 logged runs on libraries of the insect mock used below); the COI screens about 8.4 GB and about a minute (53 to 87 s). The two memory figures date from the development run with 717 ASVs; no benchmark file records them, and the validation runs measured time only, so treat them as approximate |
+| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes; the COI screens about 8.4 GB and about a minute (the memory figures are approximate; the resources table of the [configuration reference](../../reference/configuration.md) has the measured times and the caveat) |
 
 ## Setting up a run
 
@@ -169,9 +169,10 @@ screen would have done.
 ### Reading-frame check (`amplicon.coi.frame_check`)
 
 Every ASV starts right after the forward primer, so the ASVs of a run share one codon
-phase. MetaFlux takes as the run's reading frame the frame free of TAA and TAG, the stop
-codons of every animal mitochondrial code, in most reads, and as the reference length the
-most frequent length, by reads, of the ASVs open in that frame. An ASV passes when
+phase. MetaFlux takes as the run's reading frame the frame that has no TAA or TAG, the
+stop codons of every animal mitochondrial code, in most reads. The reference length is
+the most frequent length, counted by reads, among the ASVs open in that frame. An ASV
+passes when
 
 - it has no TAA or TAG in the run's frame, or in the frame that an offset of its start
   gives it, and
@@ -276,9 +277,10 @@ other species, and it also removed 1.6 % of the right ones.
 ## Validation
 
 The three primer-pair runs of the insect mock of Elbrecht et al. (2019) (bulk abdomens of
-374 arthropod BINs; SRR8082166 BF3/BR2, SRR8082178 Leray-XT, SRR8082148 fwhF2/fwhR2n) were
-each run as one sample, with the defaults above and `keep: [k__Metazoa]`, and their ASVs
-were compared with the 374 specimen barcodes. In the BF3/BR2 and fwhF2/fwhR2n libraries
+374 arthropod specimens; SRR8082166 BF3/BR2, SRR8082178 Leray-XT, SRR8082148
+fwhF2/fwhR2n) were each run as one sample, with the defaults above and
+`keep: [k__Metazoa]`, and their ASVs were compared with the 374 specimen barcodes. In the
+BF3/BR2 and fwhF2/fwhR2n libraries
 every R1 carries the reverse primer, so their two files were swapped and the runs kept
 `orientation: fixed`, as the warning above recommends; the Leray-XT library, whose R1
 carries the forward primer, ran with `fixed` as distributed.
@@ -322,10 +324,12 @@ carries the forward primer, ran with `fixed` as distributed.
   another error model), the specimens it gains or loses are recovered by a single ASV of
   3 to 10 reads, at the limit where DADA2 tells a rare variant from an error. The
   specimen counts above therefore shift by one or two between such runs, while the shares
-  of reads do not. Specimens that one primer pair recovers and another misses are a
-  different matter: they are missed with thousands of reads elsewhere (no BF3/BR2 ASV
-  comes near the barcode of *Camponotus pennsylvanicus*, while Leray-XT gives it 5,295
-  reads), so the primers, not the detection limit, decide them.
+  of reads do not. Specimens that one library recovers and another misses are a
+  different matter: they are missed with thousands of reads elsewhere (in the BF3/BR2
+  library SRR8082166 no kept ASV comes near the barcode of *Camponotus pennsylvanicus*,
+  while the Leray-XT library gives it 5,295 reads and a second BF3/BR2 library of the
+  same mock, SRR8082198, 633), so the PCR that made the library, not DADA2's detection
+  limit, decides them.
 
 ## References
 
