@@ -38,6 +38,13 @@ need about 225 GB of memory at species level.
   species representatives of GTDB R232; how, and how it was tested, is on the new
   manual page "Bacterial COX1 reference set (COI)".
 
+Checked on the insect mock of Elbrecht et al. (2019), one library per primer pair run as
+one sample: 361 (BF3/BR2), 355 (Leray-XT) and 362 (fwhF2/fwhR2n) of its 374 specimens
+are recovered by an ASV at least 97 % identical to their barcode, the ASVs that match a
+specimen hold 99.1–99.3 % of the reads of the final tables, the off-target guard caught
+every *Wolbachia* ASV that SINTAX had called a stink bug absent from the mock (41 ASVs,
+4,315 reads), and no specimen lost its only ASV to either screen.
+
 ### Mixed orientation: reversed pairs swapped back, and kept once
 
 With `amplicon.primers.orientation: mixed`, `trim_primers` runs a second Cutadapt pass

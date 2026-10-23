@@ -30,7 +30,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | Rank model | `Domain;Kingdom;Phylum;Class;Order;Family;Genus;Species` |
 | COI screens | reading-frame check and off-target guard, both on by default (`amplicon.coi`) |
 | Primers | none are shipped; validated with BF3/BR2, Leray-XT and fwhF2/fwhR2n (below) |
-| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB (8.5 minutes for 717 ASVs on 8 threads); the COI screens about 8.4 GB (about a minute) |
+| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes (71 to 86 s for 683 to 909 ASVs on 8 threads, over ten runs of the insect mock libraries below); the COI screens about 8.4 GB and about a minute (55 to 87 s). The two memory figures were measured once, during development, and not again in the validation runs |
 
 ## Setting up a run
 
@@ -80,7 +80,11 @@ smaller NUC variant), so MetaFlux ships no trainset for COI.
     reads every pair once, and its report in MultiQC describes all the reads.
     `orientation: mixed` is for libraries that really are mixed, with pairs in both
     orientations, and from v2.6.0 on it handles them: it swaps the two mates of each
-    reversed pair back, so that DADA2 merges them to the full amplicon. See
+    reversed pair back, so that DADA2 merges them to the full amplicon. On the BF3/BR2
+    library run both ways, `mixed` on the files as distributed and `fixed` on the swapped
+    files gave the same 595 kept ASVs and the same 361 specimens; `mixed` dropped 509 of
+    the 910,014 pairs (0.06 %), those whose primer Cutadapt found from fewer than 10
+    bases. See
     [the mixed-orientation second pass](../overview.md#the-mixed-orientation-second-pass).
 
 ## The reference database: MIDORI2
@@ -178,10 +182,8 @@ The offset matters with primers that match some templates imperfectly. Cutadapt 
 cut a base before or after the end of the primer, the same way for every read of that
 template, and the ASV starts one base early or late: it is one base longer or shorter, and
 open in the neighbouring frame. On the Leray-XT run of the insect mock (below), whose
-primers carry inosines, this happened to 9 % of the reads, among them the only ASVs of 26
-specimens. [To be settled before release, from validation V5: these two numbers, from
-the Leray-XT run as one sample; the ones shown come from the earlier run with two
-pseudo-samples.]
+primers carry inosines, this happened to 9 % of the reads, among them the only ASVs of 29
+specimens.
 The frame an offset of *d* bases gives is the run's frame plus *d*, so an ASV one base
 short is tested in the frame before the run's. A frameshift inside an ASV, as in a
 pseudogene or an indel artefact, leaves stop codons in both frames, one on each side of the
@@ -281,41 +283,44 @@ every R1 carries the reverse primer, so their two files were swapped and the run
 `orientation: fixed`, as the warning above recommends; the Leray-XT library, whose R1
 carries the forward primer, ran with `fixed` as distributed.
 
-[To be settled before release, from validation V5: how the BF3/BR2 and fwhF2/fwhR2n runs
-were made, which the paragraph above gives as files swapped and `orientation: fixed`
-(correct it if they ran with `mixed`), and the table and the four points below, measured
-again on those runs. The values now shown come from the earlier runs, in which each
-library was split into two pseudo-samples of alternate read pairs.]
-
 | | BF3/BR2 | Leray-XT | fwhF2/fwhR2n |
 |---|---|---|---|
-| reads after the length filter (ASVs) | 638,836 (717) | 901,120 (687) | 1,202,686 (782) |
+| reads after the length filter (ASVs) | 638,878 (804) | 897,924 (767) | 1,199,927 (888) |
 | reference length, run frame | 418 bp, frame 1 | 313 bp, frame 1 | 205 bp, frame 1 |
-| removed by the frame check | 151 ASVs, 0.52 % of reads | 90, 0.22 % | 48, 0.11 % |
-| moved by the off-target guard | 22 ASVs, 0.48 % | 20, 0.24 % | 12, 0.07 % |
-| removed by `keep: [k__Metazoa]` | 4 ASVs, 0.05 % | 5, 0.01 % | 6, 0.01 % |
-| kept | 540 ASVs | 572 | 716 |
-| reads of kept ASVs within 97 % of a specimen | 99.2 % | 99.4 % | 99.2 % |
-| specimens recovered at ≥ 97 % (identical) | 359 (354) | 353 (348) | 362 (361) |
+| removed by the frame check | 177 ASVs, 3,716 reads (0.58 %) | 95, 2,160 (0.24 %) | 64, 1,540 (0.13 %) |
+| moved by the off-target guard | 27 ASVs, 3,283 reads (0.51 %) | 26, 2,353 (0.26 %) | 16, 895 (0.07 %) |
+| removed by `keep: [k__Metazoa]` | 5 ASVs, 299 reads (0.05 %) | 5, 107 (0.01 %) | 7, 80 (0.01 %) |
+| kept | 595 ASVs, 631,580 reads | 641, 893,304 | 801, 1,197,412 |
+| reads of kept ASVs within 97 % of a specimen | 99.2 % | 99.3 % | 99.1 % |
+| specimens recovered at ≥ 97 % (identical) | 361 (357) | 355 (352) | 362 (362) |
 
 - **Nothing a specimen needed was removed.** No specimen that was missed has an ASV within
-  97 % among those the two screens took out. The few removed ASVs that match a specimen
-  (11, 2 and 2) are length variants of a kept ASV or carry a stop codon.
+  97 % among those the two screens took out, so no specimen lost its only ASV to a
+  screen. The few removed ASVs that match a specimen (14, 3 and 2) belong to specimens
+  that keep another ASV: in BF3/BR2, 11 of them are length variants and 3 are full-length
+  sequences with a stop codon in every frame; the 3 and 2 of the other runs are
+  full-length sequences with a stop codon in every frame.
 - **The offset of the frame check.** In the Leray-XT run, 9 % of the reads, among them
-  the only ASVs of 26 specimens, belong to ASVs open in frame 0, most of them one base
+  the only ASVs of 29 specimens, belong to ASVs open in frame 0, most of them one base
   short: their first base went with the primer, which cutadapt cut one base too far for
-  these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (12
+  these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (14
   specimens). Without the offset rule the frame check would have removed them.
-- **The off-target guard.** It moved 54 ASVs over the three runs, most closest to
-  *Wolbachia* (43), the others to *Rickettsia*, *Mesenet*, *Tisiphia* and one other
-  bacterium. SINTAX had called 29 of them, with 3,953 reads, the stink bug *Picromerus
-  bidens*, which is not in the mock, at species level: MIDORI2 holds a *Wolbachia*-like
-  record under that name (KR036430.1, no TGA among five tryptophan codons), and
+- **The off-target guard.** It moved 69 ASVs over the three runs, most closest to
+  *Wolbachia* (57), the others to *Rickettsia*, *Mesenet*, *Tisiphia* and one other
+  bacterium. SINTAX had called 41 of them, with 4,315 reads, the stink bug *Picromerus
+  bidens*, which is not in the mock, at species level. All 41 are closest to a
+  *Wolbachia* gene in the bacterial set, and their best MIDORI2 hit is a *Wolbachia*-like
+  record filed under that name (KR036430.1, no TGA among five tryptophan codons);
   `keep: [k__Metazoa]` would have kept them.
-- **Species flags.** Of the kept ASVs, 55 % (BF3/BR2), 49 % (Leray-XT) and 39 %
-  (fwhF2/fwhR2n) are `ok`, and `low_identity` and `shared_sequence` together flag 8–11 %;
+- **Species flags.** Of the kept ASVs, 53 % (BF3/BR2), 46 % (Leray-XT) and 38 %
+  (fwhF2/fwhR2n) are `ok`, and `low_identity` and `shared_sequence` together flag 9–11 %;
   the others have no species call, more of them the shorter the amplicon. None is far from
   MIDORI2.
+- **Counts near the detection limit move.** The specimens found in one run and missed in
+  another are recovered by a single ASV of 3 to 10 reads, at the limit where DADA2 tells
+  a rare variant from an error. The specimen counts above therefore shift by one or two
+  between runs that differ in what DADA2 sees (one sample or several, the truncation
+  lengths, the error model), while the shares of reads do not.
 
 ## References
 
