@@ -209,25 +209,24 @@ both reads instead, and the truncation lengths ([step 5](#5-truncation-length-se
 are chosen from the same blended quality profiles.
 
 Measured on a genuinely mixed library: two BF3/BR2 libraries of the COI insect mock,
-sequenced in opposite orientations and joined as one sample of 1.6 million pairs (57 %
-of them reversed), run with `mixed`, against the two libraries run separately with
-`fixed` (the reversed one with its files swapped) and their tables merged by sequence.
-The blended run recovered 363 of the 374 specimens and the separate runs 364 (the one
-the blend missed has 3 reads); 600 kept ASVs are shared, of 654 and 664; 98.3 % and
-98.6 % of the merged reads are the full 418 bp; and the two tables are almost identical,
-with a Bray-Curtis dissimilarity of 0.011 on specimen proportions (a 0-to-1 measure of
-how different two tables are, 0 for identical ones). The blended run keeps 7 % fewer
-reads, all lost at DADA2's quality filter: the truncation lengths are chosen on the
-blended quality profile, 268 / 270 bases here, where each library on its own got
-249 / 271 and 260 / 233, and the longer cuts let more pairs fail the expected-error
-limit. The error models themselves converged as quickly as on a single library. This is
-an upper bound of what the blend costs, because the two libraries also come from two
-sequencing runs, so two error profiles share one file, which a mixed library from one
-run would not have. With the trimming of v2.5.0 and earlier the same library gave no
-result at all: DADA2's error model had not converged after 172 rounds and 10.5 hours
-when the run was stopped, because half of the reads in each file were
-reverse-complemented, with their quality running backwards, and 7 % still began with
-most of a primer (see
+sequenced in opposite orientations and joined as one sample of 1.6 million pairs (57 % of
+them reversed), run with `mixed`, against the two libraries run separately with `fixed`
+(the reversed one with its files swapped) and their tables merged by sequence. The blended
+run recovered 363 of the 374 specimens and the separate runs 364 (the one the blend missed
+has 3 reads); 600 kept ASVs are shared, of 654 and 664; 99.2 % of the reads left after
+chimera removal are the full 418 bp in both; and the two tables are almost identical, with
+a Bray-Curtis dissimilarity of 0.011 on specimen proportions (a 0-to-1 measure of how
+different two tables are, 0 for identical ones). The blended run keeps 7 % fewer reads,
+all lost at DADA2's quality filter: the truncation lengths are chosen on the blended
+quality profile, 268 / 270 bases here, where each library on its own got 249 / 271 and
+260 / 233, and the longer cuts let more pairs fail the expected-error limit. The error
+models themselves converged as quickly as on a single library. This is an upper bound of
+what the blend costs, because the two libraries also come from two sequencing runs, so two
+error profiles share one file, which a mixed library from one run would not have. With the
+trimming of v2.5.0 and earlier the same library gave no result at all: DADA2's error model
+had not converged after 172 rounds and 10.5 hours when the run was stopped, because half
+of the reads in each file were reverse-complemented, with their quality running backwards,
+and 7 % still began with most of a primer (see
 [Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges)).
 
 A library in which every pair is swapped needs no second pass: swap the two input files
