@@ -59,14 +59,17 @@ arguments and writes the same reads as in v2.5.0, and no new file is written.
   two overlap. Now the pair's R2 goes to the R1 file and its R1 to the R2 file, and the
   pair reaches DADA2 like the pairs of the first pass. On the BF3/BR2 COI insect mock
   (SRR8082166, in which every R1 carries the reverse primer), none of the merged reads
-  came within 9 bp of the full 418 bp with the old handling, against 99.4 % now.
+  came within 9 bp of the full 418 bp with the old handling, against 99.4 % with the
+  mates swapped, in the DADA2 test that led to the fix; the v2.6.0 run of the same
+  library gives 99.5 %.
 - **Both 5′ calls need 10 primer bases** (`--overlap 10`, under `mixed` only). Both
   passes read every pair, and Cutadapt counts a 5′ primer as found when a read starts
   with the primer's last three bases. Where the start of each primer resembles the end
   of the other, a pair passed both and was written twice, once with its mates the wrong
   way round and most of a primer still on: 13–17 % of the pairs in the two BF3/BR2
-  libraries of the COI mock, 0.3 % in the rpoB and 0.04 % in the gyrB test set, 2 pairs
-  in the 18S test set, none in the 16S and ITS test sets. With 10 bases, 1 pair in
+  libraries of the COI mock and 0.14 % in its fwhF2/fwhR2n library (none in its
+  Leray-XT library), 0.3 % in the rpoB and 0.04 % in the gyrB test set, 2 pairs in the
+  18S test set, none in the 16S and ITS test sets. With 10 bases, 1 pair in
   SRR8082166 and 32 in the gyrB test set are still written twice. The cost is the pairs
   whose primer is found from only 3 to 9 of its bases at the start of a mate, which are
   now dropped: 0.006–0.15 % of the pairs in the 16S, ITS, 18S, gyrB and rpoB test
@@ -155,6 +158,15 @@ up, marked `(auto)`. The evidence table keeps its columns.
   other text and an empty value, which stopped v2.5.0 with a Python traceback, get the
   same message. A negative number stops the run as before. A config with such a value
   needs a whole number or `auto`.
+- **A correction to the v2.5.0 k-mer evidence page.** Its section on scaling the floor
+  with depth said that the read pairs of the species a depth-scaled floor removes move
+  to relatives (10–33 % of the read pairs at a floor of 1,673 on the test dataset, and
+  "13 to 42 % end up under a different species" at 3,000). Measured with `auto` on the
+  same four samples (floors of 1,673 to 3,458), 2.7–15.1 % of the read pairs leave the
+  table instead, because no species of their genus, family or order is left to take
+  them; at 300 the loss is at most 0.09 %. The pipeline's behaviour does not change. A
+  table made with a floor sized by hand after that page should be compared with the
+  same run at the gate off before it is relied on.
 
 ### What runs again in a folder made with v2.5.0
 
@@ -192,11 +204,11 @@ folder. So every step that runs a script runs again, with everything after it, w
 v2.6.0 changed that script or not: in amplicon mode the quality plots of the trimmed
 reads, `pick_trunclen` and everything after it (fetching the reference databases and
 computing the length probe again unless `refdb/` was carried over), in shotgun mode the
-k-mer evidence, the sylph tables, the OTU table, the read tracking and MultiQC. A step
-without a script has nothing to be compared with, and a changed setting goes unnoticed,
-so in a folder made with `fixed` `trim_primers` does not run again. In a folder made
-with `mixed` it does, for every sample and with every step after it, because the
-orientation table it now writes is missing there.
+k-mer evidence (and, with the gate on, Bracken), the sylph tables, the OTU table, the
+read tracking and MultiQC. A step without a script has nothing to be compared with, and
+a changed setting goes unnoticed, so in a folder made with `fixed` `trim_primers` does
+not run again. In a folder made with `mixed` it does, for every sample and with every
+step after it, because the orientation table it now writes is missing there.
 
 **Results.** With `orientation: fixed` the steps that run again give the results of
 v2.5.0, except that under `method: rdp` a few bootstrap values, and now and then a
@@ -248,6 +260,22 @@ noticed either, since there is no record to compare it with: switching such a fo
 `min_distinct_minimizers: auto` then needs `--forcerun kmer_evidence`. The "Running
 MetaFlux" page of the documentation explains these checks ("What happens on a
 re-run").
+
+### What to edit in a config written for v2.5.0
+
+- Nothing, for a run that stays as it was. Every new key has a default: `amplicon.coi`
+  (both screens on; read by COI runs only), `amplicon.probe_length_stat.COI` (needed by
+  COI runs only) and the `resources` rows for `coi_screens`. A folder made with
+  `orientation: mixed` needs no edit either: let primer trimming and the steps after it
+  run.
+- `shotgun.kmer_evidence.min_distinct_minimizers` must hold a whole number or `auto`.
+  A fraction, `true`/`false` or other text, which v2.5.0 took without a word or stopped
+  on with a traceback, now stops the run with the message that says what is allowed.
+- A COI run needs `amplicon.type: COI`, `amplicon.taxonomy.method: sintax` (`rdp` is
+  refused), an entry `COI: p95` under `amplicon.probe_length_stat` (the run stops at
+  start-up and names it otherwise) and, to give VSEARCH more than one thread, the
+  `resources` rows for `coi_screens` from the template; `keep: [k__Metazoa]` keeps the
+  animals. The COI page has a complete example.
 
 ## 2.5.0 — 2026-10-16
 
