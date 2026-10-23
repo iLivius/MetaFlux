@@ -6,7 +6,8 @@ the read pairs, a shotgun OTU table that comes out empty at a rank other than
 species, a Bracken rank that MetaFlux refuses, a shotgun table step that stops on the
 codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgun
 taxon filter that removes every taxon, small differences between two runs on the same
-data, an outdated marker pack in `config/markers/`, a reference file that fails the
+data, a DADA2 error model that never converges, an outdated marker pack in
+`config/markers/`, a reference file that fails the
 reference check, a reference download that fails its md5 check, and YAML mistakes in
 the config. Each entry gives the symptom, the reason behind it, and what to change.
 
@@ -446,6 +447,80 @@ then no longer changes the result:
   identical runs and *Saccharomyces* in the other 3. Its kingdom support reached
   `min_boot: 80` in only one of those three, so `keep: [k__Fungi]` kept the ASV in 1 run
   and removed it in the other 10.
+
+## Amplicon: DADA2's error model never converges
+
+!!! warning "Symptom"
+
+    Rule `dada_seqtab` runs for hours. Its log (`logs/dada_seqtab.log` in the output
+    directory) keeps adding `selfConsist step` lines and never reaches the
+    `Convergence after N rounds.` line that normally follows them:
+
+    ```text
+    [dada_seqtab] Learning error rates (R1, nbases=1e+08)...
+    396568980 total bases in 1468774 reads from 1 samples will be used for learning the error rates.
+    selfConsist step 1 .
+       selfConsist step 2
+       selfConsist step 3
+       ...
+       selfConsist step 172
+    ```
+
+    On the COI mock libraries the marker was validated on, each model converged in 4 to
+    32 rounds and `dada_seqtab` took 5 to 23 minutes.
+
+**Cause.** DADA2's `learnErrors` fits one error model per read file: for every quality
+score, how often each base is read as another base. It assumes that every read in the
+file was produced the same way, and it repeats two steps, denoising the reads with the
+current error rates and estimating the rates again from the result, until a round gives
+exactly the same error table as an earlier round. A file whose reads do not share one
+error profile can keep the estimate moving. Three ways that happens:
+
+- **Reads of both strands in one file.** When some reads are reverse complements of the
+  others, the sequencer's errors appear mirrored in part of the file (a true A read as G
+  in the forward reads is a T read as C in the reversed ones), and the poor bases of the
+  reversed reads sit at the start of the read instead of the end, where no truncation
+  removes them.
+- **Reads that still carry primer bases.** A primer with degenerate positions leaves the
+  reads of one template differing from each other at several positions of high quality,
+  which to DADA2 look either like real variants or like errors at a quality score that
+  should hardly have any.
+- **A folder trimmed under `orientation: mixed` by MetaFlux v2.5.0 or earlier**, which
+  has both problems at once: the old second pass reverse-complemented the reversed pairs
+  instead of swapping their mates, and the first pass also kept, through a chance match
+  of three primer bases, pairs that were the other way round with most of a primer still
+  on.
+
+Measured on a genuinely mixed COI library (two libraries of the same insect mock in
+opposite orientations, 1.6 million pairs as one sample) trimmed the old way: of the R1
+reads DADA2 learned from, half were reverse-complemented, with their quality running
+backwards, and 7 % still began with 17 bases of the primer; the R1 model had not
+converged after 172 rounds and 10.5 hours when the run was stopped. The same pairs
+trimmed with v2.6.0 converged in 6 and 5 rounds. `pick_trunclen` had shown the problem
+first: with the poor bases of half the reads at the start, the lower quartile of the
+quality is below the threshold from the first cycle on, so the quality-based cut lands at
+0 (`Primary cuts at Q1>=20.0: R1=0, R2=0` and `WARNING: very short primary cuts` in
+`logs/pick_trunclen.log`) and the truncation lengths come from `raise_trunc` alone
+(270 / 160 here).
+
+MetaFlux sets `amplicon.dada2.learn_errors.max_consist` to 999, so the job runs on until
+the model converges or someone stops it. DADA2's own default is 10 rounds, after which it
+prints `Self-consistency loop terminated before convergence.` and continues with the last
+estimate; with that default such a run finishes, with a model fitted to a mixture and
+tables made from it.
+
+**Fix.** Stop the run and check the trimmed reads before the error model. In
+`03.stripped/{sample}_R1.fastq.gz` every read should start with the first bases after the
+forward primer, and the quality of a read should fall towards its end, not rise; a read
+that starts with the primer itself, or with the last bases of the other primer, was not
+trimmed cleanly. With `orientation: mixed`, `stats/orientation/{sample}.tsv` says how
+many pairs each pass kept; a folder trimmed by MetaFlux v2.5.0 or earlier has no such
+file, and a run with v2.6.0 trims it again, with everything after it (see
+[the mixed-orientation second pass](amplicon/overview.md#the-mixed-orientation-second-pass)).
+If the reads were trimmed before MetaFlux saw them, or the two files of a sample are
+swapped, correct the input: a library in which every pair is swapped is run with its two
+files swapped and `orientation: fixed`, a library with pairs in both orientations with
+`mixed`.
 
 ## Amplicon: an outdated marker pack in `config/markers/` stops the run
 
