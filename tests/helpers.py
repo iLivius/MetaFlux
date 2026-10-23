@@ -16,9 +16,11 @@ WHAT IS TESTED, AND HOW THE TESTS REACH THE CODE
 
   load_functions()  pulls named functions and constants out of a file by parsing it
                     (Python's ast module reads the file as code without running it)
-                    and runs only those definitions. Used for the start-up checks in
-                    00_common.smk, which is plain Python, and for the parsers inside
-                    the read-tracking scripts.
+                    and runs only those definitions. Used for the start-up checks,
+                    the k-mer floor setting and the target lists of 00_common.smk,
+                    which is plain Python, for the parsers inside the read-tracking
+                    scripts, and for the measurements of the COI screens
+                    (80d_coi_screens.py).
   run_script()      runs a whole script with a stand-in `snakemake` object that
                     carries the input, output, params and log a rule would pass.
                     The script then does exactly what it does in a run, on the tiny
@@ -26,8 +28,9 @@ WHAT IS TESTED, AND HOW THE TESTS REACH THE CODE
                     sys.exit(message); a test catches that as SystemExit and reads
                     the message.
   inline_program()  cuts a Python program out of a rule's shell command (the taxon
-                    lookup of the read extraction lives there), so it can be run
-                    with the Python interpreter as the rule runs it.
+                    lookup of the read extraction and the orientation table of
+                    primer trimming live there), so it can be run with the Python
+                    interpreter as the rule runs it.
 
   marker_pack() reads a marker pack (workflow/markers/<name>.yaml) so that tests
   check tokens and references against the real rank models and value rules.

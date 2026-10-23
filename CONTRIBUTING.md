@@ -61,7 +61,8 @@ The same checks run on GitHub for every push and pull request
 
 ```bash
 # 1. The unit tests of the pure-Python parts (start-up checks, reference check,
-#    OTU-table builder, read-tracking parsers, taxon lookup, k-mer evidence gate).
+#    OTU-table builder, read-tracking parsers, taxon lookup, k-mer evidence gate,
+#    MIDORI2 conversion and COI screens, orientation table of primer trimming).
 #    Needs pytest and PyYAML; the OTU-table tests also need biom-format and numpy
 #    (the packages of workflow/envs/biom.yaml) and are skipped without them.
 pytest tests

@@ -9,8 +9,9 @@
 #   unit-tests  `pytest tests`: the test suite of the pure-Python parts (the start-up
 #               checks, the reference check, the OTU-table builder and its taxo.k2d
 #               reader, the read-tracking parsers, the taxon lookup of the read
-#               extraction, the k-mer evidence gate). tests/helpers.py says how the
-#               tests reach the code.
+#               extraction, the k-mer evidence gate, the MIDORI2 conversion and the
+#               COI screens, the orientation table of primer trimming under mixed).
+#               tests/helpers.py says how the tests reach the code.
 #   dry-runs    `snakemake --lint` on an amplicon and a shotgun config, then the
 #               dry-run matrix of .test/run_dry_runs.sh: every amplicon marker,
 #               taxonomy method and SILVA release, and the three shotgun profilers,
