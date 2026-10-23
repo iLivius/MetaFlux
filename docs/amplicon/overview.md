@@ -126,6 +126,8 @@ in both orientations: in some pairs R1 carries the forward primer, in others it 
 the reverse one. Because the 5′ call uses `--discard-untrimmed`, a single fixed-orientation
 pass would silently throw away every swapped pair — often half the data.
 
+#### The second pass, and why its mates are swapped
+
 Setting `amplicon.primers.orientation: mixed` adds a second Cutadapt pass over the same
 input with the primers swapped (`-g rev -G fwd`, then `-a fwd_rc -A rev_rc`). A pair this
 pass keeps still has its mates the other way round, its R1 being the reverse read, so the
@@ -141,10 +143,13 @@ covering the 3′ end of the amplicon and R2 the 5′ end. `mergePairs`, with
 read extends past the other and keeps only the stretch where the two overlap: on a
 418-bp COI amplicon in which every R1 carries the reverse primer, none of the merged
 reads came within 9 bp of the full length that way, against 99.4 % with the mates
-swapped (99.1 % at exactly 418 bp).
+swapped (99.1 % at exactly 418 bp) in the DADA2 test that led to the fix; a run of the
+same library with v2.6.0 gives 99.5 % (99.2 % at 418 bp).
 
-**With `mixed`, both 5′ calls need 10 primer bases.** The two passes read the same
-input, and each keeps a pair when its 5′ call finds a primer on both mates. By default
+#### Both 5′ calls need 10 primer bases
+
+With `mixed`, the two passes read the same input, and each keeps a pair when its 5′
+call finds a primer on both mates. By default
 Cutadapt counts a 5′ primer as found as soon as a read starts with the primer's last three
 bases (a minimum overlap of 3, because a read may begin partway into its primer), or when
 the whole primer turns up anywhere in the read within the error rate. With some primer
@@ -165,6 +170,8 @@ of 10 bases or more is rare. The 3′ calls keep Cutadapt's default, because a r
 runs through a short amplicon into the far primer can legitimately end a few bases into
 it. With `fixed` nothing changes: its one pass keeps Cutadapt's default and gives the same
 reads as in v2.5.0.
+
+#### What the 10 bases cost
 
 Measured with the rule's own commands at the default settings, each library against
 `fixed` run on the same reads with the two files in their right orientation. The columns
@@ -190,15 +197,15 @@ one of the reads; the gyrB primers are highly degenerate.
 
 The lost pairs are what the 10 bases cost. In all but 2 of the 2,088 lost pairs, `fixed`
 found the primer of a mate from only 3 to 9 of its bases at the start of the read, and
-removed just those bases. To check whether such a mate is a cleanly trimmed amplicon read,
-a simple test was used: a trimmed read counts as amplicon-like when at least 10 of the
-reads that `fixed` keeps from the same sample and in the same direction (R1 or R2) start
-with the same 15 bases. Depending on the sample and direction, 93 to 99.8 % of the reads
-that `fixed` keeps pass this test, but the mate cut short passes it in only 69 (3 %) of
-the lost pairs. In the others it still carries most of a primer that differs from the
-given one by more than the error rate allows, or is a read of something other than the
-amplicon, such as a low-complexity read. The other mate, by contrast, passes the test in
-1,792 of the 2,086 lost pairs (86 %).
+removed just those bases. Such a mate is hardly ever a cleanly trimmed amplicon read. By
+a simple test (a trimmed read starts with the same 15 bases as at least 10 of the reads
+`fixed` keeps from the same sample and direction), which 93 to 99.8 % of the kept reads
+pass, the mate cut short passes in only 69 (3 %) of the lost pairs, while the other mate
+passes in 1,792 of the 2,086 (86 %). The mate cut short usually still carries most of a
+primer that differs from the given one by more than the error rate allows, or is a read
+of something other than the amplicon, such as a low-complexity read.
+
+#### One error model for a blended library
 
 What the swap means for DADA2: in a truly mixed library, the R1 file holds sequencer
 read 1 of the pairs that came in the right way round and sequencer read 2 of the swapped
@@ -228,6 +235,8 @@ had not converged after 172 rounds and 10.5 hours when the run was stopped, beca
 of the reads in each file were reverse-complemented, with their quality running backwards,
 and 7 % still began with most of a primer (see
 [Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges)).
+
+#### A library in which every pair is swapped
 
 A library in which every pair is swapped needs no second pass: swap the two input files
 of each sample (R1 ↔ R2) and keep `fixed`. With `mixed`, the second pass would keep the
@@ -259,6 +268,8 @@ sequence, not by ASV number.
     setting is a large drop in reads at the primer-trimming stage — visible in
     `stats/read_tracking.txt` and in the Cutadapt section of the MultiQC report.
 
+#### Where the two passes show up in the reports
+
 Per-sample Cutadapt statistics are written as JSON to `stats/cutadapt/` — one file for the
 5′ call and one for the 3′ call of the first pass. The second pass writes its Cutadapt
 reports to `logs/trim_primers/{sample}.log`, so with `mixed` the Cutadapt section of
@@ -266,6 +277,8 @@ the MultiQC report describes the first pass alone, and there the pairs that only
 pass keeps count as discarded. `stats/03.stripped_reads.counts` and the `stripped` column of
 `stats/read_tracking.txt` count the pairs of both passes, so the rare pair kept by both
 counts twice.
+
+#### The orientation table
 
 With `mixed`, `stats/orientation/{sample}.tsv` shows how the pairs of each sample split
 between the two orientations: the read pairs that went into primer trimming, the pairs the
@@ -278,6 +291,8 @@ pairs those calls dropped. The rare pair kept by both passes counts in both colu
 counts twice in `03.stripped/`. Nothing in the pipeline reads the file; the
 [output reference](../reference/output.md#stats) lists its columns.
 
+#### Why a folder trimmed by an older version is trimmed again
+
 The file also makes sure that the swap and the 10-base rule reach output folders trimmed
 before they existed. A folder trimmed with `mixed` by MetaFlux v2.5.0 or earlier has no
 such file, and a run with `mixed` asks for it, so primer trimming runs again for every
@@ -286,9 +301,10 @@ the truncation lengths, DADA2, the region extraction and the phylogeny where the
 the taxonomy, the read tracking and the MultiQC report are made again. The PhiX removal
 and the QC and counts of the raw reads are kept, and so are the reference files and the
 length probe when the run starts from the MetaFlux folder that made the output folder. A
-fresh clone, an unpacked release or a second worktree looks for the probe, and by default
-the references, in its own `refdb/` folder, so from there the probe is computed again and
-the references are fetched again, unless the old `refdb/` was carried over.
+fresh clone, an unpacked release or a second worktree (another checkout of the same
+repository, made with `git worktree`) looks for the probe, and by default the references,
+in its own `refdb/` folder, so from there the probe is computed again and the references
+are fetched again, unless the old `refdb/` was carried over.
 
 Primer trimming runs again whichever MetaFlux folder the run starts from, and whatever
 `--rerun-triggers` says. Without the file it would not always happen. Snakemake notices a

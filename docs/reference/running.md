@@ -170,9 +170,14 @@ so. Four practical consequences:
 - **A deleted output is rebuilt if the run asks for it, with the steps that read
   it.** Deleting `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy` and the steps
   that read its tables; the DADA2 steps upstream are already satisfied and are
-  skipped. The files a run asks for are the ones listed in `_amplicon_targets()` and
-  `_shotgun_targets()` in `workflow/rules/shared/00_common.smk`. A deleted file that
-  is not on that list goes unnoticed: it is made again only when a step that reads it
+  skipped. The files a run asks for are those that make up a complete run: in
+  amplicon mode the read files of each stage with their counts and QC, the truncation
+  lengths, the DADA2 tables, plots and FASTA, the taxonomy tables, the read tracking
+  and the MultiQC report; in shotgun mode the fastp reports, the Kraken2, k-mer
+  evidence, Bracken and sylph files, the OTU table, the read tracking and the MultiQC
+  report (for maintainers: the lists are `_amplicon_targets()` and
+  `_shotgun_targets()` in `workflow/rules/shared/00_common.smk`). A deleted file that
+  is not one of them goes unnoticed: it is made again only when a step that reads it
   has to run anyway, or when the step that writes it runs again. The phylogeny's tree
   (the run asks for its QC report instead) and Cutadapt's JSON reports (only MultiQC
   reads them) are two such files; `--forcerun` with the name of the step that writes
@@ -194,9 +199,10 @@ so. Four practical consequences:
   always checks. Either holds only for the run it is given to: the records keep the
   old state, so a later run without it finds the same changes.
 - **The records belong to the MetaFlux folder, not to the output folder.** A fresh
-  clone, an unpacked release or a second worktree has no records of output folders
-  made from another MetaFlux folder, and its files are newer than the outputs made
-  before it. Pointed at such an output folder, it runs every step that runs a script
+  clone, an unpacked release or a second worktree (another checkout of the same
+  repository, made with `git worktree`) has no records of output folders made from
+  another MetaFlux folder, and its files are newer than the outputs made before it.
+  Pointed at such an output folder, it runs every step that runs a script
   again, with the steps after it, but notices no change to a command or a setting.
   Re-run an output folder from the MetaFlux folder that made it, brought up to date
   with `git pull`.

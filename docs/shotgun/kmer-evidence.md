@@ -427,21 +427,21 @@ were scored as in the benchmark, against the sample's 252 gold-standard species:
 | True / false species, gate off | 217 / 71 | 216 / 69 | 216 / 68 | 216 / 68 |
 | True / false species, 300 | 217 / 68 | 216 / 67 | 216 / 66 | 216 / 67 |
 | True / false species, `auto` | 217 / 68 | 216 / 64 | 216 / 63 | 216 / 61 |
-| Recall, every arm | 0.861 | 0.857 | 0.857 | 0.857 |
+| Recall, gate off, 300 and `auto` | 0.861 | 0.857 | 0.857 | 0.857 |
 | Precision, gate off → 300 → `auto` | 0.754 → 0.761 → 0.761 | 0.758 → 0.763 → 0.771 | 0.761 → 0.766 → 0.774 | 0.761 → 0.763 → 0.780 |
 | Species-level F1, gate off | 0.804 | 0.804 | 0.806 | 0.806 |
 | F1 change, 300 | +0.0045 | +0.0030 | +0.0030 | +0.0015 |
 | F1 change, `auto` | +0.0045 | +0.0076 | +0.0076 | +0.0107 |
 | True / false species, `auto`, as the depth model predicted | 216 / 66 | 216 / 64 | 216 / 63 | the model's starting point |
 
-- **No true species was removed**, at any depth, by either floor: recall is the same in
-  the three arms of every rung. Relative to its floor, the true species closest to
+- **No true species was removed**, at any depth, by either floor: recall is the same
+  with the gate off, at 300 and with `auto`, at every depth. Relative to its floor, the true species closest to
   removal was *Aliivibrio wodanis* at full depth, 7,263 distinct minimizers against
   6,309 (1.15 times the floor); at 0.76 million the weakest true species,
   *Synechococcus* sp. WH 8020, had 1,186 against 759.
 - **The depth model held where it was really tested.** The model starts from the
   full-depth run and thins its calls to a shallower depth, so the 6.31 M column is its
-  starting point, not a test, and the two middle rungs are the real tests: at 1.90 and
+  starting point, not a test, and the two middle depths are the real tests: at 1.90 and
   3.79 million it gave the numbers of true and false species of `auto` exactly, and the
   true species kept the distinct minimizers it predicted for them (median within 1 %). At
   0.76 million it was off in two ways. Species near Bracken's read threshold come and go
