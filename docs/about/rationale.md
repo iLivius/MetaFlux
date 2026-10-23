@@ -61,7 +61,7 @@ The `amplicon_probe` rule works in one of two ways depending on the marker:
 
 | Probe mode | Markers | What it does | Reference used |
 |------------|---------|--------------|----------------|
-| PCR | 16S, 18S, rpoB | Two-pass in-silico PCR with Cutadapt: keep reference sequences carrying the forward primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end; the surviving trimmed sequences are the predicted products | SILVA, SILVA-Euk, FROGS |
+| PCR | 16S, 18S, rpoB, COI | Two-pass in-silico PCR with Cutadapt: keep reference sequences carrying the forward primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end; the surviving trimmed sequences are the predicted products | SILVA, SILVA-Euk, FROGS, MIDORI2 |
 | Direct | ITS, gyrB | Measure lengths straight off a reference that is already amplicon-length — no primer binding sites needed | UNITE UCHIME pre-extracted ITS1/ITS2, DD7RZ8 pre-trimmed amplicons |
 
 Direct mode exists because in-silico PCR does not work against these two references:

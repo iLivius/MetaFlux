@@ -359,7 +359,8 @@ two ways, chosen by the marker pack, not by the user.
 
 ### `probe_mode: pcr` — in-silico PCR
 
-Used when the reference database holds full-length sequences (16S, 18S, rpoB). Cutadapt
+Used when the reference database holds full-length sequences (16S, 18S, rpoB, COI).
+Cutadapt
 is run twice against the reference FASTA:
 
 1. The reverse primer file is reverse-complemented with `seqtk seq -r`, because in a
@@ -481,9 +482,9 @@ would leave the long tail unmergeable.
 
     Every marker except ITS *reads* a `probe_length_stat` key when
     `expected_length: auto`. The key is *required* for every marker except ITS, whether
-    or not `expected_length` is `auto` — a 16S, 18S, gyrB or rpoB run with a manual
-    integer length and no matching key still stops at start-up, with the exact key to
-    add in the message. Note that gyrB reads `probe_length_stat.16S`, not a key of its
+    or not `expected_length` is `auto` — a 16S, 18S, gyrB, rpoB or COI run with a
+    manual integer length and no matching key still stops at start-up, with the exact
+    key to add in the message. Note that gyrB reads `probe_length_stat.16S`, not a key of its
     own.
 
 ### Probe caching

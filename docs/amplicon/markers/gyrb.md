@@ -115,7 +115,7 @@ its own `p__`/`c__`/… — the species slot stays a GTDB binomial such as
 
 ## Amplicon length: measured directly, not by in-silico PCR
 
-For 16S, 18S and rpoB the amplicon-length probe runs an in-silico PCR: two passes of
+For 16S, 18S, rpoB and COI the amplicon-length probe runs an in-silico PCR: two passes of
 cutadapt against a full-length reference, keeping the sequences that carry the forward
 primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end. That
 is impossible against DD7RZ8, whose sequences have already had those primer sites cut off

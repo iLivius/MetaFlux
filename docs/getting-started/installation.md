@@ -112,6 +112,7 @@ by hand.
 | PR2 (DADA2 + UTAX) + SILVA-Euk     | amplicon (18S)     | **Auto-fetched** from GitHub/Zenodo on first run                       |
 | DD7RZ8 (DADA2 trainset)            | amplicon (gyrB)    | **Auto-fetched** from Recherche Data Gouv                              |
 | FROGS RefSeq (converted to DADA2)  | amplicon (rpoB)    | **Auto-fetched + converted** on first run                              |
+| MIDORI2 (SINTAX) + bacterial COX1 set | amplicon (COI)  | **Auto-fetched + converted** — MIDORI2 GB273 with its taxonomy snapshot (md5- and SHA-256-checked) and the bacterial COX1 set (SHA-256-checked), both from Zenodo; the SINTAX file MetaFlux classifies against is built locally |
 | Kraken2 database                   | shotgun (`profiler: kraken2` or `both`) | **User-supplied** (see below)                     |
 | sylph databases + lineage tables   | shotgun (`profiler: sylph` or `both`) | **User-supplied** (see [sylph](../shotgun/sylph.md#databases-and-lineage-tables-set-up-once)) |
 | Host genome(s)                     | shotgun (optional) | **User-supplied** (path or URL)                                        |
@@ -134,6 +135,7 @@ does not pull UNITE or PR2.
 | 18S | `silva_euk/silva_132.18s.dada2.fa.gz`, `pr2/pr2_SSU_dada2.fasta.gz`, `pr2/pr2_SSU_UTAX.fasta.gz`, plus one built file: `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` | Zenodo (SILVA-Euk v132) and the PR2 v5.1.1 GitHub release; the built file is the UTAX file with its domain moved to the SINTAX letter `d:`, made by `convert_pr2_sintax` and only for `method: sintax` |
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
 | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | FROGS rpoB databank (INRAE Toulouse); downloaded as a `.tar.gz` and rewritten into a DADA2 trainset, with the domain written `d__`, by `convert_rpob_to_dada2` |
+| COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`, `midori2/GB273/taxonomy/nodes.dmp` and `names.dmp`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv`, plus one built file: `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | MIDORI2's Zenodo record (the SINTAX zip and the taxonomy zip, unpacked by `fetch_midori2_coi` / `fetch_midori2_taxonomy`) and the Zenodo record of the bacterial COX1 set (`fetch_bacterial_cox1`); the built file is made by `prepare_midori2_coi_sintax` from the three, with the domain under `d:`, the kingdom added and the bacterial records left out |
 
 `refdb_root` defaults to `refdb`, i.e. inside the clone:
 
@@ -164,8 +166,8 @@ starts classifying immediately.
 !!! note "The probe cache is not under `refdb_root`"
 
     The amplicon-length probe result is cached separately, always in `refdb/cache/`
-    inside the repository, whatever `refdb_root` is set to. For 16S, 18S and rpoB the
-    probe is an in-silico PCR of the primers against a full-length reference; for ITS
+    inside the repository, whatever `refdb_root` is set to. For 16S, 18S, rpoB and COI
+    the probe is an in-silico PCR of the primers against a full-length reference; for ITS
     and gyrB it is a direct length measurement of a reference that is already
     amplicon-length. Its filenames carry the marker, the reference version (for 16S
     also the lineages left out of the statistics; for rpoB `_excl-second-site`, because

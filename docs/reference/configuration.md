@@ -747,7 +747,7 @@ still runs either way.
 
 | Key | What it does | Default | Notes |
 |---|---|---|---|
-| `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists, and switches `organelles` off too. |
+| `enabled` | Master switch | `true` | `false` keeps every ASV regardless of the lists, and switches `organelles` off too. For COI the frame check and the off-target guard have their own switches (`amplicon.coi`) and are not affected by this one. |
 | `keep` | Tokens defining what survives | unset → `[]` | An ASV is kept only if one of its ranks matches a token. An empty list does nothing. |
 | `discard` | Tokens pruning what `keep` left | unset → `[]` | An ASV is removed if any of its ranks matches a token. Runs after `keep`. |
 | `discard_min_support` | Best-hit check for `discard`, in percent | `50` | An ASV is also removed when the classifier's best hit carries a `discard` token at that token's rank with at least this support (rdp bootstrap; SINTAX confidence ×100), even if the rank is below `min_boot` / `sintax_cutoff` and missing from the reported lineage. Catches mitochondrial 16S that is reported only to phylum or class. A number from 0 to 100. `null` (or `false` / `off` / `no`) switches it off, which gives the v2.4.0 behaviour. Anything else stops the run at start-up: a value outside 0–100, text that is not a number, and also `true` / `on` / `yes`, which YAML reads as a yes/no value rather than a number. It does nothing while `discard` is empty. See [the best-hit check](../amplicon/taxon-filter.md#the-best-hit-check-discard_min_support). |
@@ -799,7 +799,8 @@ The full treatment is on
     offtarget_guard: true
 ```
 
-Read only when `type: COI`. Rule `coi_screens` measures every ASV for both screens and
+Used only when `type: COI` (the value of `length_tolerance` is checked at start-up for
+every marker). Rule `coi_screens` measures every ASV for both screens and
 writes `06.taxonomy/coi_screens.tsv`; the taxonomy step applies them before the taxon
 filter. A screen switched off still measures, so the table says what it would have done.
 See [COI](../amplicon/markers/coi.md#the-coi-screens).

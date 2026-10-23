@@ -329,7 +329,7 @@ modes, fixed by the marker pack:
 
 | Mode | Markers | What it does |
 |------|---------|--------------|
-| `pcr` | 16S, 18S, rpoB | In-silico PCR. Two Cutadapt passes over a full-length reference: find the forward primer wherever it sits and cut it away along with everything before it, then, of those sequences, find the reverse complement of the reverse primer and cut it away along with everything after it. What survives between the two primer sites is the predicted amplicon. |
+| `pcr` | 16S, 18S, rpoB, COI | In-silico PCR. Two Cutadapt passes over a full-length reference: find the forward primer wherever it sits and cut it away along with everything before it, then, of those sequences, find the reverse complement of the reverse primer and cut it away along with everything after it. What survives between the two primer sites is the predicted amplicon. |
 | `direct` | ITS, gyrB | The reference is already cut to amplicon length — UNITE's pre-extracted UCHIME ITS1/ITS2 subregions, or DD7RZ8's pre-trimmed gyrB amplicons — so lengths are read straight off it. In-silico PCR would fail here: there are no primer sites left to cut against. |
 
 Either way, the step writes a JSON holding the length distribution: `n_amplicons`, `min`,
@@ -340,7 +340,8 @@ JSON records what was left out (`excluded_taxa`, `n_excluded`). For rpoB, produc
 still hold a second forward-primer site are left out too (`n_excluded_second_site`):
 their forward primer matched a look-alike stretch upstream of its real site. Which
 single statistic feeds the truncation constraint is set by
-`amplicon.probe_length_stat.<key>` (the shipped config uses `p95` for 16S, 18S and rpoB).
+`amplicon.probe_length_stat.<key>` (the shipped config uses `p95` for 16S, 18S, rpoB and
+COI).
 
 The result is cached in the repository under `refdb/cache/`, not under `out_dir`, and the
 filename encodes the marker, the reference (for 16S including the lineages left out, for

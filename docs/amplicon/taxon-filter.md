@@ -262,10 +262,11 @@ columns.
 | Column | Values |
 |---|---|
 | `metaxa2_origin` | Metaxa2's call: `mitochondria`, `chloroplast`, `bacteria`, `archaea`, `eukaryota`, `uncertain`. `NA` where Metaxa2 did not run (other markers, or extraction off) or made no call. Filled whenever Metaxa2 ran, also with `organelles: off`. |
-| `filter_status` | `kept`, `removed_keep`, `removed_discard`, `removed_best_hit` or `removed_organelle` |
+| `filter_status` | `kept`, `removed_keep`, `removed_discard`, `removed_best_hit` or `removed_organelle`; for COI also `removed_frame` and `moved_bacterial_cox1`, from the two [COI screens](markers/coi.md#the-coi-screens) |
 
 An ASV that more than one step would remove is labelled with the first one, in the order
-the filter runs them: keep, discard, best-hit check, organelle filter. So
+the filter runs them: keep, discard, best-hit check, organelle filter (for COI the two
+COI screens come first). So
 `removed_organelle` means that only Metaxa2 caught it, while `metaxa2_origin` shows
 Metaxa2's opinion on every row, whatever the status. The `kept` rows are `asv_table.txt`
 exactly, and the read counts of all rows add up to the `post_length_filter` column of

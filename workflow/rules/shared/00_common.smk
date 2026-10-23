@@ -127,7 +127,7 @@ def mem_mb_for(rule_name: str) -> int:
 
 
 # ────────────────────── Marker registry ────────────────────────
-# "A marker" here means everything that differs between 16S, ITS, 18S, gyrB and rpoB
+# "A marker" here means everything that differs between 16S, ITS, 18S, gyrB, rpoB and COI
 # but is a FACT about that marker rather than a choice about your particular run: which
 # reference database to measure amplicon length against, which database to classify
 # against, whether a region-extraction tool exists for it, and how many taxonomic
@@ -1150,8 +1150,8 @@ if MODE == "amplicon":
     PRIMER_HASH = _primer_pair_hash(PRIMER_FWD, PRIMER_REV)
 
     # ── Amplicon-probe wiring (from the marker profile) ──
-    #   pcr mode    (16S, 18S, rpoB) → in-silico PCR of the primers against a
-    #               full-length reference (SILVA / SILVA-Euk / FROGS).
+    #   pcr mode    (16S, 18S, rpoB, COI) → in-silico PCR of the primers against a
+    #               full-length reference (SILVA / SILVA-Euk / FROGS / MIDORI2).
     #   direct mode (ITS, gyrB)      → lengths read straight from a reference that
     #               is already amplicon-length (UNITE UCHIME / DD7RZ8).
     PROBE_MODE        = PROFILE["probe_mode"]
@@ -1243,7 +1243,7 @@ if MODE == "amplicon":
             f"{MARKER_EXTRACTOR!r} — must be 'metaxa2', 'itsx', or 'none'."
         )
 
-    # A marker whose profile has no region extractor (18S, gyrB, rpoB) defines no
+    # A marker whose profile has no region extractor (18S, gyrB, rpoB, COI) defines no
     # target_extract rule in 70_extract.smk. Leaving extraction.enabled true would
     # make the DAG ask for seqs_extracted.fasta, which nothing produces — a
     # confusing missing-input error. Force it off and say so instead.

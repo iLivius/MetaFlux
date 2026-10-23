@@ -12,14 +12,14 @@
 #   [amplicon] — only used when mode: amplicon
 #   [shotgun]  — only used when mode: shotgun
 
-# ┌────────────────────────────────────────────────────────────────────┐
-# │ WHAT THIS RUN IS — the lines that define the analysis.             │
-# │   mode             : amplicon | shotgun            (below)         │
-# │   amplicon.type    : 16S | ITS | 18S | gyrB | rpoB (amplicon block)│
-# │   shotgun.profiler : kraken2 | sylph | both        (shotgun block) │
-# │   input.fastq_dir / output.out_dir                 (below)         │
-# │ Everything else in this file is tuning and can usually stay.       │
-# └────────────────────────────────────────────────────────────────────┘
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ WHAT THIS RUN IS — the lines that define the analysis.                    │
+# │   mode             : amplicon | shotgun                  (below)          │
+# │   amplicon.type    : 16S | ITS | 18S | gyrB | rpoB | COI (amplicon block) │
+# │   shotgun.profiler : kraken2 | sylph | both              (shotgun block)  │
+# │   input.fastq_dir / output.out_dir                       (below)          │
+# │ Everything else in this file is tuning and can usually stay.              │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 # ─────────────────────── Mode selection ─────────────────────────
 # Selects which set of rules runs — amplicon or shotgun (chosen here, not auto-detected).
@@ -220,7 +220,7 @@ amplicon:
                                               # ceiling collapses to the single shortest read in
                                               # the file. There is no value that switches the
                                               # guard off.
-    # 16S, 18S, gyrB and rpoB all use the same Q-based picker + overlap constraint.
+    # 16S, 18S, gyrB, rpoB and COI all use the same Q-based picker + overlap constraint.
     # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
     # no hard cut is applied; quality is controlled by maxEE and min_len only.
 
@@ -306,8 +306,9 @@ amplicon:
       # organelles included, whatever this is set to.
       organelles: metaxa2
 
-  # COI only (ignored for every other marker): two screens of rule coi_screens,
-  # applied by the taxonomy step before keep/discard. Both are on by default.
+  # COI only: two screens of rule coi_screens, applied by the taxonomy step before
+  # keep/discard. Both are on by default. Every other marker ignores the block,
+  # except that length_tolerance is checked at start-up whatever the marker.
   # 06.taxonomy/asv_table_unfiltered.txt keeps every ASV, with the step that removed
   # it (removed_frame, moved_bacterial_cox1); 06.taxonomy/coi_screens.tsv holds the
   # measurements behind each decision. See docs/amplicon/markers/coi.md.
