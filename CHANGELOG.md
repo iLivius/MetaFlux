@@ -61,8 +61,9 @@ and writes the same reads as in v2.5.0.
   in the 18S test set, none in the 16S and ITS test sets. With 10 bases, 1 pair in
   SRR8082166 and 32 in the gyrB test set are still written twice. The cost is the pairs
   whose primer is found from only 3 to 9 of its bases at the start of a mate, which are
-  now dropped: 0.006–0.15 % of the pairs in the test sets of the shipped markers. In
-  those pairs the mate cut short is hardly ever a cleanly trimmed amplicon read.
+  now dropped: 0.006–0.15 % of the pairs in the 16S, ITS, 18S, gyrB and rpoB test
+  sets, and at most 0.06 % in the four COI mock libraries. In those pairs the mate cut
+  short is hardly ever a cleanly trimmed amplicon read.
 
 For a user of `mixed`: reversed pairs now merge to the full amplicon and are no longer
 written twice, so the tables of a `mixed` run change; re-run such folders (see below).

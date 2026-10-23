@@ -248,8 +248,8 @@ rule revcomp_primers:
 #
 # What the 10 bases cost: the pairs in which a primer is found only from 3 to 9
 # of its bases at the start of a read, which orientation: fixed keeps. That is
-# 0.006-0.15 % of the pairs in the test sets of the five shipped markers and at
-# most 0.06 % in the four COI libraries measured. Hardly any of them are
+# 0.006-0.15 % of the pairs in the 16S, ITS, 18S, gyrB and rpoB test sets and
+# at most 0.06 % in the four COI libraries measured. Hardly any of them are
 # cleanly trimmed amplicon reads: the read cut short carries the rest of a
 # primer that differs from the given one by more than the error rate allows, or
 # it is a read of something else, such as a low-complexity read. The amplicon
