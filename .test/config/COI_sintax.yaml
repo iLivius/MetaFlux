@@ -5,7 +5,11 @@
 # dry run creates nothing: out_dir and refdb_root never come into being. See
 # .test/README.md.
 # Data: 300 read pairs each of two slices of the BF3/BR2 run of the Elbrecht et al. 2019
-# insect mock (SRR8082166). In that library R1 carries BR2, hence orientation: mixed.
+# insect mock (SRR8082166), in which every R1 carries the reverse primer BR2. For real
+# data like this the COI page recommends swapping the two files and keeping
+# orientation: fixed. This config sets orientation: mixed instead, so that the matrix
+# also builds one plan with that setting; it is the only config that does. A dry run
+# never runs Cutadapt, so which primer the reads start with makes no difference here.
 mode: amplicon
 input:
   fastq_dir: .test/data/COI
