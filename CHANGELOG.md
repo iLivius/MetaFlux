@@ -96,7 +96,13 @@ sample. With one sample, `pool` has nothing to pool: DADA2 denoises it on its ow
 two or more samples nothing changes: on the 16S test set the sequence tables, the FASTA,
 the read counts and the error-plot PNGs came out byte for byte the same.
 `CONTRIBUTING.md` adds a real run with a single sample to the release checks, since the
-unit tests and the dry runs never run R.
+unit tests and the dry runs never run R. Five one-sample runs, across markers and modes,
+finished: 16S with SINTAX and with `rdp` plus the species step, ITS, gyrB under `rdp`,
+and the shotgun test set with `profiler: both`. The shotgun sample came out identical to
+its column in the four-sample run; the amplicon tables differ from the same sample's
+column in a multi-sample run only through what a run decides from all of its samples
+(the truncation lengths, DADA2's error model and its chimera vote, and the classifier's
+random draws, which depend on which ASVs the run has), as expected.
 
 ### k-mer evidence floor `auto`, sized to each sample's depth
 
@@ -186,13 +192,29 @@ v2.5.0, except that under `method: rdp` a few bootstrap values, and now and then
 lineage, can move, as between any two identical runs (DADA2's `assignTaxonomy` breaks
 exact ties at random; see the troubleshooting page). Each change was checked on its
 own: under `fixed`, `trim_primers` writes the same reads as v2.5.0 (30 samples: the five
-test sets and four COI mock libraries); with two or more samples, `dada_seqtab` writes
-the same tables (16S test set); with the COI code, the 18S run of 120 samples made with
-v2.5.0 gave the four tables of `06.taxonomy/` and `stats/read_tracking.txt` byte for
-byte the same; at the default floor of 300 the k-mer evidence files are byte for byte
-those of v2.5.0. [To be settled before release, from validation V4: the seven v2.5.0
-acceptance runs made again with v2.6.0 into new folders, every table compared byte for
-byte with v2.5.0, and each difference under `rdp` explained.] With
+test sets and four COI mock libraries); with `mixed` on the 16S test set with every pair
+swapped, the taxonomy, the ASV names and the tree are those of the v2.5.0 run of the
+original files, with 7 of 193,097 final reads fewer (the pairs the 10 bases cost); with
+two or more samples, `dada_seqtab` writes the same tables (16S test set); with the COI
+code, the 18S run of 120 samples made with v2.5.0 gave the four tables of `06.taxonomy/`
+and `stats/read_tracking.txt` byte for byte the same; at the default floor of 300 the
+k-mer evidence files are byte for byte those of v2.5.0.
+
+All the changes together were checked too: the seven test-dataset runs made for v2.5.0
+(the 16S, ITS, 18S, gyrB and rpoB test sets with `fixed`, gyrB and rpoB under `rdp`, and
+the shotgun test set with `profiler: both` and with `profiler: sylph`) were made again
+with v2.6.0 into new folders. Every step that processes the reads ran as in v2.5.0, and
+every ASV and taxonomy table, FASTA file, tree and read count came out byte for byte as
+with v2.5.0, the `rdp` taxonomy included; every read file held the same reads (the
+compressed classified-read files of the shotgun run differ only in the time stamp of
+their gzip header). Four kinds of file differ, as they can between any two runs, and
+none changes a result: Cutadapt's reports in `stats/cutadapt/` name the temporary folder
+of `trim_primers`, which gets a random name; the raw SINTAX output
+(`06.taxonomy/_sintax_raw.tsv`) and ITSx's chart of profile hits
+(`05.dada2/_itsx_tmp/seqs.graph`) hold the same lines in another order; and Metaxa2's
+own taxonomy file (`05.dada2/metaxa2/seqs.taxonomy.txt`), which nothing reads, quotes
+for one ASV of the 16S run another of four equally good hits (91.95 % identity over 373
+bases instead of 91.91 % over 371). With
 `orientation: mixed` the results change on purpose, and nothing needs to be added to
 the command: in every folder made with `mixed`, `trim_primers` and every step after it
 run again, after a `git pull` as from a fresh clone, a release archive or a new
