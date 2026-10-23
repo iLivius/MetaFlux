@@ -3,7 +3,8 @@
 Every marker MetaFlux supports is exercised on a small published dataset before a
 release. The runs are deliberately small — four to six samples each — so the whole
 amplicon path can be re-run in minutes after a change and the output compared against
-the previous result.
+the previous result. COI is the exception: one library per primer pair, 0.9 to 1.4
+million read pairs each, run as one sample.
 
 All the data on this page are public and reachable from the accessions and references
 given, so any
@@ -43,9 +44,11 @@ The COI runs (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) use one lib
 primer pair, each run as one sample. In the BF3/BR2 and fwhF2/fwhR2n libraries every R1
 carries the reverse primer, so their R1 and R2 files were swapped and the runs kept
 `orientation: fixed`; the Leray-XT library ran with `fixed` as distributed.
-[To be settled before release, from validation V5: the numbers of the next two
-sentences, from the runs just described; the ones shown come from the earlier runs, in
-which each library was split into two pseudo-samples of alternate read pairs.] 359
+[To be settled before release, from validation V5: how the BF3/BR2 and fwhF2/fwhR2n runs
+were made, which the sentence above gives as files swapped and `orientation: fixed`
+(correct it if they ran with `mixed`), and the numbers of the next two sentences, from
+those runs; the ones shown come from the earlier runs, in which each library was split
+into two pseudo-samples of alternate read pairs.] 359
 (BF3/BR2), 353 (Leray-XT) and 362 (fwhF2/fwhR2n) of the 374 specimens are recovered by an
 ASV at least 97 % identical to their barcode, and the ASVs that match a specimen hold
 99.2–99.4 % of the reads of the final tables. The off-target guard moves 12–22 bacterial

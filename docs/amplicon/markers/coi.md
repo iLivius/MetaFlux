@@ -281,9 +281,11 @@ every R1 carries the reverse primer, so their two files were swapped and the run
 `orientation: fixed`, as the warning above recommends; the Leray-XT library, whose R1
 carries the forward primer, ran with `fixed` as distributed.
 
-[To be settled before release, from validation V5: the table and the four points below,
-measured again on the runs just described. The values now shown come from the earlier
-runs, in which each library was split into two pseudo-samples of alternate read pairs.]
+[To be settled before release, from validation V5: how the BF3/BR2 and fwhF2/fwhR2n runs
+were made, which the paragraph above gives as files swapped and `orientation: fixed`
+(correct it if they ran with `mixed`), and the table and the four points below, measured
+again on those runs. The values now shown come from the earlier runs, in which each
+library was split into two pseudo-samples of alternate read pairs.]
 
 | | BF3/BR2 | Leray-XT | fwhF2/fwhR2n |
 |---|---|---|---|
