@@ -82,7 +82,8 @@ references:
     url:     https://zenodo.org/records/22685701/files/MIDORI2_GB273_KRAKEN2_taxonomy.zip?download=1
     md5:     fb562910696f35a6bbaf867263d236aa
     doi:     10.5281/zenodo.22685701
-  # [Zenodo URLs, DOI and SHA-256 to be filled in when the release is published.]
+  # [To be settled before release: the Zenodo URLs, DOI and SHA-256 of the three files
+  # of the bacterial COX1 set below, once the set is published.]
   bacterial_cox1:
     archive: files
     file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz

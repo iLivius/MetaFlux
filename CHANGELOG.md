@@ -6,7 +6,7 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
-## 2.6.0 — [date to be set at release]
+## 2.6.0 — [To be settled before release: the date]
 
 ### COI, a new amplicon marker
 
@@ -33,9 +33,10 @@ need about 225 GB of memory at species level.
   species call can be trusted (`low_identity` below 98 %, `shared_sequence` when a
   record of another named species is as close) and flags ASVs farther than 80 % from
   everything in MIDORI2.
-- **The bacterial COX1 set** (`bacterial_cox1_gtdb-r232.v1`, Zenodo [DOI]) was built for
-  this release from the 199,923 species representatives of GTDB R232; how, and how it
-  was tested, is on the new manual page "Bacterial COX1 reference set (COI)".
+- **The bacterial COX1 set** (`bacterial_cox1_gtdb-r232.v1`, Zenodo
+  [To be settled before release: its DOI]) was built for this release from the 199,923
+  species representatives of GTDB R232; how, and how it was tested, is on the new
+  manual page "Bacterial COX1 reference set (COI)".
 
 ### Mixed orientation: reversed pairs swapped back, and kept once
 

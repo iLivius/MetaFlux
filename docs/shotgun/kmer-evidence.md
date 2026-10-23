@@ -390,11 +390,11 @@ Kraken2 report. The deeper samples then get a more lenient floor than they could
 What `auto` does on samples sequenced at known depths, and on samples deeper than any
 in the benchmark:
 
-[V3 result: measured depth ladder. CAMI II marine sample 0 at 2, 5, 10 and 16.6 million read pairs, four samples in one run with PlusPF and the gate on, once with `auto` and once with 300: species precision, recall and F1 against the corrected gold standard, compared with what the depth model predicted for these depths.]
+[To be settled before release, from validation V3: measured depth ladder. CAMI II marine sample 0 at 2, 5, 10 and 16.6 million read pairs, four samples in one run with PlusPF and the gate on, once with `auto` and once with 300: species precision, recall and F1 against the corrected gold standard, compared with what the depth model predicted for these depths.]
 
-[V3 result: deep mock. MBARC-26 (51.9 million classified pairs, 26 known genomes): which known members the floor of 300, `auto` (capped at 6,500) and an uncapped floor (about 51,850) would remove.]
+[To be settled before release, from validation V3: deep mock. MBARC-26 (51.9 million classified pairs, 26 known genomes): which known members the floor of 300, `auto` (capped at 6,500) and an uncapped floor (about 51,850) would remove.]
 
-[V3 result: deep soils. The Schoenbuch forest soils with PlusPF: how much `auto` removes in deep, diverse samples.]
+[To be settled before release, from validation V3: deep soils. The Schoenbuch forest soils with PlusPF: how much `auto` removes in deep, diverse samples.]
 
 #### Limits of the rule
 
@@ -422,7 +422,7 @@ These hold with `auto` and with a number sized by hand:
   samples higher floors (2,176 to 3,458), so there it removes at least as much. Compare
   `otu_table.tsv` with the gate off and on before relying on it.
 
-    [V3 result: test dataset with `auto`. PRJNA1477390, gate on with `auto`: the floor of each sample (1,673, 2,176, 2,267 and 3,458), the species kept in `otu_table.tsv`, against 300 and the single floor of 1,673, and the change in total read pairs (the row the table at 300 has). Every statement on lost reads was measured at 300. The kmer_evidence logs estimate the read pairs Bracken will drop at 2.85–4.34 % of the classified pairs with `auto`, against 0.10–0.22 % at 300, where the measured change was between −0.09 and +0.01 %. If the measured change with `auto` is not small, revise "usually a small fraction of the sample" in the warning under "How a taxon is removed" and in the comment of `min_distinct_minimizers` in `config/config.yaml`. Check the *Homo sapiens* row: in the Kraken2 reports it has 605 to 1,743 distinct minimizers, below the `auto` floor of every sample, so the gate removes it.]
+    [To be settled before release, from validation V3: test dataset with `auto`. PRJNA1477390, gate on with `auto`: the floor of each sample (1,673, 2,176, 2,267 and 3,458), the species kept in `otu_table.tsv`, against 300 and the single floor of 1,673, and the change in total read pairs (the row the table at 300 has). Every statement on lost reads was measured at 300. The kmer_evidence logs estimate the read pairs Bracken will drop at 2.85–4.34 % of the classified pairs with `auto`, against 0.10–0.22 % at 300, where the measured change was between −0.09 and +0.01 %. If the measured change with `auto` is not small, revise "usually a small fraction of the sample" in the warning under "How a taxon is removed" and in the comment of `min_distinct_minimizers` in `config/config.yaml`. Check the *Homo sapiens* row: in the Kraken2 reports it has 605 to 1,743 distinct minimizers, below the `auto` floor of every sample, so the gate removes it.]
 
 ## Why the default is `enabled: false`
 
