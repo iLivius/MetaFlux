@@ -221,14 +221,15 @@ the files swapped, Cutadapt runs one pass and its report describes all the reads
 
 Measured on the 16S test set with the two files of every sample swapped, `mixed` gave
 the taxonomy, the ASV names and the tree of the `fixed` run on the original files. The
-trimmed reads differed only by what the 10 bases cost or added: 517 pairs dropped and 4
-trimmed 3 bases shorter (together 0.15 % of the pairs), and 22 pairs that came the other
-way round in the original files, which `fixed` had dropped. Nearly all of these fail
-DADA2's quality filter anyway, and the final ASV table differed by 7 of 193,097 reads, in
-two ASVs. With the mates of every second pair swapped instead, the trimmed files held the
-same pairs in another order, the first pass's pairs first, and DADA2 gave the same
-counts; only ASVs with exactly the same counts can then be numbered in another order.
-With `method: sintax`, an ASV that changes its number also changes its place in the
+trimmed reads differed only by what the 10 bases cost and what the swap brought in: 517
+pairs dropped and 4 trimmed 3 bases shorter (together 0.15 % of the pairs), and 22 pairs
+that came the other way round in the original files, so `fixed` had dropped them and the
+swap put them the right way round. Nearly all of these fail DADA2's quality filter
+anyway, and the final ASV table differed by 7 of 193,097 reads, in two ASVs. With the
+mates of every second pair swapped instead, the trimmed files held the same pairs in
+another order, the first pass's pairs first, and DADA2 gave the same counts; only ASVs
+with exactly the same counts can then be numbered in another order. With
+`method: sintax`, an ASV that changes its number also changes its place in the
 classifier's input, and VSEARCH bases each ASV's random bootstrap draws on the seed and
 on that place, so a lineage near the confidence cutoff can gain or lose a rank: here 5 of
 226 ASVs, each of 2 to 6 reads, and their counts did not change. Compare such runs by
