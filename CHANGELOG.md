@@ -41,9 +41,9 @@ need about 225 GB of memory at species level.
 ### Mixed orientation: reversed pairs swapped back, and kept once
 
 With `amplicon.primers.orientation: mixed`, `trim_primers` runs a second Cutadapt pass
-with the primers swapped, for the pairs whose R1 carries the reverse primer. Two things
-change in it. With `orientation: fixed`, the default, Cutadapt gets the same arguments
-and writes the same reads as in v2.5.0.
+with the primers swapped, for the pairs whose R1 carries the reverse primer. Three things
+change under `mixed`. With `orientation: fixed`, the default, Cutadapt gets the same
+arguments and writes the same reads as in v2.5.0, and no new file is written.
 
 - **The two mates of a reversed pair are swapped, not reverse-complemented.** Every
   version since v1.0.0 reverse-complemented each mate. That put the reads on the right
@@ -65,10 +65,17 @@ and writes the same reads as in v2.5.0.
   now dropped: 0.006–0.15 % of the pairs in the 16S, ITS, 18S, gyrB and rpoB test
   sets, and at most 0.06 % in the four COI mock libraries. In those pairs the mate cut
   short is hardly ever a cleanly trimmed amplicon read.
+- **A new file, `stats/orientation/{sample}.tsv`**, under `mixed` only: the read pairs
+  that went into primer trimming, the pairs the first pass kept as sequenced and the
+  pairs the second pass kept and swapped, each with its share of the pairs that went
+  in, from Cutadapt's reports of the two 5′ calls. Nothing in the pipeline reads it. A
+  folder trimmed with `mixed` by v2.5.0 lacks it, and a run asks for it, so primer
+  trimming and every step after it run again in such a folder, however v2.6.0 was
+  obtained: that is what brings the two changes above to old folders.
 
 For a user of `mixed`: reversed pairs now merge to the full amplicon and are hardly
-ever written twice, so the tables of a `mixed` run change; re-run such folders (see
-below).
+ever written twice, so the tables of a `mixed` run change; re-run such folders, and
+MetaFlux processes them again from primer trimming on (see below).
 In a truly mixed library the R1 file now holds read 1 of the pairs that came the right
 way round and read 2 of the reversed ones, and DADA2 fits its R1 and R2 error models to
 that blend. [To be settled before release, from validation V1b: what the blend changes
@@ -136,7 +143,8 @@ says. Every step after a step that runs again runs again too.
 new date only to the files it changes, and Snakemake has the records.
 
 - Amplicon mode, every marker, both orientation settings: `trim_primers` and every step
-  after it run again, because its command changed: falco on the trimmed reads, the
+  after it run again, because its command changed (with `mixed`, also because its new
+  file, `stats/orientation/{sample}.tsv`, is missing): falco on the trimmed reads, the
   stripped-read counts, `pick_trunclen`, DADA2, the extraction where it runs, the
   taxonomy, the read tracking, the phylogeny and MultiQC. The raw-read links, counts
   and QC, the PhiX removal, the primer files, the reference databases and the length
@@ -163,8 +171,10 @@ v2.6.0 changed that script or not: in amplicon mode the quality plots of the tri
 reads, `pick_trunclen` and everything after it (fetching the reference databases and
 computing the length probe again unless `refdb/` was carried over), in shotgun mode the
 k-mer evidence, the sylph tables, the OTU table, the read tracking and MultiQC. A step
-without a script has nothing to be compared with, so `trim_primers` does not run again,
-and a changed setting goes unnoticed.
+without a script has nothing to be compared with, and a changed setting goes unnoticed,
+so in a folder made with `fixed` `trim_primers` does not run again. In a folder made
+with `mixed` it does, for every sample and with every step after it, because the
+orientation table it now writes is missing there.
 
 **Results.** With `orientation: fixed` the steps that run again give the results of
 v2.5.0, except that under `method: rdp` a few bootstrap values, and now and then a
@@ -178,21 +188,25 @@ byte the same; at the default floor of 300 the k-mer evidence files are byte for
 those of v2.5.0. [To be settled before release, from validation V4: the seven v2.5.0
 acceptance runs made again with v2.6.0 into new folders, every table compared byte for
 byte with v2.5.0, and each difference under `rdp` explained.] With
-`orientation: mixed` the results change on purpose: let the steps run, and in a folder
-opened from a fresh clone, a release archive or a new worktree add
-`--forcerun trim_primers`, or DADA2 runs again on the reads v2.5.0 trimmed.
+`orientation: mixed` the results change on purpose, and nothing needs to be added to
+the command: in every folder made with `mixed`, `trim_primers` and every step after it
+run again, after a `git pull` as from a fresh clone, a release archive or a new
+worktree, because v2.5.0 did not write the orientation table.
 
 **Skipping the reruns.** `--rerun-triggers mtime params input software-env` leaves out
-the check of commands and script dates. With it only MultiQC runs again: after a
-`git pull` the release has changed its settings file, `workflow/multiqc_config.yaml`,
-and in a fresh clone that file is newer than the old report; Snakemake checks the input
-files of a step whatever `--rerun-triggers` says. The option holds only for the run it
-is given to: Snakemake keeps the old records, so a later run without it finds the same
-changes. Give it to every later run on that output folder, or let the steps run once;
-while it is given, a later change of a command or a script, a future fix included,
-goes unnoticed too. Do not use it with `orientation: mixed`: the step it
-skips is the fix. From a fresh clone with this option, a changed setting is not noticed
-either, since there is no record to compare it with: switching such a folder to
+the check of commands and script dates. With it only MultiQC runs again, except in a
+folder made with `orientation: mixed` (see below): after a `git pull` the release has
+changed MultiQC's settings file, `workflow/multiqc_config.yaml`, and in a fresh clone
+that file is newer than the old report; Snakemake checks the input files of a step
+whatever `--rerun-triggers` says. The option holds only for the run it is given to:
+Snakemake keeps the old records, so a later run without it finds the same changes.
+Give it to every later run on that output folder, or let the steps run once; while it
+is given, a later change of a command or a script, a future fix included, goes
+unnoticed too. In a folder made with `orientation: mixed` it does not keep the
+fix away: `trim_primers` and every step after it run all the same, because the
+orientation table is missing, and a missing file the run asks for is made whatever
+`--rerun-triggers` says. From a fresh clone with this option, a changed setting is not
+noticed either, since there is no record to compare it with: switching such a folder to
 `min_distinct_minimizers: auto` then needs `--forcerun kmer_evidence`. The "Running
 MetaFlux" page of the documentation explains these checks ("What happens on a
 re-run").
