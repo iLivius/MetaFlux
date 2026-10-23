@@ -24,8 +24,9 @@ need about 225 GB of memory at species level.
 - **Two COI screens** run before the taxon filter, both on by default (`amplicon.coi`):
   a reading-frame check removes ASVs with a TAA or TAG in the run's frame (allowing
   for a primer cut a base off at the ASV's start), or a length too far from the run's
-  reference length (pseudogenes, NUMTs, artefacts); an off-target guard moves the ASVs closer to a set of bacterial COX1 genes
-  (B) than to MIDORI2 (E) to `06.taxonomy/bacterial_cox1_asvs.tsv`, *Wolbachia* above
+  reference length (pseudogenes, nuclear copies of the gene called NUMTs, artefacts);
+  an off-target guard moves to `06.taxonomy/bacterial_cox1_asvs.tsv` the ASVs that are
+  closer to a set of bacterial COX1 genes (B) than to MIDORI2 (E), *Wolbachia* above
   all. `06.taxonomy/coi_screens.tsv` holds the measurements behind both;
   `asv_table_unfiltered.txt` marks the ASVs `removed_frame` or `moved_bacterial_cox1`;
   the read-tracking table has the columns `post_frame_check` and `post_bacterial_cox1`.
@@ -85,23 +86,24 @@ arguments and writes the same reads as in v2.5.0, and no new file is written.
 
 For a user of `mixed`: reversed pairs now merge to the full amplicon and are hardly
 ever written twice, so the tables of a `mixed` run change; re-run such folders, and
-MetaFlux processes them again from primer trimming on (see below).
+MetaFlux processes them again from primer trimming on (see below). The Cutadapt
+section of the MultiQC report shows the first pass only. A library in which every pair
+is swapped is better run with its two input files swapped and `fixed`: Cutadapt then
+reads every pair once, and its report covers all the reads.
+
 In a truly mixed library the R1 file now holds read 1 of the pairs that came the right
 way round and read 2 of the reversed ones, and DADA2 fits its R1 and R2 error models to
 that blend. On a genuinely mixed library (two BF3/BR2 libraries of the COI insect mock
 in opposite orientations, 1.6 million pairs as one sample) the blend recovered 363 of
-the 374 specimens against 364 for the two libraries run on their own, with 600 kept ASVs
-shared of 654 and 664 and tables almost identical (Bray-Curtis dissimilarity 0.011 on
-specimen proportions, on a 0-to-1 scale); it kept 7 % fewer reads, lost at DADA2's
+the 374 specimens against 364 for the two libraries run on their own, with 600 kept
+ASVs shared of 654 and 664 and tables almost identical (Bray-Curtis dissimilarity 0.011
+on specimen proportions, on a 0-to-1 scale); it kept 7 % fewer reads, lost at DADA2's
 quality filter because the truncation lengths are chosen on the blended quality
 profile, and that is an upper bound, since the two libraries also come from two
 sequencing runs. With the old handling the same library gave no result: DADA2's error
 model had not converged after 172 rounds and 10.5 hours, on reads of which half were
 reverse-complemented and 7 % still carried most of a primer (see the troubleshooting
-page). The Cutadapt section of the MultiQC report
-shows the first pass only. A library in which every pair is swapped is better run with
-its two input files swapped and `fixed`: Cutadapt then reads every pair once, and its
-report covers all the reads.
+page).
 
 ### Amplicon runs with a single sample
 
@@ -110,17 +112,19 @@ A run with one sample no longer stops at `dada_seqtab`. Given one sample, DADA2'
 instead of a list with one result per sample, and the read tracking of `dada_seqtab`
 stopped on it (had it got further, the sequence tables would have named the sample
 "1"). `dada_seqtab` now puts a lone result back into a one-element list named after the
-sample. With one sample, `pool` has nothing to pool: DADA2 denoises it on its own. With
-two or more samples nothing changes: on the 16S test set the sequence tables, the FASTA,
-the read counts and the error-plot PNGs came out byte for byte the same.
-`CONTRIBUTING.md` adds a real run with a single sample to the release checks, since the
-unit tests and the dry runs never run R. Five one-sample runs, across markers and modes,
-finished: 16S with SINTAX and with `rdp` plus the species step, ITS, gyrB under `rdp`,
-and the shotgun test set with `profiler: both`. The shotgun sample came out identical to
-its column in the four-sample run; the amplicon tables differ from the same sample's
-column in a multi-sample run only through what a run decides from all of its samples
-(the truncation lengths, DADA2's error model and its chimera vote, and the classifier's
-random draws, which depend on which ASVs the run has), as expected.
+sample. With one sample, `pool` has nothing to pool: DADA2 denoises it on its own.
+
+- **Two or more samples: nothing changes.** On the 16S test set the sequence tables,
+  the FASTA, the read counts and the error-plot PNGs came out byte for byte the same.
+- **Release check.** `CONTRIBUTING.md` adds a real run with a single sample to the
+  release checks, since the unit tests and the dry runs never run R.
+- **Checked on five one-sample runs** (16S with SINTAX and with `rdp` plus the species
+  step, ITS, gyrB under `rdp`, and the shotgun test set with `profiler: both`): all
+  finished. The shotgun sample came out identical to its column in the four-sample
+  run; the amplicon tables differ from the same sample's column in a multi-sample run
+  only through what a run decides from all of its samples (the truncation lengths,
+  DADA2's error model and its chimera vote, and the classifier's random draws, which
+  depend on which ASVs the run has), as expected.
 
 ### k-mer evidence floor `auto`, sized to each sample's depth
 
@@ -197,31 +201,35 @@ new date only to the files it changes, and Snakemake has the records.
   release changes the version its report shows, in `workflow/multiqc_config.yaml`,
   which is one of MultiQC's inputs.
 
-**Starting from a fresh clone, a release archive or a second worktree.** All its files
-are newer than the old outputs (a clone or a worktree dates every file when it is made,
-a release archive at the time of the release commit), and it has no records of the old
-folder. So every step that runs a script runs again, with everything after it, whether
-v2.6.0 changed that script or not: in amplicon mode the quality plots of the trimmed
-reads, `pick_trunclen` and everything after it (fetching the reference databases and
-computing the length probe again unless `refdb/` was carried over), in shotgun mode the
-k-mer evidence (and, with the gate on, Bracken), the sylph tables, the OTU table, the
-read tracking and MultiQC. A step without a script has nothing to be compared with, and
-a changed setting goes unnoticed, so in a folder made with `fixed` `trim_primers` does
-not run again. In a folder made with `mixed` it does, for every sample and with every
-step after it, because the orientation table it now writes is missing there.
+**Starting from a fresh clone, a release archive or a second worktree.** A worktree is
+another checkout of the same repository, made with `git worktree`. Every file of such a
+copy is newer than the old outputs (a clone or a worktree dates every file when it is
+made, a release archive at the time of the release commit), and it has no records of
+the old folder. So every step that runs a script runs again, with everything after it,
+whether v2.6.0 changed that script or not: in amplicon mode the quality plots of the
+trimmed reads, `pick_trunclen` and everything after it (fetching the reference databases
+and computing the length probe again unless `refdb/` was carried over), in shotgun mode
+the k-mer evidence (and, with the gate on, Bracken), the sylph tables, the OTU table,
+the read tracking and MultiQC. A step without a script has nothing to be compared with,
+and a changed setting goes unnoticed, so in a folder made with `fixed` `trim_primers`
+does not run again. In a folder made with `mixed` it does, for every sample and with
+every step after it, because the orientation table it now writes is missing there.
 
 **Results.** With `orientation: fixed` the steps that run again give the results of
 v2.5.0, except that under `method: rdp` a few bootstrap values, and now and then a
 lineage, can move, as between any two identical runs (DADA2's `assignTaxonomy` breaks
 exact ties at random; see the troubleshooting page). Each change was checked on its
-own: under `fixed`, `trim_primers` writes the same reads as v2.5.0 (30 samples: the five
-test sets and four COI mock libraries); with `mixed` on the 16S test set with every pair
-swapped, the taxonomy, the ASV names and the tree are those of the v2.5.0 run of the
-original files, with 7 of 193,097 final reads fewer (the pairs the 10 bases cost); with
-two or more samples, `dada_seqtab` writes the same tables (16S test set); with the COI
-code, the 18S run of 120 samples made with v2.5.0 gave the four tables of `06.taxonomy/`
-and `stats/read_tracking.txt` byte for byte the same; at the default floor of 300 the
-k-mer evidence files are byte for byte those of v2.5.0.
+own:
+
+- `fixed`: `trim_primers` writes the same reads as v2.5.0 (30 samples: the five test
+  sets and four COI mock libraries).
+- `mixed`, on the 16S test set with every pair swapped: the taxonomy, the ASV names and
+  the tree are those of the v2.5.0 run of the original files, with 7 of 193,097 final
+  reads fewer (the pairs the 10 bases cost).
+- Two or more samples: `dada_seqtab` writes the same tables (16S test set).
+- The COI code: the 18S run of 120 samples made with v2.5.0 gave the four tables of
+  `06.taxonomy/` and `stats/read_tracking.txt` byte for byte the same.
+- The default floor of 300: the k-mer evidence files are byte for byte those of v2.5.0.
 
 All the changes together were checked too: the seven test-dataset runs made for v2.5.0
 (the 16S, ITS, 18S, gyrB and rpoB test sets with `fixed`, gyrB and rpoB under `rdp`, and
@@ -237,10 +245,11 @@ of `trim_primers`, which gets a random name; the raw SINTAX output
 (`05.dada2/_itsx_tmp/seqs.graph`) hold the same lines in another order; and Metaxa2's
 own taxonomy file (`05.dada2/metaxa2/seqs.taxonomy.txt`), which nothing reads, quotes
 for one ASV of the 16S run another of four equally good hits (91.95 % identity over 373
-bases instead of 91.91 % over 371). With
-`orientation: mixed` the results change on purpose, and nothing needs to be added to
-the command: in every folder made with `mixed`, `trim_primers` and every step after it
-run again, after a `git pull` as from a fresh clone, a release archive or a new
+bases instead of 91.91 % over 371).
+
+With `orientation: mixed` the results change on purpose, and nothing needs to be added
+to the command: in every folder made with `mixed`, `trim_primers` and every step after
+it run again, after a `git pull` as from a fresh clone, a release archive or a new
 worktree, because v2.5.0 did not write the orientation table.
 
 **Skipping the reruns.** `--rerun-triggers mtime params input software-env` leaves out
@@ -266,8 +275,7 @@ re-run").
 - Nothing, for a run that stays as it was. Every new key has a default: `amplicon.coi`
   (both screens on; read by COI runs only), `amplicon.probe_length_stat.COI` (needed by
   COI runs only) and the `resources` rows for `coi_screens`. A folder made with
-  `orientation: mixed` needs no edit either: let primer trimming and the steps after it
-  run.
+  `orientation: mixed` needs no edit either, only the re-run described above.
 - `shotgun.kmer_evidence.min_distinct_minimizers` must hold a whole number or `auto`.
   A fraction, `true`/`false` or other text, which v2.5.0 took without a word or stopped
   on with a traceback, now stops the run with the message that says what is allowed.
