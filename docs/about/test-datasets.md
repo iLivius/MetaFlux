@@ -47,10 +47,10 @@ carries the reverse primer, so their R1 and R2 files were swapped and the runs k
 (BF3/BR2), 355 (Leray-XT) and 362 (fwhF2/fwhR2n) of the 374 specimens are recovered by an
 ASV at least 97 % identical to their barcode (357, 352 and 362 by an identical ASV), and
 the ASVs that match a specimen hold 99.1–99.3 % of the reads of the final tables. The
-off-target guard moves 16–27 bacterial ASVs per run (0.07–0.5 % of the reads), 41 of
-which SINTAX had called a stink bug that is not in the mock; the frame check removes
-0.1–0.6 % of the reads, and no specimen lost its only ASV to either screen. See
-[COI](../amplicon/markers/coi.md#validation).
+off-target guard moves 16–27 bacterial ASVs per run (0.07–0.5 % of the reads); 41 of
+the 69 moved over the three runs SINTAX had called a stink bug that is not in the mock.
+The frame check removes 0.1–0.6 % of the reads, and no specimen lost its only ASV to
+either screen. See [COI](../amplicon/markers/coi.md#validation).
 
 The 16S and 18S sets are environmental rather than defined, so they test the mechanics
 of their path — probe measurement, truncation, merging, rank handling in SILVA and PR2 —

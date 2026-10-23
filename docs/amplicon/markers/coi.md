@@ -30,7 +30,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | Rank model | `Domain;Kingdom;Phylum;Class;Order;Family;Genus;Species` |
 | COI screens | reading-frame check and off-target guard, both on by default (`amplicon.coi`) |
 | Primers | none are shipped; validated with BF3/BR2, Leray-XT and fwhF2/fwhR2n (below) |
-| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes (71 to 86 s for 683 to 909 ASVs on 8 threads, over ten runs of the insect mock libraries below); the COI screens about 8.4 GB and about a minute (55 to 87 s). The two memory figures were measured once, during development, and not again in the validation runs |
+| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes (71 to 86 s for 683 to 909 ASVs on 8 threads, in all 14 logged runs on libraries of the insect mock used below); the COI screens about 8.4 GB and about a minute (53 to 87 s). The two memory figures date from the development run with 717 ASVs; no benchmark file records them, and the validation runs measured time only, so treat them as approximate |
 
 ## Setting up a run
 
@@ -82,9 +82,9 @@ smaller NUC variant), so MetaFlux ships no trainset for COI.
     orientations, and from v2.6.0 on it handles them: it swaps the two mates of each
     reversed pair back, so that DADA2 merges them to the full amplicon. On the BF3/BR2
     library run both ways, `mixed` on the files as distributed and `fixed` on the swapped
-    files gave the same 595 kept ASVs and the same 361 specimens; `mixed` dropped 509 of
-    the 910,014 pairs (0.06 %), those whose primer Cutadapt found from fewer than 10
-    bases. See
+    files gave the same 595 kept ASVs and the same 361 specimens; `mixed` dropped 509
+    (0.06 %) of the 910,014 pairs that `fixed` keeps after primer trimming, those whose
+    primer Cutadapt found from fewer than 10 bases. See
     [the mixed-orientation second pass](../overview.md#the-mixed-orientation-second-pass).
 
 ## The reference database: MIDORI2
@@ -298,8 +298,9 @@ carries the forward primer, ran with `fixed` as distributed.
   97 % among those the two screens took out, so no specimen lost its only ASV to a
   screen. The few removed ASVs that match a specimen (14, 3 and 2) belong to specimens
   that keep another ASV: in BF3/BR2, 11 of them are length variants and 3 are full-length
-  sequences with a stop codon in every frame; the 3 and 2 of the other runs are
-  full-length sequences with a stop codon in every frame.
+  sequences with a stop codon in every frame; the 3 and 2 of the other runs pass the
+  length check (one Leray-XT ASV is two bases longer than the reference) and carry a stop
+  codon in every frame.
 - **The offset of the frame check.** In the Leray-XT run, 9 % of the reads, among them
   the only ASVs of 29 specimens, belong to ASVs open in frame 0, most of them one base
   short: their first base went with the primer, which cutadapt cut one base too far for
@@ -316,11 +317,15 @@ carries the forward primer, ran with `fixed` as distributed.
   (fwhF2/fwhR2n) are `ok`, and `low_identity` and `shared_sequence` together flag 9–11 %;
   the others have no species call, more of them the shorter the amplicon. None is far from
   MIDORI2.
-- **Counts near the detection limit move.** The specimens found in one run and missed in
-  another are recovered by a single ASV of 3 to 10 reads, at the limit where DADA2 tells
-  a rare variant from an error. The specimen counts above therefore shift by one or two
-  between runs that differ in what DADA2 sees (one sample or several, the truncation
-  lengths, the error model), while the shares of reads do not.
+- **Counts near the detection limit move.** When the same library is run again with
+  another setting (split into two samples or run as one, other truncation lengths,
+  another error model), the specimens it gains or loses are recovered by a single ASV of
+  3 to 10 reads, at the limit where DADA2 tells a rare variant from an error. The
+  specimen counts above therefore shift by one or two between such runs, while the shares
+  of reads do not. Specimens that one primer pair recovers and another misses are a
+  different matter: they are missed with thousands of reads elsewhere (no BF3/BR2 ASV
+  comes near the barcode of *Camponotus pennsylvanicus*, while Leray-XT gives it 5,295
+  reads), so the primers, not the detection limit, decide them.
 
 ## References
 
