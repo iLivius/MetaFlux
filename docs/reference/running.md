@@ -42,7 +42,7 @@ catches, among others:
 While reading the workflow, MetaFlux also prints a banner line to stderr:
 
 ```text
-[MetaFlux v2.5.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
+[MetaFlux v2.6.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
 ```
 
 Before it, an amplicon run prints a line saying whether the organelle filter is on, and

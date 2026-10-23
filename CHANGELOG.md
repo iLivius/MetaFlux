@@ -167,12 +167,7 @@ new date only to the files it changes, and Snakemake has the records.
   not run again.
 - Every folder, in both modes and with every profiler: MultiQC runs again, because the
   release changes the version its report shows, in `workflow/multiqc_config.yaml`,
-  which is one of MultiQC's inputs. [To be settled before release: this holds once the
-  version line of that file is bumped, as at every release so far; if it is left as
-  it is, write instead that with `profiler: sylph` nothing runs again, add MultiQC to
-  the gate-on case of the shotgun bullet above (it reads Bracken's reports, so it
-  runs again after Bracken), and take MultiQC out of the `git pull` case of
-  "Skipping the reruns".]
+  which is one of MultiQC's inputs.
 
 **Starting from a fresh clone, a release archive or a second worktree.** All its files
 are newer than the old outputs (a clone or a worktree dates every file when it is made,

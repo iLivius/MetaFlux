@@ -16,6 +16,7 @@
     "18S rRNA",
     "gyrB",
     "rpoB",
+    "COI",
     "DADA2",
     "Snakemake",
     "taxonomic profiling",
