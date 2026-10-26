@@ -152,9 +152,9 @@ up, marked `(auto)`. The evidence table keeps its columns.
   2×150 bp reads. See "Scaling the floor with depth" on the k-mer evidence page before
   switching to it.
 - **With a whole number nothing changes.** The rule gets the same number as before. On
-  the four test-dataset reports and the MBARC-26 report, at floors 0, 300 and 1,000
-  with the gate on and off, the evidence table, the gated report, the plot and the log
-  are byte for byte those of v2.5.0.
+  the four test-dataset reports and the MBARC-26 report, with the gate off at floors 0
+  and 300 and on at 300 and 1,000, the evidence table, the gated report, the plot and
+  the log are byte for byte those of v2.5.0.
 - **The setting is checked more strictly at start-up.** A whole number (also written
   `300.0` or `"300"`) or `auto`, in any mix of capitals and with spaces around it, is
   accepted. A fraction (v2.5.0 cut `300.5` to 300 without a word) and `true`/`false`
