@@ -121,9 +121,9 @@ the low-quality bases the model needs in order to fit.
 
 ### The mixed-orientation second pass
 
-Some library preparations (and most amplicon data pooled from several runs) deliver reads
-in both orientations: in some pairs R1 carries the forward primer, in others it carries
-the reverse one. Because the 5′ call uses `--discard-untrimmed`, a single fixed-orientation
+Libraries made by ligating the sequencing adapters onto the finished amplicons deliver
+reads in both orientations: in some pairs R1 carries the forward primer, in others the
+reverse one. Because the 5′ call uses `--discard-untrimmed`, a single fixed-orientation
 pass would silently throw away every swapped pair — often half the data.
 
 #### The second pass, and why its mates are swapped
