@@ -30,7 +30,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | Rank model | `Domain;Kingdom;Phylum;Class;Order;Family;Genus;Species` |
 | COI screens | reading-frame check and off-target guard, both on by default (`amplicon.coi`) |
 | Primers | none are shipped; validated with BF3/BR2, Leray-XT and fwhF2/fwhR2n (below) |
-| Memory and time | SINTAX against MIDORI2 holds about 8.3 GB and takes 1 to 1.5 minutes; the COI screens about 8.4 GB and about a minute (the memory figures are approximate; the resources table of the [configuration reference](../../reference/configuration.md) has the measured times and the caveat) |
+| Memory and time | SINTAX against MIDORI2 holds 8.4 GB at the peak and takes 1 to 1.5 minutes; the COI screens up to 8.6 GB and about a minute (measured on 8 threads; the resources table of the [configuration reference](../../reference/configuration.md) has the details) |
 
 ## Setting up a run
 

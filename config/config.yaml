@@ -798,8 +798,8 @@ resources:
     dada_length_filter: 4000
     target_extract: 8000
     assign_taxonomy: 16000
-    coi_screens: 12000                        # COI only: VSEARCH holds MIDORI2 GB273 and its k-mer index (about 8.4 GB,
-                                              # noted during development; approximate, no benchmark records it)
+    coi_screens: 12000                        # COI only: VSEARCH holds MIDORI2 GB273 and its k-mer index (8.5 to 8.6 GB
+                                              # measured at the peak, 767 to 888 ASVs on 8 threads)
     aggregate_read_counts: 2000
     # phylogeny (optional, 16S only)
     phylo_input: 2000                         # two small text tables -> one FASTA

@@ -1264,8 +1264,8 @@ so they are what a cluster executor turns into job requests.
 | `dada_seqtab` | amplicon | 16000 | The heaviest amplicon step: error learning, denoising, merging and chimera removal all happen here across every sample at once. |
 | `dada_length_filter` | amplicon | 4000 | |
 | `target_extract` | amplicon | 8000 | |
-| `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count, except against MIDORI2 for COI, where about 8.3 GB was noted during development (an approximate figure: no benchmark file records it, and the validation runs measured time only; the step took 71 to 86 s for 683 to 909 ASVs on 8 threads there). |
-| `coi_screens` | amplicon | 12000 | COI only: VSEARCH holds MIDORI2 GB273 (2.1 billion bases) and its k-mer index; about 8.4 GB at the peak was noted during development, with 717 ASVs on 8 threads (approximate, for the same reason as the row above); the step takes about a minute (55 to 87 s for 683 to 909 ASVs in the validation runs). |
+| `assign_taxonomy` | amplicon | 16000 | The `rdp` path is the demanding one; `sintax` stays around 2–3 GB whatever the ASV count, except against MIDORI2 for COI, where it holds 8.43 GB at the peak. That figure is set by the reference, not by the ASVs: it was the same, to within 1 MB, for 767, 804 and 888 ASVs on 8 threads. The step took 71 to 86 s for 683 to 909 ASVs in the validation runs. |
+| `coi_screens` | amplicon | 12000 | COI only: VSEARCH holds MIDORI2 GB273 (2.1 billion bases) and its k-mer index, 8.51 to 8.57 GB at the peak for 767 to 888 ASVs on 8 threads; the step takes about a minute (55 to 87 s for 683 to 909 ASVs in the validation runs). |
 | `aggregate_read_counts` | shared | 2000 | Present in the config template but not read — the rule declares no `mem_mb`; see the note below. |
 | `phylo_input` | amplicon | 2000 | Two small text tables in, one FASTA out. |
 | `phylo_align` | amplicon | 4000 | |
