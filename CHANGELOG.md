@@ -101,7 +101,7 @@ on specimen proportions, on a 0-to-1 scale); it kept 7 % fewer reads, lost at DA
 quality filter because the truncation lengths are chosen on the blended quality
 profile, and that is an upper bound, since the two libraries also come from two
 sequencing runs. With the old handling the same library gave no result: DADA2's error
-model had not converged after 172 rounds and 10.5 hours, on reads of which half were
+model had not converged after 171 rounds and 10.5 hours, on reads of which half were
 reverse-complemented and 7 % still carried most of a primer (see the troubleshooting
 page).
 

@@ -343,7 +343,12 @@ amplicon:
 
     learn_errors:
       nbases: 1e8                             # bases sampled for error model (1e8 = DADA2 default)
-      max_consist: 999                        # max EM iterations (999 ≈ unlimited)
+      # Most rounds of error learning per read direction (DADA2's default is 10).
+      # Not unlimited: most models settle within 10 rounds and the slowest seen took
+      # about 100. A model that has not settled by the last round is used as it is,
+      # and logs/dada_seqtab.log says "Self-consistency loop terminated before
+      # convergence." On a large library that never settles, 999 rounds can take days.
+      max_consist: 999
 
     # ── Tier 2: advanced tuning ──
     dada:

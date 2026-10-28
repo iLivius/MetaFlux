@@ -495,7 +495,7 @@ Measured on a genuinely mixed COI library (two libraries of the same insect mock
 opposite orientations, 1.6 million pairs as one sample) trimmed the old way: of the R1
 reads DADA2 learned from, half were reverse-complemented, with their quality running
 backwards, and 7 % still began with 17 bases of the primer; the R1 model had not
-converged after 172 rounds and 10.5 hours when the run was stopped. The same pairs
+converged after 171 rounds and 10.5 hours when the run was stopped. The same pairs
 trimmed with v2.6.0 converged in 6 and 5 rounds. `pick_trunclen` had shown the problem
 first: with the poor last bases of the reversed reads now at the start of the read, the
 lower quartile of the quality is below the Q20 threshold at the very first cycle (18 in
@@ -506,10 +506,11 @@ R1; 16 and 18 in the first two cycles of R2) and at or above it afterwards, and
 (270 / 160 here).
 
 MetaFlux sets `amplicon.dada2.learn_errors.max_consist` to 999, so the job runs on until
-the model converges or someone stops it. DADA2's own default is 10 rounds, after which it
+the model converges, someone stops it, or it reaches round 999; at 3.7 minutes a round,
+as on this library, that is about 60 hours for the R1 model alone. At the limit DADA2
 prints `Self-consistency loop terminated before convergence.` and continues with the last
-estimate; with that default such a run finishes, with a model fitted to a mixture and
-tables made from it.
+estimate, as it does after its own default of 10 rounds, and the run finishes, with a
+model fitted to a mixture and tables made from it.
 
 **Fix.** Stop the run and check the trimmed reads before the error model. In
 `03.stripped/{sample}_R1.fastq.gz` every read should start with the first bases after the

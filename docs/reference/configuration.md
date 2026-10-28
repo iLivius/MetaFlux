@@ -836,7 +836,7 @@ See [COI](../amplicon/markers/coi.md#the-coi-screens).
 | `filter.min_len_stat` | Optionally derives `min_len` from the probe distribution instead | `null` | **ITS only, opt-in.** Left `null`, every marker uses `filter.min_len`. Setting a statistic (e.g. `q1`) puts the floor near 175 bp, above ~24% of the UNITE reference — see [ITS](../amplicon/markers/its.md). The other markers never take this path: their probe measures the full amplicon, which exceeds read length. |
 | `filter.max_len` | Per-read length ceiling | `null` | `null` means no upper limit. |
 | `learn_errors.nbases` | Bases sampled to train the error model | `1e8` | The DADA2 default. Reads are drawn in random order, seeded by `amplicon.seed`. |
-| `learn_errors.max_consist` | Maximum self-consistency iterations of the error model | `999` | Effectively unlimited; the model normally converges long before. |
+| `learn_errors.max_consist` | Most rounds of error learning per read direction: DADA2 denoises the reads with its current error rates, estimates the rates again from the result, and stops when a round gives exactly the rates of an earlier one | `999` | Not unlimited. Most models settle within 10 rounds and the slowest seen took about 100. A model that has not settled by the last round is used as it is, and `logs/dada_seqtab.log` says `Self-consistency loop terminated before convergence.` On a large library that never settles, 999 rounds can take days (see [Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges)). DADA2's own default is 10. |
 
 !!! note "`truncQ` runs before `truncLen`, and the leftovers are discarded rather than kept short"
 

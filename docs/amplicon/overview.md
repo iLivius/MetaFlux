@@ -231,7 +231,7 @@ models themselves converged as quickly as on a single library. This is an upper 
 what the blend costs, because the two libraries also come from two sequencing runs, so two
 error profiles share one file, which a mixed library from one run would not have. With the
 trimming of v2.5.0 and earlier the same library gave no result at all: DADA2's error model
-had not converged after 172 rounds and 10.5 hours when the run was stopped, because half
+had not converged after 171 rounds and 10.5 hours when the run was stopped, because half
 of the reads in each file were reverse-complemented, with their quality running backwards,
 and 7 % still began with most of a primer (see
 [Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges)).
