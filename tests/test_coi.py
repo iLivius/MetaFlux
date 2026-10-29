@@ -14,12 +14,14 @@ What is tested
     species name read from a SINTAX label.
   - the shipped COI pack: SINTAX letters in VSEARCH's order, rank lists of equal
     length, reference_values naming ranks of the model.
+  - the start-up check of amplicon.coi.length_tolerance in 00_common.smk
+    (_coi_length_tolerance): whole codons pass as the same int, anything else stops.
 """
 import gzip
 
 import pytest
 
-from helpers import SCRIPTS, fake_snakemake, load_functions, marker_pack, run_script, write_text
+from helpers import COMMON_SMK, SCRIPTS, fake_snakemake, load_functions, marker_pack, run_script, write_text
 
 CONVERTER = SCRIPTS / "refdb" / "midori2_to_metaflux_sintax.py"
 SCREENS = SCRIPTS / "amplicon" / "80d_coi_screens.py"
@@ -128,3 +130,26 @@ def test_coi_pack_rank_model():
     assert len(pack["tax_levels"]) == len(letters) == len(pack["rank_prefixes"])
     assert set(pack["reference_values"]) <= set(pack["tax_levels"])
     assert pack["taxonomy_refdb"] is None and pack["taxonomy_sintax_db"] == "midori2_coi_sintax"
+
+
+# ── The length_tolerance check in 00_common.smk ─────────────────────────────────────
+
+tolerance = load_functions(COMMON_SMK, ["_coi_length_tolerance"])
+
+
+def test_length_tolerance_accepts_whole_codons_as_the_same_int():
+    # A valid value must come out as the int the rule always received, or Snakemake
+    # would see changed params and run coi_screens again.
+    for value, expected in [(0, 0), (9, 9), (12, 12), (9.0, 9), ("9", 9), (" 6 ", 6)]:
+        result = tolerance._coi_length_tolerance(value)
+        assert result == expected
+        assert type(result) is int
+
+
+@pytest.mark.parametrize("value", [-3, 10, 9.5, "9.5", "nine", "", True, False, None])
+def test_length_tolerance_stops_on_anything_else(value):
+    with pytest.raises(SystemExit) as stop:
+        tolerance._coi_length_tolerance(value)
+    message = str(stop.value)
+    assert "amplicon.coi.length_tolerance must be a whole number of bases" in message
+    assert message.endswith(f"got {value!r}")

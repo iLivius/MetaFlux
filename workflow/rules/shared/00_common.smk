@@ -940,6 +940,53 @@ def _kmer_floor_setting(value):
     return number
 
 
+def _coi_length_tolerance(value):
+    """Check amplicon.coi.length_tolerance and return it as a whole number of bases.
+
+    What it is for: the reading-frame check of the COI screens (rule coi_screens,
+    80d_coi_screens.py) removes an ASV whose length differs from the run's reference
+    length by more than this many bases. A real COI variant gains or loses whole
+    codons, so the value must be a multiple of 3 (the default, 9, is three codons).
+    Input: the value as YAML read it from the config.
+    Output: the number as an int; the amplicon block below stores it in
+    COI_LENGTH_TOLERANCE, which rule coi_screens passes to its script. A valid value
+    comes out as the same int as before this check existed, so the rule's params do
+    not change and Snakemake has no reason to run the step again.
+
+    Accepted: a whole number >= 0 that is a multiple of 3, also written 9.0 or "9".
+    Everything else stops the run, with one message that says what is allowed:
+    a number that is not a multiple of 3; a negative number; a number with a
+    fraction (9.5 used to be cut to 9 without a word); true or false (YAML reads
+    yes/no as those too, and Python would count them as 1 and 0); text such as
+    "nine", which used to stop the run with a Python traceback; an empty value.
+    The same rules as the k-mer floor above (_kmer_floor_setting).
+    """
+    stop_message = ("[MetaFlux] amplicon.coi.length_tolerance must be a whole number of "
+                    "bases, a multiple of 3 and not negative (whole codons; the default "
+                    f"is 9), got {value!r}")
+
+    # true/false: refused here, because the number checks below would let them
+    # through (Python counts True as the number 1).
+    if isinstance(value, bool):
+        sys.exit(stop_message)
+
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, float) and value.is_integer():
+        number = int(value)                  # 9.0 -> 9
+    elif isinstance(value, str):
+        try:
+            number = int(value)              # "9" or " 9 " -> 9
+        except ValueError:
+            sys.exit(stop_message)
+    else:
+        sys.exit(stop_message)               # 9.5, a list, an empty value (null) ...
+
+    if number < 0 or number % 3 != 0:
+        sys.exit(stop_message)
+    return number
+
+
 # ────────────────────── Amplicon-only globals ──────────────────
 # Runs only when mode: amplicon. Everything from here down to the matching `else:`
 # (shotgun globals) is normally never even evaluated on a shotgun run — this whole
@@ -1473,12 +1520,9 @@ if MODE == "amplicon":
     _coi_cfg = amp_cfg.get("coi") or {}
     COI_FRAME_CHECK = bool(_coi_cfg.get("frame_check", True))
     COI_OFFTARGET_GUARD = bool(_coi_cfg.get("offtarget_guard", True))
-    COI_LENGTH_TOLERANCE = int(_coi_cfg.get("length_tolerance", 9))
-    if COI_LENGTH_TOLERANCE < 0 or COI_LENGTH_TOLERANCE % 3 != 0:
-        sys.exit(
-            f"[MetaFlux] amplicon.coi.length_tolerance must be a non-negative multiple of 3 "
-            f"(whole codons; got {COI_LENGTH_TOLERANCE})."
-        )
+    # _coi_length_tolerance() (above, before the amplicon block) checks the value
+    # and stops the run on anything but a whole number of codons.
+    COI_LENGTH_TOLERANCE = _coi_length_tolerance(_coi_cfg.get("length_tolerance", 9))
     COI_SCREENS_TSV      = OUT / "06.taxonomy" / "coi_screens.tsv"
     BACTERIAL_COX1_ASVS  = OUT / "06.taxonomy" / "bacterial_cox1_asvs.tsv"
     COI_ASV_FLAGS        = OUT / "06.taxonomy" / "coi_asv_flags.tsv"

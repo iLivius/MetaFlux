@@ -323,7 +323,8 @@ amplicon:
                                               # (pseudogenes, NUMTs, artefacts). false = measure and report,
                                               # remove nothing.
     length_tolerance: 9                       # frame_check: largest length difference, in bases, from the
-                                              # run's reference length (default three codons)
+                                              # run's reference length (default three codons);
+                                              # a whole number, a multiple of 3, or the run stops
     offtarget_guard: true                     # move ASVs that are closer to bacterial COX1 (B) than to
                                               # MIDORI2 (E) out of the main tables, into
                                               # 06.taxonomy/bacterial_cox1_asvs.tsv (Wolbachia and other
