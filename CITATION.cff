@@ -1,5 +1,7 @@
 # Citation metadata in the Citation File Format (CFF), which GitHub shows under "Cite
-# this repository" and Zenodo reads when a release is archived. Keep `version` in
+# this repository". Zenodo does not read this file when a release is archived: the
+# repository also has .zenodo.json, and when both exist Zenodo uses .zenodo.json only,
+# so keep the title, authors and keywords of the two files the same. Keep `version` in
 # step with the version in the Snakefile and the README banner, and add the release
 # date at release time:
 #     date-released: YYYY-MM-DD

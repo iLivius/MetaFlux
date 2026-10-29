@@ -86,7 +86,7 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 | COI | `midori2_taxonomy` | `midori2/GB273/taxonomy/nodes.dmp` (and `names.dmp`) | MIDORI2's NCBI taxonomy snapshot, for the kingdom — *extracted* from a `.zip` | `midori2.taxonomy` |
 | COI | `bacterial_cox1` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` | identity B of the off-target guard (whole genes) | `bacterial_cox1.fasta` |
 | COI | `bacterial_cox1_fragments` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` | identity B of the off-target guard (fragments) | `bacterial_cox1.fragments` |
-| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records that are bacterial COX1; the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
+| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records at least 90 % identical to a candidate gene of the set (186 in GB273), each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
 | COI | `midori2_coi_sintax` | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | probe substrate, `sintax` database and identity E of the off-target guard — *converted* from `midori2_coi_raw` with `midori2_taxonomy` and `bacterial_cox1_midori2_list` | `midori2.sintax` |
 
 The 16S rows are those of the default release, SILVA 144; `other-verbatim` becomes

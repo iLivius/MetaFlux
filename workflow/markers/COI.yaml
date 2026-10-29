@@ -56,9 +56,11 @@ reference_values:
 #                         snapshot MIDORI2 was built with), for the kingdom.
 #   bacterial_cox1        the bacterial COX1 reference set built for MetaFlux from GTDB
 #   bacterial_cox1_fragments    R232: whole genes, fragments, and the list of MIDORI2
-#   bacterial_cox1_midori2_list records that are bacterial COX1 under eukaryote names.
-#                         The list is used by the conversion (records marked "removed"
-#                         are dropped), the genes by the off-target guard (identity B).
+#   bacterial_cox1_midori2_list records at least 90 % identical to a candidate gene of the
+#                         set (186 in GB273), marked "removed" (170, bacterial COX1 under
+#                         eukaryote names) or "listed" (16, kept). The list is used by the
+#                         conversion (records marked "removed" are dropped), the genes by
+#                         the off-target guard (identity B).
 #                         Three files of one Zenodo record, each checked against the
 #                         SHA-256 the record's SHA256SUMS lists.
 #   midori2_coi_sintax    the converted file: classified against, probed, and the

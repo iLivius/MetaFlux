@@ -348,10 +348,10 @@ The `amplicon_probe` rule (`workflow/scripts/amplicon/40a_amplicon_probe.py`) ru
 **only** when `amplicon.expected_length: auto`. With a manual length there is nothing to
 measure, so the rule never runs. Whether that also saves a download depends on the
 marker: for ITS and 18S the probe substrate (UNITE UCHIME, SILVA-Eukaryotic) is used by
-nothing else and is not fetched; for 16S, gyrB and rpoB it is downloaded either way. For
-gyrB, rpoB and 16S on SILVA 138.2 the probe substrate is the taxonomy reference itself;
-for 16S on SILVA 144 it is SILVA's own download, from which MetaFlux builds the training
-set.
+nothing else and is not fetched; for 16S, gyrB, rpoB and COI it is downloaded either way.
+For gyrB, rpoB, COI and 16S on SILVA 138.2 the probe substrate is the taxonomy reference
+itself; for 16S on SILVA 144 it is SILVA's own download, from which MetaFlux builds the
+training set.
 
 Its job is to answer one question: given *these* primers and *this* reference database,
 how long is the amplicon, and how much does that length vary? It answers it in one of
@@ -439,6 +439,7 @@ gyrB amplicons rather than full genes, with the same consequence.
 | 18S | `pcr` | SILVA-Eukaryotic 18S v132 | `silva_euk_18s_v132` | `18S` |
 | gyrB | `direct` | DD7RZ8 v6 | `gyrb_dd7rz8_v6` | `16S` (gyrB reuses that key) |
 | rpoB | `pcr` | FROGS RefSeq rpoB (products that hold a second forward-primer site left out of the statistics) | `rpob_refseq_cc_20240707_excl-second-site` | `rpoB` |
+| COI | `pcr` | MIDORI2 GB273 UNIQ NUC_SP, the converted SINTAX file | `midori2_gb273_uniq_nuc_sp_co1` | `COI` |
 
 For 16S, the in-silico products of chloroplast, mitochondrial and eukaryote references
 are left out of the statistics (marker pack field `probe_exclude_taxa`, written into the
@@ -473,9 +474,9 @@ a second forward-primer site.
 
 `amplicon.probe_length_stat.<key>` selects which one of these becomes
 `expected_length`. Accepted values are `min`, `q1`, `median`, `q3`, `p95`, `p99` and
-`max`; the shipped config sets `p95` for `16S`, `18S` and `rpoB`. A percentile near the
-top of the distribution is the safe choice for the overlap constraint, because the
-constraint has to hold for the longer amplicons in the pool — sizing it on the median
+`max`; the shipped config sets `p95` for `16S`, `18S`, `rpoB` and `COI`. A percentile
+near the top of the distribution is the safe choice for the overlap constraint, because
+the constraint has to hold for the longer amplicons in the pool — sizing it on the median
 would leave the long tail unmergeable.
 
 !!! warning "The key must exist for the marker being run"

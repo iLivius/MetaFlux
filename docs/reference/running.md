@@ -171,9 +171,11 @@ so. Four practical consequences:
   it.** Deleting `06.taxonomy/asv_table.txt` re-runs `assign_taxonomy` and the steps
   that read its tables; the DADA2 steps upstream are already satisfied and are
   skipped. The files a run asks for are those that make up a complete run: in
-  amplicon mode the read files of each stage with their counts and QC, the truncation
-  lengths, the DADA2 tables, plots and FASTA, the taxonomy tables, the read tracking
-  and the MultiQC report; in shotgun mode the fastp reports, the Kraken2, k-mer
+  amplicon mode the read files of each stage with their counts and QC, under
+  `primers.orientation: mixed` the orientation table of each sample, the truncation
+  lengths, the DADA2 tables, plots and FASTA, the taxonomy tables (in a COI run with the
+  three files of the COI screens), the read tracking and the MultiQC report; in shotgun
+  mode the fastp reports, the Kraken2, k-mer
   evidence, Bracken and sylph files, the OTU table, the read tracking and the MultiQC
   report (for maintainers: the lists are `_amplicon_targets()` and
   `_shotgun_targets()` in `workflow/rules/shared/00_common.smk`). A deleted file that
@@ -208,6 +210,43 @@ so. Four practical consequences:
   with `git pull`.
 - **A dry run shows what would run.** `-n` prints the jobs a re-run would execute,
   each with the reason.
+
+!!! note "Re-running an output folder made with v2.5.0"
+
+    What runs again depends on how you got v2.6.0:
+
+    - **After a `git pull` in the MetaFlux folder that made the output folder.** Amplicon
+      mode, every marker and both `primers.orientation` settings: `trim_primers` and
+      every step after it, because the command of `trim_primers` changed; the steps
+      before it, the reference databases and the length probe are kept. Shotgun mode with Kraken2
+      (`profiler: kraken2` or `both`): `kmer_evidence` for every sample, because its
+      script changed, and with `kmer_evidence.enabled: true` also `bracken` and
+      `finalize_otu_table`; Kraken2 does not run again. Every folder: MultiQC, because
+      its settings file, one of its inputs, now names v2.6.0.
+    - **From a fresh clone, a release archive or a second worktree.** Every step that
+      runs a script, with the steps after it (see above); in amplicon mode that includes
+      fetching the reference databases and computing the length probe again, unless
+      `refdb/` was carried over. `trim_primers` runs a command, not a script, so it
+      runs again only in a folder made with `mixed`.
+    - **A folder made with `primers.orientation: mixed`** runs `trim_primers` and every
+      step after it again in every case, whatever `--rerun-triggers` says: the run now
+      asks for the orientation table of each sample (`stats/orientation/{sample}.tsv`),
+      which v2.5.0 did not write. Its results change on purpose: reversed pairs now
+      merge to the full amplicon, and hardly any pair is written twice (see
+      [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)).
+      In every other folder the steps that run again give the results of v2.5.0, except
+      that under `method: rdp` a few bootstrap values, and now and then a lineage, can
+      move, as between any two identical runs.
+    - **To skip the reruns**, give `--rerun-triggers mtime params input software-env` to
+      that run and to every later run on the same output folder: then only MultiQC runs
+      again, apart from the `mixed` folders above. From a fresh clone with this option, a
+      changed setting is not noticed either, because there is no record to compare it
+      with: switching to `min_distinct_minimizers: auto` then needs
+      `--forcerun kmer_evidence`.
+
+    The 2.6.0 entry of the
+    [CHANGELOG](https://github.com/iLivius/MetaFlux/blob/main/CHANGELOG.md), under "What
+    runs again in a folder made with v2.5.0", gives every case in full.
 
 !!! note "Re-running an output folder made with v2.4.0"
 

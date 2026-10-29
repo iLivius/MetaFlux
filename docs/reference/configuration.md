@@ -379,7 +379,7 @@ the pack's declared filename. The full set of relocatable keys:
 | `midori2.sintax` | COI | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` (built from the three files above and the MIDORI2 list of the bacterial COX1 set, not downloaded; see below) |
 | `bacterial_cox1.fasta` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` (whole genes of the bacterial COX1 set) |
 | `bacterial_cox1.fragments` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` |
-| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (MIDORI2 records that are bacterial COX1; those marked `removed` are left out of `midori2.sintax`) |
+| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (the MIDORI2 records at least 90 % identical to a candidate gene of the set, 186 in GB273, each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); those marked `removed` are left out of `midori2.sintax`) |
 
 The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 `silva_other: strip`, `other-verbatim` becomes `other-stripped`.
@@ -448,7 +448,7 @@ amplicon:
 Each marker has its own page with the databases it uses and its quirks:
 [16S](../amplicon/markers/16S.md), [ITS](../amplicon/markers/its.md),
 [18S](../amplicon/markers/18S.md), [gyrB](../amplicon/markers/gyrb.md),
-[rpoB](../amplicon/markers/rpob.md).
+[rpoB](../amplicon/markers/rpob.md), [COI](../amplicon/markers/coi.md).
 
 !!! note "How far the seed goes"
 
@@ -584,6 +584,7 @@ low-quality bases it needs in order to learn the quality-to-error relationship.
     subsample_files: 12
     manual_r1:                  # e.g. 260
     manual_r2:                  # e.g. 240
+    min_read_coverage_pct: 95   # auto only
 ```
 
 `truncLen` is one length per read direction; everything past it is discarded. A shorter
@@ -803,6 +804,9 @@ Used only when `type: COI` (the value of `length_tolerance` is checked at start-
 every marker). Rule `coi_screens` measures every ASV for both screens and
 writes `06.taxonomy/coi_screens.tsv`; the taxonomy step applies them before the taxon
 filter. A screen switched off still measures, so the table says what it would have done.
+Its `verdict` column applies only the screens that are on, the frame check first (an ASV
+that fails both is `frame`). For a screen that is off, read `frame_ok` and `length_ok`
+(frame check) or compare B with E (off-target guard).
 See [COI](../amplicon/markers/coi.md#the-coi-screens).
 
 | Key | What it does | Default | Notes |
@@ -1295,8 +1299,9 @@ so they are what a cluster executor turns into job requests.
     the `trim_adapters` rule — there is no rule called `fastp`, and a
     `trim_adapters` key here is ignored. Rules that declare no `threads` or
     `mem_mb` at all — `link_reads`, `count_reads_*`, `revcomp_primers`, the
-    `fetch_*` and `convert_*` reference rules, `check_taxonomy_reference`,
-    `samples_manifest` and `aggregate_read_counts` — take Snakemake's own defaults and
+    `fetch_*` and `convert_*` reference rules, `prepare_midori2_coi_sintax`,
+    `check_taxonomy_reference`, `samples_manifest` and `aggregate_read_counts` — take
+    Snakemake's own defaults and
     ignore any entry of the same name. Adding a key for a rule that does not look it up
     has no effect. Two keys break the other way: `phylo_tree` and `sylph_sketch`
     fall back to **1**, not `threads_default`, because there the thread count changes

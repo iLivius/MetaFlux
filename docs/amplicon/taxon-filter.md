@@ -23,6 +23,7 @@ classification and before any table is written.
 | Input | `05.dada2/seqs_lenfilt.fasta` (ASV sequences after the length filter, and after Metaxa2/ITSx extraction where that runs) plus the matching count table `05.dada2/seqtab_lenfilt_head_names.txt` |
 | Classify | `rdp` path — DADA2 `assignTaxonomy` (+ `addSpecies` for 16S); `sintax` path — `vsearch --sintax` |
 | Build lineage | ranks joined into one taxonomy string per ASV |
+| COI screens *(COI only)* | the verdicts of rule `coi_screens`, read from `06.taxonomy/coi_screens.tsv`: an ASV that fails the reading-frame check is removed, and one closer to bacterial COX1 than to MIDORI2 is moved to `06.taxonomy/bacterial_cox1_asvs.tsv`. This happens whatever `filter.enabled` says; each screen has its own switch under `amplicon.coi` (see [COI](markers/coi.md#the-coi-screens)) |
 | **Filter** | **`keep`, then `discard`, applied to that string; then `discard`'s best-hit check; for 16S, then Metaxa2's organelle call** |
 | Output | `06.taxonomy/asv_table.txt`, `asv_table_seqs.txt`, `taxon_seq_table.txt` (filtered), and `asv_table_unfiltered.txt` (every ASV, with what the filter did to it) |
 
@@ -37,7 +38,8 @@ lists it is [`asv_table_unfiltered.txt`](#the-table-with-everything-asv_table_un
 which exists for exactly that. The cost in reads is
 visible in `stats/read_tracking.txt`, whose `post_taxonomy_filter` column is summed from
 the filtered `asv_table.txt`: comparing it with `post_length_filter` shows how many
-reads the filter removed, per sample.
+reads the filter removed, per sample. In COI runs compare it with `post_bacterial_cox1`
+instead, because the two COI screens come before the filter.
 
 !!! note
 
@@ -297,6 +299,7 @@ These are starting points, not defaults — nothing in the code applies them.
 | 18S | `[d__Eukaryota]` — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S rRNA](markers/18S.md) | `[]` |
 | gyrB | *no recommended default* — see below | |
 | rpoB | *no recommended default* — see below | |
+| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COX1 is moved by the off-target guard (`amplicon.coi`), not by a token |
 
 **16S and 18S** start with the domain, written `d__` under both methods; ITS starts with
 the kingdom, `k__`, because UNITE has no domain rank. For 18S the taxonomy reference is
@@ -324,6 +327,14 @@ the lists empty, looks at the paralog fraction in the output, and decides after.
 **rpoB** has nothing structurally equivalent. The FROGS RefSeq reference contains only
 rpoB, so there is no paralog or organellar class to filter at this stage. Leave the
 lists empty unless a particular run shows a reason not to. See [rpoB](markers/rpob.md).
+
+**COI** strings start with `d__Eukaryota`, but the token that matters is the kingdom,
+`k__Metazoa`, which MetaFlux adds from MIDORI2's own NCBI taxonomy snapshot when it
+converts the reference. A domain token does not help here:
+MIDORI2 holds eukaryotes only, so `d__Eukaryota` would keep every ASV that SINTAX could
+classify. Protists have no kingdom in NCBI and carry no `k__`, so `keep: [k__Metazoa]`
+drops them along with fungi and plants. Bacterial COX1 needs no token: the off-target
+guard, on by default, moves it out before the lists are applied. See [COI](markers/coi.md).
 
 ## Writing tokens that actually match
 
@@ -447,6 +458,18 @@ What to check, in order:
 2. The spelling, against the `taxonomy` column of a run made with `enabled: false`.
 3. Whether the samples hold the taxon at all, in `06.taxonomy/asv_table_unfiltered.txt`
    of that run.
+
+COI runs have a stop of their own, one step earlier. When the two COI screens remove or
+move every ASV, the run stops before the lists are applied, whatever `filter.enabled`
+says (numbers illustrative):
+
+```text
+[assign_taxonomy/sintax] the COI screens removed or moved ALL 812 ASVs (795 by the frame check, 17 as bacterial COX1). That usually means primers or reads that are not COI; see logs/coi_screens.log and 06.taxonomy/coi_screens.tsv.
+```
+
+`logs/coi_screens.log` gives the reading frame and the reference length the screens worked
+out for the run, and how many ASVs got each verdict; `coi_screens.tsv` has the
+measurements and the verdict of every ASV. See [the COI screens](markers/coi.md#the-coi-screens).
 
 !!! note "Run-to-run reproducibility of the filtered set"
     With a fixed `amplicon.seed`, the confidence values the filter reads come out the

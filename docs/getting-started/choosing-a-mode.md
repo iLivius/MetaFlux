@@ -18,7 +18,7 @@ did not, it is shotgun data.
 |---|---|---|
 | What was sequenced | One marker region, PCR-amplified | Whole DNA, no amplification |
 | Core method | DADA2 exact ASV inference | Kraken2 classification + Bracken re-estimation, or sylph (`shotgun.profiler`) |
-| Reference | Marker database, fetched automatically (SILVA, UNITE, PR2, DD7RZ8, FROGS) | A Kraken2 index, sylph databases with their lineage tables, or both, supplied by the user |
+| Reference | Marker database, fetched automatically (SILVA, UNITE, PR2, DD7RZ8, FROGS, MIDORI2 with the bacterial COX1 set) | A Kraken2 index, sylph databases with their lineage tables, or both, supplied by the user |
 | Primers | Required — `amplicon.primers.fwd` / `.rev` | Not used |
 | Main result | `06.taxonomy/asv_table.txt` — ASVs × samples, with taxonomy | `03.abundance/otu_table.tsv` (Kraken2) or `sylph_table.tsv` (sylph) — taxa × samples, plus the BIOM version |
 | Resolution | Exact sequence variants of one gene | Whatever the index supports, down to species with Bracken; genomes at about species level with sylph |

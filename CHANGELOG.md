@@ -32,8 +32,8 @@ need about 225 GB of memory at species level.
   the read-tracking table has the columns `post_frame_check` and `post_bacterial_cox1`.
 - **Species flags.** `06.taxonomy/coi_asv_flags.tsv` says, per kept ASV, how far a
   species call can be trusted (`low_identity` below 98 %, `shared_sequence` when a
-  record of another named species is as close) and flags ASVs farther than 80 % from
-  everything in MIDORI2.
+  record of another named species is as close) and flags ASVs less than 80 % identical
+  to every MIDORI2 record (`far_from_midori2`).
 - **The bacterial COX1 set** (`bacterial_cox1_gtdb-r232.v1`, Zenodo
   [To be settled before release: its DOI]) was built for this release from the 199,923
   species representatives of GTDB R232; how, and how it was tested, is on the new
@@ -273,17 +273,23 @@ re-run").
 ### What to edit in a config written for v2.5.0
 
 - Nothing, for a run that stays as it was. Every new key has a default: `amplicon.coi`
-  (both screens on; read by COI runs only), `amplicon.probe_length_stat.COI` (needed by
-  COI runs only) and the `resources` rows for `coi_screens`. A folder made with
-  `orientation: mixed` needs no edit either, only the re-run described above.
+  (both screens on; used by COI runs only, though `length_tolerance` is checked in every
+  amplicon run), `amplicon.probe_length_stat.COI` (needed by COI runs only) and the
+  `resources` rows for `coi_screens`. A folder made with `orientation: mixed` needs no
+  edit either, only the re-run described above.
 - `shotgun.kmer_evidence.min_distinct_minimizers` must hold a whole number or `auto`.
   A fraction, `true`/`false` or other text, which v2.5.0 took without a word or stopped
   on with a traceback, now stops the run with the message that says what is allowed.
-- A COI run needs `amplicon.type: COI`, `amplicon.taxonomy.method: sintax` (`rdp` is
-  refused), an entry `COI: p95` under `amplicon.probe_length_stat` (the run stops at
-  start-up and names it otherwise) and, to give VSEARCH more than one thread, the
-  `resources` rows for `coi_screens` from the template; `keep: [k__Metazoa]` keeps the
-  animals. The COI page has a complete example.
+- A COI run needs `amplicon.type: COI` and `amplicon.taxonomy.method: sintax` (`rdp` is
+  refused); `keep: [k__Metazoa]` keeps the animals. The COI page has a complete example.
+  The entry `COI: p95` under `amplicon.probe_length_stat` and the `resources` rows for
+  `coi_screens` come from the template, which is read underneath the run config in every
+  run launched from the repository root; only a `config/config.yaml` kept from v2.5.0
+  lacks them. Add them from the v2.6.0 template: without `COI: p95` the run stops at
+  start-up and names it, and without the rows `coi_screens` falls back to
+  `threads_default` and `mem_mb_default` (4 threads and 2,000 MB as shipped), well below
+  the 8.5–8.6 GB that VSEARCH holds, which matters on a cluster or with
+  `--resources mem_mb=...`.
 
 ## 2.5.0 — 2026-10-16
 

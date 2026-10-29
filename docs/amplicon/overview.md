@@ -33,14 +33,17 @@ in pipeline order under `out_dir`, so the directory listing reads like the workf
 | 6 | ASV inference | DADA2 | `dada_filter`, `dada_seqtab` | `04.filtered/`, `05.dada2/` |
 | 7 | Marker-region extraction *(optional)* | Metaxa2 or ITSx | `target_extract` | `05.dada2/` |
 | 8 | ASV length filter | in-house | `dada_length_filter` | `05.dada2/`, `stats/dada2/` |
-| 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `assign_taxonomy` | `06.taxonomy/` |
+| 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `coi_screens` (COI only), `assign_taxonomy` | `06.taxonomy/` |
 | 10 | [Phylogeny](phylogeny.md) *(optional, 16S only)* | MAFFT + IQ-TREE, FastTree or RAxML-NG | `phylo_input`, `phylo_align`, `phylo_tree`, `phylo_export`, `phylo_qc` | `07.phylogeny/`, `stats/phylogeny/` |
 
 Two more rules close the run: `aggregate_read_counts` builds `stats/read_tracking.txt`,
 and `multiqc` builds `multiqc/multiqc_report.html`. One small rule runs before any of the
 taxonomy: `check_taxonomy_reference` checks the reference the classifier will read
 against the marker pack and writes `stats/taxonomy_reference_check.json` (see
-[step 9](#9-taxonomy-assignment)).
+[step 9](#9-taxonomy-assignment)). In COI runs, `coi_screens` also runs before
+`assign_taxonomy`: it measures every ASV for the two COI screens and writes
+`06.taxonomy/coi_screens.tsv`, which `assign_taxonomy` reads (see
+[COI](markers/coi.md#the-coi-screens)).
 
 Stage 10 is off by default and runs only for 16S. It takes the contaminant-filtered ASVs
 from `06.taxonomy/`, aligns them, and writes an unrooted tree for phylogenetic-diversity
@@ -314,7 +317,9 @@ fresh clone, an unpacked release or a second worktree has no records of the outp
 folder. From there, DADA2 and the steps after it would still run again, because their
 scripts are newer than the old outputs, but on the reads the old version trimmed, and
 without a word. A folder trimmed with `fixed` has no such file and is not asked for one,
-so nothing runs again because of it.
+so nothing runs again because of it. (After a `git pull` from v2.5.0, `trim_primers`
+runs again in a `fixed` folder for another reason, its changed command; see
+[What happens on a re-run](../reference/running.md#what-happens-on-a-re-run).)
 
 ## 3. Per-stage QC
 
@@ -568,9 +573,11 @@ by way of a local conversion step rather than a plain download: for 16S,
 `convert_silva_train` writes SILVA 144's training set with its kingdom names without
 SILVA's `--other` suffix and `convert_silva_sintax` builds the SINTAX database from it;
 for 18S under `sintax`, `convert_pr2_sintax` moves the domain of PR2's UTAX file to the
-SINTAX letter `d:`; and the rpoB reference is rebuilt from the FROGS release by
-`convert_rpob_to_dada2`. See the [marker pages](markers/index.md) for what each one
-contains.
+SINTAX letter `d:`; the rpoB reference is rebuilt from the FROGS release by
+`convert_rpob_to_dada2`; and for COI, `prepare_midori2_coi_sintax` rewrites MIDORI2's
+SINTAX file: the domain moves to `d:`, a kingdom is added from MIDORI2's NCBI taxonomy
+snapshot, and placeholder ranks, interim species names and bacterial COX1 records are left
+out. See the [marker pages](markers/index.md) for what each one contains.
 
 Before any classification, `check_taxonomy_reference` reads the exact file the
 classifier will use and checks it against the marker pack: the number of ranks (or the
@@ -590,13 +597,22 @@ Both paths write the same four tables; the `sintax` path additionally leaves
 | `taxon_seq_table.txt` | `ASV_#` IDs | one column per rank + the sequence |
 | `asv_table_unfiltered.txt` | `ASV_#` IDs, every ASV that reached the filter | per-sample counts + taxonomy + `metaxa2_origin` + `filter_status` |
 
+COI runs write three more files to `06.taxonomy/`: `coi_screens.tsv`, the measurements
+and verdicts of rule `coi_screens`, which `assign_taxonomy` applies before the keep/discard
+filter; `bacterial_cox1_asvs.tsv`, the ASVs the off-target guard moved out of the tables;
+and `coi_asv_flags.tsv`, one row per kept ASV with its identity to MIDORI2 and two flags
+(`species_flag`, `far_from_midori2`). See
+[what the run produces](markers/coi.md#what-the-run-produces).
+
 The taxonomy string is built from the marker's rank model, which follows the ranks of
 the reference in use: `d__` is always the domain and `k__` always the kingdom, and a
 string has a kingdom only where the reference defines one. So 16S on SILVA 144 has eight
 ranks (Domain, Kingdom, Phylum … Species) and on SILVA 138.2 seven, with no kingdom; ITS
 has seven starting at the kingdom, because UNITE has no domain; rpoB has seven starting
-at the domain; 18S has PR2's nine ranks under `method: rdp` and eight under
-`method: sintax`, where PR2's UTAX file merges Division and Subdivision into one field.
+at the domain; COI has eight (Domain, Kingdom … Species), with the kingdom added from
+MIDORI2's NCBI taxonomy snapshot and missing for protists, which have none in NCBI; 18S
+has PR2's nine ranks under `method: rdp` and eight under `method: sintax`, where PR2's
+UTAX file merges Division and Subdivision into one field.
 gyrB is seven ranks deep too, but its first rank is the DD7RZ8 paralog tag — `gyrB` for
 the true gene, `other` for a co-amplified paralog — so a gyrB lineage has no domain or
 kingdom at all. See the [gyrB page](markers/gyrb.md), and
@@ -625,9 +641,10 @@ Two rules close the run.
 `aggregate_read_counts` joins the per-stage counts into `stats/read_tracking.txt`: one row
 per sample, one column per stage, in pipeline order — `raw`, `nophix` (only when PhiX
 removal ran), `stripped`, `filtered`, `denoised`, `merged`, `non_chimeric`,
-`post_extraction` (only when extraction ran), `post_length_filter` and
-`post_taxonomy_filter`. This is the first file to open when a run produces fewer ASVs than
-expected: it shows which step consumed the reads.
+`post_extraction` (only when extraction ran), `post_length_filter`, `post_frame_check` and
+`post_bacterial_cox1` (only in COI runs: the reads left after the reading-frame check, and
+after the off-target guard), and `post_taxonomy_filter`. This is the first file to open
+when a run produces fewer ASVs than expected: it shows which step consumed the reads.
 
 `multiqc` collects the Falco reports, the Cutadapt JSONs and the bowtie2 PhiX logs into
 `multiqc/multiqc_report.html`.

@@ -4,7 +4,9 @@ MetaFlux is a Snakemake workflow, not a compiled program: the clone contains rul
 files, scripts and marker definitions, and nothing needs to be installed
 system-wide. Only Snakemake has to be present before the first run. Every tool the
 workflow actually calls — DADA2, Cutadapt, bowtie2, Kraken2, Bracken and the rest —
-is installed by conda while the workflow runs.
+is installed by conda while the workflow runs. The one exception is the system's
+`unzip`, which unpacks the ITS and COI downloads (see
+[Marker databases](#marker-databases-fetched-automatically)).
 
 ## 1. Clone the repository
 
@@ -20,7 +22,7 @@ The clone is the working copy. Four places in it matter:
 | `config/config.yaml` | The configuration template — every parameter of a run |
 | `workflow/rules/` | The rule files, split into `shared/`, `amplicon/`, `shotgun/` |
 | `workflow/envs/` | One conda environment specification per tool stack, each with its pin file for Linux |
-| `workflow/markers/` | One file per amplicon marker (`16S`, `ITS`, `18S`, `gyrB`, `rpoB`), declaring that marker's reference databases and download URLs |
+| `workflow/markers/` | One file per amplicon marker (`16S`, `ITS`, `18S`, `gyrB`, `rpoB`, `COI`), declaring that marker's reference databases and download URLs |
 
 A fifth directory, `refdb/`, appears on the first run: it is where downloaded
 reference databases are cached. It is git-ignored, so it never ends up in a commit.
@@ -136,6 +138,11 @@ does not pull UNITE or PR2.
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
 | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | FROGS rpoB databank (INRAE Toulouse); downloaded as a `.tar.gz` and rewritten into a DADA2 trainset, with the domain written `d__`, by `convert_rpob_to_dada2` |
 | COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`, `midori2/GB273/taxonomy/nodes.dmp` and `names.dmp`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv`, plus one built file: `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | MIDORI2's Zenodo record (the SINTAX zip and the taxonomy zip, unpacked by `fetch_midori2_coi` / `fetch_midori2_taxonomy`) and the Zenodo record of the bacterial COX1 set (`fetch_bacterial_cox1`); the built file is made by `prepare_midori2_coi_sintax` from the three, with the domain under `d:`, the kingdom added and the bacterial records left out |
+
+The ITS and COI zip files are unpacked with the system's `unzip` (by `fetch_uchime`,
+`fetch_midori2_coi` and `fetch_midori2_taxonomy`), not with a tool from a conda
+environment. `unzip` is present on most Linux systems; on one without it, such as a
+minimal container, install it before the first ITS or COI run.
 
 `refdb_root` defaults to `refdb`, i.e. inside the clone:
 

@@ -146,11 +146,14 @@ counts of all rows add up to the `post_length_filter` column of
 `stats/read_tracking.txt`. Use it when the removed ASVs matter, for instance to
 compare how many organelle reads two primer pairs pick up — see
 [keeping and discarding taxa](../amplicon/taxon-filter.md#the-table-with-everything-asv_table_unfilteredtxt).
-Nothing in the pipeline reads it; the tree and every other table use the filtered set.
+Nothing in the pipeline reads it except, in COI runs, the read tracking, which takes the
+reads of its `removed_frame` and `moved_bacterial_cox1` rows to work out the columns
+`post_frame_check` and `post_bacterial_cox1`; the tree and every other table use the
+filtered set.
 
 The rank columns in `taxon_seq_table.txt` come from the marker pack, so they
 match the reference's actual depth: `Domain, Kingdom, Phylum … Species` for 16S on
-SILVA 144, `Domain, Phylum … Species` for 16S on SILVA 138.2 and for rpoB,
+SILVA 144 and for COI, `Domain, Phylum … Species` for 16S on SILVA 138.2 and for rpoB,
 `Kingdom … Species` for ITS, `Gene, Phylum … Species` for gyrB, and for 18S PR2's
 nine ranks
 (`Domain, Supergroup, Division, Subdivision, Class, Order, Family, Genus, Species`)
@@ -183,9 +186,9 @@ two.
 
 | File | Written by | Rows | Contents |
 |---|---|---|---|
-| `coi_screens.tsv` | `coi_screens` | every ASV that reached the filter | length, open reading frames, `frame_ok`, `length_ok`, B and the closest bacterial gene with its GTDB taxonomy, E, the closest MIDORI2 record, and the species of every record tied at that identity (joined by a vertical bar), and the verdict (`frame`, `bacterial`, `pass`); read by `assign_taxonomy` |
+| `coi_screens.tsv` | `coi_screens` | every ASV that reached the filter | the ASV's reads summed over all samples, length, open reading frames, `frame_ok`, `length_ok`, B and the closest bacterial gene with its GTDB taxonomy, E, the closest MIDORI2 record, and the species of every record tied at that identity (joined by a vertical bar; `no_species` stands for a tied record without a formal species name), and the verdict (`frame`, `bacterial`, `pass`); read by `assign_taxonomy`. The verdict applies only the screens that are on, the frame check first (an ASV that fails both is `frame`); for a screen that is off, `frame_ok` and `length_ok` (frame check) or B against E (off-target guard) show what it would have done |
 | `bacterial_cox1_asvs.tsv` | `assign_taxonomy` | the ASVs the off-target guard moved | counts per sample, what SINTAX had called the ASV, B, the closest bacterial gene and its taxonomy, E, the closest MIDORI2 record, the sequence |
-| `coi_asv_flags.tsv` | `assign_taxonomy` | the ASVs of `asv_table.txt` | E, the closest MIDORI2 record and species, `species_flag` (`ok`, `low_identity`, `shared_sequence`, `no_species`) and `far_from_midori2` (1 when E is below 80 %) |
+| `coi_asv_flags.tsv` | `assign_taxonomy` | the ASVs of `asv_table.txt` | E, the closest MIDORI2 record, the species of the tied records as in `coi_screens.tsv`, `species_flag` (`ok`, `low_identity`, `shared_sequence`, `no_species`; here `no_species` means that SINTAX called no species) and `far_from_midori2` (1 when E is below 80 %) |
 
 ### `07.phylogeny/`
 
@@ -229,7 +232,7 @@ Two things to know about what is and is not here:
 | `taxonomy_reference_check.json` | What the reference check saw in the file the classifier reads: the file, the number of records, the ranks per record, the SINTAX letters (under `sintax`) and the names found in each rank the marker pack has a rule for. Written by `check_taxonomy_reference` before any classification, and only when the file passes; `assign_taxonomy` waits for it, and nothing reads its content. See [the reference check](../amplicon/markers/index.md#the-reference-check-reference_values). |
 | `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix`, `stripped`), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. |
 | `cutadapt/{sample}.passA_5prime.cutadapt.json` and `.passA_3prime.` | Cutadapt's own report for the 5' and 3' calls of the first pass. These feed MultiQC. The second pass run under `orientation: mixed` keeps no JSON here: its reports go to `logs/trim_primers/{sample}.log`, and the counts of its 5′ call to `orientation/{sample}.tsv`, so in MultiQC the pairs that only it keeps count as discarded by the first pass. `03.stripped_reads.counts` counts the pairs of both passes, and the rare pair kept by both twice. |
-| `orientation/{sample}.tsv` | Only with `primers.orientation: mixed`. One file per sample, written by `trim_primers`: a header line and one row with `read_pairs_in` (the read pairs that went into primer trimming), `kept_as_sequenced` (the pairs the first pass kept, forward primer in R1) and `kept_swapped` (the pairs the second pass kept and wrote with their mates swapped), each with its percentage of `read_pairs_in` (`pct_as_sequenced`, `pct_swapped`, two decimals; `NA` for a sample with no pairs). The counts are those of the two 5′ calls, where the orientation of a pair is decided, taken from Cutadapt's own reports; the 3′ calls can still drop a pair that ends up shorter than `min_length`, and the rare pair kept by both passes counts in both columns. Nothing in the pipeline reads it, and MultiQC does not show it. A folder trimmed with `mixed` by MetaFlux v2.5.0 or earlier lacks it, which is what makes primer trimming run again there (see [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)). A folder switched from `mixed` to `fixed` keeps the file of its last `mixed` run. |
+| `orientation/{sample}.tsv` | Only with `primers.orientation: mixed`. One file per sample, written by `trim_primers`: a header line and one row, with the columns `sample`, `read_pairs_in` (the read pairs that went into primer trimming), `kept_as_sequenced` (the pairs the first pass kept, forward primer in R1), `pct_as_sequenced`, `kept_swapped` (the pairs the second pass kept and wrote with their mates swapped) and `pct_swapped`. The two percentages are of `read_pairs_in`, with two decimals (`NA` for a sample with no pairs). The counts are those of the two 5′ calls, where the orientation of a pair is decided, taken from Cutadapt's own reports; the 3′ calls can still drop a pair that ends up shorter than `min_length`, and the rare pair kept by both passes counts in both columns. Nothing in the pipeline reads it, and MultiQC does not show it. A folder trimmed with `mixed` by MetaFlux v2.5.0 or earlier lacks it, which is what makes primer trimming run again there (see [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)). A folder switched from `mixed` to `fixed` keeps the file of its last `mixed` run. |
 | `phylogeny/phylogeny_qc.json` | Only when `phylogeny.enabled: true`. Tip accounting, alignment shape, and the long-branch report — or a record of why no tree was built. Written on every enabled run, including a skipped one. Nothing reads it back; it is for you. See [Phylogeny](../amplicon/phylogeny.md#the-long-branch-report). |
 | `dada2/{sample}.filter_stats.json` | Per-sample `filterAndTrim` result. |
 | `dada2/stripped_read_R{1,2}_qual_plot.png` and `.pdf` | Aggregate quality profile of the primer-trimmed reads — the picture behind the `truncLen` choice. |
@@ -249,9 +252,11 @@ raw → [nophix] → stripped → filtered → denoised → merged → non_chime
 extraction step ran, and `post_frame_check` and `post_bacterial_cox1` only in COI runs:
 the reads left after the reading-frame check, and after the off-target guard moved the
 bacterial COX1 ASVs out (their reads are in `06.taxonomy/bacterial_cox1_asvs.tsv`). The last column counts reads still present after the
-contaminant filter, so the drop between `post_length_filter` and
-`post_taxonomy_filter` is exactly what the taxon filter removed: the keep/discard
-lists, the best-hit check and, for 16S, the organelle filter.
+contaminant filter, so the drop from the column before it (`post_length_filter`, or
+`post_bacterial_cox1` in COI runs) to `post_taxonomy_filter` is exactly what the taxon
+filter removed: the keep/discard lists, the best-hit check and, for 16S, the organelle
+filter. In COI runs the drop from `post_length_filter` to `post_taxonomy_filter` also
+holds the reads of the two COI screens.
 `06.taxonomy/asv_table_unfiltered.txt` shows which of them removed each ASV. A sample
 that collapses at one particular column points straight at the step to inspect.
 
@@ -275,7 +280,8 @@ renaming rules are in the shipped MultiQC config.
 
 ### `logs/`, `benchmarks/` and `_aux/`
 
-`logs/` holds the captured stdout/stderr of every rule, laid out as
+`logs/` holds the captured stdout/stderr of every rule (except the MIDORI2 conversion,
+`prepare_midori2_coi_sintax`, which writes no log), laid out as
 `logs/<rule>/<sample>.log` for per-sample rules and `logs/<rule>.log` for the
 rest. It is the first place to look when a rule fails.
 
@@ -320,7 +326,9 @@ out_dir/
 │   └── sylph/           # sylph sketches and sylph-tax files (profiler sylph | both)
 ├── 03.abundance/        # Bracken reports + otu_table.tsv / otu_table.biom; sylph tables
 ├── 04.extracted_reads/  # per-taxon reads (only when extract_taxa is set)
-├── stats/               # read_tracking.txt; sylph/ summary (profiler sylph | both)
+├── stats/               # read_tracking.txt;
+│                        # kmer_evidence/ plots (profiler kraken2 | both);
+│                        # sylph/ summary (profiler sylph | both)
 ├── multiqc/             # multiqc_report.html + multiqc_data/
 ├── samples.tsv          # sample → source → FASTQ manifest
 └── logs/                # per-rule logs
@@ -477,11 +485,16 @@ and every profiler:
 | 18S, PR2, `method: sintax` | `d__ sg__ dv__ c__ o__ f__ g__ s__` (`dv__` holds Division and Subdivision joined by `-`) | 8 |
 | gyrB, DD7RZ8 | the gene tag (`gyrB` or `other`, no prefix), then `p__ c__ o__ f__ g__ s__` | 7 |
 | rpoB, FROGS | `d__ p__ c__ o__ f__ g__ s__` | 7 |
+| COI, MIDORI2 | `d__ k__ p__ c__ o__ f__ g__ s__` (`k__` holds Metazoa, Fungi or Viridiplantae; protists have no kingdom in NCBI, so their strings have no `k__`) | 8 |
 | Kraken2 (`otu_table`), any database | `d__ k__ p__ c__ o__ f__ g__ s__` (`k__` empty on a GTDB database, which has no kingdom rank, and for taxa without a kingdom, most protists among them) | 8 |
 | sylph (`sylph_table`) | `d__ p__ c__ o__ f__ g__ s__` (GTDB has no kingdom) | 7 |
 
 In the amplicon tables, ranks the classifier could not resolve are simply left out, so a
-string can end early (`d__Bacteria;k__Pseudomonadati;p__Pseudomonadota`). The shotgun
+string can end early (`d__Bacteria;k__Pseudomonadati;p__Pseudomonadota`). A COI string
+can also skip a rank in the middle, where the converted MIDORI2 has no name for it: a
+protist has no kingdom (`d__Eukaryota;p__Euglenozoa;…`), and a rank that NCBI leaves
+unnamed is left out of the file (`…;o__Ustilaginales;g__Mycosarcoma;…`, no family). In
+`taxon_seq_table.txt` that rank's column holds `NA`. The shotgun
 tables always write every slot and leave empty any slot they have no name for, and every
 slot below `shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level table).
 
@@ -539,6 +552,7 @@ pipeline:
 | ITS, UNITE, both methods | UNITE's own `s__Genus_species` (underscore) | `s__Agaricus_bisporus` |
 | 18S, PR2 | PR2's own `s__Genus_species` | `s__Unruhdinium_kevei` |
 | gyrB (DD7RZ8), rpoB (FROGS) | the reference's own `s__Genus_species` | `s__Staphylococcus_simiae` |
+| COI, MIDORI2 | `s__Genus_species`, as the conversion writes MIDORI2's species (underscore; interim names such as `sp.` are left out) | `s__Sarcophaga_munronis` |
 | Shotgun `otu_table` | the whole species name, as the Kraken2 database writes it | `s__Escherichia coli`, `s__Peduovirus P37`, `s__uncultured Martelella sp.` |
 | Shotgun `sylph_table` | the GTDB species name exactly as GTDB writes it, placeholders included | `s__Escherichia coli_E`, `s__JABGUH01 sp018646675` |
 

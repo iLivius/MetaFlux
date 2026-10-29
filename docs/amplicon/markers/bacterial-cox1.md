@@ -8,7 +8,7 @@ recognised as such: it can only be assigned to a eukaryote, usually an animal.
 
 MetaFlux therefore uses a second reference: a set of bacterial and archaeal subunit-I genes
 taken from the species representatives of the Genome Taxonomy Database, GTDB (Parks et al.
-2025). For every ASV, MetaFlux compares its best identity to this set (B) with its best
+2026). For every ASV, MetaFlux compares its best identity to this set (B) with its best
 identity to MIDORI2 (E). An ASV with B > E is reported in a separate table of bacterial COX1
 sequences. The same set is used once, when MIDORI2 is prepared, to remove MIDORI2 records
 that are themselves bacterial COX1 filed under eukaryotic names.
@@ -25,7 +25,9 @@ other symbionts of arthropods, plus 3,000 other bacteria and 300 archaea drawn p
 least three per phylum, the rest in proportion to the number of species in the phylum).
 Because Rickettsiales are over-represented, shares given for "all bacteria" are weighted back
 to the number of GTDB species in each group. The rules were fixed before the set was built
-from GTDB R232 and tested once on data not used during development (step 7).
+from GTDB R232, except the evidence rule of step 6 and its use in check 5.4, which were
+revised during the build. The set was then tested once on data not used during development
+(step 7).
 
 ## At a glance
 
@@ -50,8 +52,9 @@ cover at least 80 % of the ASV.
 
 - **B > E.** The ASV is moved from the main ASV and taxonomy tables to
   `bacterial_cox1_asvs.tsv`, with its read counts, B, E and its best bacterial
-  match. Its reads are counted in a separate column of the read-tracking table. Nothing is
-  deleted, so that, for example, a *Wolbachia* infection stays visible.
+  match. In the read-tracking table, the column `post_bacterial_cox1` holds the reads left
+  after the move; the moved reads are `post_frame_check` minus `post_bacterial_cox1`.
+  Nothing is deleted, so that, for example, a *Wolbachia* infection stays visible.
 - **All other ASVs.** E and the best MIDORI2 match are reported for every ASV, and ASVs
   with E below 80 % are flagged.
 
@@ -371,8 +374,8 @@ Two simpler rules were tested on the development sample and not used:
 
 The lineages concerned rarely carry respiratory oxidases. In the development sample, none of
 the 15 genomes predicted with table 4 (10 Mycoplasmatales, 3 BD1-5, *Anadelfobacter* and
-*Stammera*) carried a candidate gene. The 1 % rule has not yet been run on GTDB's own gene
-files; the README reports how many genomes it assigns to table 4.
+*Stammera*) carried a candidate gene. The README reports how many R232 genomes the 1 % rule
+assigned to table 4.
 
 ### Step 2. Finding subunit-I genes
 
@@ -493,7 +496,7 @@ at loci where the gene is broken by a frameshift or an internal stop codon.
 
 GTDB admits a genome only if CheckM (Parks et al. 2015), which uses marker genes, and CheckM2
 (Chklovski et al. 2023), a machine-learning model, both estimate completeness of at least
-50 %, contamination below 5 % and a quality score of at least 50 (Parks et al. 2025). Among
+50 %, contamination below 5 % and a quality score of at least 50 (Parks et al. 2026). Among
 the genomes that pass, it prefers type material and high-quality assemblies as species
 representatives. A single foreign contig carrying one gene is below what such genome-wide
 estimates can detect, so every candidate gene is tested individually.
@@ -650,9 +653,9 @@ genome. Two independent lines of evidence say which.
 none says mitochondrial. Otherwise it is listed and kept, and check 5.4 then judges the gene
 with the record still in MIDORI2. Examples from the R232 build:
 
-- **Kept: five mushroom records.** Five records of *Rhizoctonia*, *Ganoderma* and *Fomes* were
+- **Kept: six mushroom records.** Six records of *Rhizoctonia*, *Ganoderma* and *Fomes* were
   91–98 % identical to a gene in a MAG of a soil archaeon (Nitrososphaeraceae). Their lineages
-  use TGA for only 1–5 % of tryptophan codons, so their lack of TGA is no evidence. The gene has
+  use TGA for only 1–5 % of tryptophan codons, so their TGA counts are no evidence. The gene has
   no relative in any other genome. The COX1 model matches only amino acids 12–151 of its 531,
   and the rest carries the two LAGLIDADG motifs of the homing endonucleases encoded in
   group I introns (Pfam PF00961): the gene is the first exon of a fungal COX1 read on into the
@@ -693,8 +696,9 @@ and 170 of them were removed:
 removed a record when it had no TGA in frame and its lineage reads TGA as tryptophan, and kept
 every record with at least one TGA. Applied to R232, it went wrong in two ways:
 
-- it removed the five mushroom records above, because a missing TGA is no evidence in lineages
-  that rarely use TGA, and the gene they matched was never examined;
+- it removed five of the six mushroom records above, those without a TGA, because a missing
+  TGA is no evidence in lineages that rarely use TGA, and the gene they matched was never
+  examined;
 - it kept bacterial records with a single TGA, such as the beetle record above. Left in
   MIDORI2, such records made check 5.4 reject the genes of the bacteria they come from: a
   single record filed as the clam *Corbicula fluminea* (MF319222.1: one TGA among six
@@ -866,7 +870,7 @@ GTDB taxonomy, for example:
 The release is named after the GTDB release and a build number (`gtdb-r232.v1`). A later GTDB
 release, or any change of a rule, produces a new version under the same Zenodo concept DOI.
 MetaFlux pins the version DOI and the SHA-256 of the files it downloads. If you use the set,
-cite the release by its version DOI, together with GTDB (Parks et al. 2025) and MIDORI2
+cite the release by its version DOI, together with GTDB (Parks et al. 2026) and MIDORI2
 (Leray et al. 2022).
 
 ### Parameters of version 1
@@ -919,10 +923,15 @@ close relative without biasing the result.
 
 ## Limitations, open issues and possible improvements
 
-**Coverage of bacterial diversity.** The set contains what GTDB contains. In the development
-tests, amplicons whose genus was absent from the bacterial reference were recognised in 78 %
-of cases instead of 94 %; the final test repeats this measurement with the R232 set. Lineages
-without cultured or assembled members are not represented.
+**Coverage of bacterial diversity.** The set contains what GTDB contains. In the final test,
+96.0 % of the amplicons were recognised with their genus left out of the set, against 98.4 %
+with only their species left out (78 % and 94 % in the development tests). Most of them were
+BF3/BR2 amplicons (803 of 936, 98.8 % recognised with the genus left out); for Leray-XT the
+share was 80.4 %, for fwhF2/fwhR2n 77.4 %. None of the 11 *Wolbachia* amplicons was
+recognised with its genus left out, because MIDORI2 holds *Wolbachia* COX1 under animal
+names: a *Wolbachia* lineage missing from the set is recognised only if MIDORI2 holds no
+record of it under an animal's name (step 7). Lineages without cultured or assembled members
+are not represented.
 
 **One genome per species.** Variation within a species is represented by one genome. The
 development tests removed the whole species and still recognised 94 % of the amplicons, so an
@@ -1080,7 +1089,7 @@ marker itself, are on [Citation and references](../../about/citation.md).
   assessing the quality of microbial genomes recovered from isolates, single cells, and
   metagenomes. *Genome Research* 25:1043–1055. doi:10.1101/gr.186072.114
 - Parks, D. H., Chaumeil, P.-A., Mussig, A. J., Rinke, C., Chuvochina, M., Hugenholtz, P.
-  (2025). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245
+  (2026). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245
   archaeal genomes. *Nucleic Acids Research* 54(D1):D743–D754. doi:10.1093/nar/gkaf1040
   (covers releases up to R10-RS226; R232 is release 11)
 - Paysan-Lafosse, T., et al. (2025). The Pfam protein families database: embracing AI/ML.

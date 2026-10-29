@@ -363,8 +363,8 @@ so a shorter string means a less confident assignment rather than a missing rank
 
 ## Related pages
 
-- [gyrB](gyrb.md) — the other protein-coding marker, pre-trimmed reference and a paralog
-  tag, but likewise RDP-only
+- [gyrB](gyrb.md) — the other bacterial protein-coding marker, pre-trimmed reference and a
+  paralog tag, but likewise RDP-only
 - [Amplicon length and truncation](../length-and-truncation.md)
 - [Keeping and discarding taxa](../taxon-filter.md)
 - [Configuration](../../reference/configuration.md)

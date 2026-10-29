@@ -22,7 +22,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | `amplicon.type` | `COI` |
 | Reference database | MIDORI2 release GB273 (Leray et al. 2022), variant UNIQ NUC_SP, SINTAX file; Zenodo version DOI 10.5281/zenodo.22685701 |
 | Role of that database | taxonomy reference, amplicon-length probe substrate, and identity E of the off-target guard |
-| Second reference | the bacterial COX1 reference set `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records that are bacterial COX1 under eukaryote names |
+| Second reference | the bacterial COX1 reference set `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a candidate gene of the set (186 in GB273), each marked `removed` (170, bacterial COX1 under eukaryote names) or `listed` (16, kept) |
 | Probe mode | `pcr` — MIDORI2 holds whole barcodes and whole genes |
 | Preparation | download and unzip, then a one-time conversion of the headers (below) |
 | Classifier | SINTAX only (`amplicon.taxonomy.method: sintax`) |
@@ -98,10 +98,10 @@ named, and they cover lineages that the named records do not.
 
 | | |
 |---|---|
-| Downloaded from | `https://zenodo.org/records/22685701/files/MIDORI2_GB273_SINTAX_sp.zip` (member `SINTAX_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`), and `MIDORI2_GB273_KRAKEN2_taxonomy.zip` from the same record |
+| Downloaded from | `https://zenodo.org/records/22685701/files/MIDORI2_GB273_SINTAX_sp.zip` (584 MB; member `SINTAX_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`), and `MIDORI2_GB273_KRAKEN2_taxonomy.zip` (69 MB) from the same record |
 | Checked | MD5 of each zip as Zenodo lists it; SHA-256 of the extracted FASTA as MIDORI2's `release_sha256.txt` lists it |
 | Fetch rules | `fetch_midori2_coi`, `fetch_midori2_taxonomy`, `fetch_bacterial_cox1` |
-| Conversion rule | `prepare_midori2_coi_sintax` → `<out_dir>/logs/refdb/prepare_midori2_coi_sintax.log` |
+| Conversion rule | `prepare_midori2_coi_sintax`. It writes no log: its counts go to the report next to the converted file (next row), and when it stops, its message is printed to stderr with Snakemake's own messages |
 | Cached at | `refdb/midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz`, with a report of every count the conversion changed next to it (`…_metaflux_sintax.report.tsv`) |
 
 ### What the conversion changes, and why
@@ -136,9 +136,9 @@ and after conversion
   its genus and higher ranks.
 - **Bacterial COX1 filed under eukaryote names is removed.** MIDORI2 is built from the
   eukaryotic divisions of GenBank, so a bacterial sequence submitted under an animal's name
-  enters it. The bacterial COX1 reference set lists 170 such records in GB273, mostly
-  *Wolbachia*, *Tisiphia* and other symbionts filed as insects. How they were found is
-  described on [Bacterial COX1 reference set (COI)](bacterial-cox1.md).
+  enters it. The list that comes with the bacterial COX1 reference set marks 170 such records
+  in GB273 for removal, mostly *Wolbachia*, *Tisiphia* and other symbionts filed as insects.
+  How they were found is described on [Bacterial COX1 reference set (COI)](bacterial-cox1.md).
 
 The conversion stops, rather than guessing, on a header without `;tax=`, a first field
 that is not `k:Eukaryota_<taxid>`, a taxid missing from the taxonomy snapshot, or a
@@ -164,7 +164,9 @@ took it out (`removed_frame`, `moved_bacterial_cox1`), and the read-tracking tab
 column for each screen (`post_frame_check`, `post_bacterial_cox1`).
 
 With a screen switched off, the rule still measures, and `coi_screens.tsv` says what the
-screen would have done.
+screen would have done. Its `verdict` column applies only the screens that are on, the
+frame check first (an ASV that fails both is `frame`); for a screen that is off, read
+`frame_ok` and `length_ok` (frame check) or compare B with E (off-target guard).
 
 ### Reading-frame check (`amplicon.coi.frame_check`)
 
@@ -241,8 +243,9 @@ visible.
 ### Species flags
 
 `06.taxonomy/coi_asv_flags.tsv` has one row per ASV of `asv_table.txt`: E, the best
-MIDORI2 record and its species, and two flags that add what the SINTAX confidence cannot
-show.
+MIDORI2 record, the species of every record tied with it at that identity (joined by a
+vertical bar; `no_species` there stands for a tied record without a formal species name),
+and two flags that add what the SINTAX confidence cannot show.
 
 | `species_flag` | Meaning |
 |---|---|
@@ -268,9 +271,9 @@ other species, and it also removed 1.6 % of the right ones.
 | `refdb/cache/probe_COI_midori2_gb273_uniq_nuc_sp_co1_<hash>.json` | Probed amplicon-length distribution for the primer pair, from MIDORI2 |
 | `06.taxonomy/asv_table.txt` | Counts per sample and the MIDORI2 taxonomy string, without the ASVs the screens took out |
 | `06.taxonomy/asv_table_unfiltered.txt` | Every ASV that reached the filter, with `filter_status` (`removed_frame`, `moved_bacterial_cox1` and the statuses of the taxon filter) |
-| `06.taxonomy/coi_screens.tsv` | Per ASV: length, open frames, frame and length verdicts, B and the closest bacterial gene, E and the closest MIDORI2 record and species, and the verdict of the screens |
+| `06.taxonomy/coi_screens.tsv` | Per ASV: its reads summed over all samples, length, open frames, frame and length verdicts, B and the closest bacterial gene, E, the closest MIDORI2 record and the species of the records tied with it, and the verdict of the screens |
 | `06.taxonomy/bacterial_cox1_asvs.tsv` | The ASVs the off-target guard moved: counts, SINTAX call, B, E, closest bacterial gene and its GTDB taxonomy, sequence |
-| `06.taxonomy/coi_asv_flags.tsv` | Per kept ASV: E, best MIDORI2 record and species, `species_flag`, `far_from_midori2` |
+| `06.taxonomy/coi_asv_flags.tsv` | Per kept ASV: E, best MIDORI2 record, the species of the records tied with it, `species_flag`, `far_from_midori2` |
 | `stats/read_tracking.txt` | With the columns `post_frame_check` and `post_bacterial_cox1` |
 | `logs/coi_screens.log` | The run's reading frame and reference length, and the counts of each screen |
 

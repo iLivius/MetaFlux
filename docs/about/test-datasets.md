@@ -60,7 +60,7 @@ Eukaryota before the `keep: [d__Eukaryota]` filter, splitting into TSAR (53%), O
 (28%) and Archaeplastida (14%), and that the observed median ASV length of 382 bp lies
 within a base of the 381 bp median predicted by in-silico PCR against SILVA-Euk 18S v132,
 the probe reference. Defined 18S mock communities are scarce; the ground-truth work is
-carried by the other three sets.
+carried by the four mock-community sets.
 
 ## Shotgun test dataset
 

@@ -394,7 +394,8 @@ out_dir/
 │   └── sylph/            # sylph sketches and sylph-tax files (profiler sylph | both)
 ├── 03.abundance/         # Bracken reports, otu_table.tsv / otu_table.biom
 ├── 04.extracted_reads/   # KrakenTools per-taxon reads (only if extract_taxa set)
-├── stats/                # read_tracking.txt
+├── stats/                # read_tracking.txt; kmer_evidence/ plots (profiler kraken2 | both);
+│                         # sylph/ summary (profiler sylph | both)
 ├── multiqc/              # multiqc_report.html
 ├── samples.tsv           # sample → source → FASTQ manifest
 └── logs/                 # per-rule logs

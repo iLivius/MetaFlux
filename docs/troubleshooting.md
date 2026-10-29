@@ -8,8 +8,9 @@ codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgu
 taxon filter that removes every taxon, small differences between two runs on the same
 data, a DADA2 error model that never converges, an outdated marker pack in
 `config/markers/`, a reference file that fails the
-reference check, a reference download that fails its md5 check, and YAML mistakes in
-the config. Each entry gives the symptom, the reason behind it, and what to change.
+reference check, a reference download that fails its md5 or SHA-256 check, and YAML
+mistakes in the config. Each entry gives the symptom, the reason behind it, and what
+to change.
 
 ## Amplicon: automatic `truncLen` can drop all reads on very clean runs
 
@@ -225,11 +226,11 @@ of its species, and at class, phylum or domain level, which lie outside that ran
 nothing survived at all. Bracken's `{sample}_output.txt` files were never affected, and
 neither were species-level runs.
 
-**Fix.** Update to v2.5.0 and run the same command again, from the same MetaFlux
-folder. v2.5.0 builds the table with rule `finalize_otu_table` straight from the Bracken
-reports, from their clade counts, and pins Bracken 3.1p1. In a folder made with an
-earlier version every step runs again, Kraken2 included, because the output folders
-have new names (see
+**Fix.** Update to v2.5.0 or later and run the same command again, from the same
+MetaFlux folder. From v2.5.0 on, MetaFlux builds the table with rule
+`finalize_otu_table` straight from the Bracken reports, from their clade counts, and
+pins Bracken 3.1p1. In a folder made with an earlier version every step runs again,
+Kraken2 included, because the output folders have new names (see
 [What happens on a re-run](reference/running.md#what-happens-on-a-re-run)), so nothing
 has to be forced.
 
@@ -593,10 +594,12 @@ lists every problem the check found.
 !!! warning "Symptom"
 
     A `fetch_*` rule fails, and its log (`logs/refdb/fetch_<name>.log` in the output
-    directory) ends with:
+    directory) ends with one of these lines (the second comes from the COI downloads,
+    whose MIDORI2 FASTA and bacterial COX1 files are checked against SHA-256 sums):
 
     ```text
     md5 mismatch for <file>: expected …, got …
+    sha256 mismatch for <file>: expected …, got …
     ```
 
 **Cause.** The downloaded file is not the one the marker pack expects: the download was
@@ -606,7 +609,7 @@ MetaFlux deletes the file, so it is never used.
 **Fix.** Run the same command again; a broken download usually works the second time.
 If the same checksum comes back every time, the file on the server has changed. Report
 it as an [issue on GitHub](https://github.com/iLivius/MetaFlux/issues) rather than
-editing the md5 in the marker pack.
+editing the md5 or SHA-256 in the marker pack.
 
 ## Config (YAML) errors
 

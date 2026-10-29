@@ -299,8 +299,8 @@ so a shorter string means a less confident assignment rather than a missing rank
 
 ## Related pages
 
-- [rpoB](rpob.md) — the other protein-coding marker, which differs in almost every detail
-  listed above except being RDP-only
+- [rpoB](rpob.md) — the other bacterial protein-coding marker, which differs in almost
+  every detail listed above except being RDP-only
 - [Amplicon length and truncation](../length-and-truncation.md)
 - [Keeping and discarding taxa](../taxon-filter.md)
 - [Configuration](../../reference/configuration.md)
