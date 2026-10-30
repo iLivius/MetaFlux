@@ -84,16 +84,23 @@ references:
     url:     https://zenodo.org/records/22685701/files/MIDORI2_GB273_KRAKEN2_taxonomy.zip?download=1
     md5:     fb562910696f35a6bbaf867263d236aa
     doi:     10.5281/zenodo.22685701
-  # [To be settled before release: the Zenodo URLs, DOI and SHA-256 of the three files
-  # of the bacterial COX1 set below, once the set is published.]
   bacterial_cox1:
     archive: files
     file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz
+    url:     https://zenodo.org/records/23820760/files/bacterial_cox1_gtdb-r232.v1.fasta.gz?download=1
+    sha256:  52d5136c697a36f448d5df67592d4d1ee11641f632b7d8baeeb4d678ae70dfc8
+    doi:     10.5281/zenodo.23820760
   bacterial_cox1_fragments:
     archive: files
     file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz
+    url:     https://zenodo.org/records/23820760/files/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz?download=1
+    sha256:  b820a2d87415dd8ef8b5796cce5f565e47585f953bf19cd68a863008b45cc1d7
+    doi:     10.5281/zenodo.23820760
   bacterial_cox1_midori2_list:
     archive: files
     file:    bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv
+    url:     https://zenodo.org/records/23820760/files/midori2_gb273_bacterial_records.tsv?download=1
+    sha256:  6f28c6caa24927561eeefb4eb18e5d81ed77a9aba1aa301729aef416f2587ae9
+    doi:     10.5281/zenodo.23820760
   midori2_coi_sintax:
     file:    midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz

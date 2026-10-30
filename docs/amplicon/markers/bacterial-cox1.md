@@ -33,7 +33,7 @@ revised during the build. The set was then tested once on data not used during d
 
 | | |
 |---|---|
-| Release | `bacterial_cox1_gtdb-r232.v1` (Zenodo DOI: [To be settled before release]) |
+| Release | `bacterial_cox1_gtdb-r232.v1` (Zenodo DOI: [10.5281/zenodo.23820760](https://doi.org/10.5281/zenodo.23820760)) |
 | Source | GTDB R232: 199,923 species representatives, 189,801 bacterial and 10,122 archaeal |
 | Genes | GTDB's own gene predictions, made with Prodigal 2.6.3 (Hyatt et al. 2010), file `gtdb_proteins_nt_reps_r232.tar.gz`; the build runs no gene prediction of its own |
 | Content | subunit-I genes of the heme-copper oxidase superfamily, as DNA: whole genes in one file, fragments of at least 200 amino acids in a second file |

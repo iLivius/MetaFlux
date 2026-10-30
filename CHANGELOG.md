@@ -35,7 +35,7 @@ need about 225 GB of memory at species level.
   record of another named species is as close) and flags ASVs less than 80 % identical
   to every MIDORI2 record (`far_from_midori2`).
 - **The bacterial COX1 set** (`bacterial_cox1_gtdb-r232.v1`, Zenodo
-  [To be settled before release: its DOI]) was built for this release from the 199,923
+  10.5281/zenodo.23820760) was built for this release from the 199,923
   species representatives of GTDB R232; how, and how it was tested, is on the new
   manual page "Bacterial COX1 reference set (COI)".
 
