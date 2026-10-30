@@ -60,10 +60,12 @@ that position, usually written Q1. Using Q1 rather than the mean is deliberate �
 mean stays flattering long after the worst quarter of reads has gone bad, and it is the
 bad quarter that generates spurious variants.
 
-Falco reports quality in bins: positions 1 to 9 individually, then `10-14`, `15-19`, and
-so on in fixed-width bins. Each bin is expanded back to one value per cycle position, so
-that samples whose bin layout differs at the tail (different read lengths) can still be
-compared position by position.
+Falco reports quality for positions 1 to 9 individually and for groups of positions
+beyond that. The group width depends on the longest read in the file: 5 positions
+(`10-14`, `15-19`, …) when the longest read is 140 to 334 bp, as in 2 × 250 and 2 × 300
+runs after primer trimming. Each group reports the mean of its per-position values. The
+picker expands each group back to one value per position, so samples with different
+group layouts (different read lengths) can be compared position by position.
 
 **Aggregating across samples.** At each cycle position the per-sample Q1 values are
 combined by taking the **median across samples**. One truncation is chosen for the whole
@@ -73,12 +75,12 @@ everything else.
 **Two gates then decide how far the cut is even allowed to go.** They answer different
 questions and both are needed.
 
-*Within a sample — how far do most of its reads actually reach?* Falco reports a quality
-bin for every position up to the **longest** read in a file, however few reads get that
+*Within a sample — how far do most of its reads actually reach?* Falco reports quality
+for every position up to the **longest** read in a file, however few reads get that
 far. This matters because `filterAndTrim` **discards** any read shorter than `truncLen`
 instead of padding it: a cut placed where only a few reads reach discards almost the
 whole library. So before quality is
-consulted at all, each sample's bins are cut off at the length that
+consulted at all, each sample's quality table is cut off at the length that
 `amplicon.trunc_len.min_read_coverage_pct` percent of its reads still reach — 95% by
 default, read from Falco's "Sequence Length Distribution" module.
 
@@ -188,6 +190,16 @@ cluster rather than spread evenly. `100` does not switch the gate off: it requir
 read to reach the cut, so the ceiling drops to the shortest read in the file. On this
 sample that is 79 bp, which then fails the overlap constraint and stops the run.
 
+If more than 5% of a sample's reads belong to an off-target product much shorter than the
+amplicon, the 95% length falls within that product. The run-wide ceiling is set by the strictest sample, so a single such
+sample can cap both reads too short to overlap. In a 78-sample 16S soil study
+sequenced in eight NextSeq 1000/2000 runs, 13 samples had 5 to 40% of their reads in a
+product of 150 to 165 bp, with the mode at 158 bp.
+At 95, each of these samples capped both reads at 158 bp; the sample with 40% kept the
+ceiling at 158 bp for every value down to 60. The picker stopped at the overlap check. The
+log names the sample that set each ceiling. If the short product is not the target, check
+that sample's read-length distribution and set the cuts with `mode: manual`.
+
 !!! warning "There is no value that disables this gate"
 
     `100` is the strictest setting, not the most permissive. No value restores the
@@ -208,40 +220,71 @@ one that drops below it. If quality never drops below the threshold, the cut lan
 the last position that survived the coverage gate. A warning is logged if either cut
 comes out below 50 bp, which usually means the falco reports are worth a look.
 
-!!! warning "Quality-score binning changes how much these settings can do"
+!!! warning "Binned quality scores"
 
-    The method above assumes quality scores form a continuous scale, which was true of
-    four-channel SBS instruments — the original MiSeq and HiSeq — where roughly forty
-    distinct Phred values appear. Current two-channel instruments do not report a
-    continuum. Their real-time analysis software collapses every base call into three or
-    four bins:
+    The default `q_threshold` was set on MiSeq data, which carry 33 distinct Phred values
+    (2 and every integer from 7 to 38). The other instruments in the table bin quality
+    scores. The NovaSeq 6000, NextSeq 1000/2000, NovaSeq X and MiSeq i100 use three bins plus
+    a no-call value. The values depend on the
+    instrument, its control software and, on the NextSeq 1000/2000, the reagent kit:
 
-    | Instrument | Q values actually emitted |
-    |---|---|
-    | MiSeq, HiSeq 2500 (four-channel SBS) | ~40 distinct values — effectively continuous |
-    | NovaSeq 6000 (RTA3) | 12, 23, 37 |
-    | NextSeq 1000/2000 (RTA3) | 12, 26, 34 |
-    | NovaSeq X / X Plus (RTA4) | 2, 9 (or 12), 24, 40 |
-    | MiSeq i100 (RTA4) | 2, 9 (or 12), 23 (or 24), 38 |
+    | Instrument | Q values in the FASTQ |
+    |:---|:---|
+    | MiSeq (original) | 2 and every integer from 7 to 38: continuous |
+    | HiSeq 2000/2500 | binned by default since control software HCS 2.2.38, for example 6, 15, 22, 27, 33, 37, 40 |
+    | NextSeq 500/550 | 2, 14, 21, 27, 32, 36 |
+    | NovaSeq 6000 | 2, 11, 25, 37 (12, 23, 37 on early software) |
+    | NextSeq 1000/2000 | 12, 26, 34 (standard 50-300-cycle kits); 9, 20, 34 (standard 600-cycle kit); 12, 24, 40 (XLEAP-SBS) |
+    | NovaSeq X / X Plus | 12, 20, 37 on control software before v1.2; 2, 12, 24, 40 on v1.2; 2, 9, 24, 40 (or 41) on later versions |
+    | MiSeq i100 | 2, 12, 24, 38, or 2, 9, 23, 38 on later control software |
 
-    The cut is still placed correctly: the step from the high bin down to the low bin is
-    a genuine quality collapse, and that is what the picker finds. What is lost is
-    resolution, and it has two practical consequences on binned data.
+    Values were taken from Illumina's documentation, except for the MiSeq, the NextSeq
+    500/550 (four runs of one NextSeq 500) and the current NovaSeq 6000, which were read from
+    FASTQ files.
 
-    **`q_threshold` becomes a choice between bins, not a value.** On a NovaSeq 6000 every
-    threshold from 13 to 23 selects exactly the same cut, because no base carries a score
-    in between. Moving it from 20 to 18 or 22 changes nothing.
+    On binned data, the lower quartile of a single position in one sample can only take one
+    of these values. It drops to a lower value only when at least a quarter of the bases at
+    that position are at or below that value. Marginal calls are the bases in the lowest bin above the no-call
+    value. Before binning, they are Q17 or lower on the NextSeq 1000/2000, NovaSeq X and MiSeq
+    i100, and below about Q15 on the NovaSeq 6000. With the default `q_threshold: 20`, the
+    cut is placed where at least a quarter of the bases are marginal calls. On MiSeq data, the
+    same setting places the cut where at least a quarter of the bases are Q19 or lower. On
+    the NextSeq 1000/2000, NovaSeq X and MiSeq i100, all calls from Q18 to Q29 receive the
+    same value. Calls at Q18 and Q19 are therefore no longer counted as marginal, and no
+    threshold distinguishes a tail at Q20 from one at Q29.
 
-    **`relax_q` has almost nothing to work with.** It steps the threshold down one point
-    at a time as far as `q_floor` (15 by default), and on a binned instrument that whole
-    range sits inside a single bin — so the policy either changes nothing and then stops
-    the run at the floor, or crosses a bin edge and changes the cut abruptly. On
-    two-channel data, prefer `resolve_policy: raise_trunc`.
+    **The cut can end up at the read-length limit.** Two 16S data sets with the
+    standard 600-cycle chemistry (values 9, 20, 34) were tested. The first was the soil study
+    above without its 13 samples with the short product (65 samples). The second was 31,514
+    read pairs from four tiles of a NextSeq 2000 mock community run. In both, the median lower
+    quartile across samples did not fall below 20 within the length reached by 95% of the
+    reads. The cut was placed at that limit, and quality filtering was left to
+    `max_ee` and `trunc_q`; see
+    [automatic truncLen on very clean runs](../troubleshooting.md#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs).
+    On the MiSeq test data, quality set the R2 cut for 16S, 18S, ITS, gyrB and rpoB, and
+    the R1 cut for 16S, rpoB and one of the three COI libraries. Every other cut, including
+    R2 in all three COI libraries, was the read-length limit.
 
-    A related effect: XLEAP-SBS chemistry puts the top bin at Q40, so the aggregated
-    lower quartile may never fall below the threshold at all and the cut lands at the
-    read length. That is the same situation described in
-    [automatic truncLen on very clean runs](../troubleshooting.md).
+    **`q_threshold` selects a bin boundary.** A threshold above the low value and up to the
+    middle value places the cut where a quarter of the bases are marginal calls. A
+    threshold above the middle value places it where a quarter of the bases are below Q30.
+    On a current NovaSeq 6000, all values from 12 to 25 give the first result; on NextSeq
+    1000/2000 600-cycle data, all values from 10 to 20; on NovaSeq X data from control
+    software before v1.2, all values from 13 to 20. On the last two, the default of 20 lies
+    on the boundary. On MiSeq 16S, 18S and rpoB reads re-encoded with the 600-cycle values, a
+    threshold of 21 shortened the quality cuts by 15 to 50 bp; on the soil study, it shortened
+    the R2 cut by 1 bp. Falco's group means and the median across samples also produce
+    intermediate values. On the soil study, thresholds from 21 to 34 moved the R2 cut from
+    279 to 234 bp. A threshold above
+    the top value fails at the first position: the quality cut is 0, and the final cuts
+    come from `resolve_policy` alone.
+
+    **`relax_q` has little effect.** It lowers the threshold one unit at a time down to
+    `q_floor` (15 by default). No current three-bin table has a value from 15 to 19.
+    Lowering the threshold to the floor therefore moves the cut only past intermediate values
+    from Falco's group means or the median across samples. If the overlap still fails at the
+    floor, the run stops.
+    On binned data, keep `resolve_policy: raise_trunc`.
 
 ### Config keys read by `pick_trunclen`
 

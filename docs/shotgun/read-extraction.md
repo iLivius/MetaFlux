@@ -55,9 +55,9 @@ Up to v2.4.0 MetaFlux used the Bracken report here, which has no rows below `tax
 and none for the taxa Bracken dropped below its threshold. The reads Kraken2 had placed
 on those rows were left out, without a warning: for a species whose genomes sit under a
 strain taxid, often all of them. In the ZymoBIOMICS Gut Microbiome Standard (D6331), SRA
-run SRR38976715 (BioProject PRJNA1474435; see
+run SRR29240428 (BioProject PRJNA1118346; see
 [Benchmark data](../about/test-datasets.md#benchmark-data)), Kraken2 with PlusPF
-`k2_pluspf_20260626` placed all 29,618 *Candida albicans* read pairs on the strain
+`k2_pluspf_20260626` placed all 78,214 *Candida albicans* read pairs on the strain
 SC5314 and none on the species itself. An extraction based on the Bracken report would
 have found none of them.
 
@@ -108,8 +108,8 @@ have found none of them.
       takes only the reads placed on the named taxon or below it. *Escherichia coli*
       reads that also match *Shigella*, a separate genus in NCBI's taxonomy, are
       placed on the family Enterobacteriaceae. There can be many times more of them
-      there than on *E. coli* itself (about 30 times more in the D6331 run
-      SRR38976715), while Bracken's estimate in the OTU table gives them back to
+      there than on *E. coli* itself (about 40 times more in the D6331 run
+      SRR29240428), while Bracken's estimate in the OTU table gives them back to
       *E. coli*.
 
     To collect reads for an assembly or a gene search, name the lowest rank that holds

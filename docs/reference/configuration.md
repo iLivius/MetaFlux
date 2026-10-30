@@ -604,13 +604,13 @@ merge is lost.
 
 !!! note "What `min_read_coverage_pct` is protecting against"
 
-    Falco reports a quality bin for every position up to the **longest** read in a
+    Falco reports quality for every position up to the **longest** read in a
     file, however few reads reach it. `filterAndTrim` **discards** any read shorter
     than `truncLen` instead of padding it, so a cut placed where only a few reads
     reach discards almost the whole library. On a run whose quality never drops below
     `q_threshold`, nothing else stops the cut landing there.
 
-    Before quality is looked at, each sample's bins are therefore cut off at the length
+    Before quality is looked at, each sample's quality table is therefore cut off at the length
     `min_read_coverage_pct` of its reads still reach. On the 18S
     [test dataset](../about/test-datasets.md) this moves the R1 ceiling from 288 bp to
     271 bp. At 288 / 239, the cut MetaFlux v2.1.0 and earlier chose there, only 9 of the
@@ -632,7 +632,7 @@ When the quality-based cuts break it:
 
 | Policy | Behaviour |
 |---|---|
-| `raise_trunc` | Extends both cuts past the quality drop to recover the missing bases, splitting the deficit between R1 and R2 in proportion to how much read length each has left. Errors if even the combined headroom is not enough. |
+| `raise_trunc` | Extends the cuts beyond the quality drop one base at a time, each time on the read with the higher aggregated lower quartile at the position it would gain (ties go to R1). Stops with an error if R1 and R2 together cannot gain the missing bases before reaching their ceilings. |
 | `relax_q` | Lowers the quality threshold by 1 at a time, down to `q_floor`, re-cutting until the overlap holds. Errors if the floor is reached without success. |
 | `error` | Stops immediately and reports the shortfall in bp. |
 
@@ -649,12 +649,16 @@ written to `stats/trunclen.json`.
     gate. This override also beats `mode: manual`, so `manual_r1`/`manual_r2` have
     no effect for ITS.
 
-!!! warning "The `auto` picker can overshoot on very clean runs"
+!!! warning "On very clean runs the `auto` cut is the read-length limit"
 
-    If quality never drops below `q_threshold`, the cut is placed at the last
-    quality bin — which can sit above the bulk of the trimmed read lengths and
-    drop every read at the filtering step. See
-    [troubleshooting](../troubleshooting.md).
+    If quality never drops below `q_threshold`, the cut is placed at the length reached
+    by `min_read_coverage_pct` (95%) of the reads in the strictest sample. Without this
+    limit, the cut could fall above most trimmed reads, and almost every read would be discarded
+    at the filtering step; see
+    [troubleshooting](../troubleshooting.md#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs).
+    On binned data, the cut can also be placed at this limit when quality declines towards
+    the end of the reads; see
+    [binned quality scores](../amplicon/length-and-truncation.md#choosing-the-cut-from-the-quality-profile).
 
 ### ASV length filter
 
@@ -1102,7 +1106,7 @@ alongside the report.
 | Key | What it does | Default | Notes |
 |---|---|---|---|
 | `tax_lev` | Rank at which abundance is re-estimated: `P`, `C`, `O`, `F`, `G` or `S` | `S` | Read only when Kraken2 runs (`profiler: kraken2` or `both`). Drop to `G` for a shallow database, where species-level calls are not supported by the reference content. The OTU table then has one row per taxon at this rank, and the lineage below it is left empty (`…;g__Bacteroides;s__`). `D` and `K` stop the run at start-up: at those ranks Bracken counts the reads of viruses (`D`) or of protists (`K`) towards a neighbouring domain or kingdom, and on a GTDB database it finds no kingdom at all. For domain or kingdom totals, add up a lower-rank table by its `d__` or `k__` slot; see [Troubleshooting](../troubleshooting.md#shotgun-the-run-refuses-tax_lev-d-or-k). `P`, `C`, `O` and `F` print a warning at start-up: at those ranks Bracken can add the reads of taxa that lack the rank to a row they do not belong to (same Troubleshooting entry), so `S` or `G` is recommended. Up to v2.4.0, any value other than `S` gave an empty or nearly empty table; see [Troubleshooting](../troubleshooting.md#shotgun-empty-or-nearly-empty-otu-table-with-tax_lev-other-than-s). |
-| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this and why the historic fixed default of 10 cost up to 0.34 F1 in the first benchmark. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
+| `threshold` | Minimum Kraken2 read count a taxon needs at `tax_lev` to enter Bracken's estimate | `auto` | Applied to Kraken2's own count for the taxon, before Bracken re-estimates anything. Taxa below it are removed from the model and their reads discarded rather than redistributed (Bracken reports these as "reads discarded"). `auto` computes it per sample from that sample's own classified read count, at run time, rather than using one fixed number for every sample regardless of depth; see [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md) for the benchmark behind this. On the D6331 mock, the fixed default of 10 costs 0.427 F1 against the best threshold. Set an integer instead of `auto` to bypass this and use a fixed floor as Bracken does natively. |
 | `threshold_alpha` | Scaling coefficient used only when `threshold: auto` | `5.0e-05` | `threshold = max(threshold_min, threshold_alpha × classified_read_pairs)`. Set from the [benchmark data](../about/test-datasets.md#benchmark-data). On the CAMI II marine, rhizosphere and strain-madness samples the optimum is a broad plateau around this value; on the ZymoBIOMICS D6331 standard the best value is several times higher. See [Choosing confidence and threshold](../shotgun/confidence-and-threshold.md#how-firmly-alpha-is-established) before changing it. |
 | `threshold_min` | Floor for the auto-computed threshold | `10` | Prevents a near-zero threshold on a very shallow or heavily filtered sample. Also Bracken's own historic default. |
 

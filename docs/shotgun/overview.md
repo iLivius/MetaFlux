@@ -211,7 +211,11 @@ k-mers that share one minimizer found in the database — one lookup, at one pla
 the read — so a read can show dozens of k-mer hits and still amount to a single group.
 `hit_groups: 3` requires three such separate hits before a classification stands
 (Kraken2's own default is 2), leaving a read unclassified when all its evidence sits
-at one locus.
+at one or two places. MetaFlux uses 3, following the Kraken protocol
+([Lu et al. 2022](https://doi.org/10.1038/s41596-022-00738-y)). On the D6331 mock, every value
+tested from 1 to 8 produced the same species list; see
+[Kraken2 hit groups](confidence-and-threshold.md#kraken2-hit-groups-leave-them-at-3).
+The depth-scaled Bracken threshold and k-mer floor were both fitted at 3.
 
 Input: the fastp-trimmed reads and the Kraken2 database. Output, in
 `02.classification/kraken2/`:
@@ -295,6 +299,39 @@ MultiQC.
     `stats/read_tracking.txt`, and the two are not meant to reconcile. When a relative
     abundance is computed, be explicit about which denominator was used: the OTU-table
     total, or the classified reads.
+
+### The four stringency settings at a glance
+
+Four settings control how much evidence a species needs to be reported. All four are in
+the `shotgun:` section of the config.
+
+| Setting | Applies to | Counts | Default |
+|:---|:---|:---|:---|
+| `kraken.confidence` | each read pair, in Kraken2 | share of the pair's k-mers inside the assigned clade | **0.15** |
+| `kraken.hit_groups` | each read pair, in Kraken2 | hit groups matching the database | **3** |
+| `kmer_evidence`, the k-mer evidence gate | each taxon, between Kraken2 and Bracken | distinct minimizers specific to the taxon in the sample | off; when enabled, floor **300** by default, or `auto` |
+| `bracken.threshold`, Bracken's `-t` | each taxon, in Bracken | reads assigned to the taxon's clade | `auto`: 0.00005 × classified read pairs, minimum **10** |
+
+The settings act in this order. Kraken2 moves the label of a read pair up the taxonomy
+until its confidence reaches the threshold; a pair with fewer hit groups than the minimum
+is left unclassified. The gate removes taxa with too few distinct minimizers and assigns
+their reads to the parent taxon. Bracken removes taxa below its read threshold, together
+with their reads, and redistributes the reads assigned at higher ranks among the remaining
+taxa.
+
+The gate targets false calls supported by many reads that match the same few conserved or
+shared sequences. Such calls can pass the read threshold and still fail the gate.
+
+The k-mer length k and the minimizer length l are set when the Kraken2 database is built
+(35 and 31 in the standard indices; see the first line of `inspect.txt`). None of the four
+settings changes them.
+
+Of the settings tested in the benchmark, the Bracken threshold had the largest effect on
+false species calls; see
+[Choosing confidence and threshold](confidence-and-threshold.md). The gate is optional; see
+[Species-level k-mer evidence](kmer-evidence.md). Both depth-scaled rules were fitted at
+hit groups 3 and confidence 0.15. The k-mer floor was also fitted on one set of runs at
+confidence 0.20. Confidence and hit groups should therefore stay at their defaults.
 
 ## 7. OTU table
 

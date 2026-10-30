@@ -8,6 +8,10 @@ at Bracken's default of 10, accuracy fell the more deeply a sample was sequenced
 
 - `shotgun.kraken.confidence` — **leave it at 0.15.**
 - `shotgun.bracken.threshold` — **set it to `auto`** (the default).
+- `shotgun.kraken.hit_groups` — **leave it at 3.**
+
+The four stringency settings, including the k-mer evidence gate, are compared in
+[the shotgun overview](overview.md#the-four-stringency-settings-at-a-glance).
 
 This page is the benchmark behind that recommendation: what was tested, how, and what it
 did and did not show. If you only want the setting, skip to
@@ -22,14 +26,15 @@ is. Bracken then re-estimates abundance from those calls. Neither step, by defau
 
 Species-level results on a mock community of known composition, the ZymoBIOMICS Gut
 Microbiome Standard (D6331), SRA run
-[SRR38976715](https://www.ncbi.nlm.nih.gov/sra/SRR38976715) (BioProject PRJNA1474435),
-classified with PlusPF `k2_pluspf_20260626` at Kraken2 confidence 0.15, the v2.5.0
-defaults:
+[SRR29240428](https://www.ncbi.nlm.nih.gov/sra/SRR29240428) (BioProject PRJNA1118346,
+[Martí et al. 2025](https://doi.org/10.1128/msystems.01239-24)), randomly subsampled so
+that 5.30 million read pairs remained after fastp, and classified with PlusPF
+`k2_pluspf_20260626` at Kraken2 confidence 0.15, the v2.5.0 defaults:
 
 | | Species scored | Precision | Recall | **F1** |
 |---|--:|--:|--:|--:|
-| Bracken's default, `-t 10` | 53 | 0.283 | 0.882 | 0.429 |
-| MetaFlux default, `threshold: auto` (`-t 265`) | 19 | 0.737 | 0.824 | **0.778** |
+| Bracken's default, `-t 10` | 46 | 0.326 | 0.882 | 0.476 |
+| MetaFlux default, `threshold: auto` (`-t 264`) | 19 | 0.737 | 0.824 | **0.778** |
 
 The mock's *Fusobacterium*, listed by Zymo as *F. nucleatum*, is scored as
 *F. animalis*, so calls of *F. nucleatum*, *F. polymorphum* and *F. vincentii* count as
@@ -37,13 +42,13 @@ false positives. Bracken also reports *Homo sapiens* at both thresholds: human D
 sample, not part of the standard, so it is left out of the scores.
 [Benchmark data](../about/test-datasets.md#benchmark-data) gives the reasons for both.
 
-Recall fell slightly, from 0.88 to 0.82: *Salmonella enterica*, with 135 Kraken2 reads,
-fell below the threshold. Precision rose from 0.28 to 0.74. At `-t 10`, 38 of the 53
+Recall fell slightly, from 0.88 to 0.82: *Salmonella enterica*, with 70 Kraken2 reads,
+fell below the threshold. Precision rose from 0.33 to 0.74. At `-t 10`, 31 of the 46
 species scored were not in the mock. Bracken reports a species only when Kraken2 gave
 it at least `-t` reads, so each of them had at least ten Kraken2 reads. Most of them
-(29 of the 38) are in the same genus as a member of the mock and share conserved
+(23 of the 31) are in the same genus as a member of the mock and share conserved
 regions with it; database cross-contamination is another source. The five false species
-left at `-t 265` are all *Fusobacterium* species closely related to the mock's
+left at `-t 264` are all *Fusobacterium* species closely related to the mock's
 *F. animalis*.
 
 ## Kraken2 confidence — keep it at 0.15
@@ -57,8 +62,8 @@ redistribute.
 
 The measured consequence: raising confidence lowers the read count of species-level
 calls, and a rare species can lose a large share of its few reads. On the same D6331
-reads, *Salmonella enterica*, 0.01 % of the mock's DNA, had 135 Kraken2 reads at
-confidence 0.15 and 85 at 0.20 (PlusPF `k2_pluspf_20260626`; 134 and 87 with
+reads, *Salmonella enterica*, 0.01 % of the mock's DNA, had 70 Kraken2 reads at
+confidence 0.15 and 42 at 0.20 (PlusPF `k2_pluspf_20260626`; 71 and 42 with
 `k2_pluspf_20251015`).
 
 Raising confidence and applying a read-count floor both reduce the same small read
@@ -67,6 +72,22 @@ counts, so together they remove rare species that are present. [Wright, Comeau &
 data: 0.60 gave the highest mean F1, while 0.15 gave the lowest L1 distance, that is,
 the most accurate relative abundances. 0.15 is the source of MetaFlux's default, and
 nothing here changes it.
+
+## Kraken2 hit groups — leave them at 3
+
+`shotgun.kraken.hit_groups` sets Kraken2’s `--minimum-hit-groups`: the minimum number of matching hit groups required to classify a read pair. A hit group consists of overlapping k-mers that share a minimizer found in the database. MetaFlux uses **3**, following the Kraken protocol; Kraken2’s default is **2**. See the [shotgun overview](overview.md#5-kraken2-classification).
+
+The setting was tested on the same D6331 run as the benchmark above. Classification used PlusPF `k2_pluspf_20260626` at confidence 0.15, followed by Bracken with `threshold: auto` (`-t 264`). Scoring was unchanged.
+
+| `hit_groups` | 1 | 2 | 3 | 4 | 5 | 6 | 8 |
+|:---|---:|---:|---:|---:|---:|---:|---:|
+| Classified read pairs | 5,288,168 | 5,288,162 | 5,288,158 | 5,288,156 | 5,288,152 | 5,288,151 | 5,288,112 |
+| Species scored | 19 | 19 | 19 | 19 | 19 | 19 | 19 |
+| F1 | 0.778 | 0.778 | 0.778 | 0.778 | 0.778 | 0.778 | 0.778 |
+
+All settings produced the same species list and F1. Increasing `hit_groups` from 1 to 8 reduced the classified count by only 56 read pairs out of 5.29 million.
+
+Species lists also remained unchanged between `hit_groups` settings at confidence 0.20, with the [k-mer evidence gate](kmer-evidence.md) enabled, and across Bracken thresholds from 0 to 1,000. Increasing this setting therefore provided no species-level benefit in the tested conditions.
 
 ## Bracken threshold
 
@@ -99,7 +120,7 @@ threshold = max(threshold_min, threshold_alpha × classified_read_pairs)
 
 **Units matter: classified read *pairs*, not raw reads, not trimmed reads.** Kraken2 in
 paired mode counts a pair as one unit, and the classified fraction depends on how well
-the database covers the community: with PlusPF `k2_pluspf_20260626`, 99.8 % of the
+the database covers the community: with PlusPF `k2_pluspf_20260626`, 99.7 % of the
 D6331 mock's read pairs were classified, against 47–75 % for the four wastewater
 metagenomes of the [shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset),
 at similar depth (5.3 million read pairs entering Kraken2 for the mock, 3.5–4.7 million
@@ -119,7 +140,7 @@ finishes — the count does not exist until then — and computes the threshold 
 The decision is written to that sample's Bracken log; for the D6331 run it reads:
 
 ```
-[bracken] auto threshold: 5e-05 x 5292994 classified read pairs -> -t 265
+[bracken] auto threshold: 5e-05 x 5288158 classified read pairs -> -t 264
 ```
 
 ### Where alpha comes from, and what is and is not new here
@@ -151,7 +172,7 @@ Bracken threshold with a benchmark-fitted coefficient, not as a published Bracke
 
 | Community (samples) | Species per sample | Optimal alpha |
 |---|--:|--:|
-| ZymoBIOMICS D6331, run SRR38976715 | 17 | 2.3×10⁻⁴ – 3.5×10⁻⁴ |
+| ZymoBIOMICS D6331, run SRR29240428 | 17 | 2.9×10⁻⁴ – 1.0×10⁻³ |
 | CAMI II strain-madness, samples 0–9 | 20 | 4.1×10⁻⁵ – 1.2×10⁻⁴ |
 | CAMI II marine, samples 0–9 | 256–381 | 5.2×10⁻⁵ – 2.1×10⁻⁴ |
 | CAMI II rhizosphere, samples 0–20 | 73–126 | 1.5×10⁻⁵ – 2.6×10⁻⁴ |
@@ -159,24 +180,23 @@ Bracken threshold with a benchmark-fitted coefficient, not as a published Bracke
 The optimal alpha is the `-t` with the highest species F1, divided by the sample's
 classified read pairs. D6331: the run in [Effect on a mock
 community](#effect-on-a-mock-community) (PlusPF `k2_pluspf_20260626`, confidence 0.15),
-where F1 reaches 0.903 for any `-t` from 1,191 to 1,832. CAMI II rows: the range of the
+where F1 reaches 0.903 for any `-t` from 1,514 to 5,498. CAMI II rows: the range of the
 per-sample optima in the 41-sample re-fit with PlusPF `k2_pluspf_20260626`.
 
 Pooling the 41 CAMI II samples gives a median optimal alpha of **6.0×10⁻⁵**, 1.2× the
 default. One constant works for these samples despite the spread because F1 changes
 little over a wide range of alpha: using 5×10⁻⁵ everywhere costs a mean of **0.023 F1**
-against tuning each sample to its own best (median cost 0.014). In the first benchmark,
-Bracken's default of 10 cost up to **0.34 F1**.
+against tuning each sample to its own best (median cost 0.014).
 
 The D6331 mock is an exception: there the default costs 0.125 F1 against the optimum
-(0.778 against 0.903).
+(0.778 against 0.903). Bracken's default of 10 costs 0.427 F1 (0.476 against 0.903).
 
 !!! note "Adjusting alpha for a known community"
 
     A smaller `threshold_alpha` is a looser filter, a larger one a stricter filter. The
     best value differs between communities and between samples of one community (table
     above), and it does not follow the number of species: the optimum of the 17-species
-    D6331 mock is 4.5 to 7 times the default, while the optima of the 20-species
+    D6331 mock is 5.7 to 21 times the default, while the optima of the 20-species
     strain-madness samples range from 0.8 to 2.4 times it. The default is recommended for
     routine use.
 
@@ -186,6 +206,7 @@ The D6331 mock is an exception: there the default costs 0.125 F1 against the opt
 shotgun:
   kraken:
     confidence: 0.15            # unchanged; do not raise it alongside the threshold
+    hit_groups: 3               # unchanged
   bracken:
     threshold: auto
     threshold_alpha: 5.0e-05
@@ -201,8 +222,8 @@ abundance accuracy little.
 
 On the D6331 run, the L1 distance between the Bracken profile and the genomic-DNA
 composition in Zymo's manual (the sum of absolute differences, in percentage points) was
-40.86 at both `-t 10` and `-t 265`, and the Bray–Curtis dissimilarity between the two
-profiles was 0.0009. The threshold changes **which taxa are named**, not **how much of
+19.76 at `-t 10` and 19.74 at `-t 264`, and the Bray–Curtis dissimilarity between the two
+profiles was 0.0006. The threshold changes **which taxa are named**, not **how much of
 each is reported**. If your downstream work is ordination or differential abundance on
 already-good tables, expect little change. If it is species counts, richness, or
 presence/absence, expect a large one.
@@ -218,9 +239,10 @@ database, and a database update alone should not be expected to close it.
 
 **Real data with known composition:** the [ZymoBIOMICS Gut Microbiome
 Standard (D6331)](https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf),
-SRA run SRR38976715 (BioProject PRJNA1474435; see
+SRA run SRR29240428 (BioProject PRJNA1118346, Martí et al. 2025; see
 [Benchmark data](../about/test-datasets.md#benchmark-data)), 17 species after
-strain-collapse, with its *Fusobacterium* scored as *F. animalis*; classified with PlusPF
+strain-collapse, with its *Fusobacterium* scored as *F. animalis*; randomly subsampled
+so that 5.30 million read pairs remained after fastp, and classified with PlusPF
 `k2_pluspf_20251015` and `k2_pluspf_20260626`.
 
 **Simulated data with gold-standard truth:** [CAMI
@@ -239,8 +261,8 @@ k-mer evidence gate on them.
 
 **Scorer check:** the benchmark scorer was checked against
 [OPAL](https://github.com/CAMI-challenge/OPAL) 1.0.13, the CAMI assessment tool, on the
-Bracken species tables of the two runs with PlusPF `k2_pluspf_20260626` (Kraken2
-confidence 0.15 and 0.20), which cover the 41 CAMI II samples and the D6331 mock. With
+Bracken species tables made with PlusPF `k2_pluspf_20260626` at Kraken2 confidence 0.15
+and 0.20 for the 41 CAMI II samples and the D6331 mock. With
 its inputs prepared as the scorer prepares them, OPAL's species-level true positives,
 false positives and false negatives equal the scorer's in every sample. Run on the gold
 standards as distributed, OPAL differs only in the taxa those preparation rules touch:
@@ -277,6 +299,9 @@ and MetaPhlAn, whose database holds only microbial markers, cannot report it.
   <https://www.nature.com/articles/s41592-022-01431-4>
 - Meyer, F. et al. OPAL: taxonomic profiling assessment.
   <https://github.com/CAMI-challenge/OPAL>
+- Martí, J. M. et al. (2025). Addressing the dynamic nature of reference data: a new
+  nucleotide database for robust metagenomic classification. *mSystems* 10(4):e01239-24.
+  <https://doi.org/10.1128/msystems.01239-24>
 - Zymo Research. ZymoBIOMICS Gut Microbiome Standard (D6331), Instruction Manual v1.2.0.
   <https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf>
 

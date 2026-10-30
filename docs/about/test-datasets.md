@@ -84,9 +84,11 @@ from these four runs and from the D6331 run listed under [Benchmark data](#bench
 Accuracy figures for shotgun mode come from communities of known composition:
 
 - the ZymoBIOMICS Gut Microbiome Standard (D6331), SRA run
-  [SRR38976715](https://www.ncbi.nlm.nih.gov/sra/SRR38976715) (BioProject PRJNA1474435),
-  Illumina NovaSeq 6000, 8.1 million read pairs, scored against the composition in
-  Zymo's instruction manual;
+  [SRR29240428](https://www.ncbi.nlm.nih.gov/sra/SRR29240428) (BioProject PRJNA1118346,
+  [Martí et al. 2025](https://doi.org/10.1128/msystems.01239-24)), Illumina NextSeq 2000,
+  2×150 bp, 40.1 million read pairs, subsampled at random to 6.14 million
+  (seqtk, seed 42), of which 5.30 million pass MetaFlux's fastp, and scored against the
+  composition in Zymo's instruction manual;
 - CAMI II short-read samples with their gold-standard profiles
   ([Meyer et al. 2022](https://doi.org/10.1038/s41592-022-01431-4)): marine samples 0–9,
   plant-associated (rhizosphere) samples 0–20 and strain-madness samples 0–9.
@@ -97,8 +99,8 @@ nearly all of its reads in *F. animalis*, formerly *F. nucleatum* subsp. *animal
 *F. animalis* is scored as the true member and calls of *F. nucleatum*, *F. polymorphum*
 and *F. vincentii* count as false positives.
 
-The mock also contains a little human DNA, a contaminant of the sample: 933 read pairs,
-0.02 % of the classified pairs with PlusPF `k2_pluspf_20260626`. Kraken2 reports it as
+The mock also contains a little human DNA, a contaminant of the sample: 1,708 read pairs,
+0.03 % of the classified pairs with PlusPF `k2_pluspf_20260626`. Kraken2 reports it as
 *Homo sapiens* because PlusPF contains the human genome; MetaPhlAn cannot report it,
 because its database holds microbial markers only. It is not scored. MetaFlux's
 [host removal](../shotgun/decontamination.md#host-removal) is the step that removes such

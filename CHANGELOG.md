@@ -172,6 +172,17 @@ up, marked `(auto)`. The evidence table keeps its columns.
   table made with a floor sized by hand after that page should be compared with the
   same run at the gate off before it is relied on.
 
+### The Zymo mock in the documentation
+
+The documentation now quotes the ZymoBIOMICS D6331 mock from a published run, SRA run
+SRR29240428 (Martí et al. 2025), subsampled to 5.30 million read pairs after fastp, the
+depth of the run used before. The earlier run, SRR38976715, is not linked to a
+publication and is no longer used. Every D6331 figure was measured again on the new run
+with the same method. Two change visibly: on the mock, the best Bracken alpha is now 5.7
+to 21 times the default (was 4.5 to 7 times), and the abundance error against Zymo's
+composition (L1) is about 19.7 percentage points (was 40.9). The pipeline does not
+change, and nothing runs again.
+
 ### What runs again in a folder made with v2.5.0
 
 What runs again depends on how you get v2.6.0, because Snakemake goes by two kinds of

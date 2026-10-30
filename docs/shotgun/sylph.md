@@ -164,8 +164,8 @@ lineage table. The lineage of the Kraken2 table is described on the
 With `profiler: both` the two tables do not line up column by column. `otu_table.tsv`
 has eight slots on any Kraken2 database, `d__ k__ p__ c__ o__ f__ g__ s__`, and this
 table seven, without `k__`; and the two databases can name the same organism
-differently. *Methanobrevibacter smithii* in the D6331 run SRR38976715 (BioProject
-PRJNA1474435; see [Benchmark data](../about/test-datasets.md#benchmark-data)), as Kraken2
+differently. *Methanobrevibacter smithii* in the D6331 run SRR29240428 (BioProject
+PRJNA1118346; see [Benchmark data](../about/test-datasets.md#benchmark-data)), as Kraken2
 names it with PlusPF `k2_pluspf_20260626` (above) and as sylph names it with GTDB r232
 (below):
 
@@ -236,7 +236,7 @@ names a Latin species of another genus. In GTDB r232 this is the case for some
 can land on such a genome, so that the strain appears under a placeholder name and not
 as *Escherichia coli*. MetaFlux renames and merges nothing. It flags the genome in
 `sylph_genomes.tsv` (`GTDB placeholder genus; genome labelled Escherichia coli`) and
-counts the flagged genomes of each sample in the summary. In the D6331 run SRR38976715
+counts the flagged genomes of each sample in the summary. In the D6331 run SRR29240428
 it flagged two, GCA_047199095.1 and GCA_047199115.1.
 
 ## Reading the tables

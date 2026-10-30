@@ -38,7 +38,7 @@ classifier with a broad database is the practical option.
 For **host-associated and food samples**, a marker-gene profiler such as
 [MetaPhlAn](https://github.com/biobakery/MetaPhlAn) will usually be more precise, and
 MetaFlux does not try to replace it. On the ZymoBIOMICS Gut Microbiome Standard (D6331),
-SRA run SRR38976715 (BioProject PRJNA1474435; see
+SRA run SRR29240428 (BioProject PRJNA1118346; see
 [Benchmark data](../about/test-datasets.md#benchmark-data)), MetaPhlAn 4 with the
 database `mpa_vJan26_CHOCOPhlAnSGB_202605` reported 14 of the 17 species and no false
 ones (F1 0.90). MetaFlux at its default settings with PlusPF `k2_pluspf_20260626`
@@ -51,7 +51,7 @@ On environmental samples MetaPhlAn classifies far fewer reads. On the four metag
 BioProject PRJNA1477390 (runs SRR39106521–SRR39106524; see
 [Shotgun test dataset](../about/test-datasets.md#shotgun-test-dataset)), microbial
 consortia enriched on naproxen from wastewater treatment plants, the same MetaPhlAn
-database left 44–75 % of reads unclassified, against 4.4 % on the gut mock.
+database left 44–75 % of reads unclassified, against 6.6 % on the gut mock.
 
 The two tools also make different kinds of error. A marker-gene profiler tends to miss
 taxa; a k-mer classifier tends to report taxa that are not there, which the

@@ -520,8 +520,8 @@ slot below `shotgun.bracken.tax_lev` (`…;g__Bacteroides;s__` in a genus-level 
 
 **With `shotgun.profiler: both`** the same organism reads differently in the two tables:
 `otu_table.tsv` has eight slots and `sylph_table.tsv` seven, and the two databases can
-name a taxon differently. *Methanobrevibacter smithii* in the D6331 run SRR38976715
-(BioProject PRJNA1474435; see [Benchmark data](../about/test-datasets.md#benchmark-data)),
+name a taxon differently. *Methanobrevibacter smithii* in the D6331 run SRR29240428
+(BioProject PRJNA1118346; see [Benchmark data](../about/test-datasets.md#benchmark-data)),
 as Kraken2 names it with PlusPF `k2_pluspf_20260626` and as sylph names it with GTDB r232:
 
 ```text

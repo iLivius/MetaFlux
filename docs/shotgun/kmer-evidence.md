@@ -7,6 +7,10 @@
     that the threshold cannot detect. It is off by default; see
     [Why the default is `enabled: false`](#why-the-default-is-enabled-false).
 
+    The gate is a separate setting from Bracken's read threshold (`-t`) and does not change the k-mer length.
+    It counts the distinct minimizers of a species found in the sample. See
+    [the four stringency settings at a glance](overview.md#the-four-stringency-settings-at-a-glance).
+
 Kraken2's read count tells you how many reads it chose to label with a taxon. It does
 not tell you how much sequence *unique to that organism* actually turned up in the
 sample — and those are different questions.
@@ -286,7 +290,7 @@ shallow ones. KrakenUniq and Oskolkov (2026) reported the same for unique k-mers
 above), but neither gives a depth rule for Kraken2.
 
 MetaFlux's benchmark was used to fit one. It covers 42 samples of known composition: one
-real mock community (ZymoBIOMICS D6331, SRA run SRR38976715, BioProject PRJNA1474435)
+real mock community (ZymoBIOMICS D6331, SRA run SRR29240428, BioProject PRJNA1118346)
 and 41 simulated CAMI II samples from the marine, rhizosphere and strain-madness sets
 (see [Benchmark data](../about/test-datasets.md#benchmark-data)), with 2.6–6.5 million
 classified read pairs each, classified with three Kraken2 indices: `k2_pluspf_20260626`
@@ -295,9 +299,9 @@ genomes) and `k2_NCBI_reference_20251007` (one genome per NCBI species). A floor
 distinct minimizer per 1,000 classified read pairs** gave the best result that was safe
 everywhere:
 
-- species-level F1 rose by 0.066 on average (0.036 with PlusPF), against 0.0020 for the
+- species-level F1 rose by 0.067 on average (0.036 with PlusPF), against 0.0025 for the
   fixed default of 300 (0.0003 with PlusPF);
-- it removed 2,288 of 13,115 false species calls and 6 of 13,419 true ones (none with
+- it removed 2,291 of 13,117 false species calls and 6 of 13,419 true ones (none with
   PlusPF), and lowered no sample's F1;
 - it stayed safe when shallower sequencing was modelled, down to 1 % of the reads, while
   every fixed floor tested, from 300 to 10,000, lowered some samples' F1 at some depth.
@@ -647,7 +651,7 @@ The gate was checked on one real mock community (Zymo D6331, below) and on
 strain-madness gold-standard sets (41 samples): in gate-on/gate-off runs with PlusPF
 `k2_pluspf_20251015`, and by applying it to the Bracken calls of the
 `k2_pluspf_20260626` runs. These results were scored with the benchmark's own scorer. On
-the two `k2_pluspf_20260626` runs (Kraken2 confidence 0.15 and 0.20) that scorer was
+the `k2_pluspf_20260626` runs (Kraken2 confidence 0.15 and 0.20) that scorer was
 checked against OPAL 1.0.13, the CAMI assessment tool: given the same input preparation,
 OPAL's species-level counts of true positives, false positives and false negatives equal
 the scorer's in every sample. The full methodology and the
@@ -662,9 +666,11 @@ scores.
 
 One real mock community: the [ZymoBIOMICS Gut Microbiome
 Standard (D6331)](https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf),
-SRA run [SRR38976715](https://www.ncbi.nlm.nih.gov/sra/SRR38976715) (BioProject
-PRJNA1474435; see [Benchmark data](../about/test-datasets.md#benchmark-data)), with about
-5.3 million classified read pairs.
+SRA run [SRR29240428](https://www.ncbi.nlm.nih.gov/sra/SRR29240428) (BioProject
+PRJNA1118346, [Martí et al. 2025](https://doi.org/10.1128/msystems.01239-24); see
+[Benchmark data](../about/test-datasets.md#benchmark-data)), randomly subsampled so that
+5.30 million read pairs remained after fastp, of which Kraken2 with PlusPF
+`k2_pluspf_20251015` classified 5.29 million.
 
 The standard is sold as 21 strains. A species-level profiler can only ever see **17
 species**, because five of the 21 are *Escherichia coli* strains at 2.8% each that collapse
@@ -676,42 +682,43 @@ a species. It is therefore scored as *F. animalis*, and calls of *F. nucleatum*,
 *F. polymorphum* and *F. vincentii* count as false positives. *Homo sapiens*, from human
 DNA in the sample, is not scored.
 
-The run was processed twice through the pipeline with PlusPF `k2_pluspf_20251015`,
-Kraken2 confidence 0.15 and Bracken at the former fixed `-t 10`: once with the gate off
-and once with it on at a floor of 333. A floor of 300 gives the same species list on this
-run. At the current default threshold (`-t 265` for this run), only 2 of the 34 false
-positives in the table below have enough reads to pass (*F. nucleatum* and
-*F. polymorphum*), as does the unscored *Homo sapiens*; the gate removes none of them,
-and the threshold itself drops *Salmonella enterica*.
+The run was processed through the pipeline with PlusPF `k2_pluspf_20251015`, Kraken2
+confidence 0.15, Bracken at the former fixed `-t 10` and the gate off. For the gate-on
+column, Bracken was run again with the same settings on the gated report that the pipeline
+writes at a floor of 333, the file it hands to Bracken when the gate is on. A floor of 300
+gives the same species list on this run. At the current default threshold (`-t 264` for
+this run), only 2 of the 29 false positives in the table below have enough reads to pass
+(*F. nucleatum* and *F. polymorphum*), as does the unscored *Homo sapiens*; the gate removes
+none of them, and the threshold itself drops *Salmonella enterica*.
 
 | | Gate off | Gate on |
 |---|--:|--:|
 | True members recovered | 15 / 17 | **15 / 17** |
-| False-positive species | 34 | **22** |
-| Precision | 0.306 | **0.405** |
-| F1 | 0.455 | **0.556** |
+| False-positive species | 29 | **18** |
+| Precision | 0.341 | **0.455** |
+| F1 | 0.492 | **0.600** |
 
-- **No true member was removed.** *Salmonella enterica*, 0.01% of the standard and 134
-  classified reads, has 3,547 distinct minimizers at a duplicity of 1.5, more than ten
+- **No true member was removed.** *Salmonella enterica*, 0.01% of the standard and 71
+  classified read pairs, has 3,400 distinct minimizers at a duplicity of 1.2, more than ten
   times the floor, and is kept. The gate depends on this difference: a rare species can
   still have many distinct minimizers.
 - The two members never recovered (*Enterococcus faecalis* at 0.001%, *Clostridium
-  perfringens* at 0.0001%) have one Kraken2 read each, below Bracken's `-t 10`, so neither
-  reaches the table in either run. Both have species entries in the database, so they were
-  missed for lack of reads.
+  perfringens* at 0.0001%) have 2 and 5 Kraken2 read pairs, below Bracken's `-t 10`, so
+  neither reaches the table, with the gate off or on. Both have species entries in the
+  database, so they were missed for lack of reads.
 - **Quantitative accuracy did not change.** With the human row left out, L1 distance to
-  the theoretical composition was 47.15 without the gate and 47.14 with it, Shannon *H*
-  2.145 and 2.144, and the Bray–Curtis dissimilarity between the two profiles 0.00009.
-  The 82 taxa the gate removed at 333 held 426 of the 5.3 million reads (81 taxa and 423
-  reads at 300). Any ordination or differential-abundance test would give the same answer
+  the theoretical composition was 27.80 without the gate and 27.79 with it, Shannon *H*
+  2.321 and 2.320, and the Bray–Curtis dissimilarity between the two profiles 0.0001.
+  The 43 taxa the gate removed at 333 held 445 of the 5.3 million read pairs (the same 43
+  taxa at 300). Any ordination or differential-abundance test would give the same answer
   from both tables.
 - **Richness, on the other hand, improved substantially** — which is where the gate did its
   work on this dataset:
 
 | Observed richness | Truth | Gate off | Gate on |
 |---|--:|--:|--:|
-| Species | 17 | 49 (+188%) | **37 (+118%)** |
-| Genera | 17 | 25 (+47%) | **18 (+6%)** |
+| Species | 17 | 44 (+159%) | **33 (+94%)** |
+| Genera | 17 | 24 (+41%) | **16 (−6%)** |
 
 On this mock the gate changed which species are listed, not their abundances.
 If you report how many taxa you detected, or work with presence/absence, that matters. If
@@ -720,24 +727,23 @@ change your conclusions.
 
 ### Why richness is still over-estimated with the gate on
 
-With the gate on, 37 species other than human are still reported against 17 in the
-standard. Most of the 22 false positives are not the kind of call the gate is designed to
+With the gate on, 33 species other than human are still reported against 17 in the
+standard. Most of the 18 false positives are not the kind of call the gate is designed to
 remove.
 
-Of the 22 false-positive species that survive, **19 are congeners of a genuine member** —
-and the other three are defensible. The table also lists *Homo sapiens*, which is not
+Of the 18 false-positive species that survive, **17 are congeners of a genuine member** —
+and the other one is defensible. The table also lists *Homo sapiens*, which is not
 scored:
 
 | Survivor | Reads after Bracken | Distinct minimizers | What it is |
 |---|--:|--:|---|
-| *Fusobacterium nucleatum*, *F. vincentii*, *F. polymorphum* | 180,835 | 947–29,678 | Close relatives of the true member, *F. animalis*; all four were subspecies of *F. nucleatum* until *F. animalis*, *F. vincentii* and *F. polymorphum* were raised to species rank. With `k2_pluspf_20251015`, Kraken2 gives *F. nucleatum* more reads than *F. animalis* (16,709 against 6,062) |
-| *Homo sapiens* | 965 | 10,062 | Trace human DNA from handling; present in the sample, a contaminant that is not scored |
-| *Shigella dysenteriae* | 839 | 1,117 | *Shigella* sits phylogenetically inside *E. coli*; the genomes are near-identical |
-| *Sphingomonas paucimobilis*, *Cutibacterium acnes* | 51 | 464–779 | Common extraction-kit and skin contaminants; plausibly present in the sample |
-| 16 further congeners of *Veillonella*, *Fusobacterium*, *Saccharomyces*, *Escherichia*, *Bacteroides*, *Candida*, *Clostridioides* | 1,874 | 400–5,380 | Close relatives of an abundant true member |
+| *Fusobacterium nucleatum*, *F. vincentii*, *F. polymorphum* | 226,289 | 1,113–30,392 | Close relatives of the true member, *F. animalis*; all four were subspecies of *F. nucleatum* until *F. animalis*, *F. vincentii* and *F. polymorphum* were raised to species rank. With `k2_pluspf_20251015`, Kraken2 gives *F. nucleatum* more reads than *F. animalis* (18,038 against 7,570) |
+| *Homo sapiens* | 1,802 | 15,682 | Trace human DNA from handling; present in the sample, a contaminant that is not scored |
+| *Staphylococcus epidermidis* | 22 | 1,212 | A common skin bacterium and contaminant; plausibly present in the sample |
+| 14 further congeners of *Veillonella*, *Fusobacterium*, *Saccharomyces*, *Bacteroides*, *Candida*, *Clostridioides* | 1,543 | 566–10,344 | Close relatives of an abundant true member |
 
 All these survivors carry **large** distinct-minimizer counts — *Saccharomyces paradoxus*
-has 5,380 on just 73 reads, at a duplicity of 1.7. That is broad, un-repetitive evidence,
+has 10,344 on just 144 read pairs, at a duplicity of 2.0. That is broad, un-repetitive evidence,
 and it is genuinely in the read data: *S. cerevisiae* is a real member of the standard,
 and its sequence matches a great deal of what the database files under its sister
 species.
@@ -755,8 +761,9 @@ evidence problem:
 The residual inflation is almost entirely the second kind, which is a property of how
 finely the reference database splits closely related organisms — not something any
 k-mer counting method can detect. The practical consequence is visible in the table above:
-at **genus** rank, where those distinctions disappear, the gate brings richness from +47%
-to **+6%** of the true value.
+at **genus** rank, where those distinctions disappear, the gate brings richness from 41%
+above the true value to **6% below** it: the 16 genera left are 15 of the 17 true ones
+(the two members that never reach the table are missing) and *Staphylococcus*.
 
 ### What this does not show
 
@@ -790,11 +797,13 @@ you switch the gate on, check the evidence tables for what it removed.
 ### Limitation: very close relatives
 
 Very close relatives defeat the method, and no k-mer evidence measure fixes this.
-*Shigella dysenteriae* is not in D6331, but 13 reads were assigned to it — carrying 1,117
-distinct minimizers, so it passes the gate, and Bracken raised it to 839 reads (834 with
-the gate off). *Shigella* and *E. coli* are similar enough that minimizers the database
-marks as *Shigella*-specific are genuinely present in *E. coli* reads. That is a property
-of the reference taxonomy, not something this filter can detect.
+*Shigella dysenteriae* is not in D6331, and only 3 read pairs were assigned to it, too few
+to pass Bracken's `-t 10`. Yet the sample holds 1,042 distinct minimizers that the
+database marks as specific to it, more than three read pairs can carry and more than
+three times the floor, so the gate would keep it. *Shigella* and *E. coli* are similar
+enough that minimizers the database marks as *Shigella*-specific are genuinely present
+in *E. coli* reads. That is a property of the reference taxonomy, not something this
+filter can detect.
 
 ### Threshold stability
 

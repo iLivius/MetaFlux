@@ -395,22 +395,24 @@ truncLen_R1 + truncLen_R2  >=  expected_length + min_overlap
 ```
 
 `min_overlap` defaults to `12` bp. If the quality-based cuts break the constraint,
-`trunc_len.resolve_policy` decides: `raise_trunc` (the default) extends the cuts past the
-quality drop, splitting the shortfall between R1 and R2 according to how much room each
-still has; `relax_q` lowers the quality threshold one point at a time down to
+`trunc_len.resolve_policy` decides: `raise_trunc` (the default) extends the cuts beyond
+the quality drop one base at a time, each time on the read with the higher quality at the
+position it would gain (ties go to R1); `relax_q` lowers the quality threshold one point at a time
+down to
 `trunc_len.q_floor` (default `15`) and re-cuts; `error` stops and reports the shortfall.
 
 In `manual` mode the quality analysis is skipped and `trunc_len.manual_r1` /
 `manual_r2` are used as given.
 
-!!! warning "Clean runs can defeat `auto`"
+!!! warning "On clean runs the `auto` cut is the read-length limit"
 
-    If quality never drops below the threshold, the cut lands at the full read length —
-    but after primer trimming most reads are a little shorter than that, and
-    `filterAndTrim` will then discard almost all of them. The failure appears at step 6 as
-    *"No reads passed the filter"*. The fix is to switch to `mode: manual` with values a
-    little below the length most reads still reach. See
-    [Troubleshooting](../troubleshooting.md).
+    If quality never drops below the threshold, the cut is placed at the length reached by
+    `min_read_coverage_pct` (95%) of the reads in the strictest sample, not at the full
+    read length, where `filterAndTrim` would discard almost every read. If this setting is
+    lowered, or read lengths vary widely, step 6 can still fail with *"No reads passed the
+    filter"*. In that case, use `mode: manual` with values slightly below the length most
+    reads reach. See
+    [Troubleshooting](../troubleshooting.md#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs).
 
 ITS is the exception: the cuts are still computed and recorded, but `truncLen` is
 overridden to `c(0, 0)` at the filtering step, because fungal ITS amplicons vary genuinely
