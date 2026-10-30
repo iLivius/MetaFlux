@@ -17,6 +17,11 @@ v2.6.0
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22876451.svg)](https://doi.org/10.5281/zenodo.22876451)
 [![CI](https://github.com/iLivius/MetaFlux/actions/workflows/ci.yml/badge.svg)](https://github.com/iLivius/MetaFlux/actions/workflows/ci.yml)
 
+<!-- Workflow overview as a metro map, one coloured line per marker and per shotgun profiler. GitHub shows the dark version to readers in dark mode and the light one otherwise. The detailed map is on the documentation home page (docs/index.md). -->
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/metaflux_overview_dark.png"><img src="docs/assets/metaflux_overview.png" alt="Metro overview of the MetaFlux workflow: six coloured amplicon marker lines and two shotgun profiler lines start at the config and meet at read tracking and MultiQC. COI is classified with SINTAX against MIDORI2 and then goes through two screens that can be switched off. Dashed branches show the optional 16S phylogeny and per-taxon reads; hollow stops are steps you can switch on or off in the config."></picture></p>
+
+The detailed map, step by step, is on the [documentation home page](https://iLivius.github.io/MetaFlux/).
+
 ## 📖 Documentation
 
 **Full documentation: [iLivius.github.io/MetaFlux](https://iLivius.github.io/MetaFlux/)**
