@@ -6,7 +6,7 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
-## 2.6.0 — [To be settled before release: the date]
+## 2.6.0 — 2026-10-31
 
 ### COI, a new amplicon marker
 
