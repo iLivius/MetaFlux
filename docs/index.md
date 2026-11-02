@@ -11,14 +11,15 @@ family of pipelines.
 
 ## The workflow at a glance
 
-[![Detailed metro map of the MetaFlux workflow, with six amplicon marker lines and two shotgun profiler lines. Runs begin at the config and start-up checks, then follow the stages of their mode to read tracking and MultiQC. Dashed branches show the optional 16S phylogeny and per-taxon reads; hollow stops are steps you can switch on or off in the config.](assets/metaflux_metro.png#only-light)](assets/metaflux_metro.png)
-[![Detailed metro map of the MetaFlux workflow, with six amplicon marker lines and two shotgun profiler lines. Runs begin at the config and start-up checks, then follow the stages of their mode to read tracking and MultiQC. Dashed branches show the optional 16S phylogeny and per-taxon reads; hollow stops are steps you can switch on or off in the config.](assets/metaflux_metro_dark.png#only-dark)](assets/metaflux_metro_dark.png)
+![Detailed metro map of the MetaFlux workflow, with six amplicon marker lines and two shotgun profiler lines. Runs begin at the config and start-up checks, then follow the stages of their mode to read tracking and MultiQC. Dashed branches show the optional 16S phylogeny and per-taxon reads; hollow stops are steps you can switch on or off in the config.](assets/metaflux_metro.png#only-light)
+![Detailed metro map of the MetaFlux workflow, with six amplicon marker lines and two shotgun profiler lines. Runs begin at the config and start-up checks, then follow the stages of their mode to read tracking and MultiQC. Dashed branches show the optional 16S phylogeny and per-taxon reads; hollow stops are steps you can switch on or off in the config.](assets/metaflux_metro_dark.png#only-dark)
 
 Each solid line represents one amplicon marker or shotgun profiler. Both modes end with
 read tracking and a MultiQC report. COI is classified with SINTAX against MIDORI2 and is
 then checked by two screens, enabled by default, before the taxon filter. Dashed branches
 mark the optional 16S phylogeny and per-taxon read extraction. Hollow markers indicate
-steps that can be switched on or off in the config. Click the map to open it at full size.
+steps that can be switched on or off in the config. Select the map to open it larger;
+select it again to see it at full size, and close it with x or Esc.
 
 ## The two modes
 

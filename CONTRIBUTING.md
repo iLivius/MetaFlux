@@ -74,7 +74,7 @@ bash .test/run_dry_runs.sh
 
 # 3. The documentation. --strict turns every warning into an error, so a page left
 #    out of the nav or a link to a renamed heading fails the build.
-pip install mkdocs-material==9.7.7
+pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3
 mkdocs build --strict
 
 # 4. Snakemake's own linter, informational: it flags a few long-standing style points

@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install mkdocs-material==9.7.7
+      - run: pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3
       # --strict turns every warning into an error: a page left out of the nav, a
       # link to a missing page or heading (the validation block of mkdocs.yml).
       - name: Check the docs (strict build)

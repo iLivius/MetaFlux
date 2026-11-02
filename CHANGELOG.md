@@ -44,6 +44,11 @@ The set's README reports the sensitivity of its counts for twelve thresholds, no
 each of them, and the COI screens search far deeper than VSEARCH's default, not eight
 times deeper.
 
+On the home page of the documentation, the metro map now opens in an image viewer on the
+page instead of as a bare PNG: a second click shows it at full size, and x or Esc closes
+it. The viewer is the mkdocs-glightbox plugin, a new requirement of the documentation
+build only (`pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3`).
+
 ### What runs again in a folder made with v2.6.0
 
 - **After a `git pull`** in the MetaFlux folder that made the output folder: MultiQC in

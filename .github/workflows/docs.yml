@@ -5,8 +5,9 @@
 #
 # What happens on a push to main:
 #   1. GitHub checks out the repo on a temporary Ubuntu runner.
-#   2. Installs Python and the exact mkdocs-material version verified locally (pinned
-#      below, so a future mkdocs-material release can't silently break this build).
+#   2. Installs Python and the exact mkdocs-material and mkdocs-glightbox (the image
+#      viewer) versions verified locally, pinned below so that a future release of
+#      either can't silently break this build.
 #   3. Runs `mkdocs build --strict`, the same check as when editing the docs locally.
 #      Any warning stops the job here, before anything is published (see below).
 #   4. Runs `mkdocs gh-deploy`, which builds the site and force-pushes the result to
@@ -58,7 +59,7 @@ jobs:
           # Without a matching file it fails outright at setup rather than just
           # skipping the cache, which is what actually broke the first run.
 
-      - run: pip install mkdocs-material==9.7.7
+      - run: pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3
 
       # Check the docs before publishing them. --strict turns every warning into an
       # error, so this step fails on anything the link checks in mkdocs.yml (its

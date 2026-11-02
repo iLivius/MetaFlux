@@ -62,6 +62,14 @@ markdown_extensions:
 
 plugins:
   - search
+  # Image viewer (mkdocs-glightbox): a selected image opens in an overlay on the
+  # page instead of as a bare PNG; x or Esc closes it. Images inside a link, or
+  # with the class off-glb, are left alone.
+  - glightbox:
+      zoomable: true      # a click on the opened image shows it at full size (drag to move around)
+      draggable: true     # drag sideways to go to the next image, as on a touch screen
+      auto_themed: true   # the light and dark copies of a figure go in separate galleries,
+                          # so the viewer shows only the copy of the current colour scheme
 
 # Link checks. `mkdocs build --strict` turns every warning into an error, so with
 # these four set to "warn" a strict build stops on: a page under docs/ that the nav
