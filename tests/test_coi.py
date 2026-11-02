@@ -5,8 +5,9 @@ What is tested
     file with a tiny NCBI taxonomy: the domain moves from k: to d:, the kingdom is
     added from the taxonomy (and left out for a protist), the taxid suffixes go,
     placeholder ranks and interim species names are left out of the header, the
-    records of the removal list are dropped, and the report counts all of it. The
-    script stops on a removal list made for another MIDORI2 release.
+    records of the removal list are dropped, the report counts all of it, and the
+    log names the files with the main counts. The script stops on a removal list
+    made for another MIDORI2 release, and writes the reason to the log too.
   - the per-ASV measurements of workflow/scripts/amplicon/80d_coi_screens.py: the
     open reading frames (TAA/TAG only), the frame and length conditions of the
     frame check (an offset of the ASV's start allowed, a frameshift inside not),
@@ -58,11 +59,13 @@ def convert(tmp_path, removal_text):
         handle.write(MIDORI2)
     out = tmp_path / "out" / "converted.fasta.gz"
     report = tmp_path / "out" / "report.tsv"
+    log = tmp_path / "logs" / "prepare_midori2_coi_sintax.log"
     sm = fake_snakemake(
         input={"fasta": str(fasta), "nodes": write_text(tmp_path / "nodes.dmp", NODES),
                "names": write_text(tmp_path / "names.dmp", NAMES),
                "removal": write_text(tmp_path / "removal.tsv", removal_text)},
-        output={"fasta": str(out), "report": str(report)})
+        output={"fasta": str(out), "report": str(report)},
+        log=[str(log)])
     run_script(CONVERTER, sm)
     with gzip.open(out, "rt") as handle:
         headers = [line.rstrip("\n") for line in handle if line.startswith(">")]
@@ -72,6 +75,10 @@ def convert(tmp_path, removal_text):
 
 def test_conversion(tmp_path):
     headers, counts = convert(tmp_path, "record_id\tdecision\nB1.1.<1.>658\tremoved\nA1.1.<1.>658\tlisted\n")
+    log_lines = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text().splitlines()
+    assert log_lines[0].startswith("[midori2_to_metaflux_sintax] 4 records read from ")
+    assert log_lines[1].startswith("[midori2_to_metaflux_sintax] 1 left out as bacterial COX1 ")
+    assert log_lines[2].startswith("[midori2_to_metaflux_sintax] 3 records written to ")
     assert headers == [
         ">A1.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Muscidae,g:Musca,s:Musca_domestica;",
         ">A2.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Muscidae;",
@@ -90,6 +97,8 @@ def test_removal_list_of_another_release_stops(tmp_path):
     with pytest.raises(SystemExit) as stop:
         convert(tmp_path, "record_id\tdecision\nZZ999.1.<1.>658\tremoved\n")
     assert "belongs to another MIDORI2 release" in str(stop.value)
+    log_text = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text()
+    assert log_text == str(stop.value) + "\n"
 
 
 def test_screen_measurements():

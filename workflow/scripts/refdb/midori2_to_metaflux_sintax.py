@@ -68,6 +68,9 @@ OUTPUT : output.fasta  = the MetaFlux SINTAX file (symbol midori2_coi_sintax in
          output.report = counts of everything this script changed (one line per
                          count, tab-separated), for a human and for the docs;
                          nothing downstream parses it
+LOG    : log[0]        = a plain-text log for a human to check after the run: the
+                         files read and written and the main counts, or the message
+                         the script stopped with; nothing downstream reads it
 """
 import gzip
 import re
@@ -83,6 +86,7 @@ names_path = Path(sm.input.names)
 removal_path = Path(sm.input.removal)
 out_path = Path(sm.output.fasta)
 report_path = Path(sm.output.report)
+log_path = Path(sm.log[0])
 
 # MIDORI2's SINTAX letters, in the order MIDORI2 writes them. k holds the domain.
 MIDORI2_LETTERS = ["k", "p", "c", "o", "f", "g", "s"]
@@ -99,9 +103,13 @@ FIELD = re.compile(r"(?:^|,)([kpcofgs]):(.*?)(?=,[kpcofgs]:|$)")
 
 
 def stop(message):
-    """Remove the half-written output and stop the rule with the message."""
+    """Remove the half-written output, write the message to the log and stop the
+    rule with it."""
     out_path.unlink(missing_ok=True)
-    sys.exit(f"[midori2_to_metaflux_sintax] {message}")
+    full_message = f"[midori2_to_metaflux_sintax] {message}"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(full_message + "\n")
+    sys.exit(full_message)
 
 
 def split_taxid(value):
@@ -228,3 +236,16 @@ with report_path.open("w") as handle:
     handle.write("count\tvalue\n")
     for key in sorted(counts):
         handle.write(f"{key}\t{counts[key]}\n")
+
+# --- 4. The log: the files and the main counts, for a human checking the reference
+# after the run (every count is in the report above); nothing downstream reads it.
+removed_count = counts["records left out: bacterial COX1 under a eukaryote name"]
+log_path.parent.mkdir(parents=True, exist_ok=True)
+with log_path.open("w") as log:
+    log.write(
+        f"[midori2_to_metaflux_sintax] {counts['records read']} records read from {in_path}\n"
+        f"[midori2_to_metaflux_sintax] {removed_count} left out as bacterial COX1 "
+        f"(list: {removal_path})\n"
+        f"[midori2_to_metaflux_sintax] {counts['records written']} records written to {out_path}\n"
+        f"[midori2_to_metaflux_sintax] every count: {report_path}\n"
+    )
