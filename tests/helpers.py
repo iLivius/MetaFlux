@@ -56,11 +56,12 @@ SCRIPTS     = WORKFLOW / "scripts"
 MARKERS     = WORKFLOW / "markers"
 TEST_DIR    = REPO_ROOT / ".test"
 
-# The standard-library names the extracted functions use. A function that needs
-# another module fails with a clear NameError, which says what to add here.
+# The module names the extracted functions use: the standard library's, and PyYAML
+# (yaml), which the test suite needs anyway. A function that needs another module
+# fails with a clear NameError, which says what to add here.
 STANDARD_NAMES = {
     "re": re, "struct": struct, "sys": sys, "json": json, "gzip": gzip,
-    "Path": Path, "Counter": Counter,
+    "Path": Path, "Counter": Counter, "yaml": yaml,
 }
 
 

@@ -113,11 +113,12 @@ for that invocation only; the file on disk is untouched and every other setting
 still comes from it. The shotgun section of the config has to be filled in for this
 to work — `references.kraken_db` in particular, which is checked while the workflow
 is read. Nested settings (`amplicon.type`, for instance) can't be reached with a dotted
-key — `--config` only accepts plain top-level identifiers, so overriding one
-means replacing its whole parent block with inline YAML
-(`--config 'amplicon={type: ITS}'`) rather than a single `key=value` pair.
-Keeping one config file per marker and selecting it with `--configfile` is
-clearer.
+key — `--config` only accepts plain top-level identifiers — but their block can be
+given as inline YAML: `--config 'amplicon={type: ITS}'`. The block is merged into
+the config key by key, as a run config is, so this changes `amplicon.type` and
+nothing else in `amplicon`. Its values are read as YAML reads them in a config file:
+`false` switches a setting off and `3` is a number. Keeping one config file per
+marker and selecting it with `--configfile` is clearer.
 
 !!! warning "Give each mode its own `out_dir`"
 

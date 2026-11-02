@@ -45,6 +45,84 @@ import yaml
 from pathlib import Path
 
 from snakemake.io import glob_wildcards
+from snakemake.utils import update_config
+
+
+# ─────────────────── Settings typed inline with --config ───────────────────
+# A setting can come from three layers: config/config.yaml, a run config given with
+# --configfile, and --config on the command line, each beating the one before it
+# (docs/reference/configuration.md, "The config layers"). The first two are YAML
+# files, and YAML gives every value its type as it reads them: true and false become
+# booleans, 3 and 0.5 numbers. --config does the same only for a top-level value
+# (mode=shotgun). A value typed INSIDE a block, as in
+#     --config 'amplicon={phylogeny: {enabled: false}, dada2: {max_ee: [3, 3]}}'
+# is read by Snakemake with YAML's "base" loader, which keeps every value as text:
+# `enabled` arrives as the text "false" and `max_ee` as ["3", "3"]. Such text went
+# wrong without a word further down. Python counts any text that is not empty as
+# true, so the on/off settings below (the phylogeny, the taxonomy filters, PhiX
+# removal, extraction, the two COI screens, the k-mer evidence gate, Kraken2's memory
+# mapping) were switched ON by an inline `false`. And DADA2 compared each read's
+# expected errors with max_ee as text, where "10.5" <= "3" is true, so its quality
+# filter kept reads it should have dropped.
+#
+# So, before any setting is read, every value given with --config is read again the
+# way YAML reads it in a config file, and put back into the run's config at the same
+# place. The merge is Snakemake's own (update_config, the function that put the text
+# there), so a block is merged key by key and the inline value still beats both
+# files. After this a setting means the same whether it was written in a file or
+# typed inline, and no line further down has to care where it came from. Only plain
+# values change type (true/false, whole numbers, decimals, null); any other text, such
+# as a path, a primer or a marker name, stays exactly as typed.
+#
+# The inline values come from workflow.config_settings.config, where Snakemake keeps
+# the parsed --config entries and only those (the merged `config` no longer tells
+# which value came from which layer). Without --config it is empty and nothing
+# changes. MetaFlux is developed and tested with Snakemake 9, which keeps them there;
+# on a Snakemake that does not, the run stops here with a message.
+def _as_in_a_config_file(value):
+    """Read a value given with --config the way YAML reads it in a config file.
+
+    Parameters
+    ----------
+    value : one --config entry as Snakemake hands it over: text; a block (dict) or a
+        list from a block typed inline, whose values are all text; or a value
+        Snakemake has already converted (a top-level number).
+
+    Returns
+    -------
+    The same structure, in which every text that YAML reads as a boolean, a whole
+    number, a decimal or null in a config file has become that value ("false" ->
+    False, "3" -> 3, "0.5" -> 0.5, "null" -> None). Any other text comes back as
+    typed, and so does a value that is not text. YAML reads 1e8 (no decimal point)
+    as text in a config file too; the scripts that take such a number (nbases)
+    convert it themselves.
+    """
+    if isinstance(value, dict):
+        return {key: _as_in_a_config_file(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_as_in_a_config_file(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    try:
+        typed = yaml.safe_load(value)
+    except yaml.YAMLError:
+        # Text that is not valid YAML on its own (an unmatched quote, for one) is text.
+        return value
+    if typed is None or isinstance(typed, (bool, int, float)):
+        return typed
+    # A list, a block or a date: in this position it was typed as text, so it stays
+    # text ("a: b" would otherwise become a block of its own).
+    return value
+
+
+_config_settings = getattr(workflow, "config_settings", None)
+if not hasattr(_config_settings, "config"):
+    sys.exit(
+        "[MetaFlux] This Snakemake does not keep the --config values where MetaFlux reads "
+        "them (workflow.config_settings.config), so a setting typed inline could not be "
+        "read correctly. MetaFlux is developed and tested with Snakemake 9."
+    )
+update_config(config, _as_in_a_config_file(dict(_config_settings.config or {})))
 
 
 # ────────────────────────── Mode dispatch ──────────────────────
