@@ -47,7 +47,10 @@ times deeper.
 On the home page of the documentation, the metro map now opens in an image viewer on the
 page instead of as a bare PNG: a second click shows it at full size, and x or Esc closes
 it. The viewer is the mkdocs-glightbox plugin, a new requirement of the documentation
-build only (`pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3`).
+build only (`pip install mkdocs-material==9.7.7 mkdocs-glightbox==0.5.3`). The map and
+the README overview now say v2.6.1 and are otherwise unchanged; the map PNGs are 3509 x
+1291 px instead of 5848 x 2152, so that at full size its station labels are about 20 px
+high.
 
 ### What runs again in a folder made with v2.6.0
 
