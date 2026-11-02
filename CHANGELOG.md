@@ -6,7 +6,7 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
-## 2.6.1 — [To be settled before release: the date]
+## 2.6.1 — 2026-11-02
 
 ### Settings typed inline with `--config` are read as in a config file
 
