@@ -6,6 +6,69 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
+## 2.6.1 — [To be settled before release: the date]
+
+### Settings typed inline with `--config` are read as in a config file
+
+A setting inside a block can be typed on the command line as inline YAML, for example
+`--config 'amplicon={phylogeny: {enabled: false}}'`. Snakemake hands every value of such
+a block over as text, and two kinds of setting then went wrong without a word:
+
+- **On/off settings** were switched on by `false`, because Python counts any text that
+  is not empty as true: the phylogeny and its support values, the taxonomy filters of
+  both modes, PhiX removal in both modes, the extraction, the two COI screens, the k-mer
+  evidence gate and Kraken2's memory mapping.
+- **`amplicon.dada2.max_ee`** reached DADA2 as text, and DADA2 compared each read's
+  expected errors with it as text, so a read with 10.5 expected errors passed
+  `max_ee: [2, 2]` ("10.5" sorts before "2").
+
+Settings written in a config file were never affected. MetaFlux now reads every value
+given with `--config` the way YAML reads it in a config file, before any setting is used.
+The "Running MetaFlux" page also said that an inline block replaces the whole block of
+the config; Snakemake merges it key by key, as it merges a run config, and the page now
+says so.
+
+### The MIDORI2 conversion writes its log
+
+`prepare_midori2_coi_sintax` declared a log file but wrote nothing to it. It now writes
+there the files it read and wrote and the main counts, or the message it stopped with.
+The converted reference is byte for byte the same.
+
+### Documentation
+
+The pages on COI and on the bacterial COX1 set, the configuration reference and the COI
+marker pack said that the MIDORI2 records in the set's list are at least 90 % identical
+to a gene of the set. They are at least 90 % identical to a gene that passes checks
+5.1–5.3 of its build, and 17 of the 186 match only genes that check 5.4 then left out.
+The set's README reports the sensitivity of its counts for twelve thresholds, not for
+each of them, and the COI screens search far deeper than VSEARCH's default, not eight
+times deeper.
+
+### What runs again in a folder made with v2.6.0
+
+- **After a `git pull`** in the MetaFlux folder that made the output folder: MultiQC in
+  every folder, because its settings file, one of its inputs, now names v2.6.1. In a COI
+  folder also the MIDORI2 conversion, whose script changed, and every step that follows
+  from the converted reference: the length probe (`expected_length: auto`, the default),
+  `pick_trunclen`, DADA2, the COI screens, the taxonomy and the read tracking. The steps
+  up to primer trimming are kept. The change to `--config` is read at start-up and makes
+  no step run again.
+- **From a fresh clone, a release archive or a second worktree**: every step that runs a
+  script, with the steps after it, as at every release ("What runs again in a folder made
+  with v2.5.0" below says why).
+- The steps that run again give the results of v2.6.0, as between any two identical runs:
+  the converted MIDORI2 file is byte for byte the same.
+- **To skip the reruns**, give `--rerun-triggers mtime params input software-env` to that
+  run and to every later run on the same output folder; only MultiQC then runs again.
+- A run made with one of the settings above typed inside a block with `--config` gave a
+  wrong result: run it again with the same command. A corrected `max_ee` is a changed
+  step parameter, which Snakemake notices; a switch typed `false` now leaves its step
+  out, and the files that step wrote before stay in the output folder.
+
+### What to edit in a config written for v2.6.0
+
+Nothing.
+
 ## 2.6.0 — 2026-10-31
 
 ### COI, a new amplicon marker

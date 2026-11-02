@@ -42,7 +42,7 @@ catches, among others:
 While reading the workflow, MetaFlux also prints a banner line to stderr:
 
 ```text
-[MetaFlux v2.6.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
+[MetaFlux v2.6.1] mode=amplicon, input=local, 24 sample(s) in /data/fastq
 ```
 
 Before it, an amplicon run prints a line saying whether the organelle filter is on, and
@@ -211,6 +211,21 @@ so. Four practical consequences:
   with `git pull`.
 - **A dry run shows what would run.** `-n` prints the jobs a re-run would execute,
   each with the reason.
+
+!!! note "Re-running an output folder made with v2.6.0"
+
+    After a `git pull` in the MetaFlux folder that made the output folder, MultiQC runs
+    again in every folder, because its settings file now names v2.6.1. A COI folder also
+    runs the MIDORI2 conversion again, because its script changed (it now writes its log),
+    and every step that follows from the converted reference: the length probe,
+    `pick_trunclen`, DADA2, the COI screens, the taxonomy and the read tracking. The steps
+    up to primer trimming are kept, and the results are those of v2.6.0, as between any
+    two identical runs. From a fresh
+    clone, a release archive or a second worktree, every step that runs a script runs
+    again, as at every release. `--rerun-triggers mtime params input software-env` leaves
+    only MultiQC. The 2.6.1 entry of the
+    [CHANGELOG](https://github.com/iLivius/MetaFlux/blob/main/CHANGELOG.md) gives the
+    details, and what to do with a run that typed a setting inline with `--config`.
 
 !!! note "Re-running an output folder made with v2.5.0"
 

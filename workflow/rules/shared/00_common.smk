@@ -3227,7 +3227,7 @@ if MODE == "shotgun":
 else:
     _profiler_part = ""
 sys.stderr.write(
-    f"[MetaFlux v2.6.0] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
+    f"[MetaFlux v2.6.1] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
     f"{len(SAMPLES)} sample(s) in {FASTQ_DIR}\n"
 )
 # When sylph runs, a second line names its databases (with the taxonomy of each) and

@@ -12,8 +12,8 @@ cff-version: 1.2.0
 message: "If you use MetaFlux in your work, please cite it as below, and cite the tools and reference databases it runs (see the citation page of the documentation)."
 type: software
 title: "MetaFlux: a unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow"
-version: 2.6.0
-date-released: 2026-10-31
+version: 2.6.1
+# [To be settled before release: date-released: YYYY-MM-DD]
 authors:
   - family-names: Antonielli
     given-names: Livio

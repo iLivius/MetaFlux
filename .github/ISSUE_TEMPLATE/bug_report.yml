@@ -17,7 +17,7 @@ body:
     attributes:
       label: MetaFlux version
       description: The banner the run prints, or the output of `git describe --tags`.
-      placeholder: v2.6.0
+      placeholder: v2.6.1
     validations:
       required: true
   - type: dropdown

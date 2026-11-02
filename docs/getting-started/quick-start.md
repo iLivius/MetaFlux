@@ -121,7 +121,7 @@ The dry-run also prints a one-line summary of what MetaFlux understood; read it 
 committing cores to a run:
 
 ```text
-[MetaFlux v2.6.0] mode=amplicon, input=local, 24 sample(s) in /path/to/fastq_dir
+[MetaFlux v2.6.1] mode=amplicon, input=local, 24 sample(s) in /path/to/fastq_dir
 ```
 
 A sample count that does not match the sequencing run usually means a naming
