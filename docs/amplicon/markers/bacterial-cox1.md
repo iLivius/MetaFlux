@@ -779,11 +779,11 @@ Genomes giving a product, with up to three mismatches per primer (in brackets: a
   search keeps up to 3,000 hits per amplicon, and the hits to the genes left out are
   skipped.
 - **The same on the MIDORI2 side.** Step 6 removes from MIDORI2 the bacterial records filed
-  under eukaryote names, which it finds through the genes of the set. A removed record whose
-  closest gene belongs to the amplicon's own species (or genus) is put back for that
-  amplicon, as if that species were missing from GTDB. This is the cautious choice: through
-  the genes of other species, step 6 might still have removed the record. E is computed
-  against MIDORI2 with these records back.
+  under eukaryote names, which it finds through the genes that pass checks 5.1–5.3. A
+  removed record whose closest gene belongs to the amplicon's own species (or genus) is put
+  back for that amplicon, as if that species were missing from GTDB. This is the cautious
+  choice: through the genes of other species, step 6 might still have removed the record. E
+  is computed against MIDORI2 with these records back.
 - **Measured** is the share of amplicons with B > E: those that MetaFlux would recognise as
   bacterial.
 
@@ -855,8 +855,8 @@ Any rule changed after this test makes a new version.
 | `bacterial_cox1_gtdb-r232.v1.fasta.gz` | whole genes that pass all checks; DNA; SINTAX headers |
 | `bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` | fragments of at least 200 amino acids that pass all checks |
 | `bacterial_cox1_gtdb-r232.v1_metadata.tsv.gz` | every candidate gene: genome, lineage, coordinates, scores, residues, family, type, the outcome of every check, flags and verdict |
-| `midori2_gb273_bacterial_records.tsv` | MIDORI2 records matching a gene of the set, with the matching gene and the decision (removed or listed) |
-| `README.md` | inputs and their checksums, tool and model versions, thresholds, counts per step, results of the final test, sensitivity of the counts to each threshold |
+| `midori2_gb273_bacterial_records.tsv` | MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3, with the matching gene and the decision (removed or listed) |
+| `README.md` | inputs and their checksums, tool and model versions, thresholds, counts per step, results of the final test, sensitivity of the counts to twelve of the thresholds |
 | build scripts and environment file | to rebuild the release from the same inputs |
 | `SHA256SUMS` | checksums of all files |
 
@@ -947,7 +947,9 @@ development sample:
 - the strict definition of certainly mitochondrial records.
 
 They are frozen for version 1 and tested once on data not used to set them. Other values are
-defensible; the README reports how many genes change verdict when each of them moves. The
+defensible; the README reports how many genes change verdict when twelve of the thresholds
+move, the fragment floor and the GC limit of check 5.4 among them (the residue rule and the
+definition of certainly mitochondrial records are not single values and are not varied). The
 evidence rule of step 6 is the exception: it was revised during the R232 build, after the first
 rule had been applied to the R232 records, so no independent data have tested it (step 6).
 
@@ -960,10 +962,11 @@ example in MAGs from the same study, because each copy then finds a close match 
 genome.
 
 **Bacterial records left in MIDORI2.** Step 6 removes a record only when it is at least 90 %
-identical to a gene of the set and the evidence points to bacteria. Bacterial records of
-lineages that GTDB lacks, or just below 90 %, stay in MIDORI2 and in the E of every ASV. Such
-a record can also make check 5.4 reject a genuine bacterial gene, as happened to one
-*Polaromonas* fragment in development and probably to 8 genes in R232 (step 6).
+identical to a gene that passes checks 5.1–5.3 and the evidence points to bacteria.
+Bacterial records of lineages that GTDB lacks, or just below 90 %, stay in MIDORI2 and in the
+E of every ASV. Such a record can also make check 5.4 reject a genuine bacterial gene, as
+happened to one *Polaromonas* fragment in development and probably to 8 genes in R232
+(step 6).
 
 **Genes left out for review.** Whole genes marked "review" by check 5.4 are left out of
 version 1, although some may be genuine. Their lineages then have fewer genes on the bacterial

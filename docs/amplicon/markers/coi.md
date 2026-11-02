@@ -22,7 +22,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | `amplicon.type` | `COI` |
 | Reference database | MIDORI2 release GB273 (Leray et al. 2022), variant UNIQ NUC_SP, SINTAX file; Zenodo version DOI 10.5281/zenodo.22685701 |
 | Role of that database | taxonomy reference, amplicon-length probe substrate, and identity E of the off-target guard |
-| Second reference | the bacterial COX1 reference set `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a candidate gene of the set (186 in GB273), each marked `removed` (170, bacterial COX1 under eukaryote names) or `listed` (16, kept) |
+| Second reference | the bacterial COX1 reference set `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, bacterial COX1 under eukaryote names) or `listed` (16, kept) |
 | Probe mode | `pcr` — MIDORI2 holds whole barcodes and whole genes |
 | Preparation | download and unzip, then a one-time conversion of the headers (below) |
 | Classifier | SINTAX only (`amplicon.taxonomy.method: sintax`) |
@@ -216,10 +216,10 @@ E and its closest bacterial gene. Nothing is deleted, so a *Wolbachia* infection
 visible.
 
 - **Search.** VSEARCH `--usearch_global --id 0.5 --strand plus --maxaccepts 256
-  --maxrejects 2048`, eight times VSEARCH's default search depth: with distant sequences
-  the best alignment is often not among the first targets VSEARCH tries. In the
-  development tests this depth recognised the same share of bacterial amplicons as an
-  exhaustive search (94.8 %), and a shallower one (20 accepts, 200 rejects) 2.2 points
+  --maxrejects 2048`, far deeper than VSEARCH's default (1 accept, 32 rejects): with
+  distant sequences the best alignment is often not among the first targets VSEARCH tries.
+  In the development tests this depth recognised the same share of bacterial amplicons as
+  an exhaustive search (94.8 %), and a shallower one (20 accepts, 200 rejects) 2.2 points
   fewer.
 - **Identity.** Recounted from the aligned rows over A/C/G/T columns: identical A/C/G/T
   columns divided by A/C/G/T columns plus internal gap columns. VSEARCH's own identity

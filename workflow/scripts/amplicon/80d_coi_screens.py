@@ -48,13 +48,13 @@ The off-target guard (amplicon.coi.offtarget_guard)
     VSEARCH --usearch_global of every ASV against the cleaned MIDORI2 (E) and
     against the bacterial COX1 set, whole genes and fragments (B), with
         --id 0.5 --strand plus --maxaccepts 256 --maxrejects 2048
-    (eight times VSEARCH's default search depth: with distant sequences the best
-    alignment is often not among the first targets VSEARCH tries). The identity
-    is recounted from the aligned rows over A/C/G/T columns: identical A/C/G/T
-    columns / (A/C/G/T columns + internal gap columns). VSEARCH's own identity
-    counts N and other ambiguity codes as identical, and about 9 % of MIDORI2
-    records contain them. A hit counts only when those columns cover at least
-    80 % of the ASV. B > E: the ASV is bacterial COX1.
+    (far deeper than VSEARCH's default of 1 accept and 32 rejects: with distant
+    sequences the best alignment is often not among the first targets VSEARCH
+    tries). The identity is recounted from the aligned rows over A/C/G/T columns:
+    identical A/C/G/T columns / (A/C/G/T columns + internal gap columns).
+    VSEARCH's own identity counts N and other ambiguity codes as identical, and
+    about 9 % of MIDORI2 records contain them. A hit counts only when those
+    columns cover at least 80 % of the ASV. B > E: the ASV is bacterial COX1.
     The E search also gives what the species flags need (written here, decided in
     80c): the MIDORI2 records tied at the best identity, and their species.
 

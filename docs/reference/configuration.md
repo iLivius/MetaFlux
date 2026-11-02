@@ -379,7 +379,7 @@ the pack's declared filename. The full set of relocatable keys:
 | `midori2.sintax` | COI | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` (built from the three files above and the MIDORI2 list of the bacterial COX1 set, not downloaded; see below) |
 | `bacterial_cox1.fasta` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` (whole genes of the bacterial COX1 set) |
 | `bacterial_cox1.fragments` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` |
-| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (the MIDORI2 records at least 90 % identical to a candidate gene of the set, 186 in GB273, each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); those marked `removed` are left out of `midori2.sintax`) |
+| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build, 186 in GB273, each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); those marked `removed` are left out of `midori2.sintax`) |
 
 The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 `silva_other: strip`, `other-verbatim` becomes `other-stripped`.
