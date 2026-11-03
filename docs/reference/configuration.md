@@ -341,8 +341,8 @@ BBTools conda package, so neither the download nor the index is needed there.
 
 ### Marker databases are declared by the marker packs, not here
 
-SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8, FROGS, MIDORI2 and the bacterial COX1
-set are **not** listed in the config. Each marker pack (`workflow/markers/<type>.yaml`) declares its own database
+SILVA, UNITE, PR2, SILVA-Eukaryotic, DD7RZ8, FROGS, MIDORI2 and the set of bacterial COI
+homologues are **not** listed in the config. Each marker pack (`workflow/markers/<type>.yaml`) declares its own database
 filenames and download URLs, and MetaFlux fetches (and where needed converts) them
 on first use into `refdb_root`. An entry under `references` is needed only to
 choose the SILVA release for 16S (see [SILVA release](#silva-release-16s) below) or to
@@ -376,10 +376,10 @@ the pack's declared filename. The full set of relocatable keys:
 | `rpob.frogs` | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` (the DADA2 trainset converted from the FROGS archive, with the domain written `d__`; see below) |
 | `midori2.raw` | COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz` (MIDORI2's SINTAX file as published, extracted from its zip) |
 | `midori2.taxonomy` | COI | `midori2/GB273/taxonomy/nodes.dmp` (MIDORI2's NCBI taxonomy snapshot; `names.dmp` is read from the same folder) |
-| `midori2.sintax` | COI | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` (built from the three files above and the MIDORI2 list of the bacterial COX1 set, not downloaded; see below) |
-| `bacterial_cox1.fasta` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` (whole genes of the bacterial COX1 set) |
+| `midori2.sintax` | COI | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` (built from the three files above and the MIDORI2 list of the bacterial set, not downloaded; see below) |
+| `bacterial_cox1.fasta` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` (whole genes of the set of bacterial COI homologues) |
 | `bacterial_cox1.fragments` | COI | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` |
-| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build, 186 in GB273, each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); those marked `removed` are left out of `midori2.sintax`) |
+| `bacterial_cox1.midori2_list` | COI | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` (the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build, 186 in GB273, each marked `removed` (170, judged bacterial) or `listed` (16, kept); those marked `removed` are left out of `midori2.sintax`) |
 
 The `silva.*` paths are those of SILVA 144 with `silva_other: verbatim`; with
 `silva_other: strip`, `other-verbatim` becomes `other-stripped`.
@@ -780,7 +780,7 @@ reference cannot hold in that slot (`k__Fungi` on 16S). See
 | 18S | `[d__Eukaryota]` (PR2 ranks) — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S](../amplicon/markers/18S.md) | `[]` |
 | gyrB | no recommended default — paralogs are removed with `discard: [other]` on the DD7RZ8 gene-tag rank, the same keep/discard mechanism as above, not a separate filter | |
 | rpoB | no recommended default — FROGS RefSeq has no equivalent contamination to remove | |
-| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COX1 is moved by the off-target guard (`amplicon.coi`), not by a token |
+| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COI homologues are moved by the off-target guard (`amplicon.coi`), not by a token |
 
 Contaminants a blank extraction control reveals go in `discard`, e.g.
 `discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]`. A
@@ -817,7 +817,7 @@ See [COI](../amplicon/markers/coi.md#the-coi-screens).
 |---|---|---|---|
 | `frame_check` | Removes ASVs with TAA or TAG in the run's reading frame (or in the frame an offset of the ASV's start implies), or whose length is too far from the run's reference length (pseudogenes, NUMTs, artefacts) | `true` | The run's frame and reference length are taken from the ASVs themselves (the frame open in most reads; the most frequent length among open ASVs). Removed ASVs stay in `asv_table_unfiltered.txt` as `removed_frame`. |
 | `length_tolerance` | Largest length difference from the run's reference length, in bases, that the frame check accepts | `9` | Three codons. Must be a whole number of bases, a multiple of 3 and not negative (`9.0` and `"9"` are read as 9); anything else, a fraction, `true`/`false` or other text included, stops the run at start-up. |
-| `offtarget_guard` | Moves ASVs closer to the bacterial COX1 set (B) than to MIDORI2 (E) out of the main tables, into `06.taxonomy/bacterial_cox1_asvs.tsv` | `true` | *Wolbachia* and other bacterial COX1. Moved ASVs stay in `asv_table_unfiltered.txt` as `moved_bacterial_cox1`. |
+| `offtarget_guard` | Moves ASVs closer to the set of bacterial COI homologues (B) than to MIDORI2 (E) out of the main tables, into `06.taxonomy/bacterial_cox1_asvs.tsv` | `true` | *Wolbachia* and other bacterial COI homologues. Moved ASVs stay in `asv_table_unfiltered.txt` as `moved_bacterial_cox1`. |
 
 ### DADA2 — tier 1, operational parameters
 
@@ -1236,7 +1236,7 @@ so they are what a cluster executor turns into job requests.
 | `dada_length_filter` | amplicon | 2 | |
 | `target_extract` | amplicon | 8 | Metaxa2 or ITSx. |
 | `assign_taxonomy` | amplicon | 8 | With a fixed `amplicon.seed` the result does not depend on this value (for `sintax` from v2.5.0 on). |
-| `coi_screens` | amplicon | 8 | COI only: VSEARCH against MIDORI2 (E) and the bacterial COX1 set (B). |
+| `coi_screens` | amplicon | 8 | COI only: VSEARCH against MIDORI2 (E) and the set of bacterial COI homologues (B). |
 | `aggregate_read_counts` | shared | 2 | Present in the config template but not read — the rule declares no `threads`; see the note below. |
 | `phylo_input` | amplicon | 1 | Reads two text tables, writes a FASTA. |
 | `phylo_align` | amplicon | 4 | MAFFT. |

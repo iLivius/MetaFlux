@@ -595,7 +595,7 @@ lists every problem the check found.
 
     A `fetch_*` rule fails, and its log (`logs/refdb/fetch_<name>.log` in the output
     directory) ends with one of these lines (the second comes from the COI downloads,
-    whose MIDORI2 FASTA and bacterial COX1 files are checked against SHA-256 sums):
+    whose MIDORI2 FASTA and bacterial reference files are checked against SHA-256 sums):
 
     ```text
     md5 mismatch for <file>: expected …, got …

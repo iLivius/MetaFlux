@@ -141,7 +141,7 @@ are cached under `refdb/`. Shotgun mode needs, supplied by hand, a Kraken2 index
 | PR2 (DADA2 + UTAX) + SILVA-Euk | amplicon (18S) | auto-fetched on first run |
 | DD7RZ8 (DADA2 trainset) | amplicon (gyrB) | auto-fetched on first run |
 | FROGS RefSeq (converted to DADA2) | amplicon (rpoB) | auto-fetched and converted on first run |
-| MIDORI2 (SINTAX) + bacterial COX1 set (GTDB R232) | amplicon (COI) | auto-fetched (checksummed) and converted on first run |
+| MIDORI2 (SINTAX) + bacterial COI homologues (GTDB R232) | amplicon (COI) | auto-fetched (checksummed) and converted on first run |
 | **Kraken2 / Bracken index** | shotgun (`kraken2` or `both`) | **user-supplied** |
 | **sylph databases + sylph-tax lineage tables** | shotgun (`sylph` or `both`) | **user-supplied** |
 | Host genome(s) | shotgun (optional) | user-supplied, path or URL |

@@ -13,7 +13,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 - the taxonomy is assigned with **SINTAX only**;
 - two **COI screens** run before the taxon filter: a reading-frame check against
   pseudogenes and nuclear copies of the gene (NUMTs), and an off-target guard that moves
-  bacterial COX1 sequences, *Wolbachia* above all, out of the main tables.
+  bacterial COI homologues, *Wolbachia* above all, out of the main tables.
 
 ## At a glance
 
@@ -22,7 +22,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | `amplicon.type` | `COI` |
 | Reference database | MIDORI2 release GB273 (Leray et al. 2022), variant UNIQ NUC_SP, SINTAX file; Zenodo version DOI 10.5281/zenodo.22685701 |
 | Role of that database | taxonomy reference, amplicon-length probe substrate, and identity E of the off-target guard |
-| Second reference | the bacterial COX1 reference set `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, bacterial COX1 under eukaryote names) or `listed` (16, kept) |
+| Second reference | the set of bacterial COI homologues `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, bacterial COI homologues under eukaryote names) or `listed` (16, kept) |
 | Probe mode | `pcr` — MIDORI2 holds whole barcodes and whole genes |
 | Preparation | download and unzip, then a one-time conversion of the headers (below) |
 | Classifier | SINTAX only (`amplicon.taxonomy.method: sintax`) |
@@ -134,11 +134,11 @@ and after conversion
 - **Interim species names are left out of the species rank** ("Sarcophaga sp. BIOUG…",
   "cf.", "aff."), so that a species column holds only formal binomials. The record keeps
   its genus and higher ranks.
-- **Bacterial COX1 filed under eukaryote names is removed.** MIDORI2 is built from the
-  eukaryotic divisions of GenBank, so a bacterial sequence submitted under an animal's name
-  enters it. The list that comes with the bacterial COX1 reference set marks 170 such records
+- **Bacterial COI homologues filed under eukaryote names are removed.** MIDORI2 is built from
+  the eukaryotic divisions of GenBank, so a bacterial sequence submitted under an animal's name
+  enters it. The list that comes with the set of bacterial COI homologues marks 170 such records
   in GB273 for removal, mostly *Wolbachia*, *Tisiphia* and other symbionts filed as insects.
-  How they were found is described on [Bacterial COX1 reference set (COI)](bacterial-cox1.md).
+  [Bacterial COI homologues (reference set)](bacterial-cox1.md) describes how they were found.
 
 The conversion stops, rather than guessing, on a header without `;tax=`, a first field
 that is not `k:Eukaryota_<taxid>`, a taxid missing from the taxonomy snapshot, or a
@@ -155,7 +155,7 @@ before any classification.
 ## The COI screens
 
 COI is a protein-coding gene, and two kinds of sequence reach a COI ASV table that are not
-the mitochondrial COI of a eukaryote: pseudogenes and NUMTs, and bacterial COX1. Rule
+the mitochondrial COI of a eukaryote: pseudogenes and NUMTs, and bacterial COI homologues. Rule
 `coi_screens` measures both for every ASV and writes `06.taxonomy/coi_screens.tsv`; the
 taxonomy step applies the decisions **before** keep/discard, so a pseudogene never reaches
 the token lists, and a bacterial ASV that SINTAX called an animal is not kept by
@@ -204,13 +204,13 @@ a frameshift. Tools that judge NUMTs by abundance and phylogeny, such as metaMAT
 
 ### Off-target guard (`amplicon.coi.offtarget_guard`)
 
-Most bacteria that respire oxygen carry COX1 homologues, and common COI primer pairs
+Most bacteria that respire oxygen carry COI homologues, and common COI primer pairs
 amplify some of them, *Wolbachia* and other Rickettsiales of insects above all. MIDORI2
 holds eukaryotes only, so such an ASV can only be assigned to a eukaryote, usually an
 animal, and often with high SINTAX confidence.
 
-The guard compares every ASV with the cleaned MIDORI2 (identity E) and with the bacterial
-COX1 reference set, whole genes and fragments (identity B). An ASV with **B > E** is moved
+The guard compares every ASV with the cleaned MIDORI2 (identity E) and with the set of
+bacterial COI homologues, whole genes and fragments (identity B). An ASV with **B > E** is moved
 to `06.taxonomy/bacterial_cox1_asvs.tsv`, with its counts, what SINTAX had called it, B,
 E and its closest bacterial gene. Nothing is deleted, so a *Wolbachia* infection stays
 visible.
@@ -234,7 +234,7 @@ visible.
   comparison recognised 98.4 % of them (99.9 % for BF3/BR2, 88.2 % for Leray-XT, 93.5 % for
   fwhF2/fwhR2n), and 96.0 % with the whole genus left out. It moved 0.08 % or less of 10,008
   eukaryotic inserts whose species, genus, family or order was left out of MIDORI2. How the
-  set was built and tested is on [Bacterial COX1 reference set (COI)](bacterial-cox1.md).
+  set was built and tested is on [Bacterial COI homologues (reference set)](bacterial-cox1.md).
 - **What it cannot catch.** A bacterial lineage that is missing from the set but has a
   record in MIDORI2 under an animal's name, near-identical to the ASV, stays with the
   animal: E is then higher than any B. Step 6 of the set removes such records only for

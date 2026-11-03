@@ -578,7 +578,7 @@ for 18S under `sintax`, `convert_pr2_sintax` moves the domain of PR2's UTAX file
 SINTAX letter `d:`; the rpoB reference is rebuilt from the FROGS release by
 `convert_rpob_to_dada2`; and for COI, `prepare_midori2_coi_sintax` rewrites MIDORI2's
 SINTAX file: the domain moves to `d:`, a kingdom is added from MIDORI2's NCBI taxonomy
-snapshot, and placeholder ranks, interim species names and bacterial COX1 records are left
+snapshot, and placeholder ranks, interim species names and bacterial records are left
 out. See the [marker pages](markers/index.md) for what each one contains.
 
 Before any classification, `check_taxonomy_reference` reads the exact file the
@@ -654,7 +654,7 @@ when a run produces fewer ASVs than expected: it shows which step consumed the r
 ## What changes between markers
 
 Everything above is the same for all six markers except the four columns below, and the
-two COI screens (a reading-frame check and an off-target guard against bacterial COX1)
+two COI screens (a reading-frame check and an off-target guard against bacterial COI homologues)
 that run before the taxon filter in COI runs.
 
 | Marker | Probe substrate and mode | Extractor | Taxonomy reference | Methods |

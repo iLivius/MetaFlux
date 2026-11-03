@@ -61,7 +61,7 @@ Amplicon, one config per marker, method and SILVA release that MetaFlux offers:
 | `18S_rdp`, `18S_sintax` | 18S | rdp, sintax | – | the PR2 downloads and the PR2 SINTAX conversion |
 | `gyrB_rdp` | gyrB | rdp | – | fixed amplicon length, manual truncation and length window |
 | `rpoB_rdp` | rpoB | rdp | – | the FROGS archive download and conversion |
-| `COI_sintax` | COI | sintax | – | the MIDORI2 and bacterial COX1 downloads, the MIDORI2 conversion, the COI screens, `orientation: mixed` |
+| `COI_sintax` | COI | sintax | – | the downloads of MIDORI2 and of the bacterial COI homologues, the MIDORI2 conversion, the COI screens, `orientation: mixed` |
 
 gyrB and rpoB have no SINTAX reference, so `method: sintax` is refused for them at
 start-up, and COI has no rdp trainset, so `method: rdp` is refused for it; those

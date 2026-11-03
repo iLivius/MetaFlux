@@ -170,11 +170,11 @@ genomes in each database used.
 
 ### COI marker
 
-Cite these for a COI run, with the version of the bacterial COX1 set that was used.
+Cite these for a COI run, with the version of the set of bacterial COI homologues that was used.
 
 89. Leray, M., Knowlton, N. & Machida, R. J. (2022). MIDORI2: a collection of quality controlled, preformatted, and regularly updated reference databases for taxonomic assignment of eukaryotic mitochondrial sequences. *Environmental DNA* 4:894–907. https://doi.org/10.1002/edn3.303 (release GB273, UNIQ NUC_SP SINTAX file and taxonomy snapshot: https://doi.org/10.5281/zenodo.22685701)
-90. Antonielli, L. (2026). Bacterial COX1 reference set for COI metabarcoding: bacterial and archaeal COX1 genes from GTDB (Version gtdb-r232.v1). *Zenodo*. https://doi.org/10.5281/zenodo.23820760 (identity B of the off-target guard, and the list of MIDORI2 records it matched, those judged bacterial being left out by the conversion; how it was built is on [Bacterial COX1 reference set (COI)](../amplicon/markers/bacterial-cox1.md))
-91. Parks, D. H., Chaumeil, P.-A., Mussig, A. J., Rinke, C., Chuvochina, M. & Hugenholtz, P. (2026). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245 archaeal genomes. *Nucleic Acids Research* 54(D1):D743–D754. https://doi.org/10.1093/nar/gkaf1040 (the paper of GTDB release 10, R226; GTDB is the source of the bacterial COX1 set, which is built from release R232)
+90. Antonielli, L. (2026). Bacterial and archaeal COI homologues from GTDB R232: a reference set for off-target screening (Version gtdb-r232.v1). *Zenodo*. https://doi.org/10.5281/zenodo.23820760 (identity B of the off-target guard, and the list of MIDORI2 records it matched, those judged bacterial being left out by the conversion; how it was built is on [Bacterial COI homologues (reference set)](../amplicon/markers/bacterial-cox1.md))
+91. Parks, D. H., Chaumeil, P.-A., Mussig, A. J., Rinke, C., Chuvochina, M. & Hugenholtz, P. (2026). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245 archaeal genomes. *Nucleic Acids Research* 54(D1):D743–D754. https://doi.org/10.1093/nar/gkaf1040 (the paper of GTDB release 10, R226; GTDB is the source of the set of bacterial COI homologues, which is built from release R232)
 92. Elbrecht, V., et al. (2019). Validation of COI metabarcoding primers for terrestrial arthropods. *PeerJ* 7:e7745. https://doi.org/10.7717/peerj.7745 (the insect mock used to validate COI; see [Test datasets](test-datasets.md))
 
 Cited on the [COI](../amplicon/markers/coi.md) page; not a tool MetaFlux runs:

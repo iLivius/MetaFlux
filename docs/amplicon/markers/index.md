@@ -24,7 +24,7 @@ from one experiment to the next. A pack is read separately and is never merged i
     subregions, the SILVA 144 training set (whose kingdom names lose SILVA's `--other`
     suffix), the SILVA SINTAX builds, the 18S PR2 SINTAX file (whose domain moves to the
     letter `d:`), the FROGS rpoB build and the COI files (MIDORI2, its taxonomy snapshot
-    and the bacterial COX1 set) are handled.
+    and the set of bacterial COI homologues) are handled.
 
     A pack in `config/markers/` replaces the shipped pack completely, so after an
     upgrade copy the shipped pack again and re-apply your change: every pack must
@@ -41,7 +41,7 @@ from one experiment to the next. A pack is read separately and is never merged i
 | **18S** | Eukaryotic SSU rRNA; protists and other micro-eukaryotes | `pcr` | The probe substrate (SILVA-Euk v132) is full-length SSU | PR2 v5.1.1 SSU DADA2 file (`pr2_dada2`) | Yes — `pr2_sintax`, PR2 v5.1.1's UTAX file (`pr2_utax`) with its domain moved to the SINTAX letter `d:`, built by `convert_pr2_sintax`. `rdp` and `sintax` both available | none | 9 under `rdp`, 8 under `sintax` |
 | **gyrB** | DNA gyrase subunit B; protein-coding, single-copy, higher intra-genus resolution than 16S | `direct` | The DD7RZ8 v6 trainset is already primer-trimmed in-silico amplicons (~247 bp), not whole genes | DD7RZ8 v6 trainset, GTDB r226 (`gyrb_dada2`) — the same file is the probe substrate | **No.** `rdp` only | none | 7 (first rank is a paralog tag, not a taxon) |
 | **rpoB** | RNA polymerase subunit B; protein-coding, single-copy in almost all bacteria, and assigns far more ASVs to species than a 16S V3–V4 amplicon does. Not a strain marker — the reference stops at species, so the output does too | `pcr` | The FROGS RefSeq build ships full-length rpoB genes (~4 kb), so in-silico PCR recovers the amplicon window, ~387 bp once the two primers are trimmed off (~435 bp including them) | FROGS RefSeq rpoB build 20240707, converted to a DADA2 trainset (`rpob_frogs`) — the same file is the probe substrate | **No.** `rdp` only | none | 7 |
-| **COI** | Mitochondrial cytochrome c oxidase subunit I; the animal barcode, species-level for most animals | `pcr` | MIDORI2 holds whole barcodes (about 650 bp) and whole genes, so the amplicon window has to be cut out with the primers | MIDORI2 GB273 UNIQ NUC_SP SINTAX file, *converted* (`midori2_coi_sintax`: domain moved to `d:`, kingdom added from MIDORI2's NCBI snapshot, placeholder ranks, interim species names and bacterial COX1 records left out) — the same file is the probe substrate | Yes — `midori2_coi_sintax` itself. **`sintax` only**: no `rdp` trainset (it would need about 225 GB of memory at species level) | none | 8 |
+| **COI** | Mitochondrial cytochrome c oxidase subunit I; the animal barcode, species-level for most animals | `pcr` | MIDORI2 holds whole barcodes (about 650 bp) and whole genes, so the amplicon window has to be cut out with the primers | MIDORI2 GB273 UNIQ NUC_SP SINTAX file, *converted* (`midori2_coi_sintax`: domain moved to `d:`, kingdom added from MIDORI2's NCBI snapshot, placeholder ranks, interim species names and bacterial records left out) — the same file is the probe substrate | Yes — `midori2_coi_sintax` itself. **`sintax` only**: no `rdp` trainset (it would need about 225 GB of memory at species level) | none | 8 |
 
 Names in backticks are the pack's internal reference symbols. They belong to the
 `workflow/markers/*.yaml` packs, which use them to name the probe substrate
@@ -86,7 +86,7 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 | COI | `midori2_taxonomy` | `midori2/GB273/taxonomy/nodes.dmp` (and `names.dmp`) | MIDORI2's NCBI taxonomy snapshot, for the kingdom — *extracted* from a `.zip` | `midori2.taxonomy` |
 | COI | `bacterial_cox1` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` | identity B of the off-target guard (whole genes) | `bacterial_cox1.fasta` |
 | COI | `bacterial_cox1_fragments` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` | identity B of the off-target guard (fragments) | `bacterial_cox1.fragments` |
-| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, judged bacterial COX1) or `listed` (16, kept); the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
+| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, judged bacterial) or `listed` (16, kept); the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
 | COI | `midori2_coi_sintax` | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | probe substrate, `sintax` database and identity E of the off-target guard — *converted* from `midori2_coi_raw` with `midori2_taxonomy` and `bacterial_cox1_midori2_list` | `midori2.sintax` |
 
 The 16S rows are those of the default release, SILVA 144; `other-verbatim` becomes
@@ -314,7 +314,7 @@ When you write a pack of your own:
 - [gyrB](gyrb.md) — DD7RZ8, direct probe, paralog tag, `rdp` only
 - [rpoB](rpob.md) — FROGS RefSeq, in-silico PCR probe, `rdp` only
 - [COI](coi.md) — MIDORI2, in-silico PCR probe, `sintax` only, reading-frame check and off-target guard
-- [Bacterial COX1 reference set (COI)](bacterial-cox1.md) — how the bacterial set behind the off-target guard was built and tested
+- [Bacterial COI homologues (reference set)](bacterial-cox1.md) — how the bacterial set behind the off-target guard was built and tested
 
 For how the probe distribution becomes truncation lengths and an ASV length window, see
 [amplicon length and truncation](../length-and-truncation.md). For the whole amplicon

@@ -22,7 +22,7 @@ difference between them holds even where the absolute counts have since moved.
 | 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
 | gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
 | rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
-| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod specimens, MiSeq 2×300 | 1 per primer pair | SRR8082166, SRR8082178, SRR8082148 | BF3 / BR2, mlCOIintF-XT / jgHCO2198 (Leray-XT), fwhF2 / fwhR2n | MIDORI2 GB273 + bacterial COX1 set gtdb-r232.v1 |
+| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod specimens, MiSeq 2×300 | 1 per primer pair | SRR8082166, SRR8082178, SRR8082148 | BF3 / BR2, mlCOIintF-XT / jgHCO2198 (Leray-XT), fwhF2 / fwhR2n | MIDORI2 GB273 + bacterial COI homologues gtdb-r232.v1 |
 
 The four mock-community sets (ITS, gyrB, rpoB, COI) have known composition, so they check
 taxonomy as well as mechanics. The ITS run (UNITE release 19.02.2025, `method: sintax`)

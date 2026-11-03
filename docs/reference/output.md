@@ -251,7 +251,7 @@ raw → [nophix] → stripped → filtered → denoised → merged → non_chime
 `nophix` appears only when PhiX removal ran, `post_extraction` only when the
 extraction step ran, and `post_frame_check` and `post_bacterial_cox1` only in COI runs:
 the reads left after the reading-frame check, and after the off-target guard moved the
-bacterial COX1 ASVs out (their reads are in `06.taxonomy/bacterial_cox1_asvs.tsv`). The last column counts reads still present after the
+bacterial ASVs out (their reads are in `06.taxonomy/bacterial_cox1_asvs.tsv`). The last column counts reads still present after the
 contaminant filter, so the drop from the column before it (`post_length_filter`, or
 `post_bacterial_cox1` in COI runs) to `post_taxonomy_filter` is exactly what the taxon
 filter removed: the keep/discard lists, the best-hit check and, for 16S, the organelle

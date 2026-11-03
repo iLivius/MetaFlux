@@ -23,7 +23,7 @@ classification and before any table is written.
 | Input | `05.dada2/seqs_lenfilt.fasta` (ASV sequences after the length filter, and after Metaxa2/ITSx extraction where that runs) plus the matching count table `05.dada2/seqtab_lenfilt_head_names.txt` |
 | Classify | `rdp` path — DADA2 `assignTaxonomy` (+ `addSpecies` for 16S); `sintax` path — `vsearch --sintax` |
 | Build lineage | ranks joined into one taxonomy string per ASV |
-| COI screens *(COI only)* | the verdicts of rule `coi_screens`, read from `06.taxonomy/coi_screens.tsv`: an ASV that fails the reading-frame check is removed, and one closer to bacterial COX1 than to MIDORI2 is moved to `06.taxonomy/bacterial_cox1_asvs.tsv`. This happens whatever `filter.enabled` says; each screen has its own switch under `amplicon.coi` (see [COI](markers/coi.md#the-coi-screens)) |
+| COI screens *(COI only)* | the verdicts of rule `coi_screens`, read from `06.taxonomy/coi_screens.tsv`: an ASV that fails the reading-frame check is removed, and one closer to bacterial COI homologues than to MIDORI2 is moved to `06.taxonomy/bacterial_cox1_asvs.tsv`. This happens whatever `filter.enabled` says; each screen has its own switch under `amplicon.coi` (see [COI](markers/coi.md#the-coi-screens)) |
 | **Filter** | **`keep`, then `discard`, applied to that string; then `discard`'s best-hit check; for 16S, then Metaxa2's organelle call** |
 | Output | `06.taxonomy/asv_table.txt`, `asv_table_seqs.txt`, `taxon_seq_table.txt` (filtered), and `asv_table_unfiltered.txt` (every ASV, with what the filter did to it) |
 
@@ -299,7 +299,7 @@ These are starting points, not defaults — nothing in the code applies them.
 | 18S | `[d__Eukaryota]` — note this also drops PR2's organelle-tagged domains (`d__Eukaryota:plas`, `:mito`, `:nucl`, `:apic`, `:chro`) and the few ASVs left unclassified at Domain; see [18S rRNA](markers/18S.md) | `[]` |
 | gyrB | *no recommended default* — see below | |
 | rpoB | *no recommended default* — see below | |
-| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COX1 is moved by the off-target guard (`amplicon.coi`), not by a token |
+| COI | `[k__Metazoa]` for animal surveys; empty to see everything MIDORI2 can name | `[]` — bacterial COI homologues are moved by the off-target guard (`amplicon.coi`), not by a token |
 
 **16S and 18S** start with the domain, written `d__` under both methods; ITS starts with
 the kingdom, `k__`, because UNITE has no domain rank. For 18S the taxonomy reference is
@@ -333,8 +333,8 @@ lists empty unless a particular run shows a reason not to. See [rpoB](markers/rp
 converts the reference. A domain token does not help here:
 MIDORI2 holds eukaryotes only, so `d__Eukaryota` would keep every ASV that SINTAX could
 classify. Protists have no kingdom in NCBI and carry no `k__`, so `keep: [k__Metazoa]`
-drops them along with fungi and plants. Bacterial COX1 needs no token: the off-target
-guard, on by default, moves it out before the lists are applied. See [COI](markers/coi.md).
+drops them along with fungi and plants. Bacterial COI homologues need no token: the off-target
+guard, on by default, moves them out before the lists are applied. See [COI](markers/coi.md).
 
 ## Writing tokens that actually match
 

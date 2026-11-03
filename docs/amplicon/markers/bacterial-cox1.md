@@ -1,4 +1,4 @@
-# Bacterial COX1 reference set (COI)
+# Bacterial COI homologues (reference set)
 
 COI primers do not amplify only animals. Most bacteria that respire oxygen carry genes
 homologous to the mitochondrial cytochrome c oxidase subunit I, and common COI primer pairs
@@ -9,9 +9,18 @@ recognised as such: it can only be assigned to a eukaryote, usually an animal.
 MetaFlux therefore uses a second reference: a set of bacterial and archaeal subunit-I genes
 taken from the species representatives of the Genome Taxonomy Database, GTDB (Parks et al.
 2026). For every ASV, MetaFlux compares its best identity to this set (B) with its best
-identity to MIDORI2 (E). An ASV with B > E is reported in a separate table of bacterial COX1
-sequences. The same set is used once, when MIDORI2 is prepared, to remove MIDORI2 records
-that are themselves bacterial COX1 filed under eukaryotic names.
+identity to MIDORI2 (E). An ASV with B > E is reported in a separate table of bacterial COI
+homologues. The same set is used once, when MIDORI2 is prepared, to remove MIDORI2 records
+that are themselves bacterial COI homologues filed under eukaryotic names.
+
+!!! note "Names"
+    COI, or COX1, names the mitochondrial gene. The genes of this set are its bacterial and
+    archaeal homologues: subunit I of the heme-copper oxidases (genes *coxA* or *ctaD*, *cyoB*,
+    *qoxB* and *ccoN*, among others) and of the related nitric oxide reductases, which the build
+    does not separate (step 3). This manual calls them bacterial COI homologues; "bacterial"
+    includes the archaea. File names, settings and output columns keep the short form `cox1`
+    (for example `bacterial_cox1_gtdb-r232.v1` and `bacterial_cox1_asvs.tsv`). The README of the
+    Zenodo release and the messages of MetaFlux 2.6 use the earlier name, bacterial COX1.
 
 !!! note "You do not build this set"
     MetaFlux downloads the released set and checks its SHA-256 sum. This page explains how
@@ -112,7 +121,7 @@ Settings are described on the [COI marker page](coi.md).
 
 ## Why a bacterial reference is needed
 
-### Bacterial COX1 in COI libraries
+### Bacterial COI homologues in COI libraries
 
 Subunit I of the heme-copper oxygen reductases is the catalytic subunit of the terminal
 oxidases of aerobic respiration. The enzymes form three families, A, B and C. Family A
@@ -255,7 +264,7 @@ With the tools of the second group, what happens to a bacterial ASV depends on i
 to the nearest eukaryotic record. Below the lowest limit it stays unassigned; above that
 limit it is assigned to a eukaryotic group, at the rank that its identity allows; and where
 only the target group is kept, it is removed unless it was assigned to that group. No
-published measurement of how often each case occurs for bacterial COX1 was found, nor a study
+published measurement of how often each case occurs for bacterial ASVs was found, nor a study
 that compares the two approaches. The next section gives the measurements made for MetaFlux.
 
 ### What MetaFlux does, and why
@@ -616,7 +625,7 @@ The genes that pass checks 5.1–5.3 are compared with every record of MIDORI2 G
 NUC_SP). The NUC_SP variant contains every record of the NUC variant, so the resulting list
 applies to both.
 
-**A close match means that one side is misfiled.** Genuine COI and genuine bacterial COX1 are
+**A close match means that one side is misfiled.** Genuine COI and its bacterial homologues are
 never this close: in the development tests, no genuine eukaryotic sequence was more than
 77.6 % identical to a bacterial gene. A record at least 90 % identical to a gene (identity as
 in step 5, over at least 80 % of the shorter sequence) is therefore either a bacterial sequence
@@ -745,12 +754,12 @@ it asks how the set handles bacteria and eukaryotes that the references do not c
   not allowed. Three mismatches is permissive, on purpose: the test gets more amplicons, and
   more distant ones. The products with an intact reading frame under the bacterial code are
   the queries. The PCR is run on the genes that GTDB predicted in each genome, not on the
-  genome sequence, which the build does not download: an amplicon lies inside the COX1 gene,
+  genome sequence, which the build does not download: an amplicon lies inside the subunit-I gene,
   and in development this missed only the products in genes broken by a frameshift or an
   internal stop (10 of 1,259, 0.8 %).
 - **Why most genomes give no product.** 738 of the 3,476 genomes gave a product, 936
   products in all: 803 of BF3/BR2, 102 of Leray-XT and 31 of fwhF2/fwhR2n. A genome gives one
-  product per primer pair, or more when it carries several COX1 genes.
+  product per primer pair, or more when it carries several subunit-I genes.
     - Almost all products come from family-A genes, the family of the mitochondrial enzyme
       (928 of the 936 from subtype A1), and 1,648 of the test genomes (47 %) have no family-A
       gene in the set.
@@ -799,7 +808,7 @@ Genomes giving a product, with up to three mismatches per primer (in brackets: a
   its own species (genus, family or order) is left out of MIDORI2, as for an animal that
   MIDORI2 does not contain, and B is computed against the whole set.
 - **Measured** is the share with B > E: genuine eukaryotic sequences that MetaFlux would
-  wrongly move to the table of bacterial COX1.
+  wrongly move to the table of bacterial COI homologues.
 
 #### Known contaminants
 
@@ -836,7 +845,7 @@ above, next to the same measurement in development (with the species left out).
   (E 59–71 %, B 60–73 %).
 - **Known contaminants:** all three stay out of the set.
 - **The *Wolbachia* figures rest on 11 amplicons from four genomes.** The three that were
-  missed come from one genome, *Wolbachia* sp964277405. Its own COX1 is in MIDORI2 as a
+  missed come from one genome, *Wolbachia* sp964277405. Its own *coxA* is in MIDORI2 as a
   record filed under the pseudoscorpion *Neobisium carcinoides*; step 6 removes that record
   in the release, but the test puts it back, as described above. With the species left out,
   the closest bacterial gene is another *Wolbachia* at 90–92 % (B), while the record matches
@@ -928,7 +937,7 @@ close relative without biasing the result.
 with only their species left out (78 % and 94 % in the development tests). Most of them were
 BF3/BR2 amplicons (803 of 936, 98.8 % recognised with the genus left out); for Leray-XT the
 share was 80.4 %, for fwhF2/fwhR2n 77.4 %. None of the 11 *Wolbachia* amplicons was
-recognised with its genus left out, because MIDORI2 holds *Wolbachia* COX1 under animal
+recognised with its genus left out, because MIDORI2 holds *Wolbachia* *coxA* under animal
 names: a *Wolbachia* lineage missing from the set is recognised only if MIDORI2 holds no
 record of it under an animal's name (step 7). Lineages without cultured or assembled members
 are not represented.
@@ -975,7 +984,7 @@ side of the comparison.
 **Eukaryotes moved to the bacterial table.** In development, the comparison moved 0.04 % of
 animal sequences whose family was missing from MIDORI2, and 0.14 % of those whose order was
 missing. In groups that MIDORI2 covers poorly, a few genuine eukaryotic ASVs can therefore end
-up in the table of bacterial COX1 sequences; check that table before concluding that an
+up in the table of bacterial COI homologues; check that table before concluding that an
 expected group is absent.
 
 **Labels of families B and C and of nitric oxide reductases.** The family labels rest on one
