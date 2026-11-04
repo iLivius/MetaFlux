@@ -1,0 +1,3729 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../coi/">
+      
+      
+        <link rel="next" href="../../length-and-truncation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Bacterial COI homologues (reference set) - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#bacterial-coi-homologues-reference-set" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Bacterial COI homologues (reference set)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked="">
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bacterial COI homologues (reference set)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bacterial COI homologues (reference set)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-metaflux-uses-the-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How MetaFlux uses the set
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview-of-the-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview of the build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-bacterial-reference-is-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a bacterial reference is needed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why a bacterial reference is needed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bacterial-coi-homologues-in-coi-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bacterial COI homologues in COI libraries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-other-tools-handle-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How other tools handle it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-metaflux-does-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux does, and why
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-build-step-by-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The build, step by step
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The build, step by step">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-0-source-of-the-bacterial-sequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 0. Source of the bacterial sequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-integrity-and-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1. Integrity and translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-finding-subunit-i-genes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2. Finding subunit-I genes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-oxidase-or-not-and-which-family" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3. Oxidase or not, and which family
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-whole-genes-and-fragments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4. Whole genes and fragments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-contamination-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5. Contamination checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-cleaning-midori2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6. Cleaning MIDORI2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-final-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7. Final test
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 7. Final test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bacterial-amplicons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bacterial amplicons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eukaryotic-sequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eukaryotic sequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-contaminants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known contaminants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-criteria-and-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release criteria and results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-release-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8. Release files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters-of-version-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters of version 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copy-number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Copy number
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations-open-issues-and-possible-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations, open issues and possible improvements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-pages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related pages
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/sylph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-metaflux-uses-the-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How MetaFlux uses the set
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview-of-the-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview of the build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-bacterial-reference-is-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a bacterial reference is needed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why a bacterial reference is needed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bacterial-coi-homologues-in-coi-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bacterial COI homologues in COI libraries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-other-tools-handle-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How other tools handle it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-metaflux-does-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux does, and why
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-build-step-by-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The build, step by step
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The build, step by step">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-0-source-of-the-bacterial-sequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 0. Source of the bacterial sequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-integrity-and-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1. Integrity and translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-finding-subunit-i-genes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2. Finding subunit-I genes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-oxidase-or-not-and-which-family" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3. Oxidase or not, and which family
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-whole-genes-and-fragments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4. Whole genes and fragments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-contamination-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5. Contamination checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-cleaning-midori2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6. Cleaning MIDORI2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-final-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7. Final test
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 7. Final test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bacterial-amplicons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bacterial amplicons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eukaryotic-sequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eukaryotic sequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-contaminants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known contaminants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-criteria-and-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release criteria and results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-release-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8. Release files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters-of-version-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters of version 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copy-number" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Copy number
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations-open-issues-and-possible-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations, open issues and possible improvements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-pages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related pages
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/amplicon/markers/bacterial-cox1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="bacterial-coi-homologues-reference-set">Bacterial COI homologues (reference set)<a class="headerlink" href="#bacterial-coi-homologues-reference-set" title="Permanent link">¶</a></h1>
+<p>COI primers do not amplify only animals. Most bacteria that respire oxygen carry genes
+homologous to the mitochondrial cytochrome c oxidase subunit I, and common COI primer pairs
+amplify some of them, those of <em>Wolbachia</em> above all. MIDORI2, the COI reference of MetaFlux,
+contains only records filed under eukaryotes, so an amplicon of bacterial origin cannot be
+recognised as such: it can only be assigned to a eukaryote, usually an animal.</p>
+<p>MetaFlux therefore uses a second reference: a set of bacterial and archaeal subunit-I genes
+taken from the species representatives of the Genome Taxonomy Database, GTDB (Parks et al.
+2026). For every ASV, MetaFlux compares its best identity to this set (B) with its best
+identity to MIDORI2 (E). An ASV with B &gt; E is reported in a separate table of bacterial COI
+homologues. The same set is used once, when MIDORI2 is prepared, to remove MIDORI2 records
+that are themselves bacterial COI homologues filed under eukaryotic names.</p>
+<div class="admonition note">
+<p class="admonition-title">Names</p>
+<p>COI, or COX1, names the mitochondrial gene. The genes of this set are its bacterial and
+archaeal homologues: subunit I of the heme-copper oxidases (genes <em>coxA</em> or <em>ctaD</em>, <em>cyoB</em>,
+<em>qoxB</em> and <em>ccoN</em>, among others) and of the related nitric oxide reductases, which the build
+does not separate (step 3). This manual calls them bacterial COI homologues; "bacterial"
+includes the archaea. File names, settings and output columns keep the short form <code>cox1</code>
+(for example <code>bacterial_cox1_gtdb-r232.v1</code> and <code>bacterial_cox1_asvs.tsv</code>). The README of the
+Zenodo release and the messages of MetaFlux 2.6 use the earlier name, bacterial COX1.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">You do not build this set</p>
+<p>MetaFlux downloads the released set and checks its SHA-256 sum. This page explains how
+the set was built, why each step is done as it is, how other tools deal with the same
+problem, and what the set cannot do.</p>
+</div>
+<p>All rules on this page were set on a <strong>development sample</strong> of 3,785 species representatives
+of GTDB R226, the release before R232. The sample contains all 485 species of the order
+Rickettsiales (56 of them <em>Wolbachia</em>), because this order holds <em>Wolbachia</em>, <em>Rickettsia</em> and
+other symbionts of arthropods, plus 3,000 other bacteria and 300 archaea drawn per phylum (at
+least three per phylum, the rest in proportion to the number of species in the phylum).
+Because Rickettsiales are over-represented, shares given for "all bacteria" are weighted back
+to the number of GTDB species in each group. The rules were fixed before the set was built
+from GTDB R232, except the evidence rule of step 6 and its use in check 5.4, which were
+revised during the build. The set was then tested once on data not used during development
+(step 7).</p>
+<h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Release</td>
+<td><code>bacterial_cox1_gtdb-r232.v1</code> (Zenodo DOI: <a href="https://doi.org/10.5281/zenodo.23820760">10.5281/zenodo.23820760</a>)</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>GTDB R232: 199,923 species representatives, 189,801 bacterial and 10,122 archaeal</td>
+</tr>
+<tr>
+<td>Genes</td>
+<td>GTDB's own gene predictions, made with Prodigal 2.6.3 (Hyatt et al. 2010), file <code>gtdb_proteins_nt_reps_r232.tar.gz</code>; the build runs no gene prediction of its own</td>
+</tr>
+<tr>
+<td>Content</td>
+<td>subunit-I genes of the heme-copper oxidase superfamily, as DNA: whole genes in one file, fragments of at least 200 amino acids in a second file</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>242,698 whole genes (121 MB compressed) and 31,710 fragments (11 MB) from 123,356 genomes; counts per step in the release README</td>
+</tr>
+<tr>
+<td>Taxonomy in the headers</td>
+<td>GTDB R232, in SINTAX format (<code>d:</code>, <code>p:</code>, <code>c:</code>, <code>o:</code>, <code>f:</code>, <code>g:</code>, <code>s:</code>)</td>
+</tr>
+<tr>
+<td>Used by MetaFlux</td>
+<td>the B-versus-E comparison for every ASV, and the cleaning of MIDORI2</td>
+</tr>
+<tr>
+<td>Licence</td>
+<td>CC BY-SA 4.0, as GTDB</td>
+</tr>
+<tr>
+<td>Tools for the build</td>
+<td>HMMER 3.4 (Eddy 2011) and VSEARCH 2.32.0 (Rognes et al. 2016) from bioconda, Python 3 from conda-forge</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Known issues in version 1</p>
+<p>Checks made after the release found that check 5.4 compared each gene only with the first
+20 MIDORI2 records VSEARCH reached, and VSEARCH reaches long records first. With a full
+search, five genes of version 1 are 80.6–92.2 % identical to eukaryotic MIDORI2 records over
+at least 300 aligned bases, closer than to any gene of another genome, and should have been
+left out: <code>GB_GCA_004211595.1|SEDO01000025.1_7</code> (filed under <em>Pedobacter</em>, 92.2 % identical
+to the chrysophyte record KF697361.1), <code>GB_GCA_043769975.1|JAYVIS010000415.1_2</code>,
+<code>GB_GCA_002729235.1|PBTY01000104.1_1</code>, <code>GB_GCA_041191385.1|JBEEPA010000007.1_2</code> and
+<code>GB_GCA_964599255.1|CAZRFT010000383.1_1</code>. Three more genes are 82–83 % identical to the
+mitochondrial COX1 of the green alga <em>Ostreococcus tauri</em> and pass only because each is the
+closest gene of another genome for the others: <code>GB_GCA_002726005.1|PBRS01000001.1_23</code>,
+<code>GB_GCA_963999645.1|CAXEUY010000032.1_4</code> and <code>GB_GCA_002700775.1|PAEL01000127.1_2</code>.</p>
+<p>On the MIDORI2 side, record KM679400.1 (<em>Mycetophila lunata</em>), counted as certainly
+mitochondrial, carries a <em>Tisiphia</em> gene in its first 600 bases; record KR036430.1
+(<em>Picromerus bidens</em>) is a <em>Wolbachia</em> sequence; and 57 records that the build judged
+bacterial from their codons were left off the list. All of them stay in the MIDORI2 file
+that MetaFlux 2.6 prepares.</p>
+<p>Version 2 of the set, planned for MetaFlux 2.7.0, corrects these. Until then: an ASV in
+<code>bacterial_cox1_asvs.tsv</code> whose <code>best_bacterial_gene</code> is one of the eight genes above is
+probably a protist or a green alga, and an ASV in the main tables named <em>Mycetophila
+lunata</em> or <em>Picromerus bidens</em> may be bacterial (its B and E are in <code>coi_screens.tsv</code>).</p>
+</div>
+<h2 id="how-metaflux-uses-the-set">How MetaFlux uses the set<a class="headerlink" href="#how-metaflux-uses-the-set" title="Permanent link">¶</a></h2>
+<p>For a COI run, MetaFlux downloads the release and MIDORI2, removes from MIDORI2 the records
+that step 6 marks as bacterial, and computes for every ASV its best identity to the cleaned
+MIDORI2 (E) and to the set (B). Both identities are computed as described in step 5 and must
+cover at least 80 % of the ASV.</p>
+<ul>
+<li><strong>B &gt; E.</strong> The ASV is moved from the main ASV and taxonomy tables to
+  <code>bacterial_cox1_asvs.tsv</code>, with its read counts, B, E and its best bacterial
+  match. In the read-tracking table, the column <code>post_bacterial_cox1</code> holds the reads left
+  after the move; the moved reads are <code>post_frame_check</code> minus <code>post_bacterial_cox1</code>.
+  Nothing is deleted, so that, for example, a <em>Wolbachia</em> infection stays visible.</li>
+<li><strong>All other ASVs.</strong> E and the best MIDORI2 match are reported for every ASV, and ASVs
+  with E below 80 % are flagged.</li>
+</ul>
+<p>The 80 % flag marks ASVs that are far from everything in MIDORI2. In the development tests,
+at most 5 % of genuine animal sequences whose genus was missing from MIDORI2 fell below 80 %,
+and the flag alone marked 64–90 % of bacterial amplicons, depending on the primer pair. A
+flagged ASV may therefore be a eukaryote of a group that MIDORI2 covers poorly, or a bacterium
+that the set does not contain. Removing flagged ASVs would cost too many genuine eukaryotes
+(see "What MetaFlux does, and why"), so they are only flagged.</p>
+<p>The list of bacterial records belongs to MIDORI2 GB273. MetaFlux stops when the list names
+records that are missing from the MIDORI2 file it prepares, as a list made for another
+release would; a new MIDORI2 release needs a new list, made with step 6 of the build scripts.
+Settings are described on the <a href="../coi/">COI marker page</a>.</p>
+<h2 id="overview-of-the-build">Overview of the build<a class="headerlink" href="#overview-of-the-build" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>0  source: GTDB R232 gene file (DNA, all species representatives) and metadata
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   (taxonomy, CheckM2, GC content, protein counts), checked against GTDB's MD5 sums
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>      │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>1  per genome: number of genes = GTDB's protein count; translate with genetic code 11,
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   or code 4 where the genome's genes show TGA read as tryptophan
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>      │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>2  HMM search of all proteins with the Pfam COX1 model (PF00115, gathering threshold);
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   COX2, COX3 and cytochrome b models searched as well, to describe each contig
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>      │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>3  per hit, from residues at fixed alignment positions: is it an oxidase subunit I
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>   (six metal-binding histidines), and is it family A (subtype A1 or A2)?
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>   type label (aa3, bo3, aa3-600, cbb3) from TIGRFAM and NCBIfam models where they apply
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>      │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>4  whole gene or fragment: start and stop codon present, ≥ 70 % of the model covered,
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>   400–1,100 amino acids; otherwise a fragment if ≥ 200 amino acids
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>      │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>5  contamination checks (a failure removes the gene):
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>     5.1 reading frame: DNA length a multiple of 3, no internal stop codon
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>     5.2 GC content: gene and contig within 0.15 of the genome
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>     5.3 mitochondrial match: &lt; 90 % identical to MIDORI2 records that are certainly
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>         mitochondrial
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>     5.4 closer to eukaryotes: not closer to MIDORI2 (cleaned in step 6) than to the
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>         genes of other genomes
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>   flags only, the gene is kept: cross-phylum cluster; mitochondrion-like contig;
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>   duplicate copy
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>      │
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>6  cleaning of MIDORI2, with the genes that pass 5.1–5.3: a record ≥ 90 % identical to
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>   a gene is removed when the gene's relatives or the record's tryptophan codons say
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>   "bacterial" and neither says "mitochondrial"; other matches are listed
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>      │
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>7  final test on data not used to set the rules (results go into the README)
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>      │
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>8  release: whole genes and fragments (FASTA), a table of every candidate with the
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>   outcome of every check, the MIDORI2 list of step 6, README, scripts,
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>   SHA-256 sums  ──►  Zenodo
+</code></pre></div>
+<h2 id="why-a-bacterial-reference-is-needed">Why a bacterial reference is needed<a class="headerlink" href="#why-a-bacterial-reference-is-needed" title="Permanent link">¶</a></h2>
+<h3 id="bacterial-coi-homologues-in-coi-libraries">Bacterial COI homologues in COI libraries<a class="headerlink" href="#bacterial-coi-homologues-in-coi-libraries" title="Permanent link">¶</a></h3>
+<p>Subunit I of the heme-copper oxygen reductases is the catalytic subunit of the terminal
+oxidases of aerobic respiration. The enzymes form three families, A, B and C. Family A
+contains the mitochondrial enzyme and the aa3-type oxidases of many bacteria, and is split
+into subtypes A1 and A2 (Pereira et al. 2001). Heme-copper oxidases are widely distributed in
+Bacteria and Archaea (Sousa et al. 2012), and many genomes carry several of them. The
+bacterial genes are known as <em>ctaD</em> or <em>coxA</em> (aa3-type cytochrome c oxidase), <em>cyoB</em>
+(bo3-type quinol oxidase), <em>qoxB</em> (aa3-600 quinol oxidase) and <em>ccoN</em> (cbb3-type oxidase,
+family C).</p>
+<p>COI is not a general marker for bacteria. <em>Wolbachia</em> is the exception: <em>coxA</em> is one of the
+five loci of its multilocus sequence typing scheme (Baldo et al. 2006), and Nowak et al.
+(2026) use insect COI barcode data to survey <em>Wolbachia</em> strains.</p>
+<p>COI primers bind the bacterial genes because the primer sites lie in conserved parts of the
+protein. Nowak et al. (2026, preprint) searched 59,318 bacterial RefSeq genomes: 36.8 % carry a
+gene annotated as aa3-like <em>ctaD/coxA</em>, and in these the reverse primer jgHCO2198 of the Leray
+primer pairs matches the gene perfectly in 79.8 % of genomes, BR2 in 70.6 %, but the forward
+primer BF3 in only 1.9 %. In the development sample, among the genomes that carry a family-A
+gene, the shares are almost the same: 78.0 %, 64.6 % and 1.4 % (weighted to GTDB).</p>
+<p>A single primer that binds is not enough: a product forms only when both primers of a pair
+bind. An in-silico PCR on the development sample therefore counted a genome as amplified by a
+primer pair when both primers bind its DNA, facing each other, and the stretch between them has
+the expected length (418, 313 and 205 bp for the three pairs, ± 30 bp). For the table, each
+primer could have at most one mismatch, so that it counts the products likely to form in a
+real PCR; the last two bases at its 3′ end had to match, and insertions or deletions were not
+allowed. The tests of B &gt; E below use every product with up to three mismatches, so that they
+include more distant amplicons. The table gives the share of genomes amplified in each group.</p>
+<p>Share of genomes that give a PCR product with each primer pair:</p>
+<table>
+<thead>
+<tr>
+<th>Primer pair</th>
+<th><em>Wolbachia</em> (56 genomes)</th>
+<th>other Rickettsiales (429 genomes)</th>
+<th>all bacteria (weighted to GTDB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BF3/BR2</td>
+<td>93 %</td>
+<td>25 %</td>
+<td>3.2 %</td>
+</tr>
+<tr>
+<td>Leray-XT</td>
+<td>70 %</td>
+<td>15 %</td>
+<td>0.2 %</td>
+</tr>
+<tr>
+<td>fwhF2/fwhR2n</td>
+<td>0 %</td>
+<td>0.5 %</td>
+<td>0 %</td>
+</tr>
+</tbody>
+</table>
+<p>For example, BF3/BR2 gives a product in 52 of the 56 <em>Wolbachia</em> genomes, but in only about 3
+of every 100 bacterial species. The last column is an estimate for all bacterial species in
+GTDB: the sample holds every Rickettsiales species but only a few genomes of each other phylum,
+so each group is counted in proportion to its number of GTDB species. The reverse primers bind
+widely; the forward primer decides which bacteria amplify.</p>
+<p>How much of a library is bacterial depends on the sample:</p>
+<ul>
+<li><strong>Water eDNA.</strong> In samples from UK estuarine and coastal sites, 45.8 % of the Leray-XT reads
+  had a bacterial best hit in NCBI nt, and so did 55 % of the reads of a fish-targeted, less
+  degenerate COI primer pair (Collins et al. 2019).</li>
+<li><strong>Insects.</strong> The best-documented source is <em>Wolbachia</em>. Its COI appeared in 35.1 % of 7,901
+  BF3/BR2 libraries of single insects, at a median of 1.8 % of the reads where present (Nowak
+  et al. 2026). Smith et al. (2012) found it in 0.16 % of 1.09 million Sanger barcode traces
+  of insect specimens.</li>
+</ul>
+<p>With a reference made only of eukaryotic records, these sequences cannot be recognised:</p>
+<ul>
+<li><strong>No informative top rank.</strong> MIDORI2 has the same top rank (Eukaryota) in every record, so
+  SINTAX (Edgar 2016) reports it with support 1.00 for any sequence, bacterial or not.</li>
+<li><strong>A Metazoa filter keeps them.</strong> When the MIDORI2 headers are given a kingdom rank, taken
+  from MIDORI2's own taxonomy files, SINTAX assigned 42–69 % of the bacterial amplicons of the
+  in-silico PCR to Metazoa with a confidence of at least 0.8, and 94–100 % of the <em>Wolbachia</em>
+  amplicons.</li>
+<li><strong>Pseudogene filters pass them.</strong> These filters reject ASVs with a stop codon in frame
+  under the invertebrate mitochondrial code, where only TAA and TAG are stops. A gene of a
+  bacterium that uses the bacterial code (table 11), as almost all do, has no TAA or TAG
+  inside its reading frame, so it passes.</li>
+<li><strong>MIDORI2 holds bacterial records itself.</strong> MIDORI2 is built from the eukaryotic divisions
+  of GenBank (Leray et al. 2022), so a bacterial sequence enters it when it was submitted under
+  a eukaryote's name, usually an animal's. With the genes of the development sample alone, 132
+  records of MIDORI2 release GB273 (built from GenBank release 273) were at least 90 %
+  identical to a bacterial gene (step 6).</li>
+</ul>
+<h3 id="how-other-tools-handle-it">How other tools handle it<a class="headerlink" href="#how-other-tools-handle-it" title="Permanent link">¶</a></h3>
+<p>COI tools handle non-target sequences in two ways.</p>
+<p><strong>Bacteria in the reference.</strong></p>
+<ul>
+<li><strong>CO1 Classifier.</strong> The CO1 Classifier (Porter &amp; Hajibabaei 2018), the COI reference used
+  with MetaWorks (Porter &amp; Hajibabaei 2022), states that "bacterial outgroup sequences were
+  added"; how they were chosen is not documented.<ul>
+<li>Version 5.1.0 holds 2,216,547 records, 262 of them bacterial. 229 of these are
+  <em>Wolbachia</em> COI barcode-region records from GenBank.</li>
+<li>It is distributed for the RDP classifier (Wang et al. 2007), and since version 5.0.0 also
+  in SINTAX and BLAST formats.</li>
+<li>With pseudogene filtering switched on, the MetaWorks COI workflow keeps only ESVs (exact
+  sequence variants, MetaWorks' term for ASVs) assigned to the target group (Arthropoda in
+  the shipped configuration), so bacterial ESVs are dropped together with the other
+  non-target ESVs.</li>
+</ul>
+</li>
+<li><strong>COInr.</strong> COInr (Meglécz 2023) includes all cellular organisms, and its documentation
+  states that the taxonomic origin of a sequence is taken at face value from the source
+  database.<ul>
+<li>Its release of 3 May 2026 contains 9,775 bacterial sequences from 970 genera, 9,454 of
+  them from BOLD.</li>
+<li>VTAM and mkLTG point their users to ready-made files of the release of 6 May 2022, whose
+  bacterial content was not counted for this page.</li>
+</ul>
+</li>
+<li><strong>MJOLNIR.</strong> The COI references of MJOLNIR contain some prokaryotes, mostly Rickettsiales.
+  These are db_COI_MBPK (Wangensteen et al. 2018), built by in-silico PCR on EMBL and from
+  BOLD, and the later DUFA, built from BOLD, NCBI and local sequences. In its final step,
+  MJOLNIR3 removes by default the MOTUs (molecular operational taxonomic units, clusters of
+  similar sequences) assigned to prokaryotes; in the original MJOLNIR this step is off by default.</li>
+<li><strong>DARN.</strong> DARN (Zafeiropoulos et al. 2021) places COI sequences on a reference tree that
+  includes 463 bacterial and 21 archaeal consensus sequences.<ul>
+<li>The bacterial ones were built from 3,917 bacterial COI sequences from BOLD, and from
+  9,154 bacterial sequences whose DNA was extracted from genomes for the proteins that
+  Pfam assigns to COX1 (PF00115). 217 archaeal sequences were obtained in the same way.</li>
+<li>In the authors' test with mock data, a BLAST search against the consensus sequences
+  assigned all bacterial sequences to eukaryotes, while placement on the tree recognised all
+  of them.</li>
+</ul>
+</li>
+<li><strong>A study-specific MIDORI.</strong> Nowak et al. (2026) added alphaproteobacterial sequences to
+  MIDORI release GB239 for their study.</li>
+<li><strong>BOLD.</strong> Up to version 3, BOLD checked uploaded sequences against a library of
+  contaminants that includes <em>Wolbachia</em> and flagged matching records (Smith et al. 2012). No
+  description of this check was found for BOLD version 5.</li>
+</ul>
+<p><strong>A eukaryote-oriented reference with similarity limits or taxonomic filters.</strong></p>
+<ul>
+<li><strong>VTAM.</strong> VTAM (González et al. 2023) assigns the lowest taxonomic group that contains at
+  least 90 % of the BLAST hits, trying identity steps from 100 % down to 70 %. Its
+  documentation notes that when this group "could only be defined at 80% or lower identity
+  level, the results are not very robust".</li>
+<li><strong>eKOI.</strong> When re-analysing 15 published COI datasets against eKOI and MIDORI2, the eKOI
+  authors (González-Miguéns et al. 2025) ignored ASVs below 84 % similarity to the
+  references, a value they recommend applying with caution.</li>
+<li><strong>Anacapa.</strong> The BLCA classifier of the Anacapa Toolkit (Curd et al. 2019) considers hits of
+  at least 80 % identity.</li>
+<li><strong>BOLDigger3 and apscale-blast.</strong> BOLDigger3 (version 3.0.3; Buchner &amp; Leese 2020) and
+  apscale-blast (version 2.0.6) limit the assigned rank by identity.<ul>
+<li>BOLDigger3: 97, 95, 90, 85 and 75 % from species to class, and 50 % for phylum.</li>
+<li>apscale-blast: 98, 95, 90, 87 and 85 % from species to class.</li>
+</ul>
+</li>
+<li><strong>nf-core/ampliseq.</strong> nf-core/ampliseq 3.0.0 (Straub et al. 2020) offers MIDORI2 CO1 for its
+  DADA2 classifier and for a VSEARCH consensus classifier (90 % identity, full query
+  coverage). It adds an optional codon filter and a name-based exclusion that by default
+  removes mitochondria and chloroplasts.</li>
+<li><strong>BGE Bioscan.</strong> The BGE Bioscan workflow for BF3/BR2 classifies ASVs with SINTAX against
+  BOLDistilled and keeps those assigned to Animalia, and to a class, with a confidence of at
+  least 0.8.</li>
+</ul>
+<p>With the tools of the second group, what happens to a bacterial ASV depends on its identity
+to the nearest eukaryotic record. Below the lowest limit it stays unassigned; above that
+limit it is assigned to a eukaryotic group, at the rank that its identity allows; and where
+only the target group is kept, it is removed unless it was assigned to that group. No
+published measurement of how often each case occurs for bacterial ASVs was found, nor a study
+that compares the two approaches. The next section gives the measurements made for MetaFlux.</p>
+<h3 id="what-metaflux-does-and-why">What MetaFlux does, and why<a class="headerlink" href="#what-metaflux-does-and-why" title="Permanent link">¶</a></h3>
+<p>MetaFlux compares each ASV with both references. The choice rests on three results of the
+development tests, which used the following design.</p>
+<ul>
+<li><strong>Bacterial queries</strong> were the in-silico PCR products of the development sample, split into
+  two halves by species (and, in a second run, by genus). Each half served once as queries
+  and once as the bacterial reference for the other half, so that no query could find its
+  own species (or genus). MIDORI2 was cleaned with the reference half only.</li>
+<li><strong>Eukaryotic queries</strong> were genuine COI sequences from MIDORI2, compared after every record
+  of their own species, genus, family or order had been left out of MIDORI2, to mimic
+  organisms that the reference lacks.</li>
+</ul>
+<p>The bacterial reference in these tests was made of in-silico PCR products, not of whole
+genes. The final test (step 7) repeats the measurements with the R232 gene set.</p>
+<p><strong>First, no identity limit separates bacteria from eukaryotes.</strong> Bacterial amplicons and
+eukaryotic sequences whose relatives are missing from the reference fall in the same range
+of identities to MIDORI2:</p>
+<table>
+<thead>
+<tr>
+<th>Primer pair</th>
+<th>Identity limit needed to catch 95 % of bacterial amplicons</th>
+<th>Genuine animal sequences lost at that limit (family missing from MIDORI2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BF3/BR2</td>
+<td>83 %</td>
+<td>36 %</td>
+</tr>
+<tr>
+<td>Leray-XT</td>
+<td>89 %</td>
+<td>72 %</td>
+</tr>
+<tr>
+<td>fwhF2/fwhR2n</td>
+<td>95 %</td>
+<td>87 %</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Second, the comparison B &gt; E recognised 94 % of the bacterial amplicons</strong>, pooled over the
+three primer pairs: BF3/BR2 96 %, Leray-XT 91 %, fwhF2/fwhR2n 85 %, and <em>Wolbachia</em> 97 %. Of the
+genuine animal sequences, it moved none to the bacterial side when their species or genus
+was missing from MIDORI2, 0.04 % when their family was missing and 0.14 % when their order was
+missing.</p>
+<p><strong>Third, simpler variants are weaker or add nothing.</strong></p>
+<ul>
+<li>A one-sided screen that removes any ASV at least 78 % identical to a bacterial amplicon
+  recognised 71 % of the bacterial amplicons. The limit of 78 % lies just above the highest
+  identity of any genuine eukaryotic test sequence to the bacterial amplicons (77.6 %, once
+  two genomes with eukaryotic contamination were left out of the bacterial reference), so it
+  is the lowest limit that removed no eukaryote.</li>
+<li>Bacterial sequences added to the SINTAX reference pulled none of 4,560 eukaryotic test
+  sequences into Bacteria, but added at most 0.6 percentage points to the share recognised by
+  B &gt; E. MetaFlux does not add them.</li>
+</ul>
+<h2 id="the-build-step-by-step">The build, step by step<a class="headerlink" href="#the-build-step-by-step" title="Permanent link">¶</a></h2>
+<h3 id="step-0-source-of-the-bacterial-sequences">Step 0. Source of the bacterial sequences<a class="headerlink" href="#step-0-source-of-the-bacterial-sequences" title="Permanent link">¶</a></h3>
+<p>Three sources were considered.</p>
+<ol>
+<li><strong>Bacterial records labelled COI in GenBank or BOLD,</strong> as used by COInr and the CO1
+   Classifier.<ul>
+<li>They are ready to use, but their labels come from the submitters, and a few are wrong:
+  two BOLD records labelled Alphaproteobacteria are COI of flies (94–97 % identical to fly
+  records, GC content 31–37 %).</li>
+<li>Most records also come from a few lineages. <em>Wolbachia</em> makes up 229 of the 262
+  bacterial records of the CO1 Classifier, and Actinomycetes and Alphaproteobacteria
+  three quarters of those in COInr.</li>
+</ul>
+</li>
+<li><strong>In-silico PCR products cut from genomes.</strong> They are close to what the primers amplify,
+   but tied to the primer pairs used for the build; any other primer pair would need a new
+   build.</li>
+<li><strong>Whole genes predicted in genomes.</strong> Every subunit-I gene of every genome, independent of
+   primers, with the taxonomy of the genome. DARN used this source for part of its bacterial
+   sequences.</li>
+</ol>
+<p>MetaFlux uses the third source, taken from GTDB, for three reasons:</p>
+<ul>
+<li>all GTDB genomes are classified in a single taxonomy;</li>
+<li>each species has a representative genome;</li>
+<li>GTDB distributes its own gene predictions for every representative.</li>
+</ul>
+<p>The build uses these predictions as they are and does not predict genes again, so every gene
+in the set can be traced to GTDB's annotation of the release.</p>
+<p>Only species representatives are used. Recognition does not need the query's own species: in
+the development tests, with the species left out of the bacterial reference, 94 % of the
+bacterial amplicons were still recognised, and 78 % with the genus left out. One genome per
+species is therefore enough, and the other 700,000 genomes of the release would multiply the
+size of the set with little gain.</p>
+<p>The cost of taking genes from genomes is that many representatives are metagenome-assembled
+genomes (MAGs). MAGs often cut genes at contig ends, and they can contain contigs of other
+organisms, eukaryotes included. Step 4 deals with cut genes, step 5 with contamination.</p>
+<h3 id="step-1-integrity-and-translation">Step 1. Integrity and translation<a class="headerlink" href="#step-1-integrity-and-translation" title="Permanent link">¶</a></h3>
+<p>The gene file and the metadata are checked against GTDB's published MD5 sums. For each
+genome, the number of genes in the file must equal the protein count in GTDB's metadata; a
+genome that fails is left out and listed.</p>
+<p>The build reads the DNA genes and translates them itself, rather than also downloading
+GTDB's protein file (another 123 GB). Protein and DNA then always come from the same record.
+The price is that the genetic code has to be worked out for each genome:</p>
+<ul>
+<li><strong>The default.</strong> Each gene is translated with the bacterial genetic code (NCBI table 11).</li>
+<li><strong>Table 4.</strong> For some lineages, mainly Mycoplasmatales (GTDB phylum Bacillota_I; NCBI phylum
+  Mycoplasmatota), GTDB predicts genes with table 4, in which TGA codes for tryptophan.</li>
+<li><strong>The table is not in the files.</strong> The table GTDB used is not stored in the release files.
+  The metadata give only NCBI's table, and for 92,894 of the 189,801 bacterial species
+  representatives they give none.</li>
+<li><strong>The rule.</strong> The table is therefore read back from the genes. Under table 11 TGA is a
+  stop codon, so no gene predicted with table 11 can contain TGA inside its reading frame;
+  under table 4, genes that encode tryptophan with TGA do. If more than 1 % of a genome's
+  genes with both a start and a stop codon (<code>partial=00</code>) contain an in-frame TGA before
+  their stop codon, the genome is translated with table 4.</li>
+<li><strong>Recording.</strong> The inferred table is recorded for every gene and compared with NCBI's table
+  where NCBI gives one; disagreements are listed in the README.</li>
+</ul>
+<p>Two simpler rules were tested on the development sample and not used:</p>
+<ul>
+<li><strong>A rule by lineage</strong> ("Mollicutes use table 4") would have been wrong for 11 genomes: some
+  Acholeplasmatales use table 11, and some table-4 genomes lie outside the Mollicutes.</li>
+<li><strong>The coding-density rule of GTDB-Tk</strong> disagreed with the table GTDB had used for 2 of the
+  3,785 genomes.</li>
+</ul>
+<p>The lineages concerned rarely carry respiratory oxidases. In the development sample, none of
+the 15 genomes predicted with table 4 (10 Mycoplasmatales, 3 BD1-5, <em>Anadelfobacter</em> and
+<em>Stammera</em>) carried a candidate gene. The README reports how many R232 genomes the 1 % rule
+assigned to table 4.</p>
+<h3 id="step-2-finding-subunit-i-genes">Step 2. Finding subunit-I genes<a class="headerlink" href="#step-2-finding-subunit-i-genes" title="Permanent link">¶</a></h3>
+<p>All proteins are searched with HMMER <code>hmmsearch</code> and the Pfam model PF00115 ("Cytochrome C and
+Quinol oxidase polypeptide I", Pfam release 38.2; Paysan-Lafosse et al. 2025). The search uses
+the model's gathering threshold, the score above which Pfam's curators count a protein as a
+member of the family (34.8 bits for PF00115). PF00115 covers subunit I of all three oxidase
+families and of the related nitric oxide reductases.</p>
+<p>The Pfam models for COX2 (PF00116), COX3 (PF00510) and cytochrome b (PF00033) are searched
+at the same time. Their hits are used only to describe the contig on which a gene lies
+(step 5).</p>
+<p>Two alternatives were tested on the development sample and not used for selection:</p>
+<ul>
+<li><strong>A sequence motif of family A</strong> (<code>W.[FW]GHPEV[YF]....P</code>). It finds only subtype A1, and
+  missed the 476 A2-type genes of the sample, among them every cyanobacterial aa3 oxidase.</li>
+<li><strong>The TIGRFAM models for the individual oxidase types.</strong> Their trusted cutoffs are the
+  scores above which the curators consider every hit a true member of that oxidase type. They
+  are set high so that proteins can be named safely, and are too strict for selection: they
+  left 758 whole family-A genes without a label, and these held 143 of the 1,239 in-silico
+  PCR products that lay in kept genes. The TIGRFAM models are therefore used only for labels
+  (step 3).</li>
+</ul>
+<p>Gene annotations in RefSeq were not used either. They depend on the annotation pipeline:
+NCBI attaches the name "cbb3-type cytochrome c oxidase subunit I" to its copy of the generic
+PF00115 model, so genes recognised only by that model carry this name, family-B genes
+included.</p>
+<h3 id="step-3-oxidase-or-not-and-which-family">Step 3. Oxidase or not, and which family<a class="headerlink" href="#step-3-oxidase-or-not-and-which-family" title="Permanent link">¶</a></h3>
+<p>A protein can match PF00115 above the gathering threshold without being an oxidase subunit I.
+In the development sample, 249 of the 4,304 genes that passed all other checks (5.8 %) failed
+the oxidase rule below. 193 of them had two or more of the six ligand histidines replaced,
+most often the CuB pair His290 and His291, and 56 scored below 100 bits. Most were 425–500
+amino acids long, with a median score of 55 bits. Such genes are kept out of the set and listed
+in the metadata table. None of the in-silico PCR products of the development sample lay in
+them.</p>
+<p>Each hit is aligned to PF00115 together with human COX1 (GenBank HQ713447.1). Human COX1 is
+included only to give the alignment columns their usual residue numbers; at the positions
+below, human and bovine numbering are identical.</p>
+<table>
+<thead>
+<tr>
+<th>Bovine position</th>
+<th>Role</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>His61, His378</td>
+<td>ligands of heme a</td>
+<td>oxidase</td>
+</tr>
+<tr>
+<td>His376</td>
+<td>ligand of heme a3</td>
+<td>oxidase</td>
+</tr>
+<tr>
+<td>His240, His290, His291</td>
+<td>ligands of CuB</td>
+<td>oxidase</td>
+</tr>
+<tr>
+<td>Tyr244</td>
+<td>cross-linked to His240 (helix VI)</td>
+<td>family A</td>
+</tr>
+<tr>
+<td>Glu242</td>
+<td>proton channel, motif <code>XGHPEV</code></td>
+<td>subtype A1</td>
+</tr>
+<tr>
+<td>Tyr238, Ser239</td>
+<td>motif <code>YSHPXV</code>, replacing the A1 glutamate</td>
+<td>subtype A2</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Oxidase.</strong> A hit counts as an oxidase subunit I if it scores at least 100 bits against
+  PF00115 and at most one of the six histidines is replaced. One replacement is allowed, and a
+  gap in the alignment is not counted as a replacement, because a single alignment to the
+  Pfam model can misplace a residue in a divergent sequence.</li>
+<li><strong>Family A.</strong> A gene is assigned to family A if it carries Tyr244 together with Glu242
+  (subtype A1) or with Tyr238 and Ser239 (subtype A2); these are the residues that define the
+  subtypes (Pereira et al. 2001).</li>
+<li><strong>Type label.</strong> The label (aa3 or caa3, bo3, aa3-600, cbb3) comes from the best model above
+  its trusted cutoff among TIGR02891, TIGR02843, TIGR02882 and TIGR00780 (TIGRFAMs) and
+  NF050116.1 (NCBIfam, aa3 oxidases of Actinomycetota), all from NCBI release hmm_PGAP 20.0
+  (Li et al. 2021).</li>
+</ul>
+<p>Family B has no HMM in Pfam or TIGRFAM, and family C carries its cross-linked tyrosine on
+helix VII instead of helix VI (Sousa et al. 2011). Genes of both families therefore remain
+"family not assigned" unless a TIGRFAM model names them. Nitric oxide reductases share the six
+histidine positions but lack the cross-linked tyrosine (Sousa et al. 2011), and under these
+rules they also end up as "family not assigned". They do no harm on the bacterial side of the
+comparison: a eukaryotic COI amplicon is far less similar to them than to MIDORI2, so they
+cannot raise B above E.</p>
+<p>All oxidase subunit-I genes are kept, not only family A:</p>
+<ul>
+<li><strong>Why.</strong> In the development sample, family A held every in-silico PCR product of the three
+  primer pairs. Other primer pairs, or bacteria absent from the sample, may amplify genes of
+  families B or C, and a set limited to family A would miss them.</li>
+<li><strong>The cost.</strong> A set of family A only would be about 40 % as large.</li>
+<li><strong>No risk.</strong> The other genes cannot cause a false B &gt; E, for the reason given above.</li>
+</ul>
+<h3 id="step-4-whole-genes-and-fragments">Step 4. Whole genes and fragments<a class="headerlink" href="#step-4-whole-genes-and-fragments" title="Permanent link">¶</a></h3>
+<p>In MAGs, genes are often cut at contig ends. A gene counts as whole if it meets three
+conditions:</p>
+<ul>
+<li>it has a start and a stop codon (<code>partial=00</code> in GTDB's prediction);</li>
+<li>it covers at least 70 % of the PF00115 model, counted over all its domain hits together, so
+  that a protein whose alignment to the model is broken in two, for example by an insertion,
+  is measured as one;</li>
+<li>it is 400–1,100 amino acids long. Whole genes in the development sample had a median
+  length of 555 amino acids. The range includes the fusions of subunits I and III found in
+  some haloarchaea, <em>Thermus</em> and <em>Deinococcus</em> (517–901 amino acids; 43 genes in the
+  development sample) and two haloarchaeal genes of 1,007 and 1,065 amino acids. No candidate
+  was longer; the upper limit is there to catch gene predictions that run on into a
+  neighbouring gene.</li>
+</ul>
+<p>A gene that is not whole is kept as a fragment if it has at least 200 amino acids.</p>
+<ul>
+<li><strong>Why fragments are kept.</strong> The primers amplify only 200–420 bp of a gene of about
+  1,600 bp, so a fragment that covers that region works as well as a whole gene in the
+  comparison. In the development sample, 5.9 % of the in-silico PCR products lay only in
+  fragments, mostly from MAGs of uncultured lineages.</li>
+<li><strong>Why they are kept apart.</strong> A fragment shows only part of the residues of step 3, so the
+  evidence that it is an oxidase is weaker, and a gene cut in two would be counted twice in
+  copy numbers.</li>
+<li><strong>Why 200 amino acids.</strong> Shorter pieces carry too few residues and too little sequence for
+  the checks of step 5; the shortest fragment that held an in-silico PCR product had 253
+  amino acids.</li>
+</ul>
+<p>Fragments go into a separate file. MetaFlux uses both files to compute B.</p>
+<p>Whole genes and fragments together held 1,239 of the 1,259 in-silico PCR products of the
+development sample (98.4 %). Of the other 20, five came from contigs of eukaryotic origin and
+were rightly left out, five lay across a gene split in two and were partly kept, and ten lay
+at loci where the gene is broken by a frameshift or an internal stop codon.</p>
+<h3 id="step-5-contamination-checks">Step 5. Contamination checks<a class="headerlink" href="#step-5-contamination-checks" title="Permanent link">¶</a></h3>
+<p>GTDB admits a genome only if CheckM (Parks et al. 2015), which uses marker genes, and CheckM2
+(Chklovski et al. 2023), a machine-learning model, both estimate completeness of at least
+50 %, contamination below 5 % and a quality score of at least 50 (Parks et al. 2026). Among
+the genomes that pass, it prefers type material and high-quality assemblies as species
+representatives. A single foreign contig carrying one gene is below what such genome-wide
+estimates can detect, so every candidate gene is tested individually.</p>
+<p>Two other approaches are possible:</p>
+<ul>
+<li><strong>Leaving out MAGs</strong> would remove most contamination. But for many uncultured lineages a MAG
+  is the only genome, and those lineages hold most of the in-silico PCR products found only in
+  fragments (step 4).</li>
+<li><strong>Classifying each contig taxonomically</strong> would need the genome sequences, another archive
+  of about 180 GB that the build does not download.</li>
+</ul>
+<p>Without the genome sequences, the GC content and length of a contig are estimated from the
+genes on it. In the development sample this gave the same GC verdict as the contig sequence
+for all 5,060 candidate genes, and the same contig-length flag for all but one.</p>
+<p>Four checks remove a gene.</p>
+<ul>
+<li><strong>5.1 Reading frame.</strong> The DNA length is a multiple of 3, and there is no internal stop
+  codon under the table chosen in step 1.</li>
+<li><strong>5.2 GC content.</strong> The GC content of the gene, and that of its contig, lies within 0.15 of
+  the genome's GC content.<ul>
+<li>The largest difference observed for a genuine gene in the development sample was 0.132.</li>
+<li>Example: a thraustochytrid-like COX1 in a planctomycete MAG (gene GC 0.39, genome GC 0.66)
+  fails this check. Check 5.3 cannot catch it, because thraustochytrids read TGA as a stop,
+  so none of their records count as certainly mitochondrial; check 5.4 removes it as well
+  (80.1 % identical to <em>Aurantiochytrium</em>).</li>
+</ul>
+</li>
+<li><strong>5.3 Match to mitochondrial COI.</strong> The gene is less than 90 % identical, over at least 80 %
+  of the shorter sequence, to every MIDORI2 record that is certainly mitochondrial.<ul>
+<li><strong>Why this works.</strong> Animal and fungal mitochondria read TGA as tryptophan, and most of
+  them use it often, while a gene of a bacterium that uses table 11 cannot contain TGA in
+  frame. Lineages that use TGA rarely, such as mushrooms and liver flukes (step 6), have few
+  certainly mitochondrial records, so a COI of theirs binned into a MAG is left to step 6
+  and check 5.4.</li>
+<li><strong>Why 90 %, over the shorter sequence.</strong> Genuine bacterial genes of the development sample
+  reached at most 85.4 % (a <em>Tisiphia</em> gene, against a record that is probably chimeric),
+  while the copepod COI found in a bacterial MAG (see "Contamination removed before any
+  check" below) is 99.5 % identical to a mitochondrial record. Coverage is measured on the
+  shorter sequence because many MIDORI2 records are barcodes of about 650 bp, which cannot
+  cover 80 % of a whole gene.</li>
+<li><strong>The definition.</strong> A record counts as certainly mitochondrial if none of its three
+  reading frames is open under the bacterial code (each has at least two TAA, TAG or TGA),
+  its reading frame contains at least two TGA codons, and TGA is used at least as often as
+  TGG.</li>
+<li><strong>Why it is strict.</strong> MIDORI2 contains bacterial records. A looser definition admitted two
+  bacterial records filed as a fish and a planthopper, which then caused 19 genuine bacterial
+  genes to be rejected.</li>
+<li><strong>How many records qualify.</strong> MIDORI2 GB273 is used in its UNIQ NUC_SP variant: every
+  unique sequence of each species, with records whose species name is incomplete, such as
+  "sp." or "cf.", included. Of its 3,213,682 records, 2,904,469 meet the definition.</li>
+</ul>
+</li>
+<li><strong>5.4 Closer to eukaryotes than to bacteria.</strong> The gene's best identity to MIDORI2 is at
+  least 80 % and higher than its best identity to the genes of the other GTDB genomes. This
+  check is run after step 6, on MIDORI2 without the records removed there, so that a
+  bacterial record filed under an animal's name cannot make a genuine bacterial gene look
+  eukaryotic.<ul>
+<li><strong>Records whose codons look bacterial do not count.</strong> For the same reason, a MIDORI2
+  record whose own TGA/TGG counts look bacterial by the codon test of step 6 is not used
+  as evidence here. Most such records are less than 90 % identical to every gene, so
+  step 6 never examined them, but they are close enough to the genes of their own
+  bacteria to make those genes look eukaryotic. In R232, 58 records were left out of E
+  this way, and 20 genes that they would have made check 5.4 reject passed.</li>
+<li><strong>Outcome.</strong> Such a gene is removed if it is a fragment or if its GC content differs from
+  the genome's by more than 0.08. Otherwise it is marked "review" and also left out of the
+  release, so that no manual decision enters the build.</li>
+<li><strong>In the development sample</strong> this check failed three candidates and marked 20 whole genes
+  for review:<ul>
+<li>the thraustochytrid gene of check 5.2;</li>
+<li>a fungal mitochondrial piece in a <em>Rickettsia</em> MAG (89.3 % identical to <em>Phialocephala</em>,
+  just below the limit of check 5.3). At 55 amino acids it also falls below the floor of
+  step 4;</li>
+<li>a 274-amino-acid <em>Polaromonas</em> fragment, probably removed wrongly. Its best MIDORI2
+  match, MF319222.1, is filed as the clam <em>Corbicula fluminea</em> but has a GC content of 0.64
+  and one TGA in frame, and is probably a bacterial record itself.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>How identity is computed.</strong> Identities in checks 5.3 and 5.4, in step 6 and in MetaFlux
+itself are computed from the VSEARCH alignment:</p>
+<ul>
+<li>identical A/C/G/T columns are divided by all aligned columns;</li>
+<li>end gaps are left out, and internal gaps count as differences;</li>
+<li>columns where either sequence has N or another ambiguity code are left out of both counts.</li>
+</ul>
+<p>VSEARCH's own identity counts a column as identical whenever the two symbols can stand for
+the same base, so an N matches anything. Its option <code>--n_mismatch</code> changes this for N but not
+for the other ambiguity codes. About 9 % of MIDORI2 records contain ambiguity codes, some in
+long runs, and a sequence aligned over such a run would otherwise appear identical. In the
+development tests, VSEARCH's own value was inflated in this way for 8–15 % of the bacterial
+amplicons; one archaeal amplicon appeared 100 % identical to an insect record, while its best
+identity over A/C/G/T columns was 52.8 %.</p>
+<p>Three observations are recorded as flags but do not remove a gene:</p>
+<ul>
+<li><strong>Cross-phylum cluster.</strong> The gene clusters at 95 % identity with genes from another phylum,
+  as the same contaminant binned into MAGs of different lineages would. There were none in the
+  development sample. In R232, 524 kept genes carry the flag, in 182 clusters, 154 of them
+  made only of MAGs or single-cell genomes; most join a Pseudomonadota gene to one of another
+  phylum. Such a gene is still bacterial, so B is not affected, but the bacterial lineage
+  MetaFlux reports for an ASV that matches it can be the wrong one.</li>
+<li><strong>Mitochondrion-like contig.</strong> The gene lies on a contig shorter than 20 kb that also
+  carries cytochrome b and COX2 or COX3, as a mitochondrial contig would. Bacterial operons in
+  which the bc1 complex lies next to the oxidase genes trigger this flag too (37 genes in the
+  development sample, all bacterial; 2,247 in R232), which is why it is not a filter. The one contig of
+  eukaryotic origin in the development sample, which carries the thraustochytrid-like gene of
+  check 5.2 together with COX2, COX3 and cytochrome b, is 29.5 kb long and is not flagged.</li>
+<li><strong>Duplicate copy.</strong> Two whole genes of the same genome are at least 99 % identical, as
+  happens when a contig is duplicated in an assembly.</li>
+</ul>
+<p><strong>Contamination removed before any check.</strong> An animal or fungal mitochondrial COI binned into
+a bacterial MAG contains TGA codons, which the gene prediction reads as stops under table 11.
+At most, short open reading frames are predicted at such a locus, and they fall below the
+200-amino-acid floor of step 4. In the development sample, no gene was predicted at a copepod
+COI in a bacterial MAG, and a fungal COX1 in a <em>Rickettsia</em> MAG gave only a 55-amino-acid
+open reading frame.</p>
+<h3 id="step-6-cleaning-midori2">Step 6. Cleaning MIDORI2<a class="headerlink" href="#step-6-cleaning-midori2" title="Permanent link">¶</a></h3>
+<p>The genes that pass checks 5.1–5.3 are compared with every record of MIDORI2 GB273 (UNIQ
+NUC_SP). The NUC_SP variant contains every record of the NUC variant, so the resulting list
+applies to both.</p>
+<p><strong>A close match means that one side is misfiled.</strong> Genuine COI and its bacterial homologues are
+never this close: in the development tests, no genuine eukaryotic sequence was more than
+77.6 % identical to a bacterial gene. A record at least 90 % identical to a gene (identity as
+in step 5, over at least 80 % of the shorter sequence) is therefore either a bacterial sequence
+filed under a eukaryote's name, or the gene is a eukaryotic sequence binned into a bacterial
+genome. Two independent lines of evidence say which.</p>
+<ul>
+<li><strong>The gene's side: are its relatives bacterial or mitochondrial?</strong> A genuine bacterial gene
+  usually has relatives in other GTDB genomes; a mitochondrial COI in a MAG has mitochondrial
+  relatives instead.<ul>
+<li>The gene looks bacterial when its closest gene in another genome is at least 80 %
+  identical and at least as close as its closest certainly mitochondrial record (step 5.3).</li>
+<li>It looks mitochondrial when a certainly mitochondrial record is at least 80 % identical
+  and closer than any gene of another genome.</li>
+<li>Otherwise it gives no evidence. Only certainly mitochondrial records are used on this
+  side, because they cannot be bacterial: they carry TGA codons in frame.</li>
+</ul>
+</li>
+<li><strong>The record's side: do its tryptophan codons fit its lineage?</strong> In a bacterial gene every
+  tryptophan is TGG, because TGA is a stop. Most animal and fungal mitochondria read TGA as
+  tryptophan, but how often they use it instead of TGG differs widely between lineages. In the
+  insect records of MIDORI2, 94 % of tryptophan codons are TGA; in the mushrooms
+  (Agaricomycetes), 21 %; in the liver-fluke family Fasciolidae, 15 %. A record without TGA is
+  therefore strong evidence in an insect and none in a mushroom.<ul>
+<li>The record's TGA and TGG counts are compared under two explanations. As a bacterial gene,
+  a TGA can only be an error, taken to occur at 1 in 100 tryptophan codons. As a genuine
+  COI of its lineage, each tryptophan is TGA with the share seen in the lineage's other
+  MIDORI2 records: those of its family, or of the lowest higher rank (order, class,
+  phylum) whose records hold at least 200 tryptophan codons. Records in conflict with a
+  gene are left out of these shares.</li>
+<li>The ratio of the two likelihoods counts as evidence when it is at least 20 in either
+  direction, the level that Kass and Raftery (1995) call strong.</li>
+<li>In lineages whose mitochondria read TGA as a stop (plants, brown algae, oomycetes,
+  diatoms, chrysophytes, and green algae such as <em>Micromonas</em>), the codons give no evidence.</li>
+</ul>
+</li>
+</ul>
+<p><strong>The decision.</strong> A record is removed when at least one line of evidence says bacterial and
+none says mitochondrial. Otherwise it is listed and kept, and check 5.4 then judges the gene
+with the record still in MIDORI2. Examples from the R232 build:</p>
+<ul>
+<li><strong>Kept: six mushroom records.</strong> Six records of <em>Rhizoctonia</em>, <em>Ganoderma</em> and <em>Fomes</em> were
+  91–98 % identical to a gene in a MAG of a soil archaeon (Nitrososphaeraceae). Their lineages
+  use TGA for only 1–5 % of tryptophan codons, so their TGA counts are no evidence. The gene has
+  no relative in any other genome. The COX1 model matches only amino acids 12–151 of its 531,
+  and the rest carries the two LAGLIDADG motifs of the homing endonucleases encoded in
+  group I introns (Pfam PF00961): the gene is the first exon of a fungal COX1 read on into the
+  open reading frame of its intron, a common arrangement in fungal mitochondria. The closest
+  record, KC352446.1 from a <em>Rhizoctonia solani</em> mitochondrial genome, is that intron reading
+  frame alone, filed in MIDORI2 as COI. The records stay, and check 5.4 removes the gene.</li>
+<li><strong>Removed: a beetle record with one TGA.</strong> A record filed as the carrion beetle <em>Calosilpha
+  brunnicollis</em> has one TGA among seven tryptophan codons and is 96.8 % identical to a gene of
+  <em>Aquirickettsiella</em>, a bacterial pathogen of arthropods. Its family uses TGA for 93 % of
+  tryptophan codons, so one TGA in seven is about 60,000 times likelier for a bacterial gene
+  with one sequencing error than for the beetle's own COI.</li>
+<li><strong>Removed: three chrysophyte records.</strong> Three records of <em>Dinobryon pediforme</em> are 99.3–99.6 %
+  identical to a gene of a MAG of the Paracaedibacterales, an order of alphaproteobacteria that
+  includes endosymbionts of protists. Chrysophytes read TGA as a stop, so the codons say nothing, but the
+  gene has relatives in four other genomes of the order (75–86 %).</li>
+<li><strong>Removed: a liver-fluke record.</strong> A record filed as <em>Fasciola hepatica</em> is 96.0 % identical
+  to the gene of <em>Neorickettsia findlayensis</em>, an endosymbiont of trematodes whose complete
+  genome has relatives in two other <em>Neorickettsia</em> genomes (89–90 %). Liver flukes rarely use
+  TGA, so the codons say nothing either way, and the gene decides.</li>
+</ul>
+<p>In R232, 186 records were at least 90 % identical to one of 95 genes that passed check 5.3,
+and 170 of them were removed:</p>
+<ul>
+<li><strong>By lineage.</strong> 137 of the removed records are filed under arthropods, 13 under diatoms,
+  6 under chordates, and 14 under seven other groups (gastrotrichs, chrysophytes, red
+  algae, annelids, molluscs, a dinoflagellate and a liver fluke). The 16 listed records are
+  the six mushroom records, four <em>Micromonas</em> records, four nematode records (<em>Plectus</em>,
+  whose gene looks mitochondrial), and one record each of a synurophyte and a gastrotrich.</li>
+<li><strong>By evidence.</strong> 128 records were removed on both lines of evidence, 40 on the gene's
+  alone and 2 on the codons alone. Of the 40, 13 belong to lineages whose mitochondria read
+  TGA as a stop; the other 27 have too few tryptophan codons, or belong to lineages that use
+  TGA too rarely, for the codons to tell. 12 records were listed for lack of evidence, 4 because their
+  gene looks mitochondrial.</li>
+<li><strong>Genes.</strong> Of the 95 genes in conflict with a record, 89 look bacterial, 1 mitochondrial,
+  and 5 give no evidence (no relative of at least 80 % on either side).</li>
+</ul>
+<p><strong>Why two lines of evidence.</strong> The first version of this step, fixed before the R232 build,
+removed a record when it had no TGA in frame and its lineage reads TGA as tryptophan, and kept
+every record with at least one TGA. Applied to R232, it went wrong in two ways:</p>
+<ul>
+<li>it removed five of the six mushroom records above, those without a TGA, because a missing
+  TGA is no evidence in lineages that rarely use TGA, and the gene they matched was never
+  examined;</li>
+<li>it kept bacterial records with a single TGA, such as the beetle record above. Left in
+  MIDORI2, such records made check 5.4 reject the genes of the bacteria they come from: a
+  single record filed as the clam <em>Corbicula fluminea</em> (MF319222.1: one TGA among six
+  tryptophan codons, 97.9 % identical to a <em>Paenacidovorax</em> gene) made 22 genes of
+  Burkholderiales fail.</li>
+</ul>
+<p>Under the first rule, check 5.4 left out 102 genes. With the revised rule, and with the
+records whose codons look bacterial left out of E (check 5.4), it leaves out 24; the other 78
+pass, and no gene fails that passed before. Of the 24, 16 are close to the COI of green
+algae, cryptophytes, diatoms, oomycetes, a malawimonad, a fungus or a nematode and are most
+likely eukaryotic contaminants; the other 8 are close to records filed as animals (a scallop,
+a gastropod, an amphipod, a shipworm) whose codons give no clear evidence, and are probably
+genuine bacterial genes left out.</p>
+<p>The rule was therefore revised before the final test. Because it was set while looking at the
+R232 records, it has not been tested on independent data. The README reports how many
+decisions change when each of its settings moves: none for an error rate of 0.003 or 0.03,
+a likelihood-ratio threshold of 10 or 50, or 100 or 500 tryptophan codons per lineage; 2
+and 1 of the 186 when the 80 % of the gene's side moves to 78 or 82 %. Examining records
+from 88 % instead of 90 % would remove 6 of the 14 records between the two values; from 92 %,
+15 records would be decided differently or no longer examined.</p>
+<p>MIDORI2 already excludes 2,215 GenBank records that an earlier study had found mislabelled at
+the order, class or phylum level (Leray et al. 2019, 2022). Bacterial sequences submitted
+under the host's name are a separate problem, which this step addresses.</p>
+<h3 id="step-7-final-test">Step 7. Final test<a class="headerlink" href="#step-7-final-test" title="Permanent link">¶</a></h3>
+<p>The rules were fixed before the R232 build, except the evidence rule of step 6 and its use
+in check 5.4, which were revised during the build; the final test came after that revision.
+It is run once, before release, on genomes and MIDORI2 records not used to set any rule, and
+it asks how the set handles bacteria and eukaryotes that the references do not contain.</p>
+<h4 id="bacterial-amplicons">Bacterial amplicons<a class="headerlink" href="#bacterial-amplicons" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Test genomes.</strong> 3,476 R232 species representatives that are not in the development
+  sample, chosen with the development design and a new random seed: all 176 such
+  Rickettsiales (4 of them <em>Wolbachia</em>), 3,000 other bacteria drawn per phylum, and 300
+  archaea. All the Rickettsiales are taken, as in development, because the order holds
+  <em>Wolbachia</em>, <em>Rickettsia</em> and other symbionts of arthropods.</li>
+<li><strong>In-silico PCR.</strong> The rules of development: both primers bind, facing each other, the
+  insert between them is within 30 bp of the expected length, a primer may have up to three
+  mismatches but none in its last two bases at the 3′ end, and insertions and deletions are
+  not allowed. Three mismatches is permissive, on purpose: the test gets more amplicons, and
+  more distant ones. The products with an intact reading frame under the bacterial code are
+  the queries. The PCR is run on the genes that GTDB predicted in each genome, not on the
+  genome sequence, which the build does not download: an amplicon lies inside the subunit-I gene,
+  and in development this missed only the products in genes broken by a frameshift or an
+  internal stop (10 of 1,259, 0.8 %).</li>
+<li><strong>Why most genomes give no product.</strong> 738 of the 3,476 genomes gave a product, 936
+  products in all: 803 of BF3/BR2, 102 of Leray-XT and 31 of fwhF2/fwhR2n. A genome gives one
+  product per primer pair, or more when it carries several subunit-I genes.<ul>
+<li>Almost all products come from family-A genes, the family of the mitochondrial enzyme
+  (928 of the 936 from subtype A1), and 1,648 of the test genomes (47 %) have no family-A
+  gene in the set.</li>
+<li>Where there is one, the primers decide. BF3/BR2 gives a product in a fifth of the
+  other bacteria (610 of 3,000), but in only 86 (2.9 %) with at most one mismatch per
+  primer, close to the 3.2 % of the development table. Leray-XT and fwhF2/fwhR2n give
+  one in hardly any bacteria outside the Rickettsiales.</li>
+<li>With at most one mismatch per primer, the products likely to form in a real PCR, 181
+  of the 936 remain.</li>
+</ul>
+</li>
+</ul>
+<p>Genomes giving a product, with up to three mismatches per primer (in brackets: at most one):</p>
+<table>
+<thead>
+<tr>
+<th>Genomes</th>
+<th>BF3/BR2</th>
+<th>Leray-XT</th>
+<th>fwhF2/fwhR2n</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Wolbachia</em> (4)</td>
+<td>4 (4)</td>
+<td>4 (4)</td>
+<td>3 (0)</td>
+</tr>
+<tr>
+<td>other Rickettsiales (172)</td>
+<td>72 (45)</td>
+<td>73 (31)</td>
+<td>25 (0)</td>
+</tr>
+<tr>
+<td>other bacteria (3,000)</td>
+<td>610 (86)</td>
+<td>17 (3)</td>
+<td>3 (0)</td>
+</tr>
+<tr>
+<td>archaea (300)</td>
+<td>7 (1)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Each amplicon is tested with its own species left out of the set.</strong> Every test genome
+  is a GTDB species representative, so its own genes are in the set: its amplicon would find
+  itself at 100 % identity and pass without telling anything. A bacterium in a real library
+  is rarely the genome that GTDB holds; often its species is missing, sometimes its genus. B
+  is therefore computed without the genes of the amplicon's own species, and, in a second
+  run, without those of its whole genus, as for a bacterium of a genus absent from GTDB. The
+  search keeps up to 3,000 hits per amplicon, and the hits to the genes left out are
+  skipped.</li>
+<li><strong>The same on the MIDORI2 side.</strong> Step 6 removes from MIDORI2 the bacterial records filed
+  under eukaryote names, which it finds through the genes that pass checks 5.1–5.3. A
+  removed record whose closest gene belongs to the amplicon's own species (or genus) is put
+  back for that amplicon, as if that species were missing from GTDB. This is the cautious
+  choice: through the genes of other species, step 6 might still have removed the record. E
+  is computed against MIDORI2 with these records back.</li>
+<li><strong>Measured</strong> is the share of amplicons with B &gt; E: those that MetaFlux would recognise as
+  bacterial.</li>
+</ul>
+<h4 id="eukaryotic-sequences">Eukaryotic sequences<a class="headerlink" href="#eukaryotic-sequences" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Test records.</strong> 3,336 MIDORI2 GB273 records not used during development: 1,000 at the
+  species level, 1,000 at the genus level, 858 at the family level and 478 at the order
+  level, up to 250 taxa per group (arthropods, chordates, other animals, other eukaryotes).
+  At the order level, and for the non-animal families, development had already used every
+  eligible taxon, so these taxa are tested again with records not used before.</li>
+<li><strong>Each insert is tested with its own taxon left out of MIDORI2.</strong> Each record is cut to
+  the inserts of the three primer pairs (10,008 inserts). For each insert, every record of
+  its own species (genus, family or order) is left out of MIDORI2, as for an animal that
+  MIDORI2 does not contain, and B is computed against the whole set.</li>
+<li><strong>Measured</strong> is the share with B &gt; E: genuine eukaryotic sequences that MetaFlux would
+  wrongly move to the table of bacterial COI homologues.</li>
+</ul>
+<h4 id="known-contaminants">Known contaminants<a class="headerlink" href="#known-contaminants" title="Permanent link">¶</a></h4>
+<p>As a check that nothing was lost, the contaminants found during development must still be
+rejected. Unlike the other tests, this one uses development data.</p>
+<h4 id="release-criteria-and-results">Release criteria and results<a class="headerlink" href="#release-criteria-and-results" title="Permanent link">¶</a></h4>
+<p>The release is published if the results are close to those of development, by criteria
+fixed before the test:</p>
+<ul>
+<li>for the bacterial amplicons with the species left out, a recognised share of at least 90 %
+  for BF3/BR2, 85 % for Leray-XT and 80 % for fwhF2/fwhR2n;</li>
+<li>for the eukaryotic sequences, at most 0.5 % moved to the bacterial side at any of the four
+  levels.</li>
+</ul>
+<p>All criteria were met; the full table is in the README. Each value below is the share of
+bacterial amplicons with B &gt; E, with the amplicon's species or genus left out as described
+above, next to the same measurement in development (with the species left out).</p>
+<table>
+<thead>
+<tr>
+<th>Bacterial amplicons recognised (B &gt; E)</th>
+<th>species left out</th>
+<th>genus left out</th>
+<th>development (species left out)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>all (936)</td>
+<td>98.4 %</td>
+<td>96.0 %</td>
+<td>94 %</td>
+</tr>
+<tr>
+<td>BF3/BR2 (803)</td>
+<td>99.9 %</td>
+<td>98.8 %</td>
+<td>96 %</td>
+</tr>
+<tr>
+<td>Leray-XT (102)</td>
+<td>88.2 %</td>
+<td>80.4 %</td>
+<td>91 %</td>
+</tr>
+<tr>
+<td>fwhF2/fwhR2n (31)</td>
+<td>93.5 %</td>
+<td>77.4 %</td>
+<td>85 %</td>
+</tr>
+<tr>
+<td><em>Wolbachia</em> (11)</td>
+<td>72.7 %</td>
+<td>0 %</td>
+<td>97 %</td>
+</tr>
+<tr>
+<td>other Rickettsiales (178)</td>
+<td>93.3 %</td>
+<td>87.1 %</td>
+<td></td>
+</tr>
+<tr>
+<td>at most 1 mismatch per primer (181)</td>
+<td>95.6 %</td>
+<td>89.5 %</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Eukaryotic sequences moved to the bacterial side:</strong> 0.03 % with the species left out of
+  MIDORI2 (1 insert of 3,000), 0 % with the genus left out, 0.08 % with the family left out
+  (2 of 2,574) and 0 % with the order left out. All three are far from both references
+  (E 59–71 %, B 60–73 %).</li>
+<li><strong>Known contaminants:</strong> all three stay out of the set.</li>
+<li><strong>The <em>Wolbachia</em> figures rest on 11 amplicons from four genomes.</strong> The three that were
+  missed come from one genome, <em>Wolbachia</em> sp964277405. Its own <em>coxA</em> is in MIDORI2 as a
+  record filed under the pseudoscorpion <em>Neobisium carcinoides</em>; step 6 removes that record
+  in the release, but the test puts it back, as described above. With the species left out,
+  the closest bacterial gene is another <em>Wolbachia</em> at 90–92 % (B), while the record matches
+  at 98–99 % (E), so E wins. The BF3/BR2 amplicon of <em>Wolbachia</em> sp051710285, by contrast,
+  has B 97 % and E 85 %. With the genus left out, every <em>Wolbachia</em> record of MIDORI2 comes
+  back and no <em>Wolbachia</em> amplicon wins, as in development (0.7 %): a <em>Wolbachia</em> lineage
+  missing from the set is recognised only if MIDORI2 holds no record of it under an animal's
+  name.</li>
+</ul>
+<p>Any rule changed after this test makes a new version.</p>
+<h3 id="step-8-release-files">Step 8. Release files<a class="headerlink" href="#step-8-release-files" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bacterial_cox1_gtdb-r232.v1.fasta.gz</code></td>
+<td>whole genes that pass all checks; DNA; SINTAX headers</td>
+</tr>
+<tr>
+<td><code>bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz</code></td>
+<td>fragments of at least 200 amino acids that pass all checks</td>
+</tr>
+<tr>
+<td><code>bacterial_cox1_gtdb-r232.v1_metadata.tsv.gz</code></td>
+<td>every candidate gene: genome, lineage, coordinates, scores, residues, family, type, the outcome of every check, flags and verdict</td>
+</tr>
+<tr>
+<td><code>midori2_gb273_bacterial_records.tsv</code></td>
+<td>MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3, with the matching gene and the decision (removed or listed)</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>inputs and their checksums, tool and model versions, thresholds, counts per step, results of the final test, sensitivity of the counts to twelve of the thresholds</td>
+</tr>
+<tr>
+<td>build scripts and environment file</td>
+<td>to rebuild the release from the same inputs</td>
+</tr>
+<tr>
+<td><code>SHA256SUMS</code></td>
+<td>checksums of all files</td>
+</tr>
+</tbody>
+</table>
+<p>Each FASTA header carries the gene ID, the GTDB accession, the family and type label and the
+GTDB taxonomy, for example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&gt;RS_GCF_000008385.1|NC_006833.1_429;family=A1;type=aa3_caa3;tax=d:Bacteria,p:Pseudomonadota,c:Alphaproteobacteria,o:Rickettsiales,f:Anaplasmataceae,g:Wolbachia,s:Wolbachia_sp000008385
+</code></pre></div>
+<p>The release is named after the GTDB release and a build number (<code>gtdb-r232.v1</code>). A later GTDB
+release, or any change of a rule, produces a new version under the same Zenodo concept DOI.
+MetaFlux pins the version DOI and the SHA-256 of the files it downloads. If you use the set,
+cite the release by its version DOI, together with GTDB (Parks et al. 2026) and MIDORI2
+(Leray et al. 2022).</p>
+<h3 id="parameters-of-version-1">Parameters of version 1<a class="headerlink" href="#parameters-of-version-1" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>GTDB gene file</td>
+<td><code>gtdb_proteins_nt_reps_r232.tar.gz</code>, 187 GB (174 GiB), MD5 <code>bd0117f737be1fea6819365f2375c048</code></td>
+</tr>
+<tr>
+<td>0</td>
+<td>MIDORI2</td>
+<td>GB273, <code>MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz</code>, version DOI 10.5281/zenodo.22685701</td>
+</tr>
+<tr>
+<td>0</td>
+<td>HMMs</td>
+<td>Pfam 38.2: PF00115.26, PF00116.27, PF00510.24, PF00033.25; NCBI hmm_PGAP 20.0: TIGR02891.1, TIGR02843.1, TIGR02882.1, TIGR00780.1, NF050116.1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>genetic code</td>
+<td>table 11; table 4 if &gt; 1 % of the genes with <code>partial=00</code> contain an in-frame TGA before the stop codon</td>
+</tr>
+<tr>
+<td>2</td>
+<td>HMM search</td>
+<td><code>hmmsearch --cut_ga</code> (PF00115 gathering threshold 34.8 bits)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>oxidase</td>
+<td>PF00115 ≥ 100 bits and at most 1 of the 6 ligand histidines replaced</td>
+</tr>
+<tr>
+<td>3</td>
+<td>family A</td>
+<td>Tyr244 with Glu242 (A1) or with Tyr238 and Ser239 (A2)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>type label</td>
+<td>best model at its trusted cutoff (<code>--cut_tc</code>)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>whole gene</td>
+<td><code>partial=00</code>, model coverage ≥ 0.70 (all domain hits together), 400–1,100 amino acids</td>
+</tr>
+<tr>
+<td>4</td>
+<td>fragment</td>
+<td>not whole, ≥ 200 amino acids</td>
+</tr>
+<tr>
+<td>5.1</td>
+<td>reading frame</td>
+<td>length a multiple of 3, no internal stop codon</td>
+</tr>
+<tr>
+<td>5.2</td>
+<td>GC content</td>
+<td>gene and contig within 0.15 of the genome</td>
+</tr>
+<tr>
+<td>5.3</td>
+<td>mitochondrial match</td>
+<td>&lt; 90 % identity over ≥ 80 % of the shorter sequence to certainly mitochondrial MIDORI2 records</td>
+</tr>
+<tr>
+<td>5.4</td>
+<td>closer to eukaryotes</td>
+<td>run after step 6, on the cleaned MIDORI2, without the records whose codons look bacterial (step 6 test); best MIDORI2 identity ≥ 80 % and above the best identity to other genomes: removed if fragment or GC difference &gt; 0.08, otherwise "review" (left out)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>flags</td>
+<td>cross-phylum cluster at 95 %; mitochondrion-like contig &lt; 20 kb; duplicate copy ≥ 99 %</td>
+</tr>
+<tr>
+<td>5–6</td>
+<td>identity</td>
+<td>identical A/C/G/T columns / (A/C/G/T columns + internal gap columns); end gaps and ambiguity codes left out; VSEARCH 2.32.0 <code>--usearch_global</code>, settings in the README</td>
+</tr>
+<tr>
+<td>6</td>
+<td>MIDORI2 record examined</td>
+<td>≥ 90 % to a gene that passes 5.1–5.3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gene's evidence</td>
+<td>bacterial: closest gene of another genome ≥ 80 % and at least as close as the closest certainly mitochondrial record; mitochondrial: certainly mitochondrial record ≥ 80 % and closer; otherwise none</td>
+</tr>
+<tr>
+<td>6</td>
+<td>record's evidence</td>
+<td>likelihood ratio of its TGA/TGG counts, bacterial gene (TGA error rate 0.01 per tryptophan codon) vs genuine COI (TGA share of its family, or of the lowest higher rank with ≥ 200 tryptophan codons); ≥ 20 bacterial, ≤ 1/20 mitochondrial; none where TGA is a mitochondrial stop</td>
+</tr>
+<tr>
+<td>6</td>
+<td>MIDORI2 record removed</td>
+<td>at least one line of evidence bacterial and none mitochondrial; otherwise listed and kept</td>
+</tr>
+<tr>
+<td>7</td>
+<td>release criteria</td>
+<td>species left out: ≥ 90 % (BF3/BR2), ≥ 85 % (Leray-XT), ≥ 80 % (fwhF2/fwhR2n) recognised; eukaryotes: ≤ 0.5 % moved at each level</td>
+</tr>
+<tr>
+<td>README</td>
+<td>sensitivity</td>
+<td>verdict changes when each value moves: GC limits ± 0.02, fragment floor ± 50 amino acids, identity limits ± 2 points, model coverage ± 0.10, oxidase score ± 20 bits; step 6: error rate 0.003 and 0.03, likelihood-ratio threshold 10 and 50, 100 and 500 tryptophan codons per lineage</td>
+</tr>
+</tbody>
+</table>
+<h2 id="copy-number">Copy number<a class="headerlink" href="#copy-number" title="Permanent link">¶</a></h2>
+<p>How many subunit-I genes a genome carries depends on what is counted. In near-complete
+genomes of the development sample (CheckM2 completeness ≥ 90 %, contamination ≤ 5 %; shares
+weighted to GTDB), with the counts of the 120,230 near-complete bacterial genomes of R232 in
+brackets:</p>
+<ul>
+<li><strong>Family A is mostly single-copy.</strong> 65 % of the genomes that carry it have one copy and 35 %
+  have two to five [R232: 64 % of 71,669 carriers have one copy, up to nine]. All 51
+  near-complete <em>Wolbachia</em> genomes that carry it have one copy, and so do 99 % of the other
+  Rickettsiales [R232: 55 of 56 <em>Wolbachia</em> genomes have one copy, one has none].</li>
+<li><strong>All subunit-I genes together are mostly multi-copy.</strong> 69 % of carriers have two or more,
+  up to nine, because many bacteria carry several oxidase types [R232: 67 % of 79,030
+  carriers, up to twelve]. In 90 % of the multi-copy
+  genomes all copies are less than 80 % identical to each other; they are distinct genes, not
+  assembly artefacts.</li>
+</ul>
+<p>All copies that pass the checks are kept. The primers can bind any of them, and MetaFlux uses
+only the best match of each ASV, so extra copies give a bacterial ASV more chances to find a
+close relative without biasing the result.</p>
+<h2 id="limitations-open-issues-and-possible-improvements">Limitations, open issues and possible improvements<a class="headerlink" href="#limitations-open-issues-and-possible-improvements" title="Permanent link">¶</a></h2>
+<p><strong>Coverage of bacterial diversity.</strong> The set contains what GTDB contains. In the final test,
+96.0 % of the amplicons were recognised with their genus left out of the set, against 98.4 %
+with only their species left out (78 % and 94 % in the development tests). Most of them were
+BF3/BR2 amplicons (803 of 936, 98.8 % recognised with the genus left out); for Leray-XT the
+share was 80.4 %, for fwhF2/fwhR2n 77.4 %. None of the 11 <em>Wolbachia</em> amplicons was
+recognised with its genus left out, because MIDORI2 holds <em>Wolbachia</em> <em>coxA</em> under animal
+names: a <em>Wolbachia</em> lineage missing from the set is recognised only if MIDORI2 holds no
+record of it under an animal's name (step 7). Lineages without cultured or assembled members
+are not represented.</p>
+<p><strong>One genome per species.</strong> Variation within a species is represented by one genome. The
+development tests removed the whole species and still recognised 94 % of the amplicons, so an
+amplicon from a divergent strain should be recognised at least as often; this was not tested
+directly.</p>
+<p><strong>Rules set on development data.</strong> These values were chosen after inspection of the
+development sample:</p>
+<ul>
+<li>the residue rule of step 3;</li>
+<li>the 200-amino-acid floor for fragments;</li>
+<li>check 5.4, with its GC limit of 0.08;</li>
+<li>the strict definition of certainly mitochondrial records.</li>
+</ul>
+<p>They are frozen for version 1 and tested once on data not used to set them. Other values are
+defensible; the README reports how many genes change verdict when twelve of the thresholds
+move, the fragment floor and the GC limit of check 5.4 among them (the residue rule and the
+definition of certainly mitochondrial records are not single values and are not varied). The
+evidence rule of step 6 is the exception: it was revised during the R232 build, after the first
+rule had been applied to the R232 records, so no independent data have tested it (step 6).</p>
+<p><strong>Contaminants that can pass.</strong> The mitochondrial-match check (5.3) relies on TGA being read as
+tryptophan, so it cannot recognise contamination from plants, brown algae, oomycetes, diatoms
+or thraustochytrids. For these, only the GC check (5.2) and the closer-to-eukaryotes check (5.4)
+apply. A contaminant with a GC content close to that of the genome and no close relative in
+MIDORI2 would pass. Check 5.4 also misses a contaminant that occurs in more than one MAG, for
+example in MAGs from the same study, because each copy then finds a close match in another
+genome.</p>
+<p><strong>Bacterial records left in MIDORI2.</strong> Step 6 removes a record only when it is at least 90 %
+identical to a gene that passes checks 5.1–5.3 and the evidence points to bacteria.
+Bacterial records of lineages that GTDB lacks, or just below 90 %, stay in MIDORI2 and in the
+E of every ASV. Such a record can also make check 5.4 reject a genuine bacterial gene, as
+happened to one <em>Polaromonas</em> fragment in development and probably to 8 genes in R232
+(step 6).</p>
+<p><strong>Genes left out for review.</strong> Whole genes marked "review" by check 5.4 are left out of
+version 1, although some may be genuine. Their lineages then have fewer genes on the bacterial
+side of the comparison.</p>
+<p><strong>Eukaryotes moved to the bacterial table.</strong> In development, the comparison moved 0.04 % of
+animal sequences whose family was missing from MIDORI2, and 0.14 % of those whose order was
+missing. In groups that MIDORI2 covers poorly, a few genuine eukaryotic ASVs can therefore end
+up in the table of bacterial COI homologues; check that table before concluding that an
+expected group is absent.</p>
+<p><strong>Labels of families B and C and of nitric oxide reductases.</strong> The family labels rest on one
+alignment to the Pfam model and on residues read from it. Divergent sequences can be
+misaligned, and nitric oxide reductases are not separated from families B and C. A dedicated
+classifier for the oxidase families was published (Sousa et al. 2011), but it is no longer
+available at the address given in the paper.</p>
+<p><strong>Genetic codes.</strong> The table GTDB used is inferred from the genes, not read from the files.
+Lineages with genetic code 25 (Gracilibacteria, and Absconditabacteria, formerly SR1; both read
+TGA as glycine) are predicted by GTDB under table 4 or 11. Under table 11 some of their genes
+are truncated or missing; under table 4 their TGA codons are translated as tryptophan instead
+of glycine.</p>
+<p><strong>The MIDORI2 list is a lower bound.</strong> Short records with few tryptophan codons, chimeric
+records (part animal, part bacterial), and records whose gene has no relatives in other genomes
+and whose codons say nothing are hard to judge; they are listed, not removed. MIDORI2 also
+holds sequences that are mitochondrial but not COI, such as the intron reading frame of step 6;
+they are left in place.</p>
+<p><strong>Three primer pairs tested.</strong> The recognition rates were measured for BF3/BR2, Leray-XT and
+fwhF2/fwhR2n. The set itself does not depend on primers, but the rates for other primer pairs
+are not known.</p>
+<p><strong>Shares count taxa, not reads.</strong> All test results are shares of genomes or sequences, not of
+reads. In a real library a few abundant ASVs, often from <em>Wolbachia</em>, can hold most of the
+bacterial reads, so the share of bacterial reads that is recognised can be higher or lower than
+the shares given here.</p>
+<p><strong>What the set does not predict.</strong> The set tells whether an amplicon is bacterial, not how
+much bacterial DNA a sample will yield. That depends on primer mismatches, annealing
+temperature and how much target DNA the sample holds. Off-target amplification is usually
+much larger in eDNA, where animal DNA is scarce, than in bulk samples of animal tissue
+(Elbrecht et al. 2019; Collins et al. 2019).</p>
+<p>Possible improvements:</p>
+<ul>
+<li><strong>Tree placement.</strong> Placing ASVs that are far from both references on a reference tree, as
+  DARN does, instead of a single identity comparison.</li>
+<li><strong>Protein-level comparison</strong> for very divergent ASVs, where nucleotide identity loses
+  resolution.</li>
+<li><strong>Which bacteria each primer pair amplifies.</strong> A table of the bacterial lineages that common
+  primer pairs can amplify, distributed with the release, for study design.</li>
+<li><strong>More genomes per species,</strong> for variation within species.</li>
+<li><strong>Genomes outside GTDB,</strong> with genes predicted by Pyrodigal (Larralde 2022). Pyrodigal is
+  tested to give the same predictions as the current Prodigal code (v2.6.3+31b300a, which
+  differs from the 2.6.3 release in a few edge cases) and runs faster.</li>
+<li><strong>A curated classifier for the oxidase families,</strong> to separate family B, family C and the
+  nitric oxide reductases.</li>
+<li><strong>Sharing the MIDORI2 list</strong> with the MIDORI2 maintainers.</li>
+</ul>
+<h2 id="related-pages">Related pages<a class="headerlink" href="#related-pages" title="Permanent link">¶</a></h2>
+<ul>
+<li><a href="../coi/">COI</a></li>
+<li><a href="../../taxon-filter/">Keeping and discarding taxa</a></li>
+<li><a href="../../../reference/output/">Output files</a></li>
+<li><a href="../../../about/citation/">Citation and references</a></li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
+<p>References cited on this page. The tools MetaFlux runs, and the references of the COI
+marker itself, are on <a href="../../../about/citation/">Citation and references</a>.</p>
+<ul>
+<li>Baldo, L., et al. (2006). Multilocus sequence typing system for the endosymbiont <em>Wolbachia
+  pipientis</em>. <em>Applied and Environmental Microbiology</em> 72:7098–7110.
+  doi:10.1128/AEM.00731-06</li>
+<li>Buchner, D., Leese, F. (2020). BOLDigger – a Python package to identify and organise
+  sequences with the Barcode of Life Data systems. <em>Metabarcoding and Metagenomics</em> 4:e53535.
+  doi:10.3897/mbmg.4.53535</li>
+<li>Chklovski, A., et al. (2023). CheckM2: a rapid, scalable and accurate tool for assessing
+  microbial genome quality using machine learning. <em>Nature Methods</em> 20:1203–1212.
+  doi:10.1038/s41592-023-01940-w</li>
+<li>Collins, R. A., et al. (2019). Non-specific amplification compromises environmental DNA
+  metabarcoding with COI. <em>Methods in Ecology and Evolution</em> 10:1985–2001.
+  doi:10.1111/2041-210X.13276</li>
+<li>Curd, E. E., et al. (2019). Anacapa Toolkit: an environmental DNA toolkit for processing
+  multilocus metabarcode datasets. <em>Methods in Ecology and Evolution</em> 10:1469–1475.
+  doi:10.1111/2041-210X.13214</li>
+<li>Eddy, S. R. (2011). Accelerated profile HMM searches. <em>PLoS Computational Biology</em>
+  7:e1002195. doi:10.1371/journal.pcbi.1002195</li>
+<li>Edgar, R. C. (2016). SINTAX: a simple non-Bayesian taxonomy classifier for 16S and ITS
+  sequences. <em>bioRxiv</em>. doi:10.1101/074161</li>
+<li>Elbrecht, V., et al. (2019). Validation of COI metabarcoding primers for terrestrial
+  arthropods. <em>PeerJ</em> 7:e7745. doi:10.7717/peerj.7745</li>
+<li>González, A., et al. (2023). VTAM: a robust pipeline for validating metabarcoding data using
+  controls. <em>Computational and Structural Biotechnology Journal</em> 21:1151–1156.
+  doi:10.1016/j.csbj.2023.01.034</li>
+<li>González-Miguéns, R., et al. (2025). A novel taxonomic database for eukaryotic mitochondrial
+  cytochrome oxidase subunit I gene (eKOI), with a focus on protists diversity. <em>Database</em>
+  2025:baaf057. doi:10.1093/database/baaf057</li>
+<li>Hyatt, D., et al. (2010). Prodigal: prokaryotic gene recognition and translation initiation
+  site identification. <em>BMC Bioinformatics</em> 11:119. doi:10.1186/1471-2105-11-119</li>
+<li>Kass, R. E., Raftery, A. E. (1995). Bayes factors. <em>Journal of the American Statistical
+  Association</em> 90:773–795. doi:10.1080/01621459.1995.10476572</li>
+<li>Larralde, M. (2022). Pyrodigal: Python bindings and interface to Prodigal, an efficient
+  method for gene prediction in prokaryotes. <em>Journal of Open Source Software</em> 7(72):4296.
+  doi:10.21105/joss.04296</li>
+<li>Leray, M., et al. (2019). GenBank is a reliable resource for 21st century biodiversity
+  research. <em>PNAS</em> 116:22651–22656. doi:10.1073/pnas.1911714116</li>
+<li>Leray, M., Knowlton, N., Machida, R. J. (2022). MIDORI2: a collection of quality controlled,
+  preformatted, and regularly updated reference databases for taxonomic assignment of
+  eukaryotic mitochondrial sequences. <em>Environmental DNA</em> 4:894–907. doi:10.1002/edn3.303</li>
+<li>Li, W., et al. (2021). RefSeq: expanding the Prokaryotic Genome Annotation Pipeline reach
+  with protein family model curation. <em>Nucleic Acids Research</em> 49(D1):D1020–D1028.
+  doi:10.1093/nar/gkaa1105</li>
+<li>Meglécz, E. (2023). COInr and mkCOInr: building and customizing a nonredundant barcoding
+  reference database from BOLD and NCBI using a semi-automated pipeline. <em>Molecular Ecology
+  Resources</em> 23:933–945. doi:10.1111/1755-0998.13756</li>
+<li>Nowak, K. H., Buczek, M., Marszałek, M., Prus-Frankowska, M., Valdivia, C., Deng, J.,
+  Shropshire, J. D., Łukasik, P. (2026). Insect COI barcoding data as an untapped resource for
+  surveying <em>Wolbachia</em> symbioses. <em>bioRxiv</em> (preprint, not peer reviewed).
+  doi:10.64898/2026.06.24.734267</li>
+<li>Parks, D. H., Imelfort, M., Skennerton, C. T., Hugenholtz, P., Tyson, G. W. (2015). CheckM:
+  assessing the quality of microbial genomes recovered from isolates, single cells, and
+  metagenomes. <em>Genome Research</em> 25:1043–1055. doi:10.1101/gr.186072.114</li>
+<li>Parks, D. H., Chaumeil, P.-A., Mussig, A. J., Rinke, C., Chuvochina, M., Hugenholtz, P.
+  (2026). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245
+  archaeal genomes. <em>Nucleic Acids Research</em> 54(D1):D743–D754. doi:10.1093/nar/gkaf1040
+  (covers releases up to R10-RS226; R232 is release 11)</li>
+<li>Paysan-Lafosse, T., et al. (2025). The Pfam protein families database: embracing AI/ML.
+  <em>Nucleic Acids Research</em> 53(D1):D523–D534. doi:10.1093/nar/gkae997</li>
+<li>Pereira, M. M., Santana, M., Teixeira, M. (2001). A novel scenario for the evolution of
+  haem-copper oxygen reductases. <em>Biochimica et Biophysica Acta</em> 1505:185–208.
+  doi:10.1016/S0005-2728(01)00169-4</li>
+<li>Porter, T. M., Hajibabaei, M. (2018). Automated high throughput animal CO1 metabarcode
+  classification. <em>Scientific Reports</em> 8:4226. doi:10.1038/s41598-018-22505-4</li>
+<li>Porter, T. M., Hajibabaei, M. (2022). MetaWorks: a flexible, scalable bioinformatic pipeline
+  for high-throughput multi-marker biodiversity assessments. <em>PLoS ONE</em> 17:e0274260.
+  doi:10.1371/journal.pone.0274260</li>
+<li>Rognes, T., et al. (2016). VSEARCH: a versatile open source tool for metagenomics. <em>PeerJ</em>
+  4:e2584. doi:10.7717/peerj.2584</li>
+<li>Smith, M. A., et al. (2012). <em>Wolbachia</em> and DNA barcoding insects: patterns, potential, and
+  problems. <em>PLoS ONE</em> 7:e36514. doi:10.1371/journal.pone.0036514</li>
+<li>Sousa, F. L., et al. (2011). A bioinformatics classifier and database for heme-copper oxygen
+  reductases. <em>PLoS ONE</em> 6:e19117. doi:10.1371/journal.pone.0019117</li>
+<li>Sousa, F. L., et al. (2012). The superfamily of heme-copper oxygen reductases: types and
+  evolutionary considerations. <em>Biochimica et Biophysica Acta</em> 1817(4):629–637.
+  doi:10.1016/j.bbabio.2011.09.020</li>
+<li>Straub, D., et al. (2020). Interpretations of environmental microbial community studies are
+  biased by the selected 16S rRNA (gene) amplicon sequencing pipeline. <em>Frontiers in
+  Microbiology</em> 11:550420. doi:10.3389/fmicb.2020.550420</li>
+<li>Wang, Q., et al. (2007). Naïve Bayesian classifier for rapid assignment of rRNA sequences
+  into the new bacterial taxonomy. <em>Applied and Environmental Microbiology</em> 73:5261–5267.
+  doi:10.1128/AEM.00062-07</li>
+<li>Wangensteen, O. S., et al. (2018). DNA metabarcoding of littoral hard-bottom communities:
+  high diversity and database gaps revealed by two molecular markers. <em>PeerJ</em> 6:e4705.
+  doi:10.7717/peerj.4705</li>
+<li>Zafeiropoulos, H., et al. (2021). The Dark mAtteR iNvestigator (DARN) tool: getting to know
+  the known unknowns in COI amplicon data. <em>Metabarcoding and Metagenomics</em> 5:e69657.
+  doi:10.3897/mbmg.5.69657</li>
+<li>Web sources: BGE BioscanFlow COI chapter
+  (https://bioscanflow.readthedocs.io/en/latest/6bioinfo_COI.html); MJOLNIR3
+  (https://github.com/adriantich/MJOLNIR3); BOLDigger3
+  (https://github.com/DominikBuchner/BOLDigger3); apscale-blast
+  (https://github.com/TillMacher/apscale_blast); Pfam models via InterPro
+  (https://www.ebi.ac.uk/interpro/); NCBI hmm_PGAP models (https://ftp.ncbi.nlm.nih.gov/hmm/).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

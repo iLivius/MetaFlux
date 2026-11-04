@@ -1,0 +1,3508 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../confidence-and-threshold/">
+      
+      
+        <link rel="next" href="../read-extraction/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Species-level k-mer evidence - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#species-level-k-mer-evidence" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Species-level k-mer evidence
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2">
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../amplicon/markers/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/coi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/markers/bacterial-cox1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bacterial COI homologues (reference set)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../amplicon/phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sylph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#the-two-extra-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two extra columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-metaflux-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-it-acts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it acts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-a-taxon-is-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a taxon is removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-a-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing a threshold
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choosing a threshold">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does-on-real-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does on real data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scaling-the-floor-with-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling the floor with depth
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scaling the floor with depth">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#min_distinct_minimizers-auto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        min_distinct_minimizers: auto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-auto-is-not-the-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why auto is not the default
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measured-at-known-depths-and-on-deeper-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured at known depths and on deeper samples
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limits-of-the-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits of the rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-default-is-enabled-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the default is enabled: false
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why the default is enabled: false">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unchanged-f1-does-not-mean-an-unchanged-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unchanged F1 does not mean an unchanged table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-has-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What has been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-richness-is-still-over-estimated-with-the-gate-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why richness is still over-estimated with the gate on
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitation-very-close-relatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitation: very close relatives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threshold-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threshold stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#the-two-extra-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two extra columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the numbers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-metaflux-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What MetaFlux writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-it-acts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it acts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-a-taxon-is-removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a taxon is removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-a-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choosing a threshold
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choosing a threshold">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does-on-real-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does on real data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scaling-the-floor-with-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling the floor with depth
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scaling the floor with depth">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#min_distinct_minimizers-auto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        min_distinct_minimizers: auto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-auto-is-not-the-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why auto is not the default
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measured-at-known-depths-and-on-deeper-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measured at known depths and on deeper samples
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limits-of-the-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits of the rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-default-is-enabled-false" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the default is enabled: false
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why the default is enabled: false">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unchanged-f1-does-not-mean-an-unchanged-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unchanged F1 does not mean an unchanged table
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-has-been-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What has been checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-richness-is-still-over-estimated-with-the-gate-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why richness is still over-estimated with the gate on
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitation-very-close-relatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitation: very close relatives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threshold-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threshold stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-not-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does not work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/shotgun/kmer-evidence.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="species-level-k-mer-evidence">Species-level k-mer evidence<a class="headerlink" href="#species-level-k-mer-evidence" title="Permanent link">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Read this after <a href="../confidence-and-threshold/">Choosing confidence and threshold</a></p>
+<p>Bracken's depth-scaled read threshold, described on that page, has the largest effect
+on precision in shotgun mode; set it first. This gate catches one narrow kind of error
+that the threshold cannot detect. It is off by default; see
+<a href="#why-the-default-is-enabled-false">Why the default is <code>enabled: false</code></a>.</p>
+<p>The gate is a separate setting from Bracken's read threshold (<code>-t</code>) and does not change the k-mer length.
+It counts the distinct minimizers of a species found in the sample. See
+<a href="../overview/#the-four-stringency-settings-at-a-glance">the four stringency settings at a glance</a>.</p>
+</div>
+<p>Kraken2's read count tells you how many reads it chose to label with a taxon. It does
+not tell you how much sequence <em>unique to that organism</em> actually turned up in the
+sample — and those are different questions.</p>
+<ul>
+<li>A species that is genuinely present contributes many <strong>different</strong> species-specific
+  sequences.</li>
+<li>A spurious call is usually a small set of sequences — conserved, repetitive, or
+  shared with a relative that really is abundant — matched over and over.</li>
+</ul>
+<p>In a read count the two look identical. Running Kraken2 with <code>--report-minimizer-data</code>
+adds the number that separates them. MetaFlux always does.</p>
+<h2 id="the-two-extra-columns">The two extra columns<a class="headerlink" href="#the-two-extra-columns" title="Permanent link">¶</a></h2>
+<p>The report becomes eight columns instead of six, with two inserted before the rank code:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Column</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Number of minimizers in the read data associated with this taxon</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td>An estimate of the number of <strong>distinct</strong> minimizers in the read data associated with this taxon</td>
+</tr>
+</tbody>
+</table>
+<p>Column 5 is an estimate, not an exact count — Kraken2 uses a HyperLogLog sketch rather
+than storing every minimizer. Both columns are <strong>clade-cumulative</strong>, like the read
+counts.</p>
+<div class="admonition warning">
+<p class="admonition-title">What "associated with this taxon" actually means</p>
+<p>The columns do not count the minimizers carried by the reads assigned to the taxon.</p>
+<p>Kraken2 attributes each minimizer <strong>occurrence</strong> to whichever taxon that minimizer
+maps to <strong>in the database</strong> (its lowest common ancestor), pooled over every read in
+the sample, regardless of where each read finally got assigned.</p>
+<p>This is visible in any report: taxa with two or three assigned reads can carry
+hundreds of thousands of minimizer counts. In SRR39106521, one of the test samples
+described <a href="#what-it-does-on-real-data">below</a>, the genus row <em>Streptomyces</em> has
+<strong>3 clade reads and 343,359 total minimizers</strong>, about 500 times the 690 k-mer
+positions that three pairs of 149-base reads can hold. Counts that high cannot come
+from the assigned reads alone; they are expected when minimizers are attributed by
+LCA.</p>
+<p>So column 5 for a species means: <strong>how many distinct database minimizers specific to
+that species were seen anywhere in this sample.</strong> That is a statement about how much
+species-specific sequence is present — the minimizer counterpart of what KrakenUniq
+calls <em>unique k-mers</em>, so the published thresholds below are a fair starting point;
+how well they convert to minimizers is discussed
+<a href="#choosing-a-threshold">below</a>. It is <strong>not</strong> a genome-coverage measure, and
+describing it as "how much of the genome the reads covered" would be wrong.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">The flag itself changes no classification</p>
+<p><code>--report-minimizer-data</code> is purely additive reporting: with or without it, Kraken2
+writes a byte-for-byte identical per-read output and the same values in every shared
+report column.</p>
+</div>
+<h2 id="reading-the-numbers">Reading the numbers<a class="headerlink" href="#reading-the-numbers" title="Permanent link">¶</a></h2>
+<p>Two species from SRR39106521, with similar read counts:</p>
+<table>
+<thead>
+<tr>
+<th>Species</th>
+<th style="text-align: right;">Reads</th>
+<th style="text-align: right;">Distinct minimizers</th>
+<th style="text-align: right;">Total minimizers</th>
+<th style="text-align: right;">Duplicity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Pseudomonas aeruginosa</em></td>
+<td style="text-align: right;">4,775</td>
+<td style="text-align: right;">68,276</td>
+<td style="text-align: right;">221,570</td>
+<td style="text-align: right;">3.2</td>
+</tr>
+<tr>
+<td><em>Pigmentiphaga</em> sp. CHJ604</td>
+<td style="text-align: right;">4,129</td>
+<td style="text-align: right;">929</td>
+<td style="text-align: right;">226,726</td>
+<td style="text-align: right;">244.1</td>
+</tr>
+</tbody>
+</table>
+<p>The two also have almost the same total minimizer count. The first is supported by
+68,276 distinct species-specific minimizers. The second is supported by 929, each one
+seen about 240 times.</p>
+<p><strong>Duplicity</strong> (total ÷ distinct) is the most directly readable of the three numbers,
+because it does not require knowing the sequencing depth. It also barely tracks
+abundance: across the 2,418 species rows in the Kraken2 reports of the four test
+samples, Pearson <em>r</em> against log reads is <strong>+0.17</strong> for log duplicity and <strong>+0.71</strong> for
+the log distinct count. That makes it the better number to <em>eyeball</em>. It is nonetheless a
+<strong>worse filter</strong> (see <a href="#what-does-not-work">What does not work</a>), so MetaFlux reports it
+and thresholds the distinct count.</p>
+<h2 id="what-metaflux-writes">What MetaFlux writes<a class="headerlink" href="#what-metaflux-writes" title="Permanent link">¶</a></h2>
+<p>Every shotgun run produces these, per sample, whether or not the gate is switched on:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>02.classification/kraken2/{sample}_species_evidence.tsv   one row per taxon at the Bracken rank
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>02.classification/kraken2/{sample}_report_gated.txt       the report with failing taxa removed
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>stats/kmer_evidence/{sample}_evidence.png                 reads vs distinct minimizers, log-log
+</code></pre></div>
+<p>The gated report is written even when the gate is off, precisely so you can diff it
+against the Kraken2 report and see what enabling the gate would do to <em>your</em> data before
+trusting it.</p>
+<p>The evidence table carries, per taxon: taxid, name, rank, clade and direct reads, total
+and distinct minimizers, duplicity, minimizers per read, percent of classified reads,
+and the verdict with its reason.</p>
+<h2 id="the-gate">The gate<a class="headerlink" href="#the-gate" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">shotgun</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">kmer_evidence</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                     </span><span class="c1"># report only; pipeline unchanged</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">min_distinct_minimizers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">300</span><span class="w">       </span><span class="c1"># the floor: a whole number, or auto (see below)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">min_reads</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">                       </span><span class="c1"># extra read floor, applied together with the above</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">never_prune_above_fraction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span><span class="w">   </span><span class="c1"># safety rail</span>
+</code></pre></div>
+<h3 id="where-it-acts">Where it acts<a class="headerlink" href="#where-it-acts" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kraken2  →  kmer_evidence  →  bracken  →  finalize_otu_table
+</code></pre></div>
+<p>The gate sits <strong>between</strong> Kraken2 and Bracken. It does not replace or skip Bracken — it
+hands Bracken a cleaned report instead of the raw one. Because the correction happens
+upstream, it flows all the way through: <strong><code>otu_table.biom</code> and <code>otu_table.tsv</code> become the
+corrected tables.</strong> There is no separate filtered file to reconcile.</p>
+<p>Switching the gate off restores the previous behaviour exactly: Bracken reads Kraken2's
+own report and nothing downstream changes.</p>
+<h3 id="how-a-taxon-is-removed">How a taxon is removed<a class="headerlink" href="#how-a-taxon-is-removed" title="Permanent link">¶</a></h3>
+<p>Two details must be handled correctly; otherwise Bracken redistributes the reads of the
+pruned report wrongly, without an error.</p>
+<p><strong>Whole subtree, never a bare row.</strong> Bracken rebuilds the taxonomy tree from the
+<em>indentation</em> of the report, attaching each row to the last row one level above it.
+Delete a species row and leave its strain (<code>S1</code>) children behind, and those children get
+re-parented onto whichever species happens to precede them, whose read count is then
+inflated without any warning. So when a taxon fails, everything indented beneath it goes
+too.</p>
+<p><strong>The reads are credited to the parent, not discarded.</strong> A pruned taxon's whole clade total
+is added to its parent's own-node count, so Bracken redistributes those reads among the
+siblings that passed. The parent's clade total is untouched, so the report's arithmetic
+still balances: for every node, <code>clade == direct + sum(children clade)</code>, and no column
+other than a parent's direct count ever changes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Two things this does not guarantee</p>
+<p><strong>Not all reads land on close relatives.</strong> The rationale for crediting the parent is
+that a spurious call usually borrows evidence from a neighbour. That holds for most
+of the reads that move, not all: part of them cross genus or family boundaries.</p>
+<p><strong>Some reads are still lost.</strong> If <em>every</em> species under a genus fails, Bracken has
+nothing left at the target rank to redistribute to, and drops those reads; the same
+happens one level up when every species of a family or an order fails. At the
+default floor of 300 that is a small fraction of the sample: on the
+<a href="#what-it-does-on-real-data">test dataset</a> the table lost at most 0.09 % of its read
+pairs. With <code>auto</code> it was 2.7 to 15.1 % of the same tables, because a whole order
+failed in two of them (see <a href="#limits-of-the-rule">Limits of the rule</a>). Crediting the
+parent is much better than deleting rows outright, but it is not conservation.</p>
+</div>
+<h2 id="choosing-a-threshold">Choosing a threshold<a class="headerlink" href="#choosing-a-threshold" title="Permanent link">¶</a></h2>
+<p>Three published sources give thresholds for this kind of filter, all expressed in
+KrakenUniq's unique k-mers:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>What it reports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://link.springer.com/article/10.1186/s13059-018-1568-0">KrakenUniq</a> (Breitwieser, Baker &amp; Salzberg, 2018)</td>
+<td>On a synthetic mix of reads from bacterial isolates (1–34 million read pairs), the best threshold (highest recall at a false discovery rate of 5 % or less) rose by about 2,000 unique k-mers per million reads sequenced: about 3,700 at 1 million, 21,000 at 10 million. For ten patient biopsies, mostly host DNA, a fixed 1,000 unique k-mers together with at least 10 reads removed the background calls and kept every confirmed pathogen.</td>
+</tr>
+<tr>
+<td><a href="https://doi.org/10.3389/fmicb.2026.1603339">Oskolkov (2026)</a>, <em>Front. Microbiol.</em> 17:1603339</td>
+<td>Simulated ancient metagenomes (fragments of about 42 bases, 0.1–0.7 million reads): about 1,000 unique k-mers gave the best F1, and a read-count filter added nothing. The best value rose with depth, by about 200 unique k-mers per 100,000 reads, a trend the paper calls relatively weak. Run on the same data, Kraken2 needed two to three times more distinct minimizers than KrakenUniq needed unique k-mers.</td>
+</tr>
+<tr>
+<td><a href="https://link.springer.com/article/10.1186/s13059-023-03083-9">aMeta</a> (Pochon et al., 2023)</td>
+<td>Defaults of 1,000 unique k-mers and 200 assigned reads, set from more than 1,200 ancient libraries; users are invited to try 500–1,500 k-mers depending on depth. The 2026 study above comes from the same group and reuses aMeta's simulated data.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Published thresholds count k-mers; Kraken2 reports minimizers</p>
+<p><strong>In plain terms.</strong> Kraken2 reads a sequence as overlapping 35-base k-mers, but it
+does not look each one up. For every k-mer it picks one 31-base piece inside it, the
+<em>minimizer</em>, and stores and counts only that. Neighbouring k-mers usually pick the
+same piece, so a region of a genome gives about three times fewer distinct minimizers
+than distinct k-mers. The studies above counted unique k-mers and settled on about
+1,000. In a Kraken2 report the same amount of sequence shows up as about 333
+distinct minimizers. The default floor, <strong>300</strong>, is that figure rounded down, because
+the conversion is only approximate. It was not tuned on MetaFlux's own test data, and
+it is a low, cautious value rather than an exact equivalent. When Oskolkov (2026) ran
+both tools on the same simulated data, the best Kraken2 floor was two to three times
+<em>higher</em> than the best KrakenUniq one, where the conversion predicts three times
+lower, and MetaFlux's own benchmark finds useful floors in the thousands (see
+<a href="#scaling-the-floor-with-depth">Scaling the floor with depth</a>).</p>
+<p><strong>The arithmetic</strong>, for a database built with other settings. How many k-mers share
+a minimizer depends on the database's <code>k</code> and <code>l</code>. Each k-mer of length <code>k</code>
+spans <code>w = k − l + 1</code> candidate minimizer positions of length <code>l</code>, and the standard
+expected density of selected minimizers is <code>2 / (w + 1)</code>. For the usual nucleotide
+settings (<code>k = 35</code>, <code>l = 31</code>) that is <code>w = 5</code> and a density of <code>1/3</code> — roughly <strong>one
+distinct minimizer per three k-mers</strong>.</p>
+<p>So, counting sequence alone, a published <em>1,000 unique k-mers</em> corresponds to about
+<strong>333</strong> distinct minimizers here.</p>
+<p>Check <code>k</code> and <code>l</code> on the first line of your database's <code>inspect.txt</code> and recompute if
+they differ. (The <code>2/(w+1)</code> density is the expectation for a random minimizer scheme;
+Kraken2's spaced-seed masking shifts it slightly, so treat 333 as an approximate
+conversion, not an exact one.)</p>
+</div>
+<h3 id="what-it-does-on-real-data">What it does on real data<a class="headerlink" href="#what-it-does-on-real-data" title="Permanent link">¶</a></h3>
+<p>The numbers below come from the four metagenomes of BioProject
+<a href="https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA1477390">PRJNA1477390</a> (runs
+SRR39106521–SRR39106524), microbial consortia enriched on naproxen from wastewater
+treatment plants (see <a href="../../about/test-datasets/#shotgun-test-dataset">Shotgun test dataset</a>).
+They were processed with the MetaFlux v2.5.0 defaults (Kraken2 confidence 0.15, Bracken
+<code>threshold: auto</code>) and PlusPF <code>k2_pluspf_20260626</code>, once with the gate off and once with
+it on at the default floor of 300. The floor is <code>min_distinct_minimizers</code>: the number of
+distinct minimizers a species needs in the Kraken2 report to stay in the table.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">SRR39106521</th>
+<th style="text-align: right;">SRR39106522</th>
+<th style="text-align: right;">SRR39106523</th>
+<th style="text-align: right;">SRR39106524</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Species in <code>otu_table.tsv</code>, gate off</td>
+<td style="text-align: right;">99</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">120</td>
+</tr>
+<tr>
+<td>Species, gate on (floor 300)</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">66</td>
+<td style="text-align: right;">94</td>
+<td style="text-align: right;">104</td>
+</tr>
+<tr>
+<td>Genera, gate off → on</td>
+<td style="text-align: right;">39 → 34</td>
+<td style="text-align: right;">31 → 28</td>
+<td style="text-align: right;">46 → 39</td>
+<td style="text-align: right;">52 → 44</td>
+</tr>
+<tr>
+<td>Read pairs held by the removed species</td>
+<td style="text-align: right;">4.9 %</td>
+<td style="text-align: right;">1.3 %</td>
+<td style="text-align: right;">5.8 %</td>
+<td style="text-align: right;">1.8 %</td>
+</tr>
+<tr>
+<td>Change in total read pairs</td>
+<td style="text-align: right;">−0.01 %</td>
+<td style="text-align: right;">+0.01 %</td>
+<td style="text-align: right;">−0.01 %</td>
+<td style="text-align: right;">−0.09 %</td>
+</tr>
+<tr>
+<td>Genomes detected by sylph in the same reads</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">16</td>
+</tr>
+<tr>
+<td>Species above 1 % of <code>otu_table.tsv</code>, gate off</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">12</td>
+</tr>
+<tr>
+<td>Abundant members counted from the 16S rRNA gene, no reference</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">10</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>The gate removes 14 to 22 species per sample and almost no reads.</strong> The reads of a
+  removed species go back to its parent taxon, and Bracken shares them among the
+  relatives that passed.</li>
+<li><strong>The removed species are not only rare ones.</strong> Bracken spreads the reads that Kraken2
+  could only place at genus level or above over the species below, and it had given the
+  removed species 10 to 27 times more reads than Kraken2 assigned to them. In every
+  sample one of the 20 most abundant species is removed. The largest case is
+  <em>Pseudomonas</em> sp. JS425 in SRR39106521: 372 read pairs from Kraken2, carrying 182
+  distinct minimizers, raised by Bracken to 69,992 read pairs, the eighth most abundant
+  species in the sample. Its read count passes the Bracken threshold; only the
+  distinct-minimizer count shows how little species-specific sequence is behind it (more
+  <a href="#unchanged-f1-does-not-mean-an-unchanged-table">below</a>).</li>
+<li><strong>Fewer species is the right direction for these samples.</strong> sylph, run by MetaFlux in
+  <code>both</code> mode against <code>gtdb-r232-c200-dbv1</code> and <code>fungi-refseq-2025-10-11-c200-dbv1</code>,
+  detects 9 to 16 genomes per sample; it misses organisms without a closely related
+  reference genome. A count that needs no reference database comes from the 16S rRNA
+  gene fragments in the reads, extracted with Metaxa2 2.2.3: fragments from the same part
+  of the gene are compared with one another and grouped at 97 % identity. It sees only
+  the more abundant members, roughly those above 1–2 % of the 16S gene copies, and finds
+  4 to 10 per sample, mostly from the same families that sylph and Kraken2 report. For that
+  abundant part of the community Kraken2 reports 10 to 23 species, those above 1 % of
+  its table, because it splits the reads of one organism over several related
+  species.</li>
+<li><strong>The gate does not bring the list down to that size.</strong> Most of what remains is a
+  database problem. The most abundant organism in SRR39106521 and SRR39106523,
+  <em>Pusillimonas noertemannii</em>, has no genome in PlusPF. Its reads are reported under
+  several <em>Achromobacter</em> species, which together hold more than half of each of these
+  two tables; the largest of them have tens of thousands of distinct minimizers (see the
+  warning on missing organisms in <a href="../databases/#choosing-an-index">Databases</a>). A k-mer
+  floor cannot correct that.</li>
+</ul>
+<p>The same four samples at other floors: species left in <code>otu_table.tsv</code>, and the share of
+the gate-off table held by the species that the floor removes.</p>
+<table>
+<thead>
+<tr>
+<th>Floor</th>
+<th style="text-align: right;">SRR39106521</th>
+<th style="text-align: right;">SRR39106522</th>
+<th style="text-align: right;">SRR39106523</th>
+<th style="text-align: right;">SRR39106524</th>
+<th style="text-align: right;">Read pairs held by removed species</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none (gate off)</td>
+<td style="text-align: right;">99</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>200</td>
+<td style="text-align: right;">92</td>
+<td style="text-align: right;">73</td>
+<td style="text-align: right;">105</td>
+<td style="text-align: right;">112</td>
+<td style="text-align: right;">0.9–4.7 %</td>
+</tr>
+<tr>
+<td><strong>300 (default)</strong></td>
+<td style="text-align: right;"><strong>84</strong></td>
+<td style="text-align: right;"><strong>66</strong></td>
+<td style="text-align: right;"><strong>94</strong></td>
+<td style="text-align: right;"><strong>104</strong></td>
+<td style="text-align: right;"><strong>1.3–5.8 %</strong></td>
+</tr>
+<tr>
+<td>1,000</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">8–21 %</td>
+</tr>
+<tr>
+<td>3,000</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: right;">13–42 %</td>
+</tr>
+</tbody>
+</table>
+<p>A lower floor keeps the species with 200 to 300 distinct minimizers, 7 to 11 more per
+sample. These samples have no known composition, so they cannot show whether those
+species are real. A higher floor removes many more species, and those species hold a
+large share of the table: at 3,000, 13 to 42 % of the read pairs. Part of them moves to
+other species and part leaves the table; how the two parts split was measured with
+<code>auto</code>, whose floors on these samples run from 1,673 to 3,458 (see
+<a href="#limits-of-the-rule">Limits of the rule</a>, below). On benchmark communities of known
+composition, a fixed floor of 10,000 already lowered some samples' F1 by removing true
+species, and lower fixed floors did the same once shallower sequencing was modelled
+(3,000 at 30 % of the depth, 1,000 at 10 %). A floor scaled to the depth of the sample
+avoids removing true species that way; see the next section.</p>
+<h3 id="scaling-the-floor-with-depth">Scaling the floor with depth<a class="headerlink" href="#scaling-the-floor-with-depth" title="Permanent link">¶</a></h3>
+<p>A species that is really present leaves more distinct minimizers the deeper a sample is
+sequenced, and so, up to a limit, does a spurious call that borrows sequence from an
+abundant relative. A fixed floor is therefore lenient on deep samples and strict on
+shallow ones. KrakenUniq and Oskolkov (2026) reported the same for unique k-mers (table
+above), but neither gives a depth rule for Kraken2.</p>
+<p>MetaFlux's benchmark was used to fit one. It covers 42 samples of known composition: one
+real mock community (ZymoBIOMICS D6331, SRA run SRR29240428, BioProject PRJNA1118346)
+and 41 simulated CAMI II samples from the marine, rhizosphere and strain-madness sets
+(see <a href="../../about/test-datasets/#benchmark-data">Benchmark data</a>), with 2.6–6.5 million
+classified read pairs each, classified with three Kraken2 indices: <code>k2_pluspf_20260626</code>
+(at confidence 0.15 and 0.20), <code>k2_gtdb_genome_reps_20250609</code> (GTDB r226 representative
+genomes) and <code>k2_NCBI_reference_20251007</code> (one genome per NCBI species). A floor of <strong>one
+distinct minimizer per 1,000 classified read pairs</strong> gave the best result that was safe
+everywhere:</p>
+<ul>
+<li>species-level F1 rose by 0.067 on average (0.036 with PlusPF), against 0.0025 for the
+  fixed default of 300 (0.0003 with PlusPF);</li>
+<li>it removed 2,291 of 13,117 false species calls and 6 of 13,419 true ones (none with
+  PlusPF), and lowered no sample's F1;</li>
+<li>it stayed safe when shallower sequencing was modelled, down to 1 % of the reads, while
+  every fixed floor tested, from 300 to 10,000, lowered some samples' F1 at some depth.</li>
+</ul>
+<p>This is the same order of magnitude as KrakenUniq's slope (about 670 distinct minimizers
+per million read pairs once converted), but the number itself comes from MetaFlux's
+benchmark.</p>
+<h4 id="min_distinct_minimizers-auto"><code>min_distinct_minimizers: auto</code><a class="headerlink" href="#min_distinct_minimizers-auto" title="Permanent link">¶</a></h4>
+<p><code>auto</code> applies this rule for you, sample by sample:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">shotgun</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">kmer_evidence</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">min_distinct_minimizers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+</code></pre></div>
+<p>After Kraken2 has run, rule <code>kmer_evidence</code> works out each sample's floor from that
+sample's own Kraken2 report:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>classified pairs   clade reads of the root row
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>human pairs        clade reads of the Homo sapiens row (0 if the report has none)
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>floor              (classified pairs − human pairs) / 1,000, at most 6,500
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Classified read pairs, human excluded</th>
+<th style="text-align: right;">Floor set by <code>auto</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">150,000</td>
+<td style="text-align: right;">150</td>
+</tr>
+<tr>
+<td style="text-align: right;">500,000</td>
+<td style="text-align: right;">500</td>
+</tr>
+<tr>
+<td style="text-align: right;">1 million</td>
+<td style="text-align: right;">1,000</td>
+</tr>
+<tr>
+<td style="text-align: right;">2 million</td>
+<td style="text-align: right;">2,000</td>
+</tr>
+<tr>
+<td style="text-align: right;">5 million</td>
+<td style="text-align: right;">5,000</td>
+</tr>
+<tr>
+<td style="text-align: right;">6.5 million or more</td>
+<td style="text-align: right;">6,500</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>One floor per sample.</strong> With a number, MetaFlux applies that one floor to every
+  sample of the run. With <code>auto</code>, each sample is judged against its own floor, so a deep
+  sample gets a higher floor than a shallow one in the same run. The four samples of the
+  <a href="#what-it-does-on-real-data">test dataset</a> get floors of 1,673 to 3,458.</li>
+<li><strong>A species stays when its count reaches the floor</strong>: distinct minimizers ≥ the
+  unrounded floor (1,672.619 in the example below), as in the benchmark, and it must also
+  clear <code>min_reads</code>. The 1 % safety rail works as with a number; its share is of all
+  classified reads, human ones included.</li>
+<li><strong>Human reads are left out.</strong> PlusPF contains the human genome and host removal is off
+  by default, so human reads would raise the floor without adding any microbial
+  evidence. This is MetaFlux's addition to the rule: in the benchmark, the host reads
+  left in a sample counted as classified. The row is recognised by its taxid (9606) and
+  its name, so a database whose taxids are not NCBI's (a GTDB-based one) is not affected.
+  Reads of other hosts are not subtracted. With PlusPF they mostly stay unclassified; a
+  database that holds other host genomes classifies them, and they then raise the floor:
+  remove the host first (<a href="../decontamination/#host-removal">Decontamination</a>) or set a
+  number. The <em>Homo sapiens</em> row itself is still judged against the floor: in all four
+  samples of the test dataset it fails (605 to 1,743 distinct minimizers) and leaves the
+  table with its read pairs, where at 300 it stays.</li>
+<li><strong>The cap of 6,500.</strong> The benchmark stops at 6.5 million classified pairs. A floor that
+  keeps growing with depth eventually exceeds what a real species with a small
+  species-specific part of its genome can reach; in the model this began at about 10
+  million pairs.</li>
+<li><strong>Shallow samples.</strong> Below about 500,000 classified pairs the scaled floor gains little,
+  and below 300,000 <code>auto</code> sets it lower than the default of 300. That is intended: in
+  benchmark samples thinned to 26,000–195,000 classified pairs, the fixed floor of 300
+  lowered some samples' F1 and the scaled floor lowered none. On the one benchmark
+  sample really run at 0.76 million classified pairs, <code>auto</code> (floor 759) and 300 removed
+  the same three false species
+  (<a href="#measured-at-known-depths-and-on-deeper-samples">below</a>).</li>
+<li>
+<p><strong>Where to see the floor.</strong> Each sample's log, <code>logs/kmer_evidence/{sample}.log</code>, shows
+  how its floor was worked out:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>[kmer_evidence] auto floor: 1673810 classified read pairs, less 1191 Homo sapiens read pairs (taxid 9606): 1672619 / 1000 = 1672.619. A taxon at rank S needs at least 1673 distinct minimizers.
+</code></pre></div>
+<p>The evidence table gives the floor in its <code>reason</code> column (for <em>Sphingobium
+wenxiniae</em> in that sample, <code>distinct minimizers 1664 &lt; 1673 (auto)</code>), and the plot
+draws it, labelled <code>(auto)</code>.
+Both show it rounded up: the counts are whole numbers, so "at least 1,672.619" and
+"at least 1,673" are the same test.</p>
+</li>
+</ul>
+<p>To size a number by hand instead, for instance to judge every sample of a run against the
+same floor, divide the classified read pairs of the shallowest sample, less its human
+read pairs, by 1,000. Each sample's classified count is in <code>stats/read_tracking.txt</code>
+(column <code>classified</code>), and its human read pairs are in the <em>Homo sapiens</em> row of its
+Kraken2 report. The deeper samples are then judged against a lower floor than <code>auto</code>
+would give them. Where their extra depth is spread over the whole community, that lower
+floor is more lenient than their depth warrants; where the extra depth sits on one
+dominant organism, whose reads raise <code>auto</code>'s floor for the other species without
+adding to their evidence (see the end of this page), the lower floor is the fairer one.
+On the test dataset the single floor of 1,673 keeps 41, 33, 45 and 68 species where
+<code>auto</code> keeps 35, 25, 45 and 61.</p>
+<h4 id="why-auto-is-not-the-default">Why <code>auto</code> is not the default<a class="headerlink" href="#why-auto-is-not-the-default" title="Permanent link">¶</a></h4>
+<p><code>auto</code> is opt-in, and the default stays 300:</p>
+<ul>
+<li><strong>Its gain rests mostly on one real mock community.</strong> Three quarters of the F1 gain came
+  from the ZymoBIOMICS D6331 sample; on the three simulated CAMI II sets (41 samples) the
+  mean gain per set was 0.01–0.03.</li>
+<li><strong>Part of its safety was modelled, not measured.</strong> For the benchmark samples the
+  shallower depths were modelled from the observed counts, not sequenced. One of them
+  was then subsampled to three shallower depths and run for real with PlusPF, and
+  behaved largely as the model predicted
+  (<a href="#measured-at-known-depths-and-on-deeper-samples">below</a>); the other 41 rest on the
+  model. No benchmark sample is deeper than 6.5 million classified pairs, which is why
+  there is a cap.</li>
+<li><strong>It changes the table much more than 300 does, and read pairs leave the table</strong>: 2.7
+  to 15.1 % of the read pairs on the test dataset, against at most 0.09 % at 300, most of
+  them from an organism with no close reference genome (the last point under
+  <a href="#limits-of-the-rule">Limits of the rule</a>).</li>
+</ul>
+<h4 id="measured-at-known-depths-and-on-deeper-samples">Measured at known depths and on deeper samples<a class="headerlink" href="#measured-at-known-depths-and-on-deeper-samples" title="Permanent link">¶</a></h4>
+<p>What <code>auto</code> does on samples sequenced at known depths, and on samples deeper than any
+in the benchmark:</p>
+<p><strong>Measured at four depths.</strong> CAMI II marine sample 0, one of the benchmark samples, was
+subsampled to 2, 5 and 10 million read pairs and run together with its full 16.6
+million, with the settings of its benchmark run (PlusPF <code>k2_pluspf_20260626</code>, Kraken2
+confidence 0.15): once with the gate off, once at 300 and once with <code>auto</code>. After
+quality filtering, Kraken2 classified 0.76, 1.90, 3.79 and 6.31 million pairs. Species
+were scored as in the benchmark, against the sample's 252 gold-standard species:</p>
+<table>
+<thead>
+<tr>
+<th>Classified read pairs</th>
+<th style="text-align: right;">0.76 M</th>
+<th style="text-align: right;">1.90 M</th>
+<th style="text-align: right;">3.79 M</th>
+<th style="text-align: right;">6.31 M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Floor set by <code>auto</code></td>
+<td style="text-align: right;">759</td>
+<td style="text-align: right;">1,896</td>
+<td style="text-align: right;">3,788</td>
+<td style="text-align: right;">6,309</td>
+</tr>
+<tr>
+<td>True / false species, gate off</td>
+<td style="text-align: right;">217 / 71</td>
+<td style="text-align: right;">216 / 69</td>
+<td style="text-align: right;">216 / 68</td>
+<td style="text-align: right;">216 / 68</td>
+</tr>
+<tr>
+<td>True / false species, 300</td>
+<td style="text-align: right;">217 / 68</td>
+<td style="text-align: right;">216 / 67</td>
+<td style="text-align: right;">216 / 66</td>
+<td style="text-align: right;">216 / 67</td>
+</tr>
+<tr>
+<td>True / false species, <code>auto</code></td>
+<td style="text-align: right;">217 / 68</td>
+<td style="text-align: right;">216 / 64</td>
+<td style="text-align: right;">216 / 63</td>
+<td style="text-align: right;">216 / 61</td>
+</tr>
+<tr>
+<td>Recall, gate off, 300 and <code>auto</code></td>
+<td style="text-align: right;">0.861</td>
+<td style="text-align: right;">0.857</td>
+<td style="text-align: right;">0.857</td>
+<td style="text-align: right;">0.857</td>
+</tr>
+<tr>
+<td>Precision, gate off → 300 → <code>auto</code></td>
+<td style="text-align: right;">0.754 → 0.761 → 0.761</td>
+<td style="text-align: right;">0.758 → 0.763 → 0.771</td>
+<td style="text-align: right;">0.761 → 0.766 → 0.774</td>
+<td style="text-align: right;">0.761 → 0.763 → 0.780</td>
+</tr>
+<tr>
+<td>Species-level F1, gate off</td>
+<td style="text-align: right;">0.804</td>
+<td style="text-align: right;">0.804</td>
+<td style="text-align: right;">0.806</td>
+<td style="text-align: right;">0.806</td>
+</tr>
+<tr>
+<td>F1 change, 300</td>
+<td style="text-align: right;">+0.0045</td>
+<td style="text-align: right;">+0.0030</td>
+<td style="text-align: right;">+0.0030</td>
+<td style="text-align: right;">+0.0015</td>
+</tr>
+<tr>
+<td>F1 change, <code>auto</code></td>
+<td style="text-align: right;">+0.0045</td>
+<td style="text-align: right;">+0.0076</td>
+<td style="text-align: right;">+0.0076</td>
+<td style="text-align: right;">+0.0107</td>
+</tr>
+<tr>
+<td>True / false species, <code>auto</code>, as the depth model predicted</td>
+<td style="text-align: right;">216 / 66</td>
+<td style="text-align: right;">216 / 64</td>
+<td style="text-align: right;">216 / 63</td>
+<td style="text-align: right;">the model's starting point</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>No true species was removed</strong>, at any depth, by either floor: recall is the same
+  with the gate off, at 300 and with <code>auto</code>, at every depth. Relative to its floor, the true species closest to
+  removal was <em>Aliivibrio wodanis</em> at full depth, 7,263 distinct minimizers against
+  6,309 (1.15 times the floor); at 0.76 million the weakest true species,
+  <em>Synechococcus</em> sp. WH 8020, had 1,186 against 759.</li>
+<li><strong>The depth model held where it was really tested.</strong> The model starts from the
+  full-depth run and thins its calls to a shallower depth, so the 6.31 M column is its
+  starting point, not a test, and the two middle depths are the real tests: at 1.90 and
+  3.79 million it gave the numbers of true and false species of <code>auto</code> exactly, and the
+  true species kept the distinct minimizers it predicted for them (median within 1 %). At
+  0.76 million it was off in two ways. Species near Bracken's read threshold come and go
+  by chance when reads are subsampled (six crossed it at 0.76 million, one at 1.90),
+  which the model cannot see and no floor can correct; and three false species had 1.6
+  to 3.6 times fewer distinct minimizers than the model gave them, so at that depth 300
+  removed as many false species as <code>auto</code> did.</li>
+<li><strong>The read pairs in the table hardly changed</strong>: by less than 0.05 %, with either floor,
+  at every depth.</li>
+</ul>
+<p>This is one simulated sample on one index: it measures the depths the benchmark only
+modelled, for this sample, and says nothing about the other 41 benchmark samples.</p>
+<p><strong>A deep mock community.</strong> MBARC-26 is a mock of 23 bacteria and 3 archaea with known
+genomes (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5037974/">Singer et al., 2016</a>), here
+in the library sequenced by
+<a href="https://doi.org/10.1038/s41467-018-05555-0">Hardwick et al. (2018)</a> (SRA run
+SRR6392275). With PlusPF <code>k2_pluspf_20260626</code> it has 51.9 million classified read pairs,
+eight times the deepest benchmark sample, so <code>auto</code> sets the cap, 6,500; without the cap
+the floor would be 51,851. The gate was run on the existing Kraken2 report and Bracken
+was not run again, so what follows is which species each floor keeps, not how the read
+counts move.</p>
+<table>
+<thead>
+<tr>
+<th>Floor</th>
+<th>Members removed, of 26</th>
+<th style="text-align: right;">Other species rows of the report kept, of 729</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>300</td>
+<td><em>Nocardiopsis dassonvillei</em></td>
+<td style="text-align: right;">105</td>
+</tr>
+<tr>
+<td><code>auto</code> (the cap, 6,500)</td>
+<td><em>N. dassonvillei</em></td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>Without the cap (51,851)</td>
+<td><em>N. dassonvillei</em>, <em>Escherichia coli</em></td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><em>N. dassonvillei</em> has 15 read pairs from Kraken2 in this library and 264 distinct
+  minimizers, so every floor removes it from the report: the one true member a floor
+  removed in these tests, and a very thin one. <em>E. coli</em> K-12 has 713 read pairs and
+  9,450 distinct minimizers, a member that is there and that a floor growing without
+  limit would remove from the report; the cap keeps it.</li>
+<li><strong>The final table keeps the same species at every floor</strong>, the same as with the gate
+  off: Bracken's read threshold at this depth (<code>-t 2593</code>) already leaves out both thin
+  members, and the other 24 members, and <em>Lysobacter enzymogenes</em>, which is not in the
+  mock (154,092 distinct minimizers), pass every floor.</li>
+<li>The library has 2×125 bp reads, shorter than the 2×150 bp the rule assumes (see
+  <a href="#limits-of-the-rule">Limits of the rule</a>), so the floor is relatively stricter here
+  than on the benchmark; it still removed no member that Bracken keeps.</li>
+</ul>
+<p><strong>Deep, diverse soils.</strong> Seven forest soils from the Schönbuch, Germany (BioProject
+PRJNA717813; the O, A and B horizons of a Cambisol and the O and A horizons of a Podsol
+and a Stagnosol), with 50 to 108 million read pairs after quality filtering, of which
+PlusPF <code>k2_pluspf_20260626</code> classified only 4.0 to 8.6 million. <code>auto</code> set floors of
+3,953 to 6,500, the cap in four of them. Their composition is not known, so this shows
+how much <code>auto</code> removes, not whether it is right. As for the mock, the gate was run on
+the existing reports and Bracken was not run again.</p>
+<ul>
+<li><strong>Most species rows of the report go, few species of the table.</strong> <code>auto</code> removed 59 to
+  76 % of the species rows of each Kraken2 report (300: 9 to 13 %); those rows held 0.13
+  to 0.22 % of the classified reads. Of the 39 to 69 species per soil in the final table
+  with the gate off, it removed none in three soils and one to three in the other four,
+  all of them kept at 300: <em>Kribbella</em> sp. NBC_01484 in four soils (425 to 856 read
+  pairs from Kraken2, 2,300 to 3,703 distinct minimizers) and two <em>Bradyrhizobium</em>
+  species in one.</li>
+<li><strong>Those species held up to 5.6 % of a table, and that is the most a table can lose.</strong>
+  Bracken had raised <em>Kribbella</em> sp. NBC_01484 from its 425 to 856 read pairs to
+  67,000–172,000; the three species removed from one soil held 5.6 % of its table, the
+  one species removed from each of the other three 1.1 to 2.6 %. A species that passes
+  the gate never loses read pairs when its relatives are removed, so the loss is at most
+  this share; how much of it moves to relatives and how much leaves the table was not
+  measured.</li>
+<li><strong>The cap changed no species of the table.</strong> Without it the four capped soils would get
+  floors of 7,007 to 8,607, and 42 to 232 more species rows of their reports would go,
+  none of them in the final table.</li>
+</ul>
+<h4 id="limits-of-the-rule">Limits of the rule<a class="headerlink" href="#limits-of-the-rule" title="Permanent link">¶</a></h4>
+<p>These hold with <code>auto</code> and with a number sized by hand:</p>
+<ul>
+<li><strong>It rests on limited data</strong> (see <a href="#why-auto-is-not-the-default">Why <code>auto</code> is not the default</a>).</li>
+<li><strong>Do not go above 1.5 per 1,000 pairs</strong> when you size a number by hand; <code>auto</code> uses 1
+  per 1,000. At 1.5 rare true species start to be removed (92 of 13,419 true calls), and
+  from 2 per 1,000 some samples' F1 falls even at full depth. On the CAMI II sample
+  measured at full depth (above), 1.5 per 1,000 would set the floor at 9,463 and remove a
+  true species, <em>Aliivibrio wodanis</em> (7,263 distinct minimizers).</li>
+<li><strong>Do not go above 6,500</strong>, by hand either, for the reason <code>auto</code> stops there (the cap,
+  above).</li>
+<li><strong>Host reads.</strong> <code>auto</code> leaves out the <em>Homo sapiens</em> read pairs only. When you size a
+  number by hand, subtract the read pairs Kraken2 assigned to the host (for human, the
+  <em>Homo sapiens</em> row of the report), or remove the host first
+  (<a href="../decontamination/#host-removal">Decontamination</a>).</li>
+<li><strong>Library layout.</strong> The rule assumes paired 2×150 bp Illumina reads with little mate
+  overlap and few duplicates. Shorter reads, single-end data, overlapping mates and
+  duplicate-rich libraries give fewer distinct minimizers per read pair, so the same
+  floor is stricter for them; use a lower number rather than <code>auto</code>.</li>
+<li><strong>The floor follows the depth of the whole sample, not the reads of each species.</strong> In
+  a sample dominated by one organism, the other species face a higher floor without
+  having more reads of their own; an example is at the end of this page.</li>
+<li>
+<p><strong>It changes the table more than 300 does, and read pairs leave the table.</strong> On the
+  test dataset above (1.7–3.5 million classified pairs), <code>auto</code> keeps 25–61 species per
+  sample, against 66–104 at 300, and 2.7–15.1 % of the read pairs leave the table,
+  against at most 0.09 % at 300:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">SRR39106521</th>
+<th style="text-align: right;">SRR39106522</th>
+<th style="text-align: right;">SRR39106523</th>
+<th style="text-align: right;">SRR39106524</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classified read pairs</td>
+<td style="text-align: right;">2,268,774</td>
+<td style="text-align: right;">3,458,847</td>
+<td style="text-align: right;">1,673,810</td>
+<td style="text-align: right;">2,177,429</td>
+</tr>
+<tr>
+<td><em>Homo sapiens</em> read pairs, left out</td>
+<td style="text-align: right;">1,843</td>
+<td style="text-align: right;">1,721</td>
+<td style="text-align: right;">1,191</td>
+<td style="text-align: right;">1,451</td>
+</tr>
+<tr>
+<td>Floor set by <code>auto</code></td>
+<td style="text-align: right;">2,267</td>
+<td style="text-align: right;">3,458</td>
+<td style="text-align: right;">1,673</td>
+<td style="text-align: right;">2,176</td>
+</tr>
+<tr>
+<td>Species in <code>otu_table.tsv</code>, gate off</td>
+<td style="text-align: right;">99</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">120</td>
+</tr>
+<tr>
+<td>Species, 300</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">66</td>
+<td style="text-align: right;">94</td>
+<td style="text-align: right;">104</td>
+</tr>
+<tr>
+<td>Species, one floor of 1,673 for every sample</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">68</td>
+</tr>
+<tr>
+<td>Species, <code>auto</code></td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">61</td>
+</tr>
+<tr>
+<td>Genera, gate off → <code>auto</code></td>
+<td style="text-align: right;">39 → 12</td>
+<td style="text-align: right;">31 → 10</td>
+<td style="text-align: right;">46 → 18</td>
+<td style="text-align: right;">52 → 23</td>
+</tr>
+<tr>
+<td>Read pairs held by the species <code>auto</code> removes</td>
+<td style="text-align: right;">29 %</td>
+<td style="text-align: right;">13 %</td>
+<td style="text-align: right;">33 %</td>
+<td style="text-align: right;">14 %</td>
+</tr>
+<tr>
+<td>Change in total read pairs, 300</td>
+<td style="text-align: right;">−0.01 %</td>
+<td style="text-align: right;">+0.01 %</td>
+<td style="text-align: right;">−0.01 %</td>
+<td style="text-align: right;">−0.09 %</td>
+</tr>
+<tr>
+<td>Change in total read pairs, <code>auto</code></td>
+<td style="text-align: right;">−15.1 %</td>
+<td style="text-align: right;">−11.1 %</td>
+<td style="text-align: right;">−4.2 %</td>
+<td style="text-align: right;">−2.7 %</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Of the read pairs the removed species held, 15 to 87 % went to species that
+  stayed; the rest left the table, because no species of their genus, family or
+  order was left to take them.</li>
+<li>Most of what left belongs to one order, Sphingomonadales. In SRR39106521 and
+  SRR39106522 every one of its 24 and 23 species fails (the strongest,
+  <em>Novosphingobium pentaromativorans</em>, has 2,174 and 2,156 distinct minimizers
+  against floors of 2,267 and 3,458), and the whole order, 16 and 11 % of the two
+  tables, is dropped; the rest of each table changes by about 1 % or less (+19,800
+  and −854 read pairs). Where one species of the order passes, it collects most of
+  the order's reads: in SRR39106523 <em>N. pentaromativorans</em> goes from 40,710 to
+  283,996 read pairs, on about the same distinct-minimizer count as in the two
+  samples that drop it.</li>
+<li>The order seems to be a real member of these communities without a close
+  reference genome, not a spurious call. That reading rests on two indirect signs,
+  not on a measurement: the 16S rRNA gene fragments in the same reads, classified
+  by Metaxa2 against SILVA, put 13–21 % of them in the order, and sylph finds no
+  genome of the order in any sample. Kraken2 then spreads its reads over many named
+  species, none with much species-specific sequence, and the floor removes them
+  all.</li>
+<li><code>auto</code> also removes <em>Homo sapiens</em> from all four samples (605 to 1,743 distinct
+  minimizers, below its sample's floor in all four); at 300 the row stays. A user
+  who reads human contamination off <code>otu_table.tsv</code> loses it.</li>
+<li>The 25–61 species left are still well above the 9–16 genomes sylph finds. Compare
+  <code>otu_table.tsv</code> with the gate off and on before relying on <code>auto</code>, and do not take
+  the estimate of dropped read pairs in <code>logs/kmer_evidence/{sample}.log</code> for the
+  measured change: with <code>auto</code> it was 3.5 and 3.9 times too low in the two samples
+  that lose a whole order, because it only sees the reads Kraken2 assigned, not
+  those Bracken moves.</li>
+</ul>
+</li>
+</ul>
+<h2 id="why-the-default-is-enabled-false">Why the default is <code>enabled: false</code><a class="headerlink" href="#why-the-default-is-enabled-false" title="Permanent link">¶</a></h2>
+<p>The gate is off by default because a correctly scaled
+<a href="../confidence-and-threshold/">Bracken threshold</a> already removes most of what it would
+remove. It has been run on 46 samples: the D6331 mock, the four PRJNA1477390 metagenomes
+and 41 CAMI II samples, and on the existing Kraken2 reports of the MBARC-26 mock and
+seven forest soils (<a href="#measured-at-known-depths-and-on-deeper-samples">above</a>). In
+gate-on/gate-off runs of CAMI II samples at several depths with PlusPF
+<code>k2_pluspf_20251015</code>, the gate changed species-level F1 by a mean of <strong>+0.0009</strong> at the
+depth-scaled threshold, and by zero on the strain-madness and rhizosphere samples at
+every depth tested. At the former fixed <code>-t 10</code> the mean was <strong>+0.0079</strong>, about nine
+times more. So the gate mainly helps when the Bracken threshold is not scaled to depth;
+with a scaled threshold it adds little.</p>
+<div class="admonition note">
+<p class="admonition-title">Which database build those two numbers come from</p>
+<p>Both figures come from gate-on/gate-off runs on PlusPF <code>k2_pluspf_20251015</code> (15
+sample-depth combinations at the scaled threshold, 11 at the fixed one). The
+<code>k2_pluspf_20260626</code> benchmark runs had the gate off; removing from their Bracken
+output the species the gate would prune at the default floor of 300 changes mean
+species-level F1 by +0.0003.</p>
+</div>
+<h3 id="unchanged-f1-does-not-mean-an-unchanged-table">Unchanged F1 does not mean an unchanged table<a class="headerlink" href="#unchanged-f1-does-not-mean-an-unchanged-table" title="Permanent link">¶</a></h3>
+<p>The two filters ask different questions. The threshold asks <em>how many reads</em>; the gate
+asks <em>how much distinct sequence</em>. A taxon can pass one and fail the other, and an
+aggregate score of 250+ species barely notices when a single one flips.</p>
+<p><em>Pseudomonas</em> sp. JS425 in the four test samples, with the Bracken threshold scaled to
+depth (<code>threshold_alpha</code> 5×10⁻⁵):</p>
+<table>
+<thead>
+<tr>
+<th>Sample</th>
+<th style="text-align: right;">Classified pairs</th>
+<th style="text-align: right;">Bracken <code>-t</code></th>
+<th style="text-align: right;">Kraken2 pairs</th>
+<th style="text-align: right;">Distinct minimizers</th>
+<th style="text-align: left;">Passes <code>-t</code></th>
+<th style="text-align: right;">After Bracken, gate off</th>
+<th style="text-align: left;">Gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SRR39106521</td>
+<td style="text-align: right;">2,268,774</td>
+<td style="text-align: right;">113</td>
+<td style="text-align: right;">372</td>
+<td style="text-align: right;">182</td>
+<td style="text-align: left;">yes</td>
+<td style="text-align: right;">69,992</td>
+<td style="text-align: left;">removed</td>
+</tr>
+<tr>
+<td>SRR39106522</td>
+<td style="text-align: right;">3,458,847</td>
+<td style="text-align: right;">173</td>
+<td style="text-align: right;">103</td>
+<td style="text-align: right;">181</td>
+<td style="text-align: left;">no</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: left;">removed</td>
+</tr>
+<tr>
+<td>SRR39106523</td>
+<td style="text-align: right;">1,673,810</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">301</td>
+<td style="text-align: right;">181</td>
+<td style="text-align: left;">yes</td>
+<td style="text-align: right;">51,418</td>
+<td style="text-align: left;">removed</td>
+</tr>
+<tr>
+<td>SRR39106524</td>
+<td style="text-align: right;">2,177,429</td>
+<td style="text-align: right;">109</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">181</td>
+<td style="text-align: left;">yes</td>
+<td style="text-align: right;">8,935</td>
+<td style="text-align: left;">removed</td>
+</tr>
+</tbody>
+</table>
+<p>In SRR39106521 the 372 read pairs pass the threshold, but they rest on 182 distinct
+minimizers, each hit about 60 times, and Bracken raises the call to 3 % of the sample.
+The threshold keeps JS425 in three samples and drops it from the fourth only because the
+cut-off falls differently there; in a presence/absence plot that would look like a real
+difference between samples. The gate removes it from all four.</p>
+<p>These samples have no known composition, so they do not enter the F1 scores above. That
+is why the benchmark shows almost no gain from the gate while the table changes.</p>
+<p><strong>When to consider turning it on:</strong> communities the database covers poorly, where reads
+from organisms absent from the database are assigned to their relatives. The evidence
+for this is limited. It rests on cases like JS425 in the wastewater test samples, which
+have no known composition; on the CAMI II rhizosphere samples, the poorly covered
+benchmark set with a known composition, the gate hardly changed F1. For gut, clinical
+or other samples close to RefSeq, leave it off. Either way the gated report is written
+even when the gate is off, so compare it with the Kraken2 report before deciding.</p>
+<h2 id="validation-status">Validation status<a class="headerlink" href="#validation-status" title="Permanent link">¶</a></h2>
+<p>What the gate was tested against, and what those tests could and could not show.</p>
+<h3 id="what-has-been-checked">What has been checked<a class="headerlink" href="#what-has-been-checked" title="Permanent link">¶</a></h3>
+<p>The gate was checked on one real mock community (Zymo D6331, below) and on
+<a href="https://www.nature.com/articles/s41592-022-01431-4">CAMI II</a>'s marine, rhizosphere and
+strain-madness gold-standard sets (41 samples): in gate-on/gate-off runs with PlusPF
+<code>k2_pluspf_20251015</code>, and by applying it to the Bracken calls of the
+<code>k2_pluspf_20260626</code> runs. These results were scored with the benchmark's own scorer. On
+the <code>k2_pluspf_20260626</code> runs (Kraken2 confidence 0.15 and 0.20) that scorer was
+checked against OPAL 1.0.13, the CAMI assessment tool: given the same input preparation,
+OPAL's species-level counts of true positives, false positives and false negatives equal
+the scorer's in every sample. The full methodology and the
+numbers that matter for choosing a threshold are on the
+<a href="../confidence-and-threshold/">confidence and threshold</a> page. The result for this gate:
+once the Bracken threshold is scaled to depth it adds at most 0.002 F1 (PlusPF
+<code>k2_pluspf_20251015</code>), but it still removes calls like JS425 above, which a read-count
+threshold cannot detect. The second mock on this page, MBARC-26, and the seven forest
+soils were used only to test the <code>auto</code> floor beyond the benchmark's depth
+(<a href="#measured-at-known-depths-and-on-deeper-samples">above</a>); they do not enter these
+scores.</p>
+<p>One real mock community: the <a href="https://files.zymoresearch.com/protocols/_d6331_zymobiomics_gut_microbiome_standard.pdf">ZymoBIOMICS Gut Microbiome
+Standard (D6331)</a>,
+SRA run <a href="https://www.ncbi.nlm.nih.gov/sra/SRR29240428">SRR29240428</a> (BioProject
+PRJNA1118346, <a href="https://doi.org/10.1128/msystems.01239-24">Martí et al. 2025</a>; see
+<a href="../../about/test-datasets/#benchmark-data">Benchmark data</a>), randomly subsampled so that
+5.30 million read pairs remained after fastp, of which Kraken2 with PlusPF
+<code>k2_pluspf_20251015</code> classified 5.29 million.</p>
+<p>The standard is sold as 21 strains. A species-level profiler can only ever see <strong>17
+species</strong>, because five of the 21 are <em>Escherichia coli</em> strains at 2.8% each that collapse
+into one <em>E. coli</em> row at 14%. That ceiling is arithmetic, not a reference-database gap.
+Zymo lists the standard's <em>Fusobacterium</em> as <em>F. nucleatum</em> (strain 2/1/50A), but sylph
+(GTDB r232), MetaPhlAn 4 and Kraken2 with GTDB r226 or PlusPF <code>k2_pluspf_20260626</code> place
+most of these reads in <em>F. animalis</em>, a former subspecies of <em>F. nucleatum</em> now ranked as
+a species. It is therefore scored as <em>F. animalis</em>, and calls of <em>F. nucleatum</em>,
+<em>F. polymorphum</em> and <em>F. vincentii</em> count as false positives. <em>Homo sapiens</em>, from human
+DNA in the sample, is not scored.</p>
+<p>The run was processed through the pipeline with PlusPF <code>k2_pluspf_20251015</code>, Kraken2
+confidence 0.15, Bracken at the former fixed <code>-t 10</code> and the gate off. For the gate-on
+column, Bracken was run again with the same settings on the gated report that the pipeline
+writes at a floor of 333, the file it hands to Bracken when the gate is on. A floor of 300
+gives the same species list on this run. At the current default threshold (<code>-t 264</code> for
+this run), only 2 of the 29 false positives in the table below have enough reads to pass
+(<em>F. nucleatum</em> and <em>F. polymorphum</em>), as does the unscored <em>Homo sapiens</em>; the gate removes
+none of them, and the threshold itself drops <em>Salmonella enterica</em>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Gate off</th>
+<th style="text-align: right;">Gate on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>True members recovered</td>
+<td style="text-align: right;">15 / 17</td>
+<td style="text-align: right;"><strong>15 / 17</strong></td>
+</tr>
+<tr>
+<td>False-positive species</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;"><strong>18</strong></td>
+</tr>
+<tr>
+<td>Precision</td>
+<td style="text-align: right;">0.341</td>
+<td style="text-align: right;"><strong>0.455</strong></td>
+</tr>
+<tr>
+<td>F1</td>
+<td style="text-align: right;">0.492</td>
+<td style="text-align: right;"><strong>0.600</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>No true member was removed.</strong> <em>Salmonella enterica</em>, 0.01% of the standard and 71
+  classified read pairs, has 3,400 distinct minimizers at a duplicity of 1.2, more than ten
+  times the floor, and is kept. The gate depends on this difference: a rare species can
+  still have many distinct minimizers.</li>
+<li>The two members never recovered (<em>Enterococcus faecalis</em> at 0.001%, <em>Clostridium
+  perfringens</em> at 0.0001%) have 2 and 5 Kraken2 read pairs, below Bracken's <code>-t 10</code>, so
+  neither reaches the table, with the gate off or on. Both have species entries in the
+  database, so they were missed for lack of reads.</li>
+<li><strong>Quantitative accuracy did not change.</strong> With the human row left out, L1 distance to
+  the theoretical composition was 27.80 without the gate and 27.79 with it, Shannon <em>H</em>
+  2.321 and 2.320, and the Bray–Curtis dissimilarity between the two profiles 0.0001.
+  The 43 taxa the gate removed at 333 held 445 of the 5.3 million read pairs (the same 43
+  taxa at 300). Any ordination or differential-abundance test would give the same answer
+  from both tables.</li>
+<li><strong>Richness, on the other hand, improved substantially</strong> — which is where the gate did its
+  work on this dataset:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Observed richness</th>
+<th style="text-align: right;">Truth</th>
+<th style="text-align: right;">Gate off</th>
+<th style="text-align: right;">Gate on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Species</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">44 (+159%)</td>
+<td style="text-align: right;"><strong>33 (+94%)</strong></td>
+</tr>
+<tr>
+<td>Genera</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">24 (+41%)</td>
+<td style="text-align: right;"><strong>16 (−6%)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>On this mock the gate changed which species are listed, not their abundances.
+If you report how many taxa you detected, or work with presence/absence, that matters. If
+you only ever compare relative abundances between samples, on data like this it will not
+change your conclusions.</p>
+<h3 id="why-richness-is-still-over-estimated-with-the-gate-on">Why richness is still over-estimated with the gate on<a class="headerlink" href="#why-richness-is-still-over-estimated-with-the-gate-on" title="Permanent link">¶</a></h3>
+<p>With the gate on, 33 species other than human are still reported against 17 in the
+standard. Most of the 18 false positives are not the kind of call the gate is designed to
+remove.</p>
+<p>Of the 18 false-positive species that survive, <strong>17 are congeners of a genuine member</strong> —
+and the other one is defensible. The table also lists <em>Homo sapiens</em>, which is not
+scored:</p>
+<table>
+<thead>
+<tr>
+<th>Survivor</th>
+<th style="text-align: right;">Reads after Bracken</th>
+<th style="text-align: right;">Distinct minimizers</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Fusobacterium nucleatum</em>, <em>F. vincentii</em>, <em>F. polymorphum</em></td>
+<td style="text-align: right;">226,289</td>
+<td style="text-align: right;">1,113–30,392</td>
+<td>Close relatives of the true member, <em>F. animalis</em>; all four were subspecies of <em>F. nucleatum</em> until <em>F. animalis</em>, <em>F. vincentii</em> and <em>F. polymorphum</em> were raised to species rank. With <code>k2_pluspf_20251015</code>, Kraken2 gives <em>F. nucleatum</em> more reads than <em>F. animalis</em> (18,038 against 7,570)</td>
+</tr>
+<tr>
+<td><em>Homo sapiens</em></td>
+<td style="text-align: right;">1,802</td>
+<td style="text-align: right;">15,682</td>
+<td>Trace human DNA from handling; present in the sample, a contaminant that is not scored</td>
+</tr>
+<tr>
+<td><em>Staphylococcus epidermidis</em></td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1,212</td>
+<td>A common skin bacterium and contaminant; plausibly present in the sample</td>
+</tr>
+<tr>
+<td>14 further congeners of <em>Veillonella</em>, <em>Fusobacterium</em>, <em>Saccharomyces</em>, <em>Bacteroides</em>, <em>Candida</em>, <em>Clostridioides</em></td>
+<td style="text-align: right;">1,543</td>
+<td style="text-align: right;">566–10,344</td>
+<td>Close relatives of an abundant true member</td>
+</tr>
+</tbody>
+</table>
+<p>All these survivors carry <strong>large</strong> distinct-minimizer counts — <em>Saccharomyces paradoxus</em>
+has 10,344 on just 144 read pairs, at a duplicity of 2.0. That is broad, un-repetitive evidence,
+and it is genuinely in the read data: <em>S. cerevisiae</em> is a real member of the standard,
+and its sequence matches a great deal of what the database files under its sister
+species.</p>
+<p>So there are two different ways a species-level call goes wrong, and only one is an
+evidence problem:</p>
+<ul>
+<li><strong>Thin evidence</strong> — a few conserved minimizers hit over and over. Low distinct count,
+  high duplicity. <strong>The gate removes these.</strong></li>
+<li><strong>Mis-attributed evidence</strong> — a genuinely present organism whose sequence matches a close
+  relative's database entry. High distinct count, low duplicity. <strong>The gate does not remove
+  these</strong>, and should not: the sequence is in the sample, and only the species label is
+  wrong.</li>
+</ul>
+<p>The residual inflation is almost entirely the second kind, which is a property of how
+finely the reference database splits closely related organisms — not something any
+k-mer counting method can detect. The practical consequence is visible in the table above:
+at <strong>genus</strong> rank, where those distinctions disappear, the gate brings richness from 41%
+above the true value to <strong>6% below</strong> it: the 16 genera left are 15 of the 17 true ones
+(the two members that never reach the table are missing) and <em>Staphylococcus</em>.</p>
+<h3 id="what-this-does-not-show">What this does not show<a class="headerlink" href="#what-this-does-not-show" title="Permanent link">¶</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">On D6331 the gate removed no true species; on CAMI II it changed F1 very little</p>
+<p>Every organism in D6331 has a species-level entry in the database used. When that is
+true, classification is already close to correct, most false positives are a thin
+tail of taxa with few reads, and there is little for an evidence filter to repair,
+which is what the CAMI II benchmark found: with the Bracken threshold scaled to depth,
+this gate adds at most 0.002 F1 across marine, rhizosphere and strain-madness samples
+(PlusPF <code>k2_pluspf_20251015</code>).</p>
+<p>The gate is still useful in cases like JS425 above: a taxon with an ordinary read
+count but few distinct minimizers. A read-count threshold cannot detect this, however
+it is scaled.</p>
+</div>
+<p>The CAMI II benchmark described on the <a href="../confidence-and-threshold/">confidence and threshold</a>
+page covers what one mock cannot: larger and more even communities (marine, 256–381
+species per sample), several samples at several depths, communities with genomes absent
+from the reference (rhizosphere: only 165 of its 307 gold-standard species, 54 %, are in
+PlusPF <code>k2_pluspf_20260626</code>), and sample types beyond gut and wastewater. It agrees with
+the D6331 result that the gate removes no true species from the final table at full
+sequencing depth (on MBARC-26 it removed one thin member from the Kraken2 report, which
+Bracken's read threshold drops anyway), and it shows that once the Bracken threshold is
+scaled to depth the gate changes F1 very little.</p>
+<p>Still untested: everything above used short-read Illumina data. Long-read or hybrid data,
+and sample types with sparser reference coverage than rhizosphere, have not been tried. If
+you switch the gate on, check the evidence tables for what it removed.</p>
+<h3 id="limitation-very-close-relatives">Limitation: very close relatives<a class="headerlink" href="#limitation-very-close-relatives" title="Permanent link">¶</a></h3>
+<p>Very close relatives defeat the method, and no k-mer evidence measure fixes this.
+<em>Shigella dysenteriae</em> is not in D6331, and only 3 read pairs were assigned to it, too few
+to pass Bracken's <code>-t 10</code>. Yet the sample holds 1,042 distinct minimizers that the
+database marks as specific to it, more than three read pairs can carry and more than
+three times the floor, so the gate would keep it. <em>Shigella</em> and <em>E. coli</em> are similar
+enough that minimizers the database marks as <em>Shigella</em>-specific are genuinely present
+in <em>E. coli</em> reads. That is a property of the reference taxonomy, not something this
+filter can detect.</p>
+<h3 id="threshold-stability">Threshold stability<a class="headerlink" href="#threshold-stability" title="Permanent link">¶</a></h3>
+<p>A fixed threshold should give a species the same verdict in every sample, but it does not
+always. Of 620 species found in more than one of the four PRJNA1477390 test samples,
+<strong>123 (20 %)</strong> got different verdicts at the floor of 300:</p>
+<ul>
+<li><strong>62 % differ mainly in depth</strong>: the species had at least five times fewer reads in one
+  sample, and with few reads it cannot reach enough distinct minimizers. This change of
+  verdict is probably correct.</li>
+<li><strong>38 % have read counts less than five-fold apart.</strong> 20 of these 47 species lie close to
+  the floor, between 200 and 450 distinct minimizers, in every sample. <em>Sphingomonas
+  paucimobilis</em> is one: 155 to 199 read pairs in each sample, 350 distinct minimizers in
+  SRR39106524 (kept) and 277 to 295 in the other three (removed). The other 27 lie further
+  from the floor in at least one sample, sometimes much further: <em>Sphingopyxis
+  lindanitolerans</em> has 93 to 105 distinct minimizers in three samples and 10,626 in the
+  fourth, on 95 to 282 read pairs.</li>
+</ul>
+<p>Any fixed cut-off behaves like this, whatever its value. Check the evidence tables for
+species whose verdict differs between samples.</p>
+<h2 id="what-does-not-work">What does not work<a class="headerlink" href="#what-does-not-work" title="Permanent link">¶</a></h2>
+<p>Three approaches were tested on the four PRJNA1477390 test samples and rejected. They are
+described here because each seems reasonable before it is measured.</p>
+<p><strong>A threshold on distinct minimizers alone is partly an abundance filter.</strong> The distinct
+count correlates with read count (Pearson <em>r</em> = +0.71 on log-log across the 2,418 species
+rows of the four Kraken2 reports), so some of what it removes, it removes for being rare.
+This is why the published thresholds pair the k-mer count with an explicit read floor —
+<code>min_reads</code> exists for exactly that, and is 0 by default only because
+<a href="https://doi.org/10.3389/fmicb.2026.1603339">Oskolkov (2026)</a> found that filtering on
+unique k-mers alone was enough to reach the best F1, with no read-count filter needed.</p>
+<p><strong>Normalising to minimizers-per-read inverts the filter.</strong> That ratio <em>falls</em> as
+abundance rises (<em>r</em> = −0.72): across the four samples its median is 84 for single-read
+species and 1.4 for species with 1,000 reads or more. A "ratio below 5" rule on
+SRR39106521 removed 80 % of the reads that had reached species rank, including the two
+species with the most reads, while keeping all 160 single-read species.</p>
+<p><strong>Thresholding duplicity removes the most abundant species.</strong> Across all species rows
+duplicity hardly changes with abundance (<em>r</em> = +0.17), but the most deeply sequenced
+species have high values, because each of their minimizers is seen many times.
+<em>Achromobacter denitrificans</em>, the largest species in all four samples, has a duplicity of
+23 to 74 on 42,000 to 1.1 million distinct minimizers. A duplicity cut-off of 10 prunes
+about as many species rows as the floor of 300 (65 % against 66 %), and its verdicts
+differ between samples less often (14 % of species against 20 %). But it would remove 73
+to 93 % of each sample's table, <em>A. denitrificans</em> included, where the floor of 300
+removes 1.3 to 5.8 %. With the gate's 1 % safety rail, which would keep
+<em>A. denitrificans</em>, it would still remove 16 to 65 %. Duplicity is therefore reported, not
+thresholded.</p>
+<p><strong>Flagging outliers against a fitted trend line finds no distinct population.</strong> Fitting
+<code>log(distinct minimizers)</code> against <code>log(reads)</code> and taking residuals looks principled,
+but the residuals are essentially normal: in SRR39106521 a "2 SD below the line" rule
+flagged 14 of 578 species, where a normal distribution predicts 13.1. There is no
+separable cluster to find, so the rule just removes the bottom few percent of <em>any</em>
+sample. Worse, because the line is fitted per sample, the same species can fall on
+opposite sides of it in different samples of one study.</p>
+<p>The conclusion for the design: judge every species against a floor that is not fitted to
+the evidence of the other species in its sample, and treat the trend line as a <em>ranking
+for the eye</em> rather than a test. The floor is one fixed number for every sample of a run
+or, with <code>auto</code>, a number set by the read pairs Kraken2 classified in the sample, human
+ones left out. With <code>auto</code> the same species can therefore get different verdicts in
+samples of different depth. That is intended when the whole community was sequenced
+deeper: a species that is really present then leaves more distinct minimizers (see
+<a href="#scaling-the-floor-with-depth">Scaling the floor with depth</a>). But the floor follows
+the depth of the whole sample, not the reads of each species, so a species with the same
+reads in a deeper sample, where it is a smaller share, faces a higher floor. In the test
+dataset <em>Novosphingobium pentaromativorans</em> has 2,156 to 2,195 distinct minimizers in
+all four samples, on 2,955 to 3,550 read pairs from Kraken2; <code>auto</code> keeps it in the two
+samples with floors of 1,673 and 2,176 and removes it from the two with floors of 2,267
+and 3,458. In the deepest of the four, 57 % of the classified pairs belong to one
+species, <em>Achromobacter denitrificans</em>, which raises the floor for everything else
+without adding to their evidence.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
