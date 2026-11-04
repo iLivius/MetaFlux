@@ -52,6 +52,30 @@ revised during the build. The set was then tested once on data not used during d
 | Licence | CC BY-SA 4.0, as GTDB |
 | Tools for the build | HMMER 3.4 (Eddy 2011) and VSEARCH 2.32.0 (Rognes et al. 2016) from bioconda, Python 3 from conda-forge |
 
+!!! warning "Known issues in version 1"
+    Checks made after the release found that check 5.4 compared each gene only with the first
+    20 MIDORI2 records VSEARCH reached, and VSEARCH reaches long records first. With a full
+    search, five genes of version 1 are 80.6–92.2 % identical to eukaryotic MIDORI2 records over
+    at least 300 aligned bases, closer than to any gene of another genome, and should have been
+    left out: `GB_GCA_004211595.1|SEDO01000025.1_7` (filed under *Pedobacter*, 92.2 % identical
+    to the chrysophyte record KF697361.1), `GB_GCA_043769975.1|JAYVIS010000415.1_2`,
+    `GB_GCA_002729235.1|PBTY01000104.1_1`, `GB_GCA_041191385.1|JBEEPA010000007.1_2` and
+    `GB_GCA_964599255.1|CAZRFT010000383.1_1`. Three more genes are 82–83 % identical to the
+    mitochondrial COX1 of the green alga *Ostreococcus tauri* and pass only because each is the
+    closest gene of another genome for the others: `GB_GCA_002726005.1|PBRS01000001.1_23`,
+    `GB_GCA_963999645.1|CAXEUY010000032.1_4` and `GB_GCA_002700775.1|PAEL01000127.1_2`.
+
+    On the MIDORI2 side, record KM679400.1 (*Mycetophila lunata*), counted as certainly
+    mitochondrial, carries a *Tisiphia* gene in its first 600 bases; record KR036430.1
+    (*Picromerus bidens*) is a *Wolbachia* sequence; and 57 records that the build judged
+    bacterial from their codons were left off the list. All of them stay in the MIDORI2 file
+    that MetaFlux 2.6 prepares.
+
+    Version 2 of the set, planned for MetaFlux 2.7.0, corrects these. Until then: an ASV in
+    `bacterial_cox1_asvs.tsv` whose `best_bacterial_gene` is one of the eight genes above is
+    probably a protist or a green alga, and an ASV in the main tables named *Mycetophila
+    lunata* or *Picromerus bidens* may be bacterial (its B and E are in `coi_screens.tsv`).
+
 ## How MetaFlux uses the set
 
 For a COI run, MetaFlux downloads the release and MIDORI2, removes from MIDORI2 the records
