@@ -1127,9 +1127,9 @@ if MODE == "amplicon":
     GYRB_DADA2           = _ref_path("gyrb_dada2",        "gyrb",  "dada2")
     RPOB_FROGS           = _ref_path("rpob_frogs",        "rpob",  "frogs")
     # COI. MIDORI2's own SINTAX file and its NCBI taxonomy snapshot are downloaded
-    # (rules fetch_midori2_coi / fetch_midori2_taxonomy); the bacterial COX1 set
-    # comes with its list of MIDORI2 records to remove (fetch_bacterial_cox1); the
-    # file VSEARCH classifies against, midori2_coi_sintax, is built from the three
+    # (rules fetch_midori2_coi / fetch_midori2_taxonomy); the set of bacterial COI
+    # homologues comes with its list of MIDORI2 records to remove (fetch_bacterial_cox1);
+    # the file VSEARCH classifies against, midori2_coi_sintax, is built from the three
     # (prepare_midori2_coi_sintax), not downloaded. MIDORI2_TAXONOMY is the path of
     # nodes.dmp; names.dmp comes out of the same zip into the same folder.
     MIDORI2_COI_RAW      = _ref_path("midori2_coi_raw",    "midori2", "raw")
@@ -1586,10 +1586,10 @@ if MODE == "amplicon":
     # ── COI screens (COI only) ──
     # Rule coi_screens (80_taxonomy.smk, script 80d_coi_screens.py) measures, for
     # every ASV, its reading frame and length (pseudogenes, NUMTs) and its identity
-    # to the bacterial COX1 set (B) and to the cleaned MIDORI2 (E). The taxonomy
+    # to bacterial COI homologues (B) and to the cleaned MIDORI2 (E). The taxonomy
     # step (80c) then removes the ASVs that fail the frame check (removed_frame) and
     # moves those with B > E to 06.taxonomy/bacterial_cox1_asvs.tsv
-    # (moved_bacterial_cox1), before keep/discard, so a bacterial COX1 ASV that
+    # (moved_bacterial_cox1), before keep/discard, so a bacterial ASV that
     # SINTAX called an animal is never counted as one. The rule runs on every COI
     # run, also with both screens off: it then only measures, and the table still
     # says what each screen would have done. The two switches are independent of

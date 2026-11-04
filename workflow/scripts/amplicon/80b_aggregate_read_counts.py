@@ -18,7 +18,7 @@ Columns (left to right):
 
 The two COI columns (COI runs only) are the reads still present after the COI
 screens of the taxonomy step: the frame check (pseudogenes, NUMTs) and the
-off-target guard (bacterial COX1 moved to 06.taxonomy/bacterial_cox1_asvs.tsv).
+off-target guard (bacterial ASVs moved to 06.taxonomy/bacterial_cox1_asvs.tsv).
 They come from asv_table_unfiltered.txt, whose filter_status column names the
 step that removed each ASV (removed_frame, moved_bacterial_cox1).
 

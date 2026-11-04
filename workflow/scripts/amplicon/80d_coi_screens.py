@@ -9,14 +9,14 @@ Why COI needs them
          has no stop codon in its reading frame, and its length differs from the
          expected one only by whole codons; a NUMT or an artefact with an
          insertion or deletion breaks one or the other.
-      2. Bacterial COX1. Many bacteria carry COX1 homologues that COI primers
-         amplify, above all Wolbachia and other Rickettsiales in insect samples.
-         MIDORI2 holds eukaryotes only, so such an ASV is assigned to a eukaryote.
-         The guard compares each ASV with a set of bacterial and archaeal COX1
-         genes from GTDB (identity B) and with the cleaned MIDORI2 (identity E):
-         an ASV closer to the bacterial set (B > E) is bacterial COX1. Why a
-         competitive comparison and not an identity floor is on the manual page
-         "Bacterial COX1 reference set (COI)".
+      2. Bacterial COI homologues. Many bacteria carry COI homologues that COI
+         primers amplify, above all Wolbachia and other Rickettsiales in insect
+         samples. MIDORI2 holds eukaryotes only, so such an ASV is assigned to a
+         eukaryote. The guard compares each ASV with a set of bacterial and
+         archaeal COI homologues from GTDB (identity B) and with the cleaned
+         MIDORI2 (identity E): an ASV closer to the bacterial set (B > E) is a
+         bacterial COI homologue. Why a competitive comparison and not an identity
+         floor is on the manual page "Bacterial COI homologues (reference set)".
     This script measures both for every ASV and writes one row per ASV. It removes
     nothing itself: rule assign_taxonomy (80c_parse_sintax.py) reads the table and
     applies the decisions inside its filter chain, so asv_table_unfiltered.txt
@@ -46,7 +46,7 @@ The reading-frame check (amplicon.coi.frame_check)
 
 The off-target guard (amplicon.coi.offtarget_guard)
     VSEARCH --usearch_global of every ASV against the cleaned MIDORI2 (E) and
-    against the bacterial COX1 set, whole genes and fragments (B), with
+    against the bacterial set, whole genes and fragments (B), with
         --id 0.5 --strand plus --maxaccepts 256 --maxrejects 2048
     (far deeper than VSEARCH's default of 1 accept and 32 rejects: with distant
     sequences the best alignment is often not among the first targets VSEARCH
@@ -54,15 +54,16 @@ The off-target guard (amplicon.coi.offtarget_guard)
     identical A/C/G/T columns / (A/C/G/T columns + internal gap columns).
     VSEARCH's own identity counts N and other ambiguity codes as identical, and
     about 9 % of MIDORI2 records contain them. A hit counts only when those
-    columns cover at least 80 % of the ASV. B > E: the ASV is bacterial COX1.
-    The E search also gives what the species flags need (written here, decided in
-    80c): the MIDORI2 records tied at the best identity, and their species.
+    columns cover at least 80 % of the ASV. B > E: the ASV is a bacterial COI
+    homologue. The E search also gives what the species flags need (written here,
+    decided in 80c): the MIDORI2 records tied at the best identity, and their
+    species.
 
 Input  (rule coi_screens in 80_taxonomy.smk)
     seqs       05.dada2/seqs_lenfilt.fasta, the final ASV set
     seqtab     05.dada2/seqtab_lenfilt_head_names.txt, its read counts
     midori2    the cleaned MIDORI2 SINTAX file (prepare_midori2_coi_sintax)
-    bacterial  the bacterial COX1 whole genes; fragments: the fragments
+    bacterial  the whole genes of the bacterial set; fragments: the fragments
 Output
     table      06.taxonomy/coi_screens.tsv, one row per ASV (columns below), read
                by rule assign_taxonomy (80c) only

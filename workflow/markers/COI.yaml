@@ -54,12 +54,12 @@ reference_values:
 #                         release_sha256.txt lists it.
 #   midori2_taxonomy      nodes.dmp and names.dmp of MIDORI2's taxonomy zip (the NCBI
 #                         snapshot MIDORI2 was built with), for the kingdom.
-#   bacterial_cox1        the bacterial COX1 reference set built for MetaFlux from GTDB
+#   bacterial_cox1        the set of bacterial COI homologues built for MetaFlux from GTDB
 #   bacterial_cox1_fragments    R232: whole genes, fragments, and the list of MIDORI2
 #   bacterial_cox1_midori2_list records at least 90 % identical to a gene that passes
 #                         checks 5.1-5.3 of the set's build (186 in GB273), marked
-#                         "removed" (170, bacterial COX1 under eukaryote names) or
-#                         "listed" (16, kept). The list is used by the
+#                         "removed" (170, bacterial COI homologues under eukaryote
+#                         names) or "listed" (16, kept). The list is used by the
 #                         conversion (records marked "removed" are dropped), the genes by
 #                         the off-target guard (identity B).
 #                         Three files of one Zenodo record, each checked against the

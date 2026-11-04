@@ -77,7 +77,7 @@ def test_conversion(tmp_path):
     headers, counts = convert(tmp_path, "record_id\tdecision\nB1.1.<1.>658\tremoved\nA1.1.<1.>658\tlisted\n")
     log_lines = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text().splitlines()
     assert log_lines[0].startswith("[midori2_to_metaflux_sintax] 4 records read from ")
-    assert log_lines[1].startswith("[midori2_to_metaflux_sintax] 1 left out as bacterial COX1 ")
+    assert log_lines[1].startswith("[midori2_to_metaflux_sintax] 1 left out as bacterial COI homologues ")
     assert log_lines[2].startswith("[midori2_to_metaflux_sintax] 3 records written to ")
     assert headers == [
         ">A1.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Muscidae,g:Musca,s:Musca_domestica;",
@@ -86,7 +86,7 @@ def test_conversion(tmp_path):
     ]
     assert counts["records read"] == "4"
     assert counts["records written"] == "3"
-    assert counts["records left out: bacterial COX1 under a eukaryote name"] == "1"
+    assert counts["records left out: bacterial COI homologue under a eukaryote name"] == "1"
     assert counts["kingdom Metazoa"] == "2"
     assert counts["kingdom none (protists)"] == "1"
     assert counts["placeholder dropped at g:"] == "2"

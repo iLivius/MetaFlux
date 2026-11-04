@@ -20,7 +20,7 @@ that are themselves bacterial COI homologues filed under eukaryotic names.
     does not separate (step 3). This manual calls them bacterial COI homologues; "bacterial"
     includes the archaea. File names, settings and output columns keep the short form `cox1`
     (for example `bacterial_cox1_gtdb-r232.v1` and `bacterial_cox1_asvs.tsv`). The README of the
-    Zenodo release and the messages of MetaFlux 2.6 use the earlier name, bacterial COX1.
+    Zenodo release and the messages of MetaFlux before 2.7 use the earlier name, bacterial COX1.
 
 !!! note "You do not build this set"
     MetaFlux downloads the released set and checks its SHA-256 sum. This page explains how

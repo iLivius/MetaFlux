@@ -52,7 +52,7 @@ output:
 # (shotgun.profiler sylph | both) are shotgun-only and must be supplied separately.
 references:
   # Marker reference databases (SILVA / UNITE / PR2 / SILVA-Euk / DD7RZ8 / FROGS /
-  # MIDORI2 / the bacterial COX1 set) are NOT listed here. Each marker pack
+  # MIDORI2 / the set of bacterial COI homologues) are NOT listed here. Each marker pack
   # (workflow/markers/<type>.yaml) declares its own DB filenames and download URLs,
   # and MetaFlux fetches them on first use into refdb_root. An entry here is needed
   # only to RELOCATE one or, for 16S, to pick the SILVA release (see below), e.g.
@@ -286,7 +286,7 @@ amplicon:
       #   rpoB : no recommended default — FROGS RefSeq has no non-rpoB contamination
       #          equivalent to filter; leave empty unless your own run shows otherwise
       #   COI  : keep [k__Metazoa]                discard []   # animal surveys; bacterial
-      #          COX1 is handled by amplicon.coi.offtarget_guard, not by a token
+      #          COI homologues are handled by amplicon.coi.offtarget_guard, not by a token
       # To drop lab/kit contaminants a blank control revealed, add them to discard,
       # e.g. discard: [o__Chloroplast, f__Mitochondria, g__Ralstonia, g__Bradyrhizobium]
       keep:    #[d__Bacteria, d__Archaea]
@@ -325,10 +325,11 @@ amplicon:
     length_tolerance: 9                       # frame_check: largest length difference, in bases, from the
                                               # run's reference length (default three codons);
                                               # a whole number, a multiple of 3, or the run stops
-    offtarget_guard: true                     # move ASVs that are closer to bacterial COX1 (B) than to
-                                              # MIDORI2 (E) out of the main tables, into
-                                              # 06.taxonomy/bacterial_cox1_asvs.tsv (Wolbachia and other
-                                              # bacterial COX1). false = measure and report, move nothing.
+    offtarget_guard: true                     # move ASVs that are closer to the set of bacterial COI
+                                              # homologues (B) than to MIDORI2 (E) out of the main tables,
+                                              # into 06.taxonomy/bacterial_cox1_asvs.tsv (Wolbachia and
+                                              # other bacterial COI homologues). false = measure and
+                                              # report, move nothing.
 
   dada2:
     pool: false                               # false | "pseudo" | true
@@ -744,7 +745,8 @@ resources:
     dada_length_filter: 2
     target_extract: 8
     assign_taxonomy: 8
-    coi_screens: 8                            # COI only: VSEARCH against MIDORI2 and the bacterial COX1 set
+    coi_screens: 8                            # COI only: VSEARCH against MIDORI2 and the set of
+                                              # bacterial COI homologues
     aggregate_read_counts: 2
     # phylogeny (optional, 16S only — see amplicon.phylogeny)
     phylo_input: 1                            # reads two text tables, writes a FASTA

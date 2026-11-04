@@ -382,8 +382,8 @@ filter_status: dict[str, str] = {aid: "kept" for aid in shared_ids}
 # verdict that already takes amplicon.coi.frame_check / offtarget_guard into
 # account: "frame" (no open reading frame in the run's frame, or a length that is
 # not whole codons away from the run's reference length), "bacterial" (closer to
-# the bacterial COX1 set than to MIDORI2, B > E) or "pass". The two screens run
-# here, BEFORE keep/discard, for two reasons: a bacterial COX1 ASV that SINTAX
+# bacterial COI homologues than to MIDORI2, B > E) or "pass". The two screens run
+# here, BEFORE keep/discard, for two reasons: a bacterial ASV that SINTAX
 # called an animal must end up in bacterial_cox1_asvs.tsv as moved, not in the
 # tables as kept by k__Metazoa; and a pseudogene must not reach the token lists.
 # They are independent of filter.enabled, which concerns the token lists only.
@@ -420,7 +420,7 @@ if coi_input:
                f"{reads_of([aid])} reads (SINTAX: {tax_strings[aid] or 'unclassified'})")
     if n_before > 0 and not filtered_ids:
         msg = (f"the COI screens removed or moved ALL {n_before} ASVs ({len(removed_frame_ids)} by "
-               f"the frame check, {len(coi_moved)} as bacterial COX1). That usually means primers or "
+               f"the frame check, {len(coi_moved)} as bacterial COI homologues). That usually means primers or "
                f"reads that are not COI; see logs/coi_screens.log and 06.taxonomy/coi_screens.tsv.")
         logmsg("ERROR: " + msg)
         log.close()

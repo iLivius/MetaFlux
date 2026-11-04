@@ -77,14 +77,14 @@ else:  # sintax
     # COI screens (COI only; COI is classified by SINTAX only, so the rule lives in
     # this branch). For every ASV of the final set: its reading frame and length
     # (the frame check, against pseudogenes and NUMTs) and its A/C/G/T identity to
-    # the bacterial COX1 set (B) and to the cleaned MIDORI2 (E), for the off-target
+    # bacterial COI homologues (B) and to the cleaned MIDORI2 (E), for the off-target
     # guard and the species flags. It decides nothing itself: assign_taxonomy reads
     # the table and applies amplicon.coi.frame_check / offtarget_guard inside its
     # filter chain, so asv_table_unfiltered.txt keeps every ASV with the step that
     # removed it. Why and how, with the numbers behind the defaults, in the header
     # of 80d_coi_screens.py and on docs/amplicon/markers/coi.md.
     #   in : the length-filtered ASVs and their counts (the same files
-    #        assign_taxonomy reads), MIDORI2_COI_SINTAX, the bacterial COX1 set
+    #        assign_taxonomy reads), MIDORI2_COI_SINTAX, the bacterial set
     #   out: COI_SCREENS_TSV, read only by assign_taxonomy below; kept as a record
     #        of every measurement behind the two screens
     if COI_SCREENS:

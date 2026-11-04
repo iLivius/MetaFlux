@@ -464,7 +464,7 @@ move every ASV, the run stops before the lists are applied, whatever `filter.ena
 says (numbers illustrative):
 
 ```text
-[assign_taxonomy/sintax] the COI screens removed or moved ALL 812 ASVs (795 by the frame check, 17 as bacterial COX1). That usually means primers or reads that are not COI; see logs/coi_screens.log and 06.taxonomy/coi_screens.tsv.
+[assign_taxonomy/sintax] the COI screens removed or moved ALL 812 ASVs (795 by the frame check, 17 as bacterial COI homologues). That usually means primers or reads that are not COI; see logs/coi_screens.log and 06.taxonomy/coi_screens.tsv.
 ```
 
 `logs/coi_screens.log` gives the reading frame and the reference length the screens worked

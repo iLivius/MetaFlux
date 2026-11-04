@@ -310,12 +310,12 @@ rule convert_pr2_sintax:
         "../../scripts/refdb/pr2_utax_domain_first.py"
 
 
-# ── COI references: MIDORI2 and the bacterial COX1 set ────────────────────
+# ── COI references: MIDORI2 and the set of bacterial COI homologues ───────
 # MIDORI2 publishes each release on Zenodo as zips that bundle every gene and
 # format; COI needs one FASTA out of the SINTAX_sp zip (584 MB) and the NCBI
-# taxonomy snapshot the release was built with (69 MB). The bacterial COX1 set
-# (built for MetaFlux from GTDB R232, see the manual page on it) is three plain
-# files of its own Zenodo record. None of this fits the generated fetch loop
+# taxonomy snapshot the release was built with (69 MB). The set of bacterial COI
+# homologues (built for MetaFlux from GTDB R232, see the manual page on it) is three
+# plain files of its own Zenodo record. None of this fits the generated fetch loop
 # below (a zip member, several files, SHA-256 checks), so all three downloads have
 # their own rule (Tier 1), and the file VSEARCH classifies against is built from
 # them by prepare_midori2_coi_sintax (Tier 2).
@@ -400,8 +400,8 @@ rule fetch_midori2_taxonomy:
         """
 
 
-# The bacterial COX1 set: whole genes, fragments, and the MIDORI2 records that are
-# bacterial COX1 under eukaryote names.
+# The set of bacterial COI homologues: whole genes, fragments, and the MIDORI2
+# records that are bacterial COI homologues under eukaryote names.
 #   out: BACTERIAL_COX1, BACTERIAL_COX1_FRAGMENTS (read by the off-target guard of
 #        rule coi_screens) and BACTERIAL_COX1_MIDORI2_LIST (read by
 #        prepare_midori2_coi_sintax)
@@ -424,7 +424,7 @@ rule fetch_bacterial_cox1:
     shell:
         r"""
         if [ -z "{params.url_fasta}" ] || [ -z "{params.sha256_fasta}" ]; then
-            echo "COI.yaml names no Zenodo URL or SHA-256 for the bacterial COX1 set yet;" \
+            echo "COI.yaml names no Zenodo URL or SHA-256 for the set of bacterial COI homologues yet;" \
                  "place the release files at the paths of COI.yaml (or set" \
                  "references.bacterial_cox1.* in the run config)." > {log}
             exit 1
@@ -450,9 +450,10 @@ rule fetch_bacterial_cox1:
 # The SINTAX file COI is classified against. What the conversion does, and why, is
 # in the script's header: domain to d:, kingdom from the taxonomy snapshot, taxid
 # suffixes removed, placeholder ranks and interim species names left out, bacterial
-# COX1 records removed. It also writes a report of every count it changed, next to
-# the FASTA.
-#   in : the three files fetched above
+# COI homologues removed. It also writes a report of every count it changed, next
+# to the FASTA.
+#   in : the four files of the three downloads above: MIDORI2's FASTA, nodes.dmp and
+#        names.dmp, and the list of MIDORI2 records that comes with the bacterial set
 #   out: MIDORI2_COI_SINTAX (midori2_coi_sintax), read by check_taxonomy_reference,
 #        the length probe (expected_length: auto), assign_taxonomy and coi_screens
 rule prepare_midori2_coi_sintax:

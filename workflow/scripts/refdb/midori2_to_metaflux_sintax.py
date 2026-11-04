@@ -10,7 +10,7 @@ MIDORI2 (Leray et al. 2022) publishes its COI reference for SINTAX with headers 
 
   >KU746593.1.<1.>658;tax=k:Eukaryota_2759,p:Arthropoda_6656,c:Insecta_50557,o:Diptera_7147,f:Sarcophagidae_7381,g:Sarcophaga_7384,s:Sarcophaga munronis_1806722;
 
-Four things in them do not fit how MetaFlux classifies and reports:
+Five things in the file do not fit how MetaFlux classifies and reports:
   1. The DOMAIN (Eukaryota) sits under the letter k:. VSEARCH reads the letters as
      a fixed top-down order (d above k above p ...), and MetaFlux's rank model
      writes d__ for a domain and k__ only for a kingdom taken from the reference's
@@ -29,10 +29,10 @@ Four things in them do not fit how MetaFlux classifies and reports:
   4. The NUC_SP variant includes records whose species is an INTERIM name
      ("Sarcophaga sp. BIOUG12345-A01", "cf.", "aff.", BOLD codes). Reported as a
      species, such a name would look like an identification it is not.
-  5. Some MIDORI2 records are bacterial COX1 filed under a eukaryote's name
-     (mostly Rickettsiales symbionts of insects; see the MetaFlux manual page on
-     the bacterial COX1 reference set). Left in, they would pull the bacterial
-     COX1 ASVs into animal taxa.
+  5. Some MIDORI2 records are bacterial COI homologues filed under a eukaryote's
+     name (mostly Rickettsiales symbionts of insects; see the MetaFlux manual page
+     "Bacterial COI homologues (reference set)"). Left in, they would pull the
+     bacterial ASVs into animal taxa.
 
 WHAT IT DOES (record by record, in file order; sequences are copied unchanged)
   - writes the domain under d: (always Eukaryota in MIDORI2);
@@ -48,7 +48,7 @@ WHAT IT DOES (record by record, in file order; sequences are copied unchanged)
     header, not written empty, because the reference check refuses empty names;
   - writes species as Genus_epithet (space -> underscore), as UNITE and PR2 do;
   - leaves out the records marked "removed" in the MIDORI2 list that ships with
-    the bacterial COX1 reference set (midori2_<release>_bacterial_records.tsv).
+    the set of bacterial COI homologues (midori2_<release>_bacterial_records.tsv).
 
 WHAT IT REFUSES (the script stops with a message rather than guess)
   - a header without ";tax=", or whose first field is not k:Eukaryota_<taxid>;
@@ -60,7 +60,8 @@ WHAT IT REFUSES (the script stops with a message rather than guess)
 INPUT  : input.fasta   = MIDORI2_UNIQ_NUC_SP_<release>_CO1_SINTAX.fasta.gz (rule
                          fetch_midori2_coi extracts it from MIDORI2_<release>_SINTAX_sp.zip)
          input.nodes   = nodes.dmp, input.names = names.dmp (the taxonomy zip)
-         input.removal = midori2_<release>_bacterial_records.tsv (bacterial COX1 set)
+         input.removal = midori2_<release>_bacterial_records.tsv (from the release
+                         of the bacterial set)
 OUTPUT : output.fasta  = the MetaFlux SINTAX file (symbol midori2_coi_sintax in
                          COI.yaml), read by rule check_taxonomy_reference and then by
                          assign_taxonomy (VSEARCH --sintax) and by the COI screens
@@ -164,7 +165,7 @@ def kingdom_of(taxid):
     return found
 
 
-# --- 2. Records to leave out: bacterial COX1 under eukaryote names ----------------
+# --- 2. Records to leave out: bacterial COI homologues under eukaryote names ------
 to_remove = set()
 with removal_path.open() as handle:
     columns = handle.readline().rstrip("\n").split("\t")
@@ -193,7 +194,7 @@ with gzip.open(in_path, "rt") as fi, gzip.open(out_path, "wt", compresslevel=6) 
         counts["records read"] += 1
         if record_id in to_remove:
             seen_removed.add(record_id)
-            counts["records left out: bacterial COX1 under a eukaryote name"] += 1
+            counts["records left out: bacterial COI homologue under a eukaryote name"] += 1
             skip_sequence = True
             continue
         skip_sequence = False
@@ -239,12 +240,12 @@ with report_path.open("w") as handle:
 
 # --- 4. The log: the files and the main counts, for a human checking the reference
 # after the run (every count is in the report above); nothing downstream reads it.
-removed_count = counts["records left out: bacterial COX1 under a eukaryote name"]
+removed_count = counts["records left out: bacterial COI homologue under a eukaryote name"]
 log_path.parent.mkdir(parents=True, exist_ok=True)
 with log_path.open("w") as log:
     log.write(
         f"[midori2_to_metaflux_sintax] {counts['records read']} records read from {in_path}\n"
-        f"[midori2_to_metaflux_sintax] {removed_count} left out as bacterial COX1 "
+        f"[midori2_to_metaflux_sintax] {removed_count} left out as bacterial COI homologues "
         f"(list: {removal_path})\n"
         f"[midori2_to_metaflux_sintax] {counts['records written']} records written to {out_path}\n"
         f"[midori2_to_metaflux_sintax] every count: {report_path}\n"

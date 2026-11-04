@@ -6,6 +6,80 @@ what to edit in an existing run config. The documentation site has the details; 
 release notes on GitHub repeat the longer entries. Every release is archived on
 Zenodo; the concept DOI in the README always resolves to the newest one.
 
+## 2.7.0 — [To be settled before release: the date]
+
+### The messages of the COI steps say bacterial COI homologues
+
+COX1 is the name of the mitochondrial gene. The genes of the bacterial and archaeal
+reference set that the COI steps use are its homologues (*coxA* or *ctaD*, *cyoB*,
+*qoxB* and *ccoN*, among others), together with the related nitric oxide reductases.
+The messages and comments of the COI steps, the comments of `config/config.yaml` and of
+the COI marker pack included, now call them bacterial COI homologues, as the manual and
+the Zenodo record of the set do. Four messages read differently:
+
+- **The report of the MIDORI2 conversion** (`…_metaflux_sintax.report.tsv`, next to the
+  converted reference): the row `records left out: bacterial COX1 under a eukaryote
+  name` is now `records left out: bacterial COI homologue under a eukaryote name`, with
+  the same count.
+- **The log of the conversion** (`logs/refdb/prepare_midori2_coi_sintax.log`):
+  `N left out as bacterial COX1` is now `N left out as bacterial COI homologues`.
+- **The stop of the taxonomy step** when the COI screens remove or move every ASV:
+  `(N by the frame check, M as bacterial COX1)` is now `(N by the frame check, M as
+  bacterial COI homologues)`.
+- **The stop of `fetch_bacterial_cox1`** when COI.yaml names no URL or SHA-256 for the
+  set, written to its log: `for the bacterial COX1 set yet` is now `for the set of
+  bacterial COI homologues yet`.
+
+File names, rule names, settings, output columns and the values of `filter_status` keep
+the short form `cox1` (for example `bacterial_cox1_asvs.tsv`, `post_bacterial_cox1` and
+`moved_bacterial_cox1`), so no run config, and no script that reads the tables of an
+output folder, needs a change; only a script that looks up the row of the conversion
+report by its name needs the new wording above. No count, threshold or decision changes.
+
+### Documentation
+
+After 2.6.1, the online manual was updated to call the set bacterial COI homologues: the
+page "Bacterial COX1 reference set (COI)" became "Bacterial COI homologues (reference
+set)", at the same address, and the other pages use the same name. A note on that page
+says what the name covers and that file names, settings and output columns keep the
+short form `cox1`. The taxon filter page now quotes the stop of the COI screens in its
+new wording.
+
+### What runs again in a folder made with v2.6.1
+
+This part will be rewritten at release time, together with the other 2.7.0 changes; for
+now it covers only the changes above.
+
+- **After a `git pull`** in the MetaFlux folder that made the output folder: the read
+  tracking (`aggregate_read_counts`) in every amplicon folder, because its script
+  changed (a comment only). In every folder classified with `method: sintax` (the
+  default for 16S, ITS and 18S, the only method for COI) also the taxonomy
+  (`assign_taxonomy`), whose script changed, and the 16S phylogeny where it is switched
+  on. In a COI folder also the download of the set of bacterial COI homologues
+  (`fetch_bacterial_cox1`), once for the shared `refdb/` and only where MetaFlux made
+  that download: its command changed (the text of its error message), so its three
+  files (about 132 MB) are downloaded again; then the MIDORI2 conversion
+  (`prepare_midori2_coi_sintax`), whose script changed, and every step that follows
+  from the converted reference: the reference check, the length probe
+  (`expected_length: auto`, the default), `pick_trunclen`, DADA2, the COI screens
+  (whose script changed too), the taxonomy and the read tracking. The steps up to primer
+  trimming are kept. Shotgun folders run nothing again. The comments changed in the
+  rule files, in `config/config.yaml` and in the COI marker pack make no step run
+  again: for the code of a step, Snakemake looks only at the date of its script or at
+  the text of its shell command or `run:` block.
+- **From a fresh clone, a release archive or a second worktree**: every step that runs a
+  script, with the steps after it, as at every release ("What runs again in a folder
+  made with v2.5.0" below says why).
+- The steps that run again give the results of v2.6.1, as between any two identical
+  runs; only the messages above read differently. The converted MIDORI2 file has the
+  same content.
+- **To skip the reruns**, give `--rerun-triggers mtime params input software-env` to
+  that run and to every later run on the same output folder.
+
+### What to edit in a config written for v2.6.1
+
+Nothing.
+
 ## 2.6.1 — 2026-11-02
 
 ### Settings typed inline with `--config` are read as in a config file
