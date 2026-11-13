@@ -1,0 +1,38 @@
+# Dry-run config of the CI matrix: 16S, method sintax, SILVA 144, with DADA2's error
+# models learned with an error function of the user's own (EXPERIMENTAL; error_model:
+# custom). The function is .test/custom_error_functions/loess_wrapper.R, which hands the
+# counts to DADA2's loessErrfun unchanged. The start-up checks must accept the block (the
+# file exists and can be read, the name is one R can give a function), and the plan
+# holds the file as an input of learn_errors and of error_model_report, which both run
+# in the conda environment workflow/envs/dada2_custom.yaml (checked on the rule text
+# by tests/test_error_model_settings.py; the runner checks only that the plan is
+# built). The dry run does not run the function: that needs filtered reads and R.
+# Only the keys that differ from the template config/config.yaml are set here; Snakemake
+# loads the template first and this file on top of it. Paths are relative to the
+# repository root, where snakemake is started. A dry run creates nothing: out_dir and
+# refdb_root never come into being. See .test/README.md.
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S
+output:
+  out_dir: .test/out/16S_custom_error_function
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [d__Bacteria, d__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]
+  dada2:
+    learn_errors:
+      error_model: custom
+      custom_error_function:
+        file: .test/custom_error_functions/loess_wrapper.R
+        name: loess_wrapper

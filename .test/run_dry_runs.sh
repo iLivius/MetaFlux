@@ -12,7 +12,9 @@
 #                                      in the config's "# EXPECT:" line; passing, or
 #                                      stopping for another reason, is a failure.
 # Then one setting typed inline with --config, switched off and on, must change the
-# plan as it would written in a config file (see that section below).
+# plan as it would written in a config file, and two settings of DADA2's error
+# learning typed inline must pass or stop at start-up as they would written in a
+# config file (see those sections below).
 # How: each config is dry-run from the repository root (the Snakefile needs that),
 # with the template config/config.yaml underneath it, as in a real run. The snakemake
 # command can be given with the SNAKEMAKE environment variable (default: the one on
@@ -118,6 +120,42 @@ check_inline_switch phylogeny_off .test/config/16S_sintax_silva144.yaml \
     'amplicon={phylogeny: {enabled: false}}' none
 check_inline_switch phylogeny_on .test/config/16S_rdp_silva144.yaml \
     'amplicon={phylogeny: {enabled: true}}' some
+echo
+
+# ── Settings of DADA2's error learning typed inline ──
+# The start-up checks of amplicon.dada2.learn_errors (00_common.smk) must see an
+# inline value as they see it in a config file. A model code typed inline arrives
+# as text inside a list and must be accepted at start-up (this dry run shows only
+# that; how the code is normalised is tested in tests/test_error_model_settings.py);
+# a cap of 0 typed inline arrives as the text "0", is read back as the number 0, and
+# must stop the run with the same message as in a config file. wanted is "pass" (the
+# dry run must plan the run) or a fragment of the stop message.
+check_inline_outcome() {
+    local name=$1 config=$2 inline=$3 wanted=$4
+    local log="$LOG_DIR/inline_$name.log"
+    if "$SNAKEMAKE" -n --cores 1 --configfile "$config" --config "$inline" > "$log" 2>&1; then
+        if [ "$wanted" = pass ] && grep -qE '^total[[:space:]]+[0-9]+' "$log"; then
+            echo "PASS  inline $name: --config '$inline' plans the run"
+        elif [ "$wanted" = pass ]; then
+            echo "FAIL  inline $name: the dry run passed but printed no job table (see $log)"
+            failures=$((failures + 1))
+        else
+            echo "FAIL  inline $name: --config '$inline' passed, but it should have stopped with: $wanted"
+            failures=$((failures + 1))
+        fi
+    elif [ "$wanted" != pass ] && grep -qF -- "$wanted" "$log"; then
+        echo "PASS  inline $name: --config '$inline' stopped at start-up as expected ($wanted)"
+    else
+        echo "FAIL  inline $name: --config '$inline' did not behave as expected ($wanted); last lines:"
+        tail -n 5 "$log" | sed 's/^/        /'
+        failures=$((failures + 1))
+    fi
+}
+check_inline_outcome accept_code .test/config/16S_sintax_silva144.yaml \
+    'amplicon={dada2: {learn_errors: {accept_unconverged: [R2:0a55be94]}}}' pass
+check_inline_outcome max_consist_zero .test/config/16S_sintax_silva144.yaml \
+    'amplicon={dada2: {learn_errors: {max_consist: 0}}}' \
+    'max_consist must be a whole number of at least 1'
 echo
 
 if [ "$failures" -eq 0 ]; then

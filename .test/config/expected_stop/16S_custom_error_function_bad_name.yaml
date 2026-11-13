@@ -1,0 +1,30 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: error_model: custom
+# (EXPERIMENTAL) with a function name R cannot give a function (a dash, as in a file
+# name). The file exists, so the stop comes from the name check. The runner
+# (.test/run_dry_runs.sh) expects the message fragment on the next line.
+# EXPECT: custom_error_function.name must be the name of an R function
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S
+output:
+  out_dir: .test/out/expected_stop_16S_custom_error_function_bad_name
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [d__Bacteria, d__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]
+  dada2:
+    learn_errors:
+      error_model: custom
+      custom_error_function:
+        file: .test/custom_error_functions/loess_wrapper.R
+        name: loess-wrapper

@@ -31,10 +31,14 @@ bracken:
 # ── Sample-name renames (amplicon + shotgun) ────────────────────
 sample_names_replace_regex: true
 sample_names_replace:
-  # Falco / FastQC-format reports (read QC at each pipeline stage)
+  # Falco / FastQC-format reports (read QC at each pipeline stage; rule falco,
+  # 20_qc.smk, names each report <sample>_R<r>_<stage>). The filtered stage is the
+  # reads after DADA2's filterAndTrim, which the error models are learned from.
+  # MultiQC applies these renames one after the other, in this order.
   '^(.+)_R(\d+)_raw$':       'QC | raw reads | \1_R\2'
   '^(.+)_R(\d+)_nophix$':    'QC | PhiX-filtered reads | \1_R\2'
   '^(.+)_R(\d+)_stripped$':  'QC | primer-trimmed reads | \1_R\2'
+  '^(.+)_R(\d+)_filtered$':  'QC | quality-filtered reads | \1_R\2'
 
   # bowtie2 (PhiX filtering, amplicon)
   '^(.+)_phixFilter$':       'PhiX removal | \1'
@@ -79,3 +83,110 @@ sample_names_replace:
 # MultiQC 1.35.
 sample_names_ignore:
   - 'kraken2 | *_report_gated'
+
+# ── Amplicon: the DADA2 error-model report ──────────────────────
+# Rule error_model_report (60e_error_model_report.R) writes six files into
+# stats/dada2/multiqc/, a folder rule multiqc scans in amplicon mode (90_report.smk):
+# two tables, error_model_summary_mqc.tsv and error_model_goodness_of_fit_mqc.tsv, and
+# copies of four figures, error_model_*_mqc.png. MultiQC shows them as one module,
+# "DADA2 error model", with six sections. The entries below make that work; checked
+# with MultiQC 1.35 (the version of envs/multiqc.linux-64.pin.txt; envs/multiqc.yaml
+# itself is not pinned to it, so a later MultiQC may group or order the sections
+# differently):
+#   - sp: every figure has a search pattern of its own, its file name. Without it,
+#     MultiQC 1.35 ignores the parent_id of an image, and each figure becomes a module
+#     of its own. The name before the colon is the id of the figure's section (the
+#     file name without _mqc.png).
+#   - custom_data: each figure's section name and description, and the module it
+#     belongs to (parent_id, parent_name, parent_description). The module takes its
+#     name and description from the first of these entries MultiQC reads; all four
+#     carry them, so the order does not matter. The module's description is the
+#     statement of what the comparison of the error functions can and cannot show,
+#     written once below (&statement names the text, *statement repeats it: a YAML
+#     anchor and alias). The same statement is in 60e_error_model_report.R
+#     (REPORT_STATEMENT_TEXT), and tests/test_error_model_settings.py keeps the two
+#     copies equal. The two tables carry their own id, name and description in the
+#     header of their files, plus the parent_id.
+#   - report_section_order: the module comes after the tool modules (Falco, Cutadapt,
+#     PhiX removal) and before Software Versions; inside it the sections run from what
+#     was chosen and how the learning ended, to the data, to the fit: summary, quality
+#     values, convergence, fit of R1, fit of R2, goodness of fit. MultiQC sorts modules
+#     by descending order and the sections of a module by ascending order. Do not use
+#     after: or before: here: in MultiQC 1.35 they act the other way round.
+# The texts are in double quotes, so that an apostrophe needs no escaping.
+sp:
+  error_model_fit_R1:
+    fn: 'error_model_fit_R1_mqc.png'
+  error_model_fit_R2:
+    fn: 'error_model_fit_R2_mqc.png'
+  error_model_convergence:
+    fn: 'error_model_convergence_mqc.png'
+  error_model_quality_values:
+    fn: 'error_model_quality_values_mqc.png'
+
+custom_data:
+  error_model_fit_R1:
+    parent_id: 'metaflux_error_model'
+    parent_name: 'DADA2 error model'
+    parent_description: &statement "The comparison refits only the smoothing step:
+      each error function MetaFlux offers is applied to the transition counts that the
+      model used was fitted to (for a model ended by the flat-rounds rule, those of the
+      round before the last). It shows how closely each function describes those counts,
+      not which function would have given the better ASVs: learning with another function
+      would have produced other counts, and a more flexible function always comes closer
+      to the counts it is fitted to. The numbers compare functions within this run only;
+      they cannot judge a run, nor tell faulty reads from good ones."
+    section_name: 'Fit, R1 reads'
+    description: &fit_description "Counted error rates for each of the 12 substitution
+      types against the consensus quality score (the mean quality of identical reads),
+      with the curve of the model used (solid) and the curves the other error functions
+      give on the same counts (dashed). Filled points: quality values the reads carry;
+      open points: averaged qualities of identical reads, consensus qualities no read
+      carries; triangles at the bottom: no error counted. Black dotted line: the nominal
+      rate of the quality score; the models MetaFlux was tested on sit 1.2 to 25 times
+      above it at the most common value, healthy or not. Ticks: quality values in the
+      filtered reads. The solid line should follow the filled points and fall as quality
+      rises."
+  error_model_fit_R2:
+    parent_id: 'metaflux_error_model'
+    parent_name: 'DADA2 error model'
+    parent_description: *statement
+    section_name: 'Fit, R2 reads'
+    description: *fit_description
+  error_model_convergence:
+    parent_id: 'metaflux_error_model'
+    parent_name: 'DADA2 error model'
+    parent_description: *statement
+    section_name: 'Convergence'
+    description: "How much the model changed in each round of learning (black) and how
+      far each round's starting table is from the final model (grey, dashed), on a log
+      scale. Dashed line: 1/1000 of the change in round 1. A grey band marks DADA2's own
+      stop (a repeat of an earlier table, or a cycle) or the window of the flat-rounds
+      rule; a vertical line marks the flat-rounds stop or the cap. A model ended by the
+      flat-rounds rule or the cap counts as not converged: the run goes on with it only
+      when its code is listed in amplicon.dada2.learn_errors.accept_unconverged."
+  error_model_quality_values:
+    parent_id: 'metaflux_error_model'
+    parent_name: 'DADA2 error model'
+    parent_description: *statement
+    section_name: 'Quality values in the filtered reads'
+    description: "Bases per quality value in the first 100,000 filtered reads of each
+      voting sample, pooled. 3 to 10 values above Q2 with gaps between them are read as
+      binned quality scores, 20 or more as continuous ones; error_model: auto chooses the
+      function from this."
+
+report_section_order:
+  metaflux_error_model:                  # the module: between the tool modules and Software Versions
+    order: 15
+  metaflux_error_model_summary:          # the sections inside the module, ascending
+    order: 10
+  error_model_quality_values:
+    order: 20
+  error_model_convergence:
+    order: 30
+  error_model_fit_R1:
+    order: 40
+  error_model_fit_R2:
+    order: 50
+  metaflux_error_model_goodness_of_fit:
+    order: 60

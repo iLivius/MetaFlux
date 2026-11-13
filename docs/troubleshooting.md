@@ -6,7 +6,13 @@ the read pairs, a shotgun OTU table that comes out empty at a rank other than
 species, a Bracken rank that MetaFlux refuses, a shotgun table step that stops on the
 codes of the Kraken2 reports, a keep/discard token refused at start-up, a shotgun
 taxon filter that removes every taxon, small differences between two runs on the same
-data, a DADA2 error model that never converges, an outdated marker pack in
+data, a DADA2 error model that never converges, a run that stops because the reads
+carry too few quality values or the samples carry different ones, `error_model: binned`
+refused on continuous quality values, straight segments in the error plot of binned
+data, the experimental
+`custom_error_function` refused at start-up, `learn_errors` stopping in your own error
+function, the environment of that function failing to build on Apple Silicon Macs or
+Linux on ARM, an outdated marker pack in
 `config/markers/`, a reference file that fails the
 reference check, a reference download that fails its md5 or SHA-256 check, and YAML
 mistakes in the config. Each entry gives the symptom, the reason behind it, and what
@@ -402,7 +408,7 @@ on the exact same input can differ slightly:
 
 | Step | Rule | What the random draw is for |
 |------|------|-----------------------------|
-| DADA2 `learnErrors(randomize = TRUE)` | `dada_seqtab` | Subsamples reads to build the error model |
+| DADA2 `learnErrors(randomize = TRUE)` | `learn_errors` | Subsamples reads to build the error model |
 | DADA2 `assignTaxonomy` (`method: rdp`) | `assign_taxonomy` | Bootstrap confidence |
 | VSEARCH `--sintax` (`method: sintax`) | `assign_taxonomy` | Bootstrap confidence, seeded from a random source by default |
 
@@ -449,33 +455,84 @@ then no longer changes the result:
   `min_boot: 80` in only one of those three, so `keep: [k__Fungi]` kept the ASV in 1 run
   and removed it in the other 10.
 
+A few raw working files of the extraction step differ between identical runs as well,
+without any effect on the tables: the summaries of Metaxa2 and ITSx carry their start
+and end times, Metaxa2's own classification (`05.dada2/metaxa2/seqs.taxonomy.txt`) can
+change in a few rows, and ITSx writes `05.dada2/_itsx_tmp/seqs.graph` in the order its
+searches finish. Leave them out when you compare two runs (see
+[Output files](reference/output.md#inside-05dada2)).
+
 ## Amplicon: DADA2's error model never converges
 
 !!! warning "Symptom"
 
-    Rule `dada_seqtab` runs for hours. Its log (`logs/dada_seqtab.log` in the output
-    directory) keeps adding `selfConsist step` lines and never reaches the
-    `Convergence after N rounds.` line that normally follows them:
+    The run stops at rule `check_error_model`, after the error models were learned and
+    before any denoising. The terminal shows MetaFlux's message, which starts with
 
     ```text
-    [dada_seqtab] Learning error rates (R1, nbases=1e+08)...
-    396568980 total bases in 1468774 reads from 1 samples will be used for learning the error rates.
-    selfConsist step 1 .
-       selfConsist step 2
-       selfConsist step 3
-       ...
-       selfConsist step 172
+    [check_error_model] STOP: the DADA2 error model of the R2 reads did not converge (R2:7ebe3bed),
+    so MetaFlux stops before denoising. What to check, and how to go on with this model, follows;
     ```
 
-    On the COI mock libraries the marker was validated on, each model converged in 4 to
-    32 rounds and `dada_seqtab` took 5 to 23 minutes.
+    followed by Snakemake's own lines, which end with
 
-**Cause.** DADA2's `learnErrors` fits one error model per read file: for every quality
-score, how often each base is read as another base. It assumes that every read in the
-file was produced the same way, and it repeats two steps, denoising the reads with the
-current error rates and estimating the rates again from the result, until a round gives
-exactly the same error table as an earlier round. A file whose reads do not share one
-error profile can keep the estimate moving. Three ways that happens:
+    ```text
+    Error in rule check_error_model:
+        ...
+        log: /data/run1/logs/check_error_model.log (check log file(s) for error details)
+    ...
+    WorkflowError:
+    At least one job did not complete successfully.
+    ```
+
+    The whole message is in `logs/check_error_model.log` in the output directory: how
+    the learning ended, what to check, and the line that accepts this model. A stop
+    inside `learn_errors` itself, with a message that starts with
+    `[learn_errors] STOP:` (for example when the error function fails), has its reason at
+    the end of `logs/learn_errors.log`.
+
+    Before the stop, rule `learn_errors` can run for hours. Its log gets one
+    `selfConsist step` line per round, each followed by a MetaFlux line with the change
+    of the model in that round; `tail -f logs/learn_errors.log` follows it. Of 194
+    learning runs on real data, 186 converged within 8 rounds and the slowest took 101.
+    On a COI library of 1.6 million pairs learned as one sample, a round took about 4
+    minutes, so the cap of 200 rounds would take about 12 hours per read direction there.
+
+**How the learning ends.** DADA2's `learnErrors` fits one error model per read
+direction: for every quality score, how often each base is read as another base. It
+repeats two steps, denoising the reads with the current error rates and estimating the
+rates again from the result, until a round gives back a table that already went into a
+round. That is DADA2's own stop, and MetaFlux calls such a model *converged*; the table
+can repeat the one that went into the same round, or come back after a cycle of a few
+rounds, when a few reads keep switching between two ASVs. MetaFlux ends the loop in two
+more ways, and counts both as not converged:
+
+- **The cap**, `amplicon.dada2.learn_errors.max_consist` (200 rounds by default).
+- **The flat-rounds rule**, `max_flat_rounds` (20 by default; 0 switches it off). On a
+  slow library the table can keep changing by tiny amounts for a hundred rounds or
+  more. MetaFlux ends the learning when the model has stopped improving: the change in
+  a round is less than 1/1000 of the change in round 1, and the lowest change so far
+  fell by less than 10 % over the last 20 rounds. DADA2's author has said that ending
+  the loop where the change stops decreasing, and using that model, makes no biological
+  difference. The rule was calibrated by replaying four learning runs round by round,
+  all with the loess fit: on a 101-round run it stopped at round 42, where denoising
+  with the stopped model changed 0.02 % of the reads, and over every value of
+  `max_flat_rounds` tested the largest change was 0.04 % of the reads. Six learning runs
+  replayed with the binned fit agree: the rule ended one 95-round run at round 49, where
+  denoising with the stopped model changed 0.007 % of the reads, and over every value
+  tested the largest change was 0.02 %.
+
+A model ended in either way stops the run, because the numbers alone cannot tell a
+slow but healthy library from one with faulty reads: a COI library with reads of both
+strands in one file (below) changed by about 0.003 per round from about round 4 on, like a
+healthy slow one, and the flat-rounds rule ended it at round 32. DADA2 on its own does
+not stop: at its limit (10 rounds by default) it prints `Self-consistency loop
+terminated before convergence.` and carries on with the last table, as QIIME 2 and
+nf-core/ampliseq do. MetaFlux stops instead, so that no ASV table is made from such a
+model before someone has looked at it.
+
+**Cause.** The loop keeps moving when the reads do not share one error profile, or when
+it has little to settle on:
 
 - **Reads of both strands in one file.** When some reads are reverse complements of the
   others, the sequencer's errors appear mirrored in part of the file (a true A read as G
@@ -491,6 +548,17 @@ error profile can keep the estimate moving. Three ways that happens:
   instead of swapping their mates, and the first pass also kept, through a chance match
   of three primer bases, pairs that were the other way round with most of a primer still
   on.
+- **Binned quality scores.** NovaSeq, NextSeq and other recent Illumina instruments
+  write only a few quality values, and DADA2's usual fit expects a smooth range of them.
+  The slowest run seen, 101 rounds, was such data (three values: 9, 20 and 34), learned
+  with that usual fit. With `error_model: auto`, the default, MetaFlux learns binned data
+  with DADA2's binned fit instead; with `error_model: loess` they keep the usual fit.
+  Whether the binned fit settles faster on the slow libraries is not measured yet.
+- **Very diverse samples with few repeated reads**, such as soil or sediment. DADA2
+  tells an error from a real variant by how often a sequence recurs; when most reads are
+  unique, the loop settles slowly. MetaFlux learns from whole samples in a random order
+  fixed by `amplicon.seed`, and cannot be steered to the better-duplicated ones, so with
+  clean reads such a model is a candidate for acceptance (below).
 
 Measured on a genuinely mixed COI library (two libraries of the same insect mock in
 opposite orientations, 1.6 million pairs as one sample) trimmed the old way: of the R1
@@ -506,25 +574,405 @@ R1; 16 and 18 in the first two cycles of R2) and at or above it afterwards, and
 `logs/pick_trunclen.log`) and the truncation lengths come from `raise_trunc` alone
 (270 / 160 here).
 
-MetaFlux sets `amplicon.dada2.learn_errors.max_consist` to 999, so the job runs on until
-the model converges, someone stops it, or it reaches round 999; at 3.7 minutes a round,
-as on this library, that is about 60 hours for the R1 model alone. At the limit DADA2
-prints `Self-consistency loop terminated before convergence.` and continues with the last
-estimate, as it does after its own default of 10 rounds, and the run finishes, with a
-model fitted to a mixture and tables made from it.
+**What a stop leaves on disk.** The two models (`05.dada2/error_model_R{1,2}.rds`), the
+record of the learning (`stats/dada2/error_model.json`) and the report on the models (the
+figures and tables `stats/dada2/error_model_*`, and DADA2's own plots
+`stats/dada2/filtered_read_R{1,2}_error_plot.png`) are kept: they are written before the
+check. Started with `--keep-going`, MetaFlux also builds the MultiQC report, whose last
+module, "DADA2 error model", shows the same report. The stop deletes nothing else either:
+if an earlier run had finished in this folder, its tables in `05.dada2/`, `06.taxonomy/`
+and `stats/read_tracking.txt` are still there, made with the earlier model, until the run
+goes on.
 
-**Fix.** Stop the run and check the trimmed reads before the error model. In
-`03.stripped/{sample}_R1.fastq.gz` every read should start with the first bases after the
-forward primer, and the quality of a read should fall towards its end, not rise; a read
-that starts with the primer itself, or with the last bases of the other primer, was not
-trimmed cleanly. With `orientation: mixed`, `stats/orientation/{sample}.tsv` says how
-many pairs each pass kept; a folder trimmed by MetaFlux v2.5.0 or earlier has no such
-file, and a run with v2.6.0 trims it again, with everything after it (see
+**Fix.** Check the reads first. In `03.stripped/{sample}_R1.fastq.gz` every read should
+start with the first bases after the forward primer. One line shows the most common
+starts of a sample's reads, to compare with the primer sequences (with your output folder
+in place of `/data/run1` and a sample name in place of `<sample>`):
+
+```bash
+zcat /data/run1/03.stripped/<sample>_R1.fastq.gz | head -4000 | awk 'NR%4==2' | cut -c1-20 | sort | uniq -c | sort -rn | head
+```
+
+A start that matches the primer itself, or the last bases of the other primer, was not
+trimmed cleanly. In `stats/falco/<sample>_R1_stripped/fastqc_report.html` (and `_R2_`) the
+per-base quality should fall along the read; a rise from low values at the start is the
+sign of reversed reads, and flat lines at 2 to 4 values mean binned quality scores. A
+`very short primary cuts` warning in `logs/pick_trunclen.log` can mean the same. With
+`orientation: mixed`, `stats/orientation/{sample}.tsv` says how many pairs each pass kept;
+a folder trimmed by MetaFlux v2.5.0 or earlier has no such file, and a run with v2.6.0 or
+later trims it again, with everything after it (see
 [the mixed-orientation second pass](amplicon/overview.md#the-mixed-orientation-second-pass)).
 If the reads were trimmed before MetaFlux saw them, or the two files of a sample are
 swapped, correct the input: a library in which every pair is swapped is run with its two
 files swapped and `orientation: fixed`, a library with pairs in both orientations with
-`mixed`.
+`mixed`. Corrected reads give a new model, which is learned again.
+
+If you lowered `max_consist`, for example to the 10 rounds of QIIME 2, raise it back
+first (or delete the line): some libraries need 20 to 100 rounds, and their models are
+fine; a model that converges within the new limit needs no acceptance. More rounds rarely
+help once 200 were not enough. A run config copied from a template up to v2.6.1 says
+`max_consist: 999`, and MetaFlux prints a note at start-up when it sees it: with 999 a
+model that keeps changing runs for days before the check, unless the flat-rounds rule
+ends it first. Delete the line to use 200.
+
+**Before you accept a model.** Rule out the reads first: a model fitted to a mixture
+describes the mixture, however good it looks, and accepting it carries the problem into
+every table. Then make the two checks that DADA2's FAQ gives for a model that stopped
+before converging:
+
+- **The fit figures**, `stats/dada2/error_model_fit_R1.png` and `error_model_fit_R2.png`.
+  Each panel is one kind of misread: `A2C` is a true A read as C. Along the bottom is the
+  consensus quality score (the mean quality of identical reads), up the side the rate, on
+  a log scale. The grey points are the rates DADA2 counted in the reads: filled at the
+  quality values the reads carry, open at the averaged qualities of identical reads,
+  consensus qualities no read carries. The solid line is the model; the dashed lines are the other
+  error functions refitted on the same counts; the dotted line is what the quality scores
+  promise on paper (Q30: one error in 1,000 bases). A model worth keeping has a solid line
+  that follows the filled points in every panel and falls as the quality score rises. Be
+  wary of a line that misses most of the filled points, or that rises with the quality
+  score over a wide range of scores. A small upturn at the very top is common: on the
+  models of the eight MiSeq test sets, 289 of the 342 rises of the loess fit lay among
+  the five highest quality scores (34 to 38). `rising_steps` in
+  `stats/dada2/error_model_fit.tsv` counts the rises, and the same file gives how far the
+  line typically lies from the counted rates. DADA2's
+  own pictures of the models, `filtered_read_R1_error_plot.png` and `_R2_`, show the same
+  points and line in DADA2's style (red: the promised rate).
+- **The convergence**, `stats/dada2/error_model_convergence.png`, with the numbers behind
+  it in `stats/dada2/error_model.json`, per read direction: `change_per_round` (how much
+  the model moved in each round, summed over all its rates) and `distance_to_final` (how
+  far each round's starting table is from the final one, DADA2's `checkConvergence`).
+  Close to convergence, the last values are several orders of magnitude below the first
+  two.
+
+If both checks pass, DADA2's FAQ says to use the model ("in almost all cases, just
+proceed with the learned error rates"). If either fails, look at the reads again rather
+than allowing more rounds. How the figures and numbers are made, with the values of the
+models MetaFlux was tested on to compare with, is described under
+[the report](amplicon/error-model.md#the-report).
+
+**Accepting a model.** The stop message ends with the line that accepts the model,
+built from its code:
+
+```yaml
+accept_unconverged: ["R2:7ebe3bed"]
+```
+
+It goes in the run config of this output folder (the file you give with `--configfile`,
+not `config/config.yaml`), inside the `amplicon:` → `dada2:` → `learn_errors:` block it
+already has. Do not paste a second `amplicon:` block: YAML keeps only the last of two
+blocks with the same name, and your other amplicon settings would be lost (MetaFlux stops
+at start-up when it finds one). In a run config that has none of these blocks yet:
+
+```yaml
+amplicon:
+  dada2:
+    learn_errors:
+      accept_unconverged: ["R2:7ebe3bed"]
+```
+
+Then start MetaFlux again with the same command. The model is not learned again:
+`check_error_model` writes its verdict, `stats/dada2/error_model_check.txt` (for example
+`R1:0a55be94 converged; R2:7ebe3bed accepted (not converged: flat-rounds rule, round
+42)`), and `dada_seqtab` and the steps after it run. Changing the list itself makes no
+step run again: the check reads it when it runs. So a code changed or removed in a
+finished folder takes effect only when the check runs again (after a new model, after
+the report is drawn again, or with `--forcerun check_error_model`): a model whose code is
+then not listed stops the run again, and only the verdict file is removed, while with its
+code listed the run goes on with `dada_seqtab` and every step after it. Keep the line in
+that run config: when a
+later run of the folder learns the models again (after a MetaFlux update or from a fresh
+clone, for example) from the same reads with the same settings and the same DADA2, it gets
+the same model and goes on, while other reads, settings or software, and possibly another
+type of computer, give another model with another code, and the run stops again for you
+to look at it. The check also runs again whenever the error-model report is drawn again
+(after a MetaFlux update that changes the report, for example), and it then needs the
+line as well. Never put the line in a config shared by several runs. Together, the verdict file and the run config record
+which model the tables were made with.
+
+## Amplicon: the run stops because the reads carry fewer than three quality values
+
+!!! warning "Symptom"
+
+    The run stops at rule `choose_error_model`, after the filtering and before the error
+    models are learned, with a message that starts like one of these:
+
+    ```text
+    [choose_error_model] STOP: the filtered R1 reads carry fewer than three distinct quality values above Q2 (values seen in the first 100,000 reads of each voting sample: 3, 30). DADA2 cannot learn an error model without quality information, whatever error_model says. ...
+    [choose_error_model] STOP: sample S7 (100,000 R1 reads scanned) carries fewer than three distinct quality values above Q2 (3, 30), unlike the other voting samples (32 values, 7-38). ...
+    [choose_error_model] STOP: no voting sample carries three or more distinct quality values above Q2 in its R1 reads: S1 (100,000 reads scanned: 3, 30), S2 (100,000 reads scanned: 3, 40). ...
+    ```
+
+**Cause.** DADA2 learns its error model from the quality scores of the reads: for each
+score, how often a base is misread. A sequencer writes at least three distinct values
+above Q2 (instruments with binned quality scores three to seven, a MiSeq some thirty);
+values at or below Q2 mark no-calls on Illumina instruments, and the default
+`trunc_q: 2` removes them. One or two values mean that the values were rewritten on the
+way: ENA serves some runs with Q30 at every base (and Q3 for rejected bases), and SRA
+Lite files carry made-up values too. DADA2 cannot learn from such reads: its usual fit
+fails with `Error rates could not be estimated`, and the binned fit has at most one
+straight line to draw, through two made-up values. One such
+sample among good ones would make the one error model of the run wrong for every sample,
+so it stops the run as well. MetaFlux counts the values in the first 100,000 filtered
+reads of each sample (rule `dada_filter`); only samples with at least 1,000 filtered
+reads vote, so a near-empty blank never causes this stop. A raised `trunc_q` removes
+values too: `filterAndTrim` cuts each read at its first base at or below that value, and
+the message then says so first.
+
+**Fix.** Download the reads from NCBI with sra-tools (`prefetch`, then `fasterq-dump`),
+which gives the sequencer's own values (see "Are the quality values real?" in
+[checking a public dataset](about/test-datasets.md#check-a-public-dataset-before-adopting-it)),
+or leave the sample out of the input folder. If `trunc_q` was raised, set it back to 2.
+`stats/dada2/quality_values.tsv` in the output directory lists the values of every sample
+and read direction, and the Falco report of each sample's filtered reads
+(`stats/falco/<sample>_R1_filtered/fastqc_report.html`, and `_R2_`) shows them along the
+read. The setting `error_model` cannot get past this stop: no error function can learn
+from reads without quality information. The stop comes before the error models are
+learned, so the run makes no new MultiQC report: MultiQC waits for the report on the error
+models. In a folder that ran before, whatever lies on disk from the steps after this one
+(the error models and their report, the tables of `05.dada2/`, the MultiQC report) comes
+from the earlier run. The files named here are on disk.
+
+## Amplicon: the samples of a run carry different quality values
+
+!!! warning "Symptom"
+
+    The run stops at rule `choose_error_model`, before the error models are learned,
+    with a message that starts like one of these:
+
+    ```text
+    [choose_error_model] STOP: the voting samples do not share one kind of quality values in the R1 reads: 12 samples carry binned values (9, 20, 34) and 3 carry continuous ones (32 values, 7-38); ...
+    [choose_error_model] STOP: the voting samples carry two different sets of binned quality values in the R1 reads: most carry 11, 25, 37, but S4, S5 also carry 9. ...
+    [choose_error_model] STOP: the filtered R1 reads carry 15 distinct quality values above Q2 (20, 21, ..., 34). MetaFlux reads 3 to 10 values as binned quality scores ...
+    [choose_error_model] STOP: the filtered R1 reads carry 10 distinct quality values above Q2 (29, 30, 31, 32, 33, 34, 35, 36, 37, 38), and some of them are neighbours (29 and 30). ...
+    ```
+
+**Cause.** DADA2 learns one error model per read direction for all samples of a run, and
+`error_model: auto` (the default) picks its error function from the quality values the
+reads carry: the loess fit for continuous values (20 or more distinct values above Q2, as
+a MiSeq writes them) and the binned fit for binned values (3 to 10, as NovaSeq, NextSeq,
+MiSeq i100 and other recent instruments write them). Samples from two instruments, or
+from one instrument under two versions of its control software (two binned tables, such
+as 11, 25, 37 and 9, 25, 37), cannot share one model fitted to both, so `auto` does not
+choose for them. Between 11 and 19 distinct values is seen on no instrument: a mix of
+files, values rewritten by a sequencing facility, or MiSeq reads under a raised
+`trunc_q` (only the values above it remain) are the likely causes. Neighbouring values
+among 3 to 10, such as 29 and 30, are seen on no instrument either: every instrument
+table leaves gaps between its values, while MiSeq reads under a `trunc_q` of 28 to 30 keep
+only the 8 to 10 values above it, all neighbours, and reads trimmed at a quality
+threshold before they reached MetaFlux look the same; the message names `trunc_q` when it
+is above 2. Only samples with at least 1,000 filtered reads vote; a smaller sample with
+other values gets a note and is ignored.
+
+**Fix.** Run the groups in separate output folders, one input folder per instrument.
+If `trunc_q` was raised, set it back to 2, the default, so that the choice sees every
+value the reads carry. If you know what the data are and accept one model for all
+samples, set the error function in the run config:
+
+```yaml
+error_model: loess
+```
+
+The line goes under `amplicon:` → `dada2:` → `learn_errors:`, inside the `amplicon:`
+block the run config already has; a second `amplicon:` block would replace the first,
+and the other amplicon settings would be lost (MetaFlux stops at start-up when it finds
+one). `loess` serves any mix with one smooth curve (it
+is the fit MetaFlux used for every run up to v2.6.1); the stop then becomes a warning.
+`binned` is not advised for two binned tables: `learnErrors` learns from a few whole
+samples (until `nbases` bases are in), and the values of a group it does not draw would
+be fitted on the averaged qualities of the other group. The per-sample values are in the
+message and in `stats/dada2/quality_values.tsv`. As with every stop before the error
+models are learned, the run makes no new MultiQC report (in a folder that ran before,
+the one on disk, like the other results after this step, comes from the earlier run).
+
+## Amplicon: `error_model: binned` stops on continuous quality values
+
+!!! warning "Symptom"
+
+    The run stops at rule `choose_error_model` with:
+
+    ```text
+    [choose_error_model] STOP: amplicon.dada2.learn_errors.error_model is binned, but the filtered R1 reads carry continuous quality values (32 distinct values above Q2, 7-38), as a MiSeq writes them. The binned fit would join the error rates of 32 values with straight lines instead of fitting a curve. Set error_model to auto or loess, or delete the line from your run config.
+    ```
+
+    or, when the samples of the run carry different kinds of quality values, with a text
+    that starts `... error_model is binned, but together the voting samples' filtered R1
+    reads carry 27 distinct quality values above Q2 (9-39), which MetaFlux reads as
+    continuous, although not every sample carries that many on its own`.
+
+**Cause.** The binned fit draws straight lines between the error rates counted at the
+quality values the reads carry. On binned data those are three to six values, where a
+curve has too few points to rest on. On continuous data it would join some thirty
+counted rates one by one and follow their noise: on the models of the eight MiSeq test
+sets, its rates rose with the quality score in a quarter to two fifths of the steps
+between neighbouring scores (92 to 142 of 348 to 372), against at most one in nine for
+the loess fit (2 to 40).
+A run config copied from a run on binned data is the usual cause. The second text usually
+comes from binned and continuous samples in one run: a sample with continuous values
+carries 20 or more values on its own, so together the samples count as continuous.
+
+**Fix.** Set `error_model: auto` or `error_model: loess` in the run config, or delete
+the line to get the default. For samples of two instruments, run the groups in separate
+output folders, or set `error_model: loess` (see
+[the samples of a run carry different quality values](#amplicon-the-samples-of-a-run-carry-different-quality-values)).
+
+## Amplicon: the error plot shows straight segments between a few quality values
+
+!!! note "What it looks like"
+
+    Not an error. On a run with binned quality scores, the line of the model in the fit
+    figures (`stats/dada2/error_model_fit_R1.png` and `_R2_`, solid) and in DADA2's error
+    plots (`stats/dada2/filtered_read_R1_error_plot.png` and `_R2_`, black) is made of a
+    few pieces that meet at the quality values the reads carry, bent on the log axis,
+    with points at many more quality scores than the reads carry. The title names the fit
+    and its values, for example
+    `R2 error model: binned fit on 9, 20, 34 - converged (round 6 repeated its starting table)`.
+
+**Cause.** This is how the binned fit works. It joins the error rates counted at the
+values the reads carry (9, 20 and 34 in the example) with straight lines; on the log
+scale of the plot, a straight line between two rates is drawn bowed upward. The points
+between those values are consensus qualities: DADA2 counts the errors of each unique
+sequence at the mean quality of its identical reads, so averaged scores such as 27
+appear although no read carries them. Between the two upper values they come from
+sequences seen in many reads, mostly read without error, and most of their bases lie
+below the line. How many of the misreads they hold depends on the data: on one NextSeq
+2000 run, with two samples learned together for R1 and one for R2, they held 8 % of the
+R1 and 32 % of the R2 bases but only 1.2 % and 2.3 % of the counted misreads; one sample
+of the same run, learned alone, gave 7.6 % and 35 % of the bases and 15 % and 13 % of
+the misreads. Between the two lowest values they rest on a tenth of a percent of the
+bases or less on the runs checked, yet they can hold a good part of the misreads (6 %
+and 15 % in that single sample) and lie far above the line. The share of your run is
+`share_substitutions_at_averaged_columns` in `stats/dada2/error_model_report.json`, and
+the notes in `stats/dada2/error_model_fit.tsv` give it too.
+
+**What would be a problem.** A line that misses the points at the quality values the
+reads carry (the filled points of the fit figures), or error rates that rise as the
+quality score rises. A line above the nominal line (dotted in the fit figures, red in
+DADA2's plots) is normal for every fit: the models MetaFlux was tested on sat 1.2 to 25
+times above it at their most common quality value (1.2 to 2.0 on the Zymo D6331 mock and
+on one NextSeq 2000 sample learned alone, with either fit; 7 to 25 on the others), on
+healthy and faulty libraries alike. The fit figures also show the loess fit refitted on the same counts
+(dashed). On the NextSeq 2000 run checked, its curve dipped by up to four orders of
+magnitude between the two upper values, where only averaged qualities hold bases, and
+rose again towards the top value (a dip below the panel is cut off at its edge); the
+binned fit draws a straight line there. The page
+[DADA2 error model](amplicon/error-model.md#the-report) explains the figures and gives
+the numbers of the models MetaFlux was tested on.
+
+## Amplicon: the run refuses `custom_error_function` at start-up
+
+!!! warning "Symptom"
+
+    The run stops before any step, with a message about the experimental setting
+    `amplicon.dada2.learn_errors.custom_error_function` (your own error function), such
+    as:
+
+    ```text
+    [MetaFlux] amplicon.dada2.learn_errors.custom_error_function.file: /home/me/MetaFlux/functions/my_errfun.R is not an existing file (written in the config as 'functions/my_errfun.R'; a relative path is read from the folder snakemake is started in, here /home/me/MetaFlux)
+    [MetaFlux] amplicon.dada2.learn_errors.custom_error_function.name must be the name of an R function as you would type it in R, without quotes: ...; got 'my-errfun'
+    ```
+
+**Cause and fix.** MetaFlux checks the block before any step, with a message that names
+the setting: a missing file would otherwise stop Snakemake at once with a bare "Missing
+input files" for rule `learn_errors` (or `error_model_report`), and a bad name would
+surface only after hours of filtering, as an R error in `learn_errors`. Each message
+names the key:
+
+| The message says | Cause | Fix |
+|---|---|---|
+| `error_model is custom, so ... custom_error_function.file must give the R file ...; it is empty` | `error_model: custom` without a file | Set `file`, or set `error_model` back to `auto`, `loess` or `binned`. |
+| `error_model is custom, so ... custom_error_function.name must give the name of your error function ...` | `error_model: custom` without a name | Set `name` to the function's name in the file. |
+| `custom_error_function sets a file but no name` (or `a name but no file`) | Half of the block, under another `error_model` | Set both, and the report draws the function next to the others for comparison; or leave both empty. |
+| `custom_error_function must be a block with two keys` | A path written directly after `custom_error_function:` | Write `file:` and `name:` on the two lines below it, indented. |
+| `custom_error_function.file must be text` (or `.name`) | A number or a list | Write the path, or the name, as text. |
+| `custom_error_function.file: ... is not an existing file` | A typo, a folder, or a relative path read from another folder than intended | Check the path the message prints. A relative path is read from the folder `snakemake` is started in, not from the folder of the config file; an absolute path avoids the question. |
+| `custom_error_function.file: ... cannot be read` | The file's permissions | Make the file readable for the user who runs Snakemake (`chmod u+r`). |
+| `custom_error_function.name must be the name of an R function` | A dash or a space in the name, an accented letter, a first character that is a digit or an underscore, or a word R reserves (`function`, `TRUE`, `NA` ...) | Write the name exactly as the file defines the function, for example `my_errfun`. |
+
+Whether the file defines a function of that name, and what the function returns, can only
+be checked in R, when `learn_errors` runs (next entry). See
+[your own error function](amplicon/error-model.md#your-own-error-function-experimental).
+
+## Amplicon: `learn_errors` stops in your own error function
+
+!!! warning "Symptom"
+
+    With `error_model: custom` (experimental), the run stops at rule `learn_errors`,
+    with a message on the terminal and at the end of `logs/learn_errors.log` that starts
+    like one of these:
+
+    ```text
+    [learn_errors] STOP: MetaFlux could not load your error function (amplicon.dada2.learn_errors.custom_error_function, experimental): /data/error_functions/my_errfun.R does not define my_errfn (it defines: my_errfun). Check the name in the config against the file.
+    [learn_errors] STOP: the R1 error function failed in round 0: the custom error function my_errfun (/data/error_functions/my_errfun.R) returned a rate of exactly 0 in 41 cell(s), the first A2G at quality 0. ...
+    ```
+
+**Cause.** MetaFlux reads the file, fetches the function by its name and checks every table
+the function returns before DADA2 uses it (see
+[what MetaFlux checks](amplicon/error-model.md#what-metaflux-checks)). Plain DADA2 stops
+on some of these problems with a short message of its own:
+`Error matrix must have 16 rows (A2A, A2C, ...).` for a wrong number of rows,
+`All error matrix entries must be <=1.` for a value above 1,
+`missing value where TRUE/FALSE needed` for a missing value, and
+`Error matrix is NULL.` for a data frame or, after
+`Error rates could not be estimated`, for an R error inside the function. It only warns
+about a rate of 0, and goes on without a word with other columns, other names or rows
+that do not sum to 1. MetaFlux checks every table and stops with the reason. "Round 0"
+is DADA2's start-up pass, the first call of the function.
+
+**Fix.** The reason follows the first colon:
+
+| The reason says | Cause | Fix |
+|---|---|---|
+| `reading ..., the file of the custom error function, failed with this R error: ...` | The file cannot be read as R code: a syntax error, an error in a line outside the function, or `library()` of a package the environment of your function (`dada2_custom.yaml`) does not provide | Read R's message; `source()` the file in an R session to see the error. The packages the environment provides are listed under [R packages](amplicon/error-model.md#r-packages). |
+| `... does not define ... (it defines: ...)` | The name in the config differs from the function's name in the file | Correct `name`; the message lists what the file defines. |
+| `... is not a function but an object of class ...` | The name names data, not a function | Set `name` to the function. |
+| `the custom error function ... stopped with this R error: ...` | An R error inside the function | Read R's message. The counts of any saved model have the shape the function receives: `my_errfun(readRDS("05.dada2/error_model_R1.rds")$trans)` tries the function in R on counts of the same shape (those of a model saved by an earlier run; the counts of the failing call are not saved). |
+| `the file of the custom error function, ..., cannot be read` | The file was moved, deleted or made unreadable after start-up | Check the file at the path the message prints. |
+| `returned an object of class ..., not a numeric matrix` | A data frame or a list | Return a numeric matrix (`as.matrix()`). |
+| `returned a matrix of type ..., not a numeric matrix` | A matrix of text or of TRUE/FALSE values | Return the rates as numbers. |
+| `returned a matrix of ... rows and ... columns; it must have the shape of the counts` | Columns dropped or added | Return one row per row and one column per column of `trans`. |
+| `returned a table whose rows are named ...` (or `columns`) | Names other than those of `trans`, or in another order | Use `rownames(trans)` and `colnames(trans)`, or no names: MetaFlux then copies them. |
+| `returned missing or infinite values` | Often 0/0 at quality scores without bases, or the logarithm of 0 | Fill the scores without bases from their neighbours, as DADA2's functions do. |
+| `returned values below 0 or above 1` | A rate that is not a probability | Keep every rate between 0 and 1. |
+| `returned a rate of exactly 0` | Counted rates used as they are, where no misread was counted, or a number too small for the computer | Keep every misread rate at or above 1e-7, as DADA2's own functions do; a rate of 0 can turn sequences with that misread into ASVs of their own. A rate far below the counted one acts almost the same and is not stopped, only warned about when it is below 1e-7. |
+| `returned rows ... that do not sum to 1` | The read-correctly rows (`A2A` and so on) not computed from the misread rates | Set each to 1 minus the three misread rates of its base, at every quality score. |
+
+As with every stop inside `learn_errors`, the run makes no new MultiQC report; the Falco
+reports of the filtered reads in `stats/falco/` are on disk. In a folder that ran before
+(such as a copy made to try a new version of the function), only the models and the
+record are removed: the error-model report, the verdict of the check
+(`stats/dada2/error_model_check.txt`), the tables of `05.dada2/` and every result after
+them, and the MultiQC report on disk still come from the earlier models until the
+learning succeeds again. A warning of the function does not stop the run: it is written
+to `logs/learn_errors.log` and to the record.
+
+## Amplicon: the environment of your own error function cannot be built
+
+!!! warning "Symptom"
+
+    On an Apple Silicon Mac or on Linux on ARM, a run that names an error function of
+    your own (`custom_error_function`, experimental) stops before any job starts, while
+    Snakemake creates its conda environments:
+
+    ```text
+    Could not create conda environment from .../workflow/envs/dada2_custom.yaml:
+    ...
+    PackagesNotFoundInChannelsError: The following packages are not available from current channels:
+
+      - r-scam
+    ```
+
+**Cause.** The steps that call your function run in `workflow/envs/dada2_custom.yaml`: the
+DADA2 environment plus the R packages mgcv and scam (see
+[R packages](amplicon/error-model.md#r-packages)). conda-forge has no r-scam build for
+these machines (`osx-arm64`, `linux-aarch64`). Older conda versions call the error
+`PackagesNotFoundError`. A run that names no function of its own never builds this
+environment.
+
+**Fix.** If your function does not use scam, delete the line `- r-scam` from
+`workflow/envs/dada2_custom.yaml` in the MetaFlux folder you run from, and start the run
+again: mgcv exists for these machines. A function that needs scam cannot run there until
+conda-forge builds it for them; run it on Linux (x86-64) or an Intel Mac, where the file
+can be built as shipped.
 
 ## Amplicon: an outdated marker pack in `config/markers/` stops the run
 
@@ -624,5 +1072,18 @@ python -c "import yaml; yaml.safe_load(open('config/config.yaml'))"
 
 A *"expected block end, but found block sequence start"* message points to a
 misplaced or over-indented `- ` list item — commonly in `host_genomes`.
+
+A key written twice in the same block is no YAML error: YAML keeps the last of the two
+without a word. A second `amplicon:` block pasted at the end of a run config, for
+example to add a line a MetaFlux message asks for, would replace the first one whole,
+and the marker, the primers and every other amplicon setting of the first would fall
+back to the template. MetaFlux therefore reads each file given with `--configfile` once
+more at start-up and stops on such a repeat, with the file, the key and both lines:
+
+```text
+[MetaFlux] /data/run1.yaml: the key 'amplicon' is written twice in the same block (lines 18 and 29). YAML keeps only the last of the two, without a word, ...
+```
+
+Move the settings of the second block into the first, each once, and delete the second.
 
 The full key-by-key reference is in [Configuration](reference/configuration.md).

@@ -137,8 +137,11 @@ consumers only:
   extracted subregion sits below read length, whereas for 16S the probe measures the
   full amplicon and would exceed the read length and drop everything. Why it is not
   the default is set out under [the length floor](#min_len-and-the-short-tail).
-- **`dada_length_filter`** builds the ASV window as
-  `[q1 − window_margin, p95 + window_margin]`, `window_margin` defaulting to 50 bp.
+- **`dada_length_filter`** builds the ASV window as `[min, p95 + window_margin]`,
+  `window_margin` defaulting to 50 bp: the floor is the shortest region in the
+  reference, without margin (see [the length floor of the window](#region-extraction-with-itsx)).
+  With `extraction.enabled: false` it is `[q1 − window_margin, p95 + window_margin]`, as
+  for the other markers.
 
 Nothing about `truncLen` reads the probe for ITS, and `amplicon.min_overlap` and
 `probe_length_stat` are not applied to an ITS run at all.
@@ -166,6 +169,14 @@ The 3′ low-quality tail is still removed — just adaptively, per read:
 
 If ITS R2 quality is poor, the lever is therefore a stricter `trunc_q` or a tighter
 `max_ee` — not a fixed truncation length.
+
+The one fixed cut ITS reads get is the extra last sequencing cycle of a 2 × 151,
+2 × 251 or 2 × 301 run, removed at primer trimming (`cutadapt.trim_final_cycle: auto`).
+Its calls are often wrong the same way in most reads of a sequence, and without
+truncation the wrong base reaches the overlap of the two mates, where `mergePairs`
+accepts no mismatch.
+See [the extra last cycle](../overview.md#the-extra-last-cycle) and
+[the validation](#validation).
 
 ### `min_len` and the short tail
 
@@ -262,13 +273,26 @@ The match is approximate: those UCHIME files were themselves produced with
 `ITSx --anchor 15`, so every reference sequence keeps about 15 bp of
 flanking rRNA at each end — SSU and 5.8S for ITS1, 5.8S and LSU for ITS2. MetaFlux runs
 ITSx over the ASVs with the default anchor of 0, so the reference distribution sits
-roughly 30 bp above the ASVs it is being compared with. The 50 bp `window_margin`
-absorbs most of that, and what is left shows up only at the bottom of the window. On
-the ITS2 file the workflow downloads, q1 is 175 bp, so the floor lands at
-`175 − 50 = 125` bp; that excludes about 5% of the reference sequences once their
-anchors are subtracted, where a matched comparison would exclude about 2%. The
-sequences in that band are the shortest fungal ITS2, so the low end of the window is
-the part worth checking on a dataset expected to contain them.
+roughly 30 bp above the ASVs it is being compared with (*Candida haemulonii* in the test
+set: a 93 bp reference record, a 63 bp region in the ASV). At the top of the window the
+50 bp `window_margin` absorbs most of that.
+
+The floor of the window is the shortest region in the reference, the probe's `min`,
+without margin. A short region is a short ITS, not a fragment: ITSx reports a region only
+where it finds the 5.8S boundary, and a region whose SSU or LSU boundary it misses keeps
+some rRNA, so it comes out longer, not shorter.
+
+| | ITS2 | ITS1 |
+|---|---|---|
+| Floor (probe `min`) | 38 bp | 17 bp |
+| Shortest reference records | 4 records of lichen fungi, 38–41 bp | 62 records, 17–19 bp |
+| Reference sequences below the floor, anchors subtracted | 0.15 % | 0.21 % |
+
+The minimum comes from a few unusual records, so the floor guards against fragments
+rather than marking a biological limit. The floor of the other markers,
+`q1 − window_margin`, would be 125 bp for ITS2: on the ITS test set it removed
+*Candida haemulonii* (63 bp), *Metschnikowia pulcherrima* (70 bp) and
+*Dipodascus australiensis* (78 bp), 64 % of the reads after chimera removal.
 
 | | |
 |---|---|
@@ -454,3 +478,58 @@ since ITSx removes the conserved flanks, and the gap between them is a direct me
 of how much flanking sequence the amplicon carried. `05.dada2/itsx_collapse_map.tsv`
 shows which ASVs were merged after extraction. The full output layout is in
 [Output files](../../reference/output.md).
+
+## Validation
+
+The six samples of the [ITS test set](../../about/test-datasets.md) (yeast mocks A, B, C
+and F of PRJNA862334, MiSeq, reads of 301 bp) were run with the defaults and `keep: [k__Fungi]`,
+with the two changes of v2.7.0 switched on one at a time. Each ASV was matched to the
+ITS2 sequences of the species in the mocks, so detection does not depend on the
+classifier.
+
+| | v2.6.1 | last cycle removed | short-ITS floor | both (v2.7.0) |
+|---|--:|--:|--:|--:|
+| ASVs | 12 | 14 | 16 | 18 |
+| Retention, % of raw read pairs | 16.0 | 33.7 | 44.5 | 62.2 |
+| Expected ITS2 types detected, of 26 | 12 | 19 | 19 | 26 |
+| Expected genera detected, of 17 | 9 | 10 | 16 | 17 |
+| *S. paradoxus*, of 4 samples | 0 | 4 | 0 | 4 |
+| *S. uvarum* group, of 2 samples | 0 | 2 | 0 | 2 |
+| Short-ITS2 yeasts, of 7 sample–species pairs | 0 | 0 | 7 | 7 |
+
+Counts are summed over the samples: a mock of four species sequenced in two samples
+counts 8 expected types. A type is a species, or a group of species with the same ITS2
+(the *S. uvarum* group). *Retention* is the share of the raw read pairs that reach the
+final table. The short-ITS2 yeasts are *C. haemulonii*, *M. pulcherrima* and
+*D. australiensis*.
+
+- **The two changes recover different species.** Removing the last cycle lets the pairs
+  of *S. paradoxus* and of the *S. uvarum* group merge; the floor keeps the short-ITS2
+  yeasts. Together they detect every expected type in every sample.
+- **`max_mismatch: 1` adds little.** With both changes it adds 2 ASVs, 2.8 points of
+  retention and no expected type, so the default stays at 0.
+- **Class-only ASVs.** SINTAX stops at class (Saccharomycetes) for 5 of the 18 ASVs,
+  32 % of the reads: four *Saccharomyces* ASVs, whose species share a near-identical ITS2
+  in this amplicon, and one variant of *M. pulcherrima*.
+- **Species outside the mock lists.** *Rhodotorula diobovata* (mock A) and *Yamadazyma
+  mexicana* (mock B) are found in v2.6.1 and v2.7.0 alike.
+
+Detection is complete; the proportions are not. The next table compares, per sample, the
+read share of the short-ITS2 yeasts with their share in the mock, and gives the genus
+distance: the Bray–Curtis dissimilarity between the expected and the observed genus
+shares, from 0 (identical) to 1 (nothing in common), with genera assigned by sequence.
+
+| Mock (samples) | Short-ITS2 yeasts | Expected | Observed | Genus distance, v2.6.1 | v2.7.0 |
+|---|---|--:|--:|--:|--:|
+| A (1) | *C. haemulonii*, *M. pulcherrima* | 40 % | 72.3 % | 0.40 | 0.32 |
+| B (1) | *D. australiensis* | 20 % | 44.8 % | 0.20 | 0.29 |
+| C (2) | *C. haemulonii*, *M. pulcherrima* | 10 % | 47.6 %, 48.1 % | 0.13, 0.15 | 0.38, 0.38 |
+| F (2) | none | 0 % | 0.6 %, 0.5 % | 0.15, 0.90 | 0.16, 0.17 |
+
+The short-ITS2 yeasts get two to five times their share. Their reads add to those of the
+other species instead of replacing them (*S. cerevisiae* in mock C: 14,638 and 12,086
+reads in v2.6.1, 14,814 and 12,245 in v2.7.0), so the excess is already in the reads, as
+expected from PCR, which favours short templates. The distance therefore rises in mocks B
+and C although every expected type is found. It falls in mock A, where the short-ITS2
+yeasts make up 40 % of the community, and in mock F, where the *Saccharomyces* pairs now
+merge. Read shares of ITS amplicons this different in length are not abundances.

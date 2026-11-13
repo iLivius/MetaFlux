@@ -6,6 +6,16 @@ HOW TO RUN THE TESTS
   numpy (the two packages of workflow/envs/biom.yaml) and are skipped without them.
   No conda, no Snakemake and no reference database is needed: every test runs on
   tiny inputs written on the spot, in a temporary folder pytest provides.
+  Two files need R: tests/test_custom_error_function_r.py runs the R checks of the
+  experimental error_model: custom (.test/custom_error_functions/custom_function_checks.R,
+  base R only), and tests/test_error_model_r.py runs .test/r_checks/error_model_checks.R
+  (how learn_errors sorts and dada_seqtab pairs the filtered files, and texts of the
+  learning log, the registry of error functions and the report; base R, except one case
+  that needs the R packages pacman and dada2 and is skipped without them). Both are
+  skipped unless the environment variable METAFLUX_RSCRIPT names an Rscript, for example
+  that of MetaFlux's DADA2 environment:
+      METAFLUX_RSCRIPT=/path/to/the/dada2/env/bin/Rscript pytest tests
+  The CI does not set it, so the CI runs no R.
 
 WHAT IS TESTED, AND HOW THE TESTS REACH THE CODE
   MetaFlux's Python lives in two kinds of file, and neither can simply be imported:
@@ -14,19 +24,20 @@ WHAT IS TESTED, AND HOW THE TESTS REACH THE CODE
   that Snakemake hands a running job. The three helpers below get around that
   without changing a line of the pipeline:
 
-  load_functions()  pulls named functions and constants out of a file by parsing it
-                    (Python's ast module reads the file as code without running it)
-                    and runs only those definitions. Used for the start-up checks,
-                    the k-mer floor setting and the target lists of 00_common.smk,
-                    which is plain Python, for the parsers inside the read-tracking
-                    scripts, and for the measurements of the COI screens
-                    (80d_coi_screens.py).
+  load_functions()  pulls named functions, classes and constants out of a file by
+                    parsing it (Python's ast module reads the file as code without
+                    running it) and runs only those definitions. Used for the start-up
+                    checks (the YAML loader that refuses a key written twice is a class),
+                    the k-mer floor setting, the settings of DADA2's error learning
+                    and the target lists of 00_common.smk, which is plain Python, for
+                    the parsers inside the read-tracking scripts, and for the
+                    measurements of the COI screens (80d_coi_screens.py).
   run_script()      runs a whole script with a stand-in `snakemake` object that
-                    carries the input, output, params and log a rule would pass.
-                    The script then does exactly what it does in a run, on the tiny
-                    files the test wrote. A script that stops the run calls
+                    carries the input, output, params, log and config a rule would
+                    pass. The script then does exactly what it does in a run, on the
+                    tiny files the test wrote. A script that stops the run calls
                     sys.exit(message); a test catches that as SystemExit and reads
-                    the message.
+                    the message (the check before denoising, 60f, is tested so).
   inline_program()  cuts a Python program out of a rule's shell command (the taxon
                     lookup of the read extraction and the orientation table of
                     primer trimming live there), so it can be run with the Python
@@ -66,14 +77,14 @@ STANDARD_NAMES = {
 
 
 def source_segments(path, names):
-    """The source text of the top-level functions and constants called `names` in
-    the Python file at `path`, as {name: text}, read with the ast module (the file
+    """The source text of the top-level functions, classes and constants called `names`
+    in the Python file at `path`, as {name: text}, read with the ast module (the file
     is parsed, not run). Stops with a clear message when a name is not found."""
     source = Path(path).read_text()
     tree = ast.parse(source)
     found = {}
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name in names:
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name in names:
             found[node.name] = ast.get_source_segment(source, node)
         elif isinstance(node, ast.Assign):
             for target in node.targets:
@@ -86,8 +97,8 @@ def source_segments(path, names):
 
 
 def load_functions(path, names):
-    """Run the definitions of `names` from the file at `path` (functions and the
-    constants they use) and return them as attributes of one object, e.g.
+    """Run the definitions of `names` from the file at `path` (functions, classes and
+    the constants they use) and return them as attributes of one object, e.g.
         checks = load_functions(COMMON_SMK, ["_value_passes"])
         checks._value_passes("Bacillati", {"ends_with": ["ati"]})
     Only these definitions run; the rest of the file (which would read a run config)
@@ -105,15 +116,19 @@ def load_functions(path, names):
     return SimpleNamespace(**{name: namespace[name] for name in names})
 
 
-def fake_snakemake(input=None, output=None, params=None, log=None):
+def fake_snakemake(input=None, output=None, params=None, log=None, config=None):
     """A stand-in for the `snakemake` object a running job gets: `sm.input.reports`,
-    `sm.output.tsv`, `sm.params.samples`, `sm.log[0]` and so on. Each argument is a
-    dict of the names the rule declares; `log` is a list of paths."""
+    `sm.output.tsv`, `sm.params.samples`, `sm.log[0]`, `sm.config` and so on. Each of
+    input, output and params is a dict of the names the rule declares; `log` is a list
+    of paths; `config` is the run's config as a plain dict (empty when not given),
+    which a script reads as `snakemake.config`, as check_error_model reads
+    accept_unconverged there."""
     return SimpleNamespace(
         input=SimpleNamespace(**(input or {})),
         output=SimpleNamespace(**(output or {})),
         params=SimpleNamespace(**(params or {})),
         log=list(log or []),
+        config=config or {},
     )
 
 

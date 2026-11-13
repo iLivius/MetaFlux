@@ -30,7 +30,7 @@ in pipeline order under `out_dir`, so the directory listing reads like the workf
 | 3 | Per-stage QC | Falco | `falco` | `stats/falco/` |
 | 4 | Amplicon-length probe | Cutadapt (or direct read) | `amplicon_probe` | `refdb/cache/` |
 | 5 | Truncation-length selection | in-house | `pick_trunclen` | `stats/trunclen.json` |
-| 6 | ASV inference | DADA2 | `dada_filter`, `dada_seqtab` | `04.filtered/`, `05.dada2/` |
+| 6 | ASV inference | DADA2 | `dada_filter`, `choose_error_model`, `learn_errors`, `error_model_report`, `check_error_model`, `dada_seqtab` | `04.filtered/`, `05.dada2/`, `stats/dada2/` |
 | 7 | Marker-region extraction *(optional)* | Metaxa2 or ITSx | `target_extract` | `05.dada2/` |
 | 8 | ASV length filter | in-house | `dada_length_filter` | `05.dada2/`, `stats/dada2/` |
 | 9 | Taxonomy assignment | DADA2 RDP or VSEARCH SINTAX | `coi_screens` (COI only), `assign_taxonomy` | `06.taxonomy/` |
@@ -99,7 +99,7 @@ Trimming happens in two calls, because a read can carry primer sequence at both 
 
 | Call | Cutadapt options | Purpose |
 |------|------------------|---------|
-| 5′ | `-g file:fwd -G file:rev`, `--discard-untrimmed` (and `--overlap 10` with `orientation: mixed`, see [below](#the-mixed-orientation-second-pass)) | Removes the forward primer from R1 and the reverse primer from R2. Pairs without a recognisable primer are dropped. |
+| 5′ | `-g file:fwd -G file:rev`, `--discard-untrimmed` (and `--overlap 10` with `orientation: mixed`, see [below](#the-mixed-orientation-second-pass); `--cut -1 -U -1` when the last sequencing cycle is removed, see [the extra last cycle](#the-extra-last-cycle)) | Removes the forward primer from R1 and the reverse primer from R2. Pairs without a recognisable primer are dropped. |
 | 3′ | `-a file:rev_rc -A file:fwd_rc` | Removes read-through: when the amplicon is shorter than the read, the sequencer runs past the far end into the reverse complement of the other primer. Reads without read-through pass through untouched. |
 
 The two reverse-complemented primer files are produced once per run by `revcomp_primers`
@@ -120,7 +120,65 @@ the Cutadapt section of the MultiQC report — show what the tolerance is actual
 
 There is deliberately **no quality trimming here**: DADA2 learns its error model from the
 run's own quality scores, and pre-trimming on quality would distort it by removing exactly
-the low-quality bases the model needs in order to fit.
+the low-quality bases the model needs in order to fit. The one exception, below, removes
+the same cycle from every read, whatever its quality.
+
+### The extra last cycle
+
+An Illumina run sequences one cycle more than its read length: 2 × 151, 2 × 251 or
+2 × 301 cycles for reads of 150, 250 or 300 bases. The extra cycle serves the phasing
+correction of the cycle before it; its own calls get no such correction.
+
+The table checks the last base of each read, and the base before it, against the base the
+other mate reads at the same position of the template. Each value is the share of
+overlapping read pairs, among the first 20,000 of the library, in which the two mates
+agree; a good cycle is close to 100 %. COI is left out: its reads are 295 and 296 bp long.
+
+| Library ([test datasets](../about/test-datasets.md)) | Instrument, read length | R1 last base | R1 base before | R2 last base | R2 base before |
+|---|---|--:|--:|--:|--:|
+| ITS2 yeast mocks (SRR20648181) | MiSeq, 301 | 94.7 % | 99.4 % | 59.9 % | 97.9 % |
+| 18S (River) | MiSeq, 301 | 98.3 % | 99.7 % | 85.9 % | 98.1 % |
+| rpoB (Mock1) | MiSeq, 301 | 92.6 % | 99.5 % | 72.2 % | 96.3 % |
+| gyrB (MC1) | MiSeq, 251 | 99.1 % | 99.7 % | 80.8 % | 96.2 % |
+| 16S (WTB12) | MiSeq, 301 | 73.8 % | 97.2 % | too few pairs | too few pairs |
+| Zymo D6331 (SRR38976716) | NextSeq 2000, 321 and 281 | 99.1 % | 99.8 % | 99.8 % | 99.3 % |
+
+On the MiSeq runs the last base disagrees with the other mate in up to 40 % of the pairs,
+and the wrong calls lean one way: where the ITS2 template carries a T, R2's cycle 301
+reads C in 79 % of the pairs. The quality scores of that cycle (mean Q 10) predict 13 %
+errors. The NextSeq 2000 run, whose cycles are split unevenly between the two reads,
+shows no such loss.
+
+Whether that base reaches the ASVs depends on the truncation. ITS reads are not truncated
+(`truncLen` 0, 0): the wrong base survives denoising, because most reads of the sequence
+carry it, and `mergePairs`, which accepts no mismatch in the overlap
+(`dada2.merge.max_mismatch: 0`), rejects the pairs. On the other markers `truncLen`
+decides: a cut below the read length removes the base anyway, and removing it before a cut
+at the read-length limit shifts that cut.
+
+`amplicon.cutadapt.trim_final_cycle` removes the last base of every read before the
+primers are searched (Cutadapt's `--cut -1` for R1 and `-U -1` for R2, in both 5′ calls):
+
+| Value | The last base of a read direction is removed when |
+|---|---|
+| `auto` (default) | DADA2 does not truncate that direction (ITS; the other markers only with `trunc_len.mode: manual` and a cut of 0) **and** its longest read among the first 10,000 is 76, 101, 151, 251 or 301 bp |
+| `true` | always |
+| `false` | never (as up to v2.6.1) |
+
+The decision for each sample and read direction, with the longest read and the reason,
+opens `logs/trim_primers/{sample}.log`. Every later step, Falco and DADA2 included, sees
+the shorter reads.
+
+The next table gives the effect of the removal on the test sets, all other settings at
+their defaults. The truncated sets were trimmed on purpose, to measure what `auto` leaves
+alone. *Retention* is the share of the raw read pairs that reach the final table.
+
+| Test set (read length) | Truncated | Removed by `auto` | Effect of the removal |
+|---|---|---|---|
+| ITS2 yeast mocks (301) | no | yes | retention 16.0 → 33.7 %; *S. paradoxus* detected in 4 of 4 samples and the *S. uvarum* group in 2 of 2, against none |
+| 18S (301) | yes | no | R1 cut 271 → 274 bp; final table −1.2 % reads, −38 ASVs; merging 98 % either way |
+| rpoB (301) | yes | no | final table unchanged; on a copy with binned quality scores, 1 of the 19 strains lost (42 reads) |
+| 16S (301), gyrB (251) | yes | no | final table unchanged |
 
 ### The mixed-orientation second pass
 
@@ -323,20 +381,38 @@ runs again in a `fixed` folder for another reason, its changed command; see
 
 ## 3. Per-stage QC
 
-`falco` profiles reads at each stage of preprocessing: `raw`, `nophix` (only when PhiX
-removal ran) and `stripped`. Falco is a drop-in FastQC replacement that reads FASTQ much
-faster and writes the same `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`,
-one directory per sample, direction and stage under `stats/falco/`.
+`falco` profiles reads at each stage of the amplicon path: `raw`, `nophix` (only when
+PhiX removal ran), `stripped`, and `filtered`, the reads DADA2's `filterAndTrim` keeps in
+step 6. Falco is a drop-in FastQC replacement that reads FASTQ much faster and writes the
+same `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`, one directory per sample,
+direction and stage under `stats/falco/`.
 
-Running the same QC three times is what makes it possible to see *where* reads were lost
-and *how* the quality profile changed, instead of only seeing the final, post-trimming
-snapshot. Each Falco call
-is fed a stage-renamed symlink of its input, because MultiQC takes the sample name from the
-filename recorded inside `fastqc_data.txt` — without that, the three stages of one sample
-would collapse into a single entry.
+Running the same QC at each stage is what makes it possible to see *where* reads were
+lost and *how* the quality profile changed, instead of only seeing the final snapshot.
+Each Falco call is fed a stage-renamed symlink of its input, because MultiQC takes the
+sample name from the filename recorded inside `fastqc_data.txt` — without that, the
+stages of one sample would collapse into a single entry.
 
 The `stripped`-stage tables are not only a report: `pick_trunclen` reads their per-base
-quality columns in the next step.
+quality columns in the next step. The reports of the other stages are read by nothing
+but MultiQC.
+
+The `filtered` stage shows the reads DADA2 learns its error models from. Its reports are
+made right after `dada_filter`, and `choose_error_model` waits for them, because its stop
+messages point to them; deleting a sample's `filtered` folder in `stats/falco/` therefore
+makes the error models be learned again (a single file deleted inside it only later, see
+[What happens on a re-run](../reference/running.md#what-happens-on-a-re-run)). In the MultiQC report, its rows (`QC | quality-filtered reads`)
+give the reads that passed the filter and the mean quality at each position of the
+read. A mean hides binned quality scores, the few values recent instruments write (for
+example 9, 20 and 34), because the mean of a few values can fall anywhere between them.
+Each sample's own Falco page (`stats/falco/<sample>_R1_filtered/fastqc_report.html`, and
+`_R2_`) draws the quality along the read as box plots built from the values the reads
+carry, so binned reads show as flat lines on their common values. On the NextSeq 2000
+reads of one 16S library, these lines sat at 34 along nearly the whole read and at 20
+only near the end of R2; 9, carried by fewer than one base in ten, never showed. Every
+value, with its share of bases, is in the report on the error models
+(`stats/dada2/error_model_quality_values.png`, also in the "DADA2 error model" section of
+the MultiQC report).
 
 ## 4. Amplicon-length probe
 
@@ -357,7 +433,7 @@ Either way, the step writes a JSON holding the length distribution: `n_amplicons
 `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean` and `stdev`. For 16S, chloroplast,
 mitochondrial and eukaryote references are left out of these statistics, because their
 in-silico products are often longer and the taxon filter removes them later anyway; the
-JSON records what was left out (`excluded_taxa`, `n_excluded`). For rpoB, products that
+JSON records what was left out (`excluded_taxa`, `n_excluded`). For 16S and rpoB, products that
 still hold a second forward-primer site are left out too (`n_excluded_second_site`):
 their forward primer matched a look-alike stretch upstream of its real site. Which
 single statistic feeds the truncation constraint is set by
@@ -366,7 +442,7 @@ COI).
 
 The result is cached in the repository under `refdb/cache/`, not under `out_dir`, and the
 filename encodes the marker, the reference (for 16S including the lineages left out, for
-rpoB the second-site rule), and a short hash of both primer FASTAs. Same marker, same
+16S and rpoB the second-site rule), and a short hash of both primer FASTAs. Same marker, same
 reference, same primers means the cached probe is reused — across reruns and across different output directories. Change a primer and the hash changes, so the probe is
 recomputed automatically.
 
@@ -422,7 +498,7 @@ in length and a fixed cut would discard the short ones. Quality control for ITS 
 
 ## 6. ASV inference
 
-This is the DADA2 core: three rules, run in order.
+This is the DADA2 core: seven rules, run in order.
 
 **`dada_quality_plots`** aggregates the per-base quality profile across all primer-trimmed
 samples and saves it as PNG and PDF (`stats/dada2/stripped_read_R{1,2}_qual_plot.*`).
@@ -431,8 +507,11 @@ Diagnostic only — it does not feed the truncation decision, which comes from F
 
 **`dada_filter`** runs DADA2's `filterAndTrim` per sample on the reads from `03.stripped/`,
 using the truncation lengths from `stats/trunclen.json`. Filtered reads go to `04.filtered/`,
-and a small per-sample JSON of in/out counts goes to `stats/dada2/`, where `dada_seqtab`
-collects it for read tracking. The gates:
+and a small per-sample JSON goes to `stats/dada2/` with the in/out counts, which
+`dada_seqtab` collects for read tracking, and the quality values found in the first
+100,000 filtered reads of each file, which `choose_error_model` reads. When no read pair
+of a sample passes, `filterAndTrim` writes no files, and the step stops with a message
+that names the filtering settings. The gates:
 
 | Parameter | Config key | Shipped default |
 |-----------|------------|-----------------|
@@ -450,12 +529,81 @@ floor is meaningful there, whereas for the other markers the probe describes the
 amplicon and would drop every read. Without a probe JSON, ITS falls back to the config
 `min_len` like every other marker.
 
-**`dada_seqtab`** runs the denoising chain once over all samples together:
+The next four steps learn and check DADA2's error models; the page
+[DADA2 error model](error-model.md) describes them in depth, with examples of their
+figures.
 
-1. `learnErrors` on R1 and R2 separately — builds a run-specific error model from a
-   random subsample of reads (`amplicon.dada2.learn_errors.nbases`, default `1e8`).
-   Diagnostic plots go to `stats/dada2/filtered_read_R{1,2}_error_plot.*`.
-2. `derepFastq` then `dada` — the denoising itself, which decides whether a rare sequence
+**`choose_error_model`** picks, for R1 and for R2, the error function the models are
+learned with. In every round of learning, an error function turns the misreads counted
+at each quality score into error rates. DADA2's default, the loess fit, draws a smooth
+curve and is made for the continuous quality values a MiSeq writes (filtered MiSeq reads
+carry 28 to 32 distinct values above Q2); NovaSeq, NextSeq and other recent instruments
+write only a few binned values (for example 9, 20 and 34), for which DADA2's author
+recommends a binned fit, `makeBinnedQualErrfun`. With
+`amplicon.dada2.learn_errors.error_model: auto`, the step pools the quality values of
+the samples with at least 1,000 filtered reads and takes loess for 20 or more distinct
+values above Q2 and the binned fit for 3 to 10 with gaps between them, anchored on the
+values the reads carry. It stops the run before any learning when the reads carry fewer
+than three values (as files re-encoded by ENA do), when one sample does, when samples
+from different instruments are mixed, or when 11 to 19 values, or 3 to 10 that include
+neighbours (as MiSeq reads keep under a raised `trunc_q`), leave the kind open; each stop
+says how to go on (see [Troubleshooting](../troubleshooting.md#amplicon-the-run-stops-because-the-reads-carry-fewer-than-three-quality-values)).
+The experimental `error_model: custom` takes an error function of your own instead; only
+the stops about the reads themselves apply to it (see
+[your own error function](error-model.md#your-own-error-function-experimental)).
+The choice goes to `stats/dada2/error_model_choice.json`, and the values of every sample
+to `stats/dada2/quality_values.tsv`. The step waits for the Falco reports of the filtered
+reads ([step 3](#3-per-stage-qc)) without reading them, so that the reports its stop
+messages point to are there (a deleted Falco folder of that stage therefore makes the
+models be learned again). The step runs on the machine Snakemake runs on, also on a
+cluster, so its message reaches your terminal.
+
+**`learn_errors`** fits DADA2's error model, once for R1 and once for R2, from the
+filtered reads of all samples, with the error function `choose_error_model` picked. The
+model says how often each base is read as another at each quality score; the denoising
+needs it to tell a real variant from a sequencing error of a more abundant sequence. `learnErrors` reads whole samples in random order
+until `amplicon.dada2.learn_errors.nbases` bases are in (default `1e8`), then repeats two
+steps on them: denoise with the current error rates, and estimate the rates again from
+the result. The loop ends when a round gives back a table that already went into an
+earlier round (DADA2's own stop; MetaFlux calls the model *converged*), when the
+flat-rounds rule sees that the model has stopped improving (`max_flat_rounds`, default
+`20`), or at the cap of `max_consist` rounds (default `200`). The step writes the two
+models to `05.dada2/error_model_R{1,2}.rds` and the record of how their learning ended
+to `stats/dada2/error_model.json`, with a code for each model, such as `R2:0a55be94`.
+
+**`error_model_report`** writes the report on the two models, in `stats/dada2/`. For each
+read direction it takes the transition counts the model was fitted to and refits every
+error function MetaFlux offers on them: only the smoothing step that turns counts into
+error rates, not a new learning, so the refit of the function used gives back the model
+exactly. It then measures how closely each fitted curve follows the counted rates (the
+deviance of the counts, the typical fold difference between curve and counts, and how
+often the curve rises with quality), separately at the quality values the reads carry
+and at the averaged qualities of identical reads, which binned data produce in between.
+The figures show each model's fit (counted rates, the model, the refits and the nominal
+rate of the quality score, per kind of misread), how the learning converged round by
+round, and the quality values of the filtered reads; DADA2's own `plotErrors` pictures
+(`filtered_read_R{1,2}_error_plot.*`) are kept. The titles name the error function (for
+the binned fit, with the quality values it was anchored on) and how the learning ended.
+The same report forms the "DADA2 error model" section of the MultiQC report. It runs
+before the check, so it is there whatever the check decides; a figure it cannot draw is
+replaced by a picture that states the error and listed as a warning, which the check
+repeats. How to read it: [the report](error-model.md#the-report).
+
+**`check_error_model`** reads the record. When both models converged, it writes a
+one-line verdict (`stats/dada2/error_model_check.txt`) and the run goes on. When a model
+was ended by the flat-rounds rule or the cap, the run stops here, before any denoising,
+unless the model's code is listed in `amplicon.dada2.learn_errors.accept_unconverged`.
+The stop message says what to check in the reads first, where the model's figures are,
+and the line that accepts this model; see
+[the check and acceptance by code](error-model.md#the-check-and-acceptance-by-code) and
+[Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges).
+The check runs on the machine Snakemake runs on, also on a cluster, so its message
+reaches your terminal.
+
+**`dada_seqtab`** reads the two saved models and runs the denoising chain once over all
+samples together:
+
+1. `derepFastq` then `dada` — the denoising itself, which decides whether a rare sequence
    is a real variant or a sequencing error of an abundant one.
    `amplicon.dada2.dada.omega_a` (default `1e-40`) sets that sensitivity: it is the
    abundance p-value a unique sequence must beat to be split off as its own ASV, so lower
@@ -463,10 +611,10 @@ amplicon and would drop every read. Without a probe JSON, ITS falls back to the 
    *raising* it (say to `1e-20`) splits off more ASVs, at the cost of more false
    positives. `amplicon.dada2.pool` (default `false`) controls whether samples are
    processed independently, pseudo-pooled, or fully pooled.
-3. `mergePairs` — joins R1 and R2 into full amplicons, requiring
+2. `mergePairs` — joins R1 and R2 into full amplicons, requiring
    `amplicon.dada2.merge.min_overlap` bp of overlap (default `12`) with at most
    `max_mismatch` mismatches (default `0`) — both DADA2's own defaults.
-4. `makeSequenceTable` then `removeBimeraDenovo` — builds the ASV × sample count table and
+3. `makeSequenceTable` then `removeBimeraDenovo` — builds the ASV × sample count table and
    removes chimeras (`amplicon.dada2.chimera.method`, default `consensus`).
 
 !!! note "Two `min_overlap` keys, two different jobs"
@@ -477,10 +625,11 @@ amplicon and would drop every read. Without a probe JSON, ITS falls back to the 
 
 The outputs land in `05.dada2/`: `seqs.fasta` (ASV sequences), `seqtab_head_names.txt`
 (counts keyed by `ASV_#` ID), `seqtab_head_seqs.txt` (the same counts keyed by the full
-sequence) and `read.counts`.
+sequence) and `read.counts`, next to the two error models of `learn_errors`.
 
-`amplicon.seed` (default `42`) fixes the random-number draw in `learnErrors`, which is what
-makes a rerun on the same input reproduce the same ASVs.
+`amplicon.seed` (default `42`) fixes the random-number draw in `learnErrors` (rule
+`learn_errors`: the order in which it reads the samples), which is what makes a rerun on
+the same input reproduce the same models and the same ASVs.
 
 ## 7. Marker-region extraction *(optional)*
 
@@ -532,7 +681,10 @@ priority:
 
 1. `amplicon.length_filter.range`, when set — an explicit `[min, max]`.
 2. `mode: auto` with a probe available — `[probe q1 − window_margin, probe p95 + window_margin]`,
-   with `window_margin` defaulting to `50` bp. P95 rather than P99 sets a tighter ceiling.
+   with `window_margin` defaulting to `50` bp. For ITS with extraction on, the floor is
+   the probe's `min` instead, without margin, so that short ITS regions are kept (see
+   [the ASV length filter](length-and-truncation.md#the-asv-length-filter)). P95 rather
+   than P99 sets a tighter ceiling.
    The ITS probe is the case to watch: it reads lengths straight off pre-extracted
    ITS1/ITS2 subregions, so its upper tail is real length variation between fungal
    lineages, and a p95 ceiling will clip genuinely long ITS ASVs, Basidiomycota most
@@ -648,8 +800,10 @@ removal ran), `stripped`, `filtered`, `denoised`, `merged`, `non_chimeric`,
 after the off-target guard), and `post_taxonomy_filter`. This is the first file to open
 when a run produces fewer ASVs than expected: it shows which step consumed the reads.
 
-`multiqc` collects the Falco reports, the Cutadapt JSONs and the bowtie2 PhiX logs into
-`multiqc/multiqc_report.html`.
+`multiqc` collects the Falco reports, the Cutadapt JSONs, the bowtie2 PhiX logs and the
+report on DADA2's error models into `multiqc/multiqc_report.html`. It waits for that
+report but not for `check_error_model`, so with `--keep-going` a run stopped by the check
+still gets its MultiQC report.
 
 ## What changes between markers
 
@@ -673,6 +827,8 @@ quirks that follow from its database.
 ## Where to go next
 
 - [Amplicon length and truncation](length-and-truncation.md) — steps 4, 5 and 8 in depth.
+- [DADA2 error model](error-model.md) — the error models of step 6: the choice of error
+  function, how learning ends, the check before denoising and the report.
 - [Keeping and discarding taxa](taxon-filter.md) — the step-9 contaminant filter.
 - [Markers](markers/index.md) — per-marker references, primers and defaults.
 - [Output files](../reference/output.md) — what every file under `out_dir` contains.

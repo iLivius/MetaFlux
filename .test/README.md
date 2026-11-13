@@ -45,6 +45,11 @@ snakemake -n --cores 1 --configfile .test/config/16S_rdp_silva144.yaml
 | `stubs/kraken2_db/` | A stand-in Kraken2 database folder (see below). |
 | `stubs/sylph/`, `stubs/sylph_taxonomy/` | Stand-in sylph database files and sylph-tax lineage tables (see below). |
 | `stubs/host/host_standin.fa.gz` | A made-up 300 bp "host genome", so that the host-removal rules appear in one shotgun plan. |
+| `custom_error_functions/loess_wrapper.R` | A minimal error function of your own (experimental `error_model: custom`): it hands DADA2's transition counts to `loessErrfun` and returns its table unchanged. Used by `16S_custom_error_function` and shown as the example on the documentation page of the error model. |
+| `custom_error_functions/binned_from_counts.R` | An error function of your own with a fit of its own: DADA2's binned fit, with every quality score of the counts at which all four true bases have bases as a bin. It carries an unchanged copy of `makeBinnedQualErrfun` (DADA2 1.38.0, under DADA2's license), which DADA2 1.34.0 lacks. Shown as an example on the documentation page of the error model; no test or dry run uses it. |
+| `custom_error_functions/monotone_gam.R` | An error function of your own built on a monotone GAM (R package scam): per kind of misread, an error rate that may only fall as the quality score rises, with fall-backs for thin counts. Needs scam (`workflow/envs/dada2_custom.yaml`). Shown as an example on the documentation page of the error model; no test or dry run uses it. |
+| `custom_error_functions/custom_function_checks.R` | The R checks of `error_model: custom` on made-up tables (base R only): each broken table must stop with its reason, attributes are dropped, a rate below 1e-7 warns, the random-number state and kind are put back, and the round keeper writes each warning once. Run by `tests/test_custom_error_function_r.py` when `METAFLUX_RSCRIPT` names an Rscript; not part of the dry runs. |
+| `r_checks/error_model_checks.R` | R checks of the error-model scripts on made-up input: `learn_errors` sorts the filtered files in the same order in every locale, `dada_seqtab` pairs each R1 file with the R2 file of the same name and stops when one is missing (this case needs the R packages pacman and dada2), and the texts of the flat-rounds log line, of the binned fit's stop on quality scores outside its anchors and of the report's titles with many anchors. Run by `tests/test_error_model_r.py` when `METAFLUX_RSCRIPT` names an Rscript; not part of the dry runs. |
 | `run_dry_runs.sh` | The runner the CI calls; its header says exactly what it does. |
 
 ## The matrix
@@ -62,6 +67,8 @@ Amplicon, one config per marker, method and SILVA release that MetaFlux offers:
 | `gyrB_rdp` | gyrB | rdp | – | fixed amplicon length, manual truncation and length window |
 | `rpoB_rdp` | rpoB | rdp | – | the FROGS archive download and conversion |
 | `COI_sintax` | COI | sintax | – | the downloads of MIDORI2 and of the bacterial COI homologues, the MIDORI2 conversion, the COI screens, `orientation: mixed` |
+| `16S_error_model_settings` | 16S | sintax | 144 | the settings of DADA2's error learning written as text, in capitals or as a single code (`max_consist: "200"`, `max_flat_rounds: 0`, `error_model: " LOESS "`, `accept_unconverged: "R2:0A55BE94"`), which the start-up checks accept and normalise |
+| `16S_custom_error_function` | 16S | sintax | 144 | the experimental `error_model: custom` with `custom_error_function` naming `custom_error_functions/loess_wrapper.R` by a relative path: the start-up check accepts the block, and the plan is built (that the file is an input of `learn_errors` and `error_model_report`, and that both run in `workflow/envs/dada2_custom.yaml`, is checked on the rule text by `tests/test_error_model_settings.py`) |
 
 gyrB and rpoB have no SINTAX reference, so `method: sintax` is refused for them at
 start-up, and COI has no rdp trainset, so `method: rdp` is refused for it; those
@@ -86,6 +93,23 @@ Expected stops (`config/expected_stop/`):
 | `COI_rdp` | `method: rdp` on a marker without an rdp trainset | `method: rdp is not available` |
 | `shotgun_tax_lev_D` | Bracken at the domain rank | `tax_lev: D is not allowed` |
 | `shotgun_kmer_floor_word` | a k-mer evidence floor that is neither a whole number nor `auto` | `min_distinct_minimizers must be a whole number >= 0 (the default is 300) or the word auto` |
+| `16S_max_consist_zero` | a cap of 0 rounds on DADA2's error learning, which would hand DADA2's rough starting estimate to the denoising | `max_consist must be a whole number of at least 1` |
+| `16S_accept_unconverged_true` | `accept_unconverged: true`, an on/off switch where the setting takes the codes of accepted error models | `accept_unconverged takes the codes` |
+| `16S_max_flat_rounds_fraction` | a fraction (`2.5`) as the number of flat rounds of the early stop | `max_flat_rounds must be a whole number >= 0` |
+| `16S_error_model_word` | an instrument name (`novaseq`) as the error function of DADA2's error learning, which takes `auto`, `loess`, `binned` or `custom` | `error_model must be one of auto, loess, binned` |
+| `16S_custom_error_function_missing_file` | `error_model: custom` with an error-function file that does not exist (a typo in its name) | `is not an existing file` |
+| `16S_custom_error_function_bad_name` | `error_model: custom` with a function name R cannot give a function (`loess-wrapper`, with a dash) | `custom_error_function.name must be the name of an R function` |
+| `16S_learn_errors_block_empty` | a `learn_errors:` block whose only line (`accept_unconverged`) is commented out, which YAML reads as empty and which would replace the template's whole block | `amplicon.dada2.learn_errors is empty in your run config` |
+| `16S_two_amplicon_blocks` | a second `amplicon:` block pasted at the end of the run config, which YAML would keep instead of the first, losing the marker, the primers and the taxonomy filter without a word | `the key 'amplicon' is written twice in the same block (lines 18 and 29)` |
+| `ITS_trim_final_cycle_word` | a word other than `auto`, `true` or `false` (`always`) for the removal of the extra last sequencing cycle in primer trimming | `trim_final_cycle must be auto, true or false` |
+
+Settings typed inline with `--config` (after the two groups above, in `run_dry_runs.sh`):
+
+| Check | What is typed inline | What must happen |
+|---|---|---|
+| `phylogeny_off`, `phylogeny_on` | `amplicon={phylogeny: {enabled: false}}` over a config that turns the phylogeny on, and `true` over one that leaves it off | the plan holds no phylogeny job, and phylogeny jobs, as the same values written in a config file would give |
+| `accept_code` | `amplicon={dada2: {learn_errors: {accept_unconverged: [R2:0a55be94]}}}` | the dry run plans the run: a model code typed inline is accepted at start-up (how a code is normalised is checked by `tests/test_error_model_settings.py`, and how inline text becomes a list by `tests/test_inline_config.py`) |
+| `max_consist_zero` | `amplicon={dada2: {learn_errors: {max_consist: 0}}}` | the run stops at start-up with `max_consist must be a whole number of at least 1`, as in a config file |
 
 ## The stand-in databases
 

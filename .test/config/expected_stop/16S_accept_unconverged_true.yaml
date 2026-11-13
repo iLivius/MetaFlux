@@ -1,0 +1,28 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: accept_unconverged set
+# to true. The setting takes the codes of the error models the user accepts (as the
+# stop message prints them); an on/off switch would accept any model that does not
+# converge, however often the data change. The runner (.test/run_dry_runs.sh) expects
+# the message fragment on the next line.
+# EXPECT: accept_unconverged takes the codes
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S
+output:
+  out_dir: .test/out/expected_stop_16S_accept_unconverged_true
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [d__Bacteria, d__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]
+  dada2:
+    learn_errors:
+      accept_unconverged: true

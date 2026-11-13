@@ -51,6 +51,39 @@ first: the failures worth knowing about are described there with their fix.
   says how): as long as the old pin exists, Snakemake installs the old builds from it
   and never sees the edit. A tool used only by the tests or the checks (pytest, mkdocs)
   is not a pipeline dependency and is pinned in `.github/workflows/ci.yml` instead.
+- **One pin is rebuilt from another, not solved: `dada2_custom.linux-64.pin.txt`.**
+  `workflow/envs/dada2_custom.yaml` is `dada2.yaml` plus `r-mgcv` and `r-scam`, for error
+  functions of the user's own, and its pin must hold every build of
+  `dada2.linux-64.pin.txt`, so that a model learned in it rests on the same dada2, R and
+  maths libraries as one learned in `dada2.yaml`. A fresh solve does not keep them: a
+  dry-run solve of the yaml, when this pin was made, changed 97 of the 185 builds of
+  dada2's pin, OpenBLAS and the GCC runtime among them. So whenever `dada2.yaml` or its
+  pin changes, refresh dada2's pin first, make the same edit in `dada2_custom.yaml`, and
+  rebuild its pin from dada2's, in a new folder outside the repository:
+
+  ```bash
+  prefix=/path/to/a/new/folder
+  # 1. Build the environment of dada2's pin exactly: an explicit list is installed as
+  #    it is, without solving.
+  conda create --yes --no-default-packages -p "$prefix" --file workflow/envs/dada2.linux-64.pin.txt
+  # 2. Install the two packages with every installed package frozen. conda updates
+  #    openssl and ca-certificates on every install (its aggressive_update_packages
+  #    setting), even with --freeze-installed, so name both with the version and build
+  #    they have in dada2's pin.
+  conda install --yes --freeze-installed --override-channels -c conda-forge -c bioconda \
+      --strict-channel-priority -p "$prefix" r-mgcv r-scam \
+      "openssl=<version>=<build>" "ca-certificates=<version>=<build>"
+  # 3. Export it in the format of every pin file.
+  conda list --explicit --md5 -p "$prefix" > workflow/envs/dada2_custom.linux-64.pin.txt
+  ```
+
+  The new pin must hold every line of dada2's pin, and the added lines must be the two
+  packages and what they bring (nlme comes with mgcv):
+  `comm -23 <(sort workflow/envs/dada2.linux-64.pin.txt) <(sort workflow/envs/dada2_custom.linux-64.pin.txt)`
+  prints nothing, and `comm -13` with the same two files lists the added lines.
+  `tests/test_error_model_settings.py` checks both, and that the yaml is `dada2.yaml`
+  plus the two packages. The versions of mgcv and scam named under "R packages" in
+  `docs/amplicon/error-model.md` are those of this pin; update them with it.
 - **Run the checks** (next section) before you open the pull request, and add a test
   or a dry-run config when your change can be covered by one.
 
@@ -62,9 +95,16 @@ The same checks run on GitHub for every push and pull request
 ```bash
 # 1. The unit tests of the pure-Python parts (start-up checks, reference check,
 #    OTU-table builder, read-tracking parsers, taxon lookup, k-mer evidence gate,
-#    MIDORI2 conversion and COI screens, orientation table of primer trimming).
+#    MIDORI2 conversion and COI screens, orientation table and final-cycle decision
+#    of primer trimming,
+#    settings of DADA2's error learning, the choice of its error function, the list
+#    of error functions and the vendored DADA2 function, the files and the MultiQC
+#    section of the error-model report, and the check before denoising).
 #    Needs pytest and PyYAML; the OTU-table tests also need biom-format and numpy
-#    (the packages of workflow/envs/biom.yaml) and are skipped without them.
+#    (the packages of workflow/envs/biom.yaml) and are skipped without them. The R
+#    checks (the experimental error_model: custom, and the file order, file pairing and
+#    texts of the error-model scripts) run only when METAFLUX_RSCRIPT names an Rscript
+#    (see tests/helpers.py); the CI skips them.
 pytest tests
 
 # 2. The dry-run matrix: every marker, method, SILVA release and shotgun profiler
@@ -129,7 +169,24 @@ possible:
 - **Scripts are plain Python or R** that read the `snakemake` object and nothing else;
   MetaFlux scripts never import from each other (each runs in its own conda
   environment). Where two scripts share a function, they carry a copy and say so, and
-  a test keeps the copies identical.
+  a test keeps the copies identical. One exception: the list of the error functions
+  DADA2 can learn its error model with, `workflow/scripts/amplicon/60_error_functions.R`,
+  is sourced by both `60d_learn_errors.R` and `60e_error_model_report.R` (both run in
+  `dada2.yaml`, or in `dada2_custom.yaml`, which holds the same builds plus mgcv and scam,
+  when a run names an error function of the user's own), so that the learning and the
+  report always mean the same thing by a function's name, and both rules list it as an
+  input. Its header says what a change to
+  it costs (every amplicon folder learns its error models again) and how to add a
+  function. Another exception: `workflow/scripts/amplicon/30a_final_cycle.py` is a small
+  command-line program, not a Snakemake script. Rule `trim_primers` runs it from its
+  shell command, once per read direction, to decide whether Cutadapt removes the last
+  sequencing cycle, and lists it as an input; its header says what a change to it costs
+  (primer trimming runs again in every amplicon folder).
+- **Vendored code is never edited.** `workflow/scripts/amplicon/vendor/` holds one
+  function copied unchanged from DADA2 (`makeBinnedQualErrfun`, under DADA2's license,
+  `LICENSE.dada2`). A test checks its bytes against the md5 in its header, so a hand
+  edit or an editor that strips trailing spaces fails the checks. A newer version of
+  the function goes in as a new copy, with its source and md5 in the header.
 - **Public text stays general and timeless.** The docs, the comments, the commit
   messages and the changelog name versions, tools and data releases, but no dates of
   our own work, commit hashes, issue numbers or private discussions. Facts come with

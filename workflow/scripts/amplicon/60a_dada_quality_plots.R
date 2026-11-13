@@ -25,9 +25,10 @@
 #
 # Output: one PNG + one PDF per direction (R1, R2) under stats/dada2/. Nothing
 # downstream reads these back in, and they are not even picked up by the
-# MultiQC report (MultiQC only scans stats/falco and stats/cutadapt in
-# amplicon mode — see 90_report.smk): open them by hand when sanity-checking a
-# run or deciding whether trunc_len needs adjusting.
+# MultiQC report (in amplicon mode MultiQC scans only stats/falco, stats/cutadapt,
+# logs/rm_phix when PhiX is removed, and stats/dada2/multiqc/, the six files of the
+# error-model section — see 90_report.smk): open them by hand when sanity-checking
+# a run or deciding whether trunc_len needs adjusting.
 
 # ── Load packages and redirect output to the log file ───────────
 if (!requireNamespace("pacman", quietly = TRUE))

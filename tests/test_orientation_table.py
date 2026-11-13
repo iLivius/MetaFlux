@@ -53,13 +53,21 @@ def expand_stand_in(pattern, **values):
 def amplicon_targets(orientation, remove_phix=True, phylogeny=False):
     """The files a plain amplicon run of the two samples S1 and S2 asks for, writing to
     /out, with the given orientation setting, as a set of path strings."""
-    loaded = load_functions(COMMON_SMK, ["_amplicon_targets"])
+    loaded = load_functions(COMMON_SMK, ["_amplicon_targets", "_error_model_report_files"])
     settings = loaded._amplicon_targets.__globals__
     settings["OUT"] = Path("/out")
+    # The files of the error-model report, which the targets include; 00_common.smk
+    # builds the same dict from OUT while it loads the config.
+    settings["ERROR_MODEL_REPORT"] = loaded._error_model_report_files(Path("/out"))
     settings["SAMPLES"] = SAMPLES
     settings["ORIENTATION"] = orientation
     settings["REMOVE_PHIX"] = remove_phix
-    settings["FALCO_STAGES"] = ["raw", "nophix", "stripped"] if remove_phix else ["raw", "stripped"]
+    # The Falco stages as 00_common.smk sets them; test_error_model_settings.py checks
+    # that the two lists here are the ones in that file.
+    if remove_phix:
+        settings["FALCO_STAGES"] = ["raw", "nophix", "stripped", "filtered"]
+    else:
+        settings["FALCO_STAGES"] = ["raw", "stripped", "filtered"]
     settings["PHYLO_ENABLED"] = phylogeny
     # Off: the COI screens' tables are asked for in COI runs only, and none is tested here.
     settings["COI_SCREENS"] = False

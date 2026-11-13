@@ -20,7 +20,7 @@
 #
 # Input: the length-filtered ASV FASTA (seqs_lenfilt.fasta) and its matching
 # ASV_#-keyed sequence table (seqtab_lenfilt_head_names.txt), both from rule
-# dada_length_filter (60d_dada_length_filter.py) — the FASTA after any
+# dada_length_filter (60h_dada_length_filter.py) — the FASTA after any
 # Metaxa2/ITSx region extraction and the post-extraction ASV length window,
 # i.e. this run's final ASV set. Also reads the marker's reference database
 # (refdb) and, for 16S only, the addSpecies reference (species_db) and

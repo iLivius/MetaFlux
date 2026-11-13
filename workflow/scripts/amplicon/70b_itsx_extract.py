@@ -6,7 +6,7 @@ amplicon.extraction.enabled is true. ITS (Internal Transcribed Spacer) is the
 standard fungal barcode marker: it sits between two conserved ribosomal genes
 in the arrangement SSU-ITS1-5.8S-ITS2-LSU, and unlike 16S it varies a lot in
 length between species, which is exactly why the ASV length filter downstream
-(60d_dada_length_filter.py) needs a wide window rather than one fixed cut.
+(60h_dada_length_filter.py) needs a wide window rather than one fixed cut.
 ITSx scans each input sequence against a library of HMM profiles — precomputed
 statistical models of what each conserved flanking gene (SSU, 5.8S, LSU) looks
 like, one profile per reference lineage — to find where those genes end and
@@ -35,7 +35,7 @@ abundance) and their per-sample counts are summed in the seqtab.
 Output: seqs_extracted.fasta (deduplicated extracted ITS1/ITS2 sequences),
 seqtab_extracted_head_names.txt (matching, summed read counts), and
 itsx_collapse_map.tsv (an audit trail of which original ASVs each output ASV
-represents) are read next by dada_length_filter (60d_dada_length_filter.py).
+represents) are read next by dada_length_filter (60h_dada_length_filter.py).
 ITSx's own raw output files are kept under the working prefix directory for QC.
 """
 import shutil

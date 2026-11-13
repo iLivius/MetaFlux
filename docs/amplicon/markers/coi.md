@@ -22,7 +22,7 @@ DADA2 denoising, length filtering, taxonomy — with three things that are speci
 | `amplicon.type` | `COI` |
 | Reference database | MIDORI2 release GB273 (Leray et al. 2022), variant UNIQ NUC_SP, SINTAX file; Zenodo version DOI 10.5281/zenodo.22685701 |
 | Role of that database | taxonomy reference, amplicon-length probe substrate, and identity E of the off-target guard |
-| Second reference | the set of bacterial COI homologues `bacterial_cox1_gtdb-r232.v1`, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, bacterial COI homologues under eukaryote names) or `listed` (16, kept) |
+| Second reference | the set of bacterial COI homologues `bacterial_cox1_gtdb-r232.v2`, built from GTDB R232: identity B of the off-target guard, and the list of the MIDORI2 records the set's build examined (500 in GB273), each marked `removed` (236 records, bacterial COI homologues under eukaryote names) or `listed` (264, kept) |
 | Probe mode | `pcr` — MIDORI2 holds whole barcodes and whole genes |
 | Preparation | download and unzip, then a one-time conversion of the headers (below) |
 | Classifier | SINTAX only (`amplicon.taxonomy.method: sintax`) |
@@ -136,14 +136,18 @@ and after conversion
   its genus and higher ranks.
 - **Bacterial COI homologues filed under eukaryote names are removed.** MIDORI2 is built from
   the eukaryotic divisions of GenBank, so a bacterial sequence submitted under an animal's name
-  enters it. The list that comes with the set of bacterial COI homologues marks 170 such records
-  in GB273 for removal, mostly *Wolbachia*, *Tisiphia* and other symbionts filed as insects.
+  enters it. The list that comes with the set of bacterial COI homologues marks 236 such records
+  in GB273 for removal (187 distinct sequences), mostly *Wolbachia*, *Tisiphia* and other
+  symbionts filed as insects. The conversion removes them by sequence: a record that carries a
+  removed sequence goes under every name MIDORI2 files it.
   [Bacterial COI homologues (reference set)](bacterial-cox1.md) describes how they were found.
 
 The conversion stops, rather than guessing, on a header without `;tax=`, a first field
-that is not `k:Eukaryota_<taxid>`, a taxid missing from the taxonomy snapshot, or a
-removal list that names records absent from the FASTA (a list made for another MIDORI2
-release).
+that is not `k:Eukaryota_<taxid>`, a taxid missing from the taxonomy snapshot, a removal
+list without the SHA-1 of each sequence (a list from before `gtdb-r232.v2`), or a list
+made from this very MIDORI2 file whose removed sequences are not all in it. A list made
+from another MIDORI2 file does not stop the run: the removed sequences the file lacks are
+counted in the log and in the report.
 
 ### The reference check
 
@@ -231,8 +235,8 @@ visible.
   animal sequences whose family is missing. In the final test of the bacterial set, 936
   bacterial amplicons from genomes not used to build its rules were each compared with their
   own species left out of the set, as for a bacterium whose species GTDB lacks: the
-  comparison recognised 98.4 % of them (99.9 % for BF3/BR2, 88.2 % for Leray-XT, 93.5 % for
-  fwhF2/fwhR2n), and 96.0 % with the whole genus left out. It moved 0.08 % or less of 10,008
+  comparison recognised 98.4 % of them (99.9 % for BF3/BR2, 87.3 % for Leray-XT, 96.8 % for
+  fwhF2/fwhR2n), and 95.7 % with the whole genus left out. It moved 0.08 % or less of 10,008
   eukaryotic inserts whose species, genus, family or order was left out of MIDORI2. How the
   set was built and tested is on [Bacterial COI homologues (reference set)](bacterial-cox1.md).
 - **What it cannot catch.** A bacterial lineage that is missing from the set but has a
@@ -293,9 +297,9 @@ carries the forward primer, ran with `fixed` as distributed.
 | reads after the length filter (ASVs) | 638,878 (804) | 897,924 (767) | 1,199,927 (888) |
 | reference length, run frame | 418 bp, frame 1 | 313 bp, frame 1 | 205 bp, frame 1 |
 | removed by the frame check | 177 ASVs, 3,716 reads (0.58 %) | 95, 2,160 (0.24 %) | 64, 1,540 (0.13 %) |
-| moved by the off-target guard | 27 ASVs, 3,283 reads (0.51 %) | 26, 2,353 (0.26 %) | 16, 895 (0.07 %) |
+| moved by the off-target guard | 28 ASVs, 3,288 reads (0.51 %) | 27, 2,581 (0.29 %) | 16, 895 (0.07 %) |
 | removed by `keep: [k__Metazoa]` | 5 ASVs, 299 reads (0.05 %) | 5, 107 (0.01 %) | 7, 80 (0.01 %) |
-| kept | 595 ASVs, 631,580 reads | 641, 893,304 | 801, 1,197,412 |
+| kept | 594 ASVs, 631,575 reads | 640, 893,076 | 801, 1,197,412 |
 | reads of kept ASVs within 97 % of a specimen | 99.2 % | 99.3 % | 99.1 % |
 | specimens recovered at ≥ 97 % (identical) | 361 (357) | 355 (352) | 362 (362) |
 
@@ -311,13 +315,10 @@ carries the forward primer, ran with `fixed` as distributed.
   short: their first base went with the primer, which cutadapt cut one base too far for
   these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (14
   specimens). Without the offset rule the frame check would have removed them.
-- **The off-target guard.** It moved 69 ASVs over the three runs, most closest to
-  *Wolbachia* (57), the others to *Rickettsia*, *Mesenet*, *Tisiphia* and one other
-  bacterium. SINTAX had called 41 of them, with 4,315 reads, the stink bug *Picromerus
-  bidens*, which is not in the mock, at species level. All 41 are closest to a
-  *Wolbachia* gene in the bacterial set, and their best MIDORI2 hit is a *Wolbachia*-like
-  record filed under that name (KR036430.1, no TGA among five tryptophan codons);
-  `keep: [k__Metazoa]` would have kept them.
+- **The off-target guard.** It moved 71 ASVs over the three runs, most closest to
+  *Wolbachia* (57), the others to *Rickettsia* (5), *Tisiphia* (5), *Mesenet* (3) and one
+  other bacterium. SINTAX names none of them at species level: 51 stop at kingdom
+  (Metazoa), 20 at domain, so `keep: [k__Metazoa]` alone would have kept the 51.
 - **Species flags.** Of the kept ASVs, 53 % (BF3/BR2), 46 % (Leray-XT) and 38 %
   (fwhF2/fwhR2n) are `ok`, and `low_identity` and `shared_sequence` together flag 9–11 %;
   the others have no species call, more of them the shorter the amplicon. None is far from

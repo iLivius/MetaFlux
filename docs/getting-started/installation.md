@@ -90,14 +90,19 @@ conda list --explicit --md5 -p .snakemake/conda/<hash>_ > workflow/envs/<tool>.l
 `snakedeploy pin-conda-envs workflow/envs/<tool>.yaml` does the same in one step.
 Snakemake treats a new or changed pin file like a changed yaml: in output folders made
 before the change, the steps that use that environment run again, and the steps after
-them.
+them. One pin is made differently: `dada2_custom.linux-64.pin.txt` must keep the builds
+of `dada2.linux-64.pin.txt`, so it is built from that pin instead of solved
+(`CONTRIBUTING.md` gives the commands).
 
 !!! note
 
     Only the environments the selected mode actually needs are built. The Snakefile
     includes `workflow/rules/amplicon/*.smk` **or** `workflow/rules/shotgun/*.smk`
     depending on `mode`, so an amplicon run never solves the Kraken2 environment and
-    a shotgun run never solves the DADA2 one.
+    a shotgun run never solves the DADA2 one. Within amplicon mode, `dada2_custom.yaml`
+    (the DADA2 environment plus the R packages mgcv and scam) is built only for a run
+    that names an error function of its own; as shipped it cannot be built on Apple
+    Silicon Macs or Linux on ARM (see [R packages](../amplicon/error-model.md#r-packages)).
 
 ## 4. Reference databases
 
@@ -137,7 +142,7 @@ does not pull UNITE or PR2.
 | 18S | `silva_euk/silva_132.18s.dada2.fa.gz`, `pr2/pr2_SSU_dada2.fasta.gz`, `pr2/pr2_SSU_UTAX.fasta.gz`, plus one built file: `pr2/pr2_SSU_UTAX_domain-first.fasta.gz` | Zenodo (SILVA-Euk v132) and the PR2 v5.1.1 GitHub release; the built file is the UTAX file with its domain moved to the SINTAX letter `d:`, made by `convert_pr2_sintax` and only for `method: sintax` |
 | gyrB | `gyrb/train_set_gyrB_v6.fa.gz` | Recherche Data Gouv (INRAE Dataverse), DOI 10.57745/DD7RZ8 |
 | rpoB | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | FROGS rpoB databank (INRAE Toulouse); downloaded as a `.tar.gz` and rewritten into a DADA2 trainset, with the domain written `d__`, by `convert_rpob_to_dada2` |
-| COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`, `midori2/GB273/taxonomy/nodes.dmp` and `names.dmp`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz`, `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv`, plus one built file: `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | MIDORI2's Zenodo record (the SINTAX zip and the taxonomy zip, unpacked by `fetch_midori2_coi` / `fetch_midori2_taxonomy`) and the Zenodo record of the bacterial COI homologues (`fetch_bacterial_cox1`); the built file is made by `prepare_midori2_coi_sintax` from the three, with the domain under `d:`, the kingdom added and the bacterial records left out |
+| COI | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`, `midori2/GB273/taxonomy/nodes.dmp` and `names.dmp`, `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2.fasta.gz`, `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_fragments.fasta.gz`, `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_midori2_gb273_records.tsv`, plus one built file: `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | MIDORI2's Zenodo record (the SINTAX zip and the taxonomy zip, unpacked by `fetch_midori2_coi` / `fetch_midori2_taxonomy`) and the Zenodo record of the bacterial COI homologues (`fetch_bacterial_cox1`); the built file is made by `prepare_midori2_coi_sintax` from the three, with the domain under `d:`, the kingdom added and the bacterial records left out |
 
 The ITS and COI zip files are unpacked with the system's `unzip` (by `fetch_uchime`,
 `fetch_midori2_coi` and `fetch_midori2_taxonomy`), not with a tool from a conda
@@ -177,7 +182,7 @@ starts classifying immediately.
     the probe is an in-silico PCR of the primers against a full-length reference; for ITS
     and gyrB it is a direct length measurement of a reference that is already
     amplicon-length. Its filenames carry the marker, the reference version (for 16S
-    also the lineages left out of the statistics; for rpoB `_excl-second-site`, because
+    also the lineages left out of the statistics; for 16S and rpoB `_excl-second-site`, because
     products that hold a second forward-primer site are left out) and a 12-character
     fingerprint of the two primer FASTA files, so a change of primers produces a
     different name and the probe is recomputed rather than silently reused. See

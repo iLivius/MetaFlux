@@ -30,14 +30,15 @@ out_dir/
 ├── 02.no_phix/       # PhiX-filtered reads      (absent when remove_phix: false)
 ├── 03.stripped/      # primer-trimmed reads
 ├── 04.filtered/      # DADA2 filterAndTrim output
-├── 05.dada2/         # ASV sequences and count tables at each stage
+├── 05.dada2/         # ASV sequences and count tables at each stage, and the two error models
 ├── 06.taxonomy/      # asv_table.txt, asv_table_seqs.txt, taxon_seq_table.txt,
 │                     # asv_table_unfiltered.txt (every ASV, removed ones included)
 │                     # (+ _sintax_raw.tsv on the sintax path)
 │                     # (+ coi_screens.tsv, bacterial_cox1_asvs.tsv,
 │                     #    coi_asv_flags.tsv for COI)
 ├── 07.phylogeny/     # alignment + unrooted tree  (only when phylogeny.enabled: true)
-├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/,
+├── stats/            # read counts, falco/, cutadapt/, trunclen.json, dada2/
+│                     # (with the error-model report and its MultiQC files),
 │                     # taxonomy_reference_check.json
 │                     # (+ orientation/ when primers.orientation: mixed)
 │                     # (+ phylogeny/ when phylogeny.enabled: true)
@@ -60,7 +61,7 @@ Everything else is intermediate data or QC.
 |---|---|---|---|
 | `01.reads/` | `{sample}_R1.fastq.gz`, `_R2` | `link_reads` | Symlinks pointing back at `input.fastq_dir`. Nothing reads from here — the downstream rules open the originals. The links exist so the run directory shows which files went in. |
 | `02.no_phix/` | `{sample}_R1.fastq.gz`, `_R2` | `rm_phix` | Bowtie2 against the fetched PhiX reference; the pairs that do *not* align are kept. Present only when `amplicon.decontamination.remove_phix` is `true` (the default). |
-| `03.stripped/` | `{sample}_R1.fastq.gz`, `_R2` | `trim_primers` | Cutadapt removes the primers at the 5' end and any read-through of the opposite primer at the 3' end. With `primers.orientation: mixed` a second pass recovers the pairs that arrived the other way round and swaps their two mates back, so that their forward read is in R1; in a mixed library the R1 file then holds read 1 of some pairs and read 2 of the others. Both 5′ calls then need at least 10 primer bases, so that hardly any pair is kept by both passes and written here twice (see [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)). |
+| `03.stripped/` | `{sample}_R1.fastq.gz`, `_R2` | `trim_primers` | Cutadapt removes the primers at the 5' end and any read-through of the opposite primer at the 3' end. Before that it can remove the last base of every read, by default from untruncated (ITS) reads of a run with an extra last sequencing cycle (`cutadapt.trim_final_cycle`, see [the extra last cycle](../amplicon/overview.md#the-extra-last-cycle)). With `primers.orientation: mixed` a second pass recovers the pairs that arrived the other way round and swaps their two mates back, so that their forward read is in R1; in a mixed library the R1 file then holds read 1 of some pairs and read 2 of the others. Both 5′ calls then need at least 10 primer bases, so that hardly any pair is kept by both passes and written here twice (see [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)). |
 | `04.filtered/` | `{sample}_R1_filt.fastq.gz`, `_R2_filt` | `dada_filter` | DADA2 `filterAndTrim` with the `truncLen` decided in `stats/trunclen.json`. This is the last per-sample FASTQ; from here DADA2 works on all samples at once. |
 
 ### Inside `05.dada2/`
@@ -79,7 +80,8 @@ ASV sequence; the counts are identical, only the labels differ.
 | **Extras** | `read.counts` | Metaxa2 / ITSx results and working dir | — |
 
 The rules behind the columns are `dada_seqtab`, `target_extract` and
-`dada_length_filter`, in that order.
+`dada_length_filter`, in that order; `dada_seqtab` denoises with the two error models
+that `learn_errors` saved next to them (see "The error models" below).
 
 The last populated column is the final result. `assign_taxonomy` reads two of these
 files: the length-filtered FASTA `seqs_lenfilt.fasta` and the `ASV_#`-keyed
@@ -101,12 +103,29 @@ markers that have no region extractor — 18S, gyrB, rpoB and COI.
 sample, columns `stripped`, `filtered`, `denoised`, `merged`, `non_chimeric`. It
 is the raw material for the DADA2 part of `stats/read_tracking.txt`.
 
+**The error models.** `error_model_R1.rds` and `error_model_R2.rds` are the error
+models DADA2's `learnErrors` fitted to the filtered R1 and R2 reads: for each quality
+score, how often each base is read as each other base. They are written by
+`learn_errors`, exactly as `learnErrors` returned them (the final table, the table that
+went into each round, and the counts the final table was fitted to), and read by
+`error_model_report`, which draws them, and by `dada_seqtab`, which denoises with them.
+In R, `readRDS()` opens them and `dada2::plotErrors()` draws them. How their learning
+ended is in `stats/dada2/error_model.json` (below). How the models are learned, checked
+and reported on: [DADA2 error model](../amplicon/error-model.md).
+
 The extraction step leaves a per-extractor trail:
 
 | Marker | Extractor | Files in `05.dada2/` |
 |---|---|---|
 | 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter) plus the raw `seqs.*` working files under `metaxa2/` |
 | ITS | ITSx | `itsx_extraction.summary.txt`, `itsx_collapse_map.tsv`, plus the raw `seqs.*` working files under `_itsx_tmp/` |
+
+Some of the raw working files differ between two identical runs, also of earlier
+versions, while every table of the extraction stays the same: `metaxa2/seqs.summary.txt`
+and `_itsx_tmp/seqs.summary.txt` (with its copy `itsx_extraction.summary.txt`) hold the
+start and end times, Metaxa2's own classification in `metaxa2/seqs.taxonomy.txt` can
+change in a few rows, and ITSx writes `_itsx_tmp/seqs.graph` in the order its searches
+finish. Leave them out when you compare two runs.
 
 `itsx_collapse_map.tsv` records how ASVs were merged after extraction. Two ASVs can
 differ only in the flanking 5.8S/LSU sequence; once ITSx trims those flanks away the
@@ -230,13 +249,26 @@ Two things to know about what is and is not here:
 | `03.stripped_reads.counts` | Same, after primer trimming. |
 | `trunclen.json` | The truncation decision: what `truncLen` was chosen for R1 and R2 and how. See [amplicon length and truncation](../amplicon/length-and-truncation.md). |
 | `taxonomy_reference_check.json` | What the reference check saw in the file the classifier reads: the file, the number of records, the ranks per record, the SINTAX letters (under `sintax`) and the names found in each rank the marker pack has a rule for. Written by `check_taxonomy_reference` before any classification, and only when the file passes; `assign_taxonomy` waits for it, and nothing reads its content. See [the reference check](../amplicon/markers/index.md#the-reference-check-reference_values). |
-| `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix`, `stripped`), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. |
+| `falco/{sample}_R{1,2}_{stage}/` | Falco QC per sample, per read direction, per stage (`raw`, `nophix` when PhiX removal runs, `stripped`, and `filtered`: the reads `filterAndTrim` kept, which the error models are learned from), each holding `fastqc_data.txt`, `fastqc_report.html` and `summary.txt`. `pick_trunclen` reads the tables of the `stripped` stage; the other stages are read only by MultiQC. `choose_error_model` waits for the `filtered` reports without reading them, because its stop messages point to them; deleting a sample's `filtered` folder therefore makes Falco run again for it, and then the error models are learned again with every DADA2 step after them, as deleting a `stripped` folder already does through `pick_trunclen`. Deleting one file inside such a folder changes nothing at first: the file is made again only when a step that reads it runs for another reason (MultiQC reads `fastqc_data.txt` of every stage), and then the error models are learned again and every DADA2 step after them runs too. On binned quality scores, the box plots of a `filtered` report sit on the common values the reads carry, while MultiQC shows only the mean quality; see [per-stage QC](../amplicon/overview.md#3-per-stage-qc). |
 | `cutadapt/{sample}.passA_5prime.cutadapt.json` and `.passA_3prime.` | Cutadapt's own report for the 5' and 3' calls of the first pass. These feed MultiQC. The second pass run under `orientation: mixed` keeps no JSON here: its reports go to `logs/trim_primers/{sample}.log`, and the counts of its 5′ call to `orientation/{sample}.tsv`, so in MultiQC the pairs that only it keeps count as discarded by the first pass. `03.stripped_reads.counts` counts the pairs of both passes, and the rare pair kept by both twice. |
 | `orientation/{sample}.tsv` | Only with `primers.orientation: mixed`. One file per sample, written by `trim_primers`: a header line and one row, with the columns `sample`, `read_pairs_in` (the read pairs that went into primer trimming), `kept_as_sequenced` (the pairs the first pass kept, forward primer in R1), `pct_as_sequenced`, `kept_swapped` (the pairs the second pass kept and wrote with their mates swapped) and `pct_swapped`. The two percentages are of `read_pairs_in`, with two decimals (`NA` for a sample with no pairs). The counts are those of the two 5′ calls, where the orientation of a pair is decided, taken from Cutadapt's own reports; the 3′ calls can still drop a pair that ends up shorter than `min_length`, and the rare pair kept by both passes counts in both columns. Nothing in the pipeline reads it, and MultiQC does not show it. A folder trimmed with `mixed` by MetaFlux v2.5.0 or earlier lacks it, which is what makes primer trimming run again there (see [the mixed-orientation second pass](../amplicon/overview.md#the-mixed-orientation-second-pass)). A folder switched from `mixed` to `fixed` keeps the file of its last `mixed` run. |
 | `phylogeny/phylogeny_qc.json` | Only when `phylogeny.enabled: true`. Tip accounting, alignment shape, and the long-branch report — or a record of why no tree was built. Written on every enabled run, including a skipped one. Nothing reads it back; it is for you. See [Phylogeny](../amplicon/phylogeny.md#the-long-branch-report). |
-| `dada2/{sample}.filter_stats.json` | Per-sample `filterAndTrim` result. |
+| `dada2/{sample}.filter_stats.json` | Per-sample `filterAndTrim` result, written by `dada_filter`: `reads_in` and `reads_out`, which `dada_seqtab` reads for the read tracking. |
+| `dada2/{sample}.quality_values.json` | The quality values of the sample's filtered reads, written by `dada_filter` and read by `choose_error_model`: per read direction the reads scanned (the first 100,000 of the filtered file, or all of a smaller one), the distinct quality values found and the bases at each (`scan_limit` records the 100,000). |
+| `dada2/error_model_choice.json` | The error function each error model is learned with, written by `choose_error_model`: the setting (`requested`), the thresholds of the decision, and per read direction `quality_class` (`binned`, `continuous` or `undetermined`), `error_function` (`loess` or `binned`, or `custom` for your own function under the experimental `error_model: custom`), `decided_by` (`auto` or `setting`), `quality_values` (the values of the voting samples, Q2 and below included: the anchors of the binned fit), `values_above_q2`, `bases_per_value` (summed over the voting samples), `samples_voting` and `samples_not_voting` (samples with fewer than 1,000 filtered reads do not vote); then the warnings and the values of every sample. Read by `learn_errors`; `error_model_report` takes it as an input, so the report is drawn again when the choice changes. |
+| `dada2/quality_values.tsv` | One row per sample and read direction: reads scanned, whether the sample voted, the number of distinct values above Q2, the values, the kind of quality values on its own, and the bases at or below Q2. Written by `choose_error_model` for you; nothing reads it, and the run does not ask for it, so a deleted copy comes back only when `choose_error_model` runs again. |
 | `dada2/stripped_read_R{1,2}_qual_plot.png` and `.pdf` | Aggregate quality profile of the primer-trimmed reads — the picture behind the `truncLen` choice. |
-| `dada2/filtered_read_R{1,2}_error_plot.png` and `.pdf` | DADA2 error-model fit. A bad fit here explains a bad ASV set downstream. |
+| `dada2/filtered_read_R{1,2}_error_plot.png` and `.pdf` | The two error models, drawn by `error_model_report` with DADA2's `plotErrors`, as MetaFlux has always drawn them. Points: the error rates counted in the reads `learnErrors` learned from; black line: the model; red line: the rate the quality score promises. The title names the error function (for the binned fit with the quality values it was anchored on) and how the learning ended, for example `R2 error model: loess fit - converged (round 5 repeated its starting table)`, `R2 error model: binned fit on 9, 20, 34 - converged (round 6 repeated its starting table)`, or `NOT converged: flat-rounds rule, round 42 (code R2:7ebe3bed)`. On binned data the binned fit is drawn as straight pieces between those values, bowed on the log axis, with points at averaged quality scores between them (see [Troubleshooting](../troubleshooting.md#amplicon-the-error-plot-shows-straight-segments-between-a-few-quality-values)). For a model ended by the flat-rounds rule, the points are the counts the kept table was fitted to, those of the round before the last. The report's own fit figures (next row) show the same model with more detail. All the report's files are written before the check below, so they exist even when the run stops there. A bad fit here explains a bad ASV set downstream. |
+| `dada2/error_model_fit_R{1,2}.png` and `.pdf` | The fit of each error model, drawn by `error_model_report`: one panel per kind of misread (`A2C`, a true A read as C, to `T2G`), the consensus quality score (the mean quality of identical reads) along the bottom, the error rate up the side on a log scale. Grey points: the rates counted in the reads `learnErrors` drew, sized by the bases at that score; filled at the quality values the reads carry, open at the averaged qualities of identical reads, small triangles at the bottom where no error was counted. Solid line: the model used, in the colour of its error function. Dashed: every other error function MetaFlux offers, refitted on the same counts (cut off at the edge of a panel where it runs outside the range of the points, the model and the nominal line). Black dotted: the nominal rate of the quality score. Ticks along the bottom: the quality values in the filtered reads. The solid line should follow the filled points and fall as quality rises. |
+| `dada2/error_model_convergence.png` and `.pdf` | How the learning of both models ended, drawn by `error_model_report`: per round, how much the model changed (black) and how far that round's starting table is from the final model (grey, dashed, DADA2's `checkConvergence`), on a log scale. A dashed line marks 1/1000 of the change in round 1; a grey band marks DADA2's own stop (a repeat or a cycle) or the window of the flat-rounds rule; vertical lines mark the flat-rounds stop and the cap. |
+| `dada2/error_model_quality_values.png` and `.pdf` | The bases at each quality value in the first 100,000 filtered reads of each voting sample, pooled, per read direction: the numbers `choose_error_model` chose the error function from. |
+| `dada2/error_model_fit.tsv` | One row per read direction and error function, written by `error_model_report`: whether it is the function the model was learned with (`model_used`), its anchors (binned fit), `refit_status`, `refit_reproduces_model` (for the function used: whether its refit on the counts gives back the model exactly), the bases, the share of them at the quality values the reads carry, and how closely the fitted rates follow the counted ones: `loglik_per_base`, the deviance per million bases (in total, at the reads' quality values and at the averaged columns), the typical fold difference between fitted and counted rates (the same three ways; 1.00 = on the counted rates), `cells_with_errors`, and `rising_steps` out of `steps_compared` (neighbouring quality scores where the fitted rate rises by more than 10 %) with `substitutions_with_rise`; `note` says where the numbers of a row mislead. A run that names an error function of your own (experimental, `amplicon.dada2.learn_errors.custom_error_function`) has a row `custom` too, whose note names the function and the first 8 characters of the md5 sum of its file. The comparison refits only the smoothing step on the counts the model used was fitted to: it shows how closely each function describes those counts, not which one would have given the better ASVs. Nothing reads it. |
+| `dada2/error_model_rates.tsv` | One row per read direction, kind of misread and quality score, written by `error_model_report`: `column_kind` (`read_value`, `averaged` or `no_data`), the bases and errors counted, `observed_rate`, `nominal_rate`, `model_rate` and the rate of each refitted function (`rate_loess`, `rate_binned`, and `rate_custom` when an error function of your own is named). The numbers behind the fit figures. Nothing reads it. |
+| `dada2/error_model_rounds.tsv` | One row per read direction and round of learning, written by `error_model_report`: the change in the round, the lowest change so far, the distance to the final model, `depth_limit` (1/1000 of the change in round 1), `in_flat_window` and `event` (`matched_round`, `dada2_repeat`, `flat_stop` or `cap` on the round where it happened). The numbers behind the convergence figure. Nothing reads it. |
+| `dada2/error_model_report.json` | The report in one file, written by `error_model_report`: the statement of what the comparison of the error functions can and cannot show; per read direction how the learning ended, the model code, the error function, the share of bases at the reads' quality values, the share of counted misreads at the averaged columns, and the rows of `error_model_fit.tsv`; and the report's own `warnings` (a figure it could not draw is replaced by a picture that states the error, and listed here). `check_error_model` waits for this file and repeats its warnings in a note. |
+| `dada2/multiqc/` | The "DADA2 error model" section of the MultiQC report, written by `error_model_report` for rule `multiqc`, which scans this folder: `error_model_summary_mqc.tsv` and `error_model_goodness_of_fit_mqc.tsv` (two tables; when an error function of your own is named, the summary has a column "Custom error function" with its name, the first 8 characters of the md5 sum of its file, and whether the model was learned with it) and copies of the four figures above (`*_mqc.png`). Open the report's own files instead; these exist for MultiQC. They are not spare copies, though: like every file of the report, the PDFs included, they are files the run asks for, so deleting any of them draws the report again, which makes `check_error_model`, `dada_seqtab` and every step after it run again. |
+| `dada2/error_model.json` | How the learning of each error model ended, written by `learn_errors`. Top level: the dada2 version, `requested` (the setting `error_model`), `custom_error_function` (under the experimental `error_model: custom`, your own function: `name`, `file_as_configured`, `file` as resolved, the `md5` sum of the file, and `packages_loaded`, the R packages loaded while the file was read or the function ran, with their versions; `null` otherwise), `nbases`, `max_consist`, `seed`, `max_flat_rounds` and the two constants of the flat-rounds rule, and `warnings` (those of the choice of error function). Per read direction (`R1`, `R2`): `error_function` and `error_function_label` (`custom` and `custom error function <name> (experimental)` for your own function); `quality_class`, `decided_by` and `quality_values` (from `error_model_choice.json`); `anchors_used` and `anchors_dropped` (the binned fit only: the quality values the final table was anchored on, and those left out because the reads `learnErrors` drew had no bases there, or, between the lowest and the highest anchor, no bases of one of the four nucleotides; `null` and `[]` for loess); `bases_learned`, `reads_learned` and `samples_learned` (from DADA2's own line in the log, or `null`); `rounds`; `converged` (`true` only when a round gave back a table that already went into a round); `stopped_by` (`dada2_repeat`, `flat_rounds` or `cap`); `matched_round` and `cycle_length` (which round's table was repeated, and how many rounds the repeat spans; `1` is a plain repeat of the round's own starting table); `flat_stop_round`; `change_per_round` (how much the model moved in each round, summed over all its rates; after a flat-rounds stop it includes the change of the stop round); `distance_to_final` (how far each round's starting table is from the final one: DADA2's `checkConvergence`); `depth_limit` (1/1000 of the change in round 1); `model_code` and `model_md5`; `counts_behind_model` (the transition counts the final table was fitted to: those of the last round, or after a flat-rounds stop those of the round before); `warnings` (warnings of the error function, each distinct text once with the round it first appeared in, your own function's included, as is MetaFlux's warning when your function returns a rate below 1e-7, and a note when the bases, reads and samples could not be read from DADA2's line in the log). Read by `error_model_report` (the report) and `check_error_model`. |
+| `dada2/error_model_check.txt` | The verdict of `check_error_model`, one line, for example `R1:0a55be94 converged; R2:7ebe3bed accepted (not converged: flat-rounds rule, round 42)`. Written only when the run went on: both models converged, or the code of each model that did not is listed in `amplicon.dada2.learn_errors.accept_unconverged`. `dada_seqtab` copies it into its log. In a finished run, `converged: false` in `error_model.json` therefore means a model accepted by its code; in a run that stopped at the check, this file is missing. |
 | `dada2/asv_length_stats.json` and `asv_length_hist.png` | ASV length distributions, described below. |
 
 **`read_tracking.txt`** is one row per sample, one column per stage, in pipeline
@@ -271,19 +303,49 @@ a lot; for 16S the first two distributions usually look the same.
 
 ### `multiqc/`
 
-`multiqc_report.html` collects the Falco reports for all three read stages, the
-Cutadapt JSONs and the Bowtie2 PhiX logs into one page. `multiqc_data/` holds the
-parsed numbers behind it. Falco writes FastQC-format output, so MultiQC files it
-under a "FastQC" heading. MultiQC renames the three Falco stages to
-`QC | raw reads`, `QC | PhiX-filtered reads` and `QC | primer-trimmed reads`; the
-renaming rules are in the shipped MultiQC config.
+`multiqc_report.html` collects the Falco reports of every read stage (four, or three
+without PhiX removal), the Cutadapt JSONs and the Bowtie2 PhiX logs into one page.
+`multiqc_data/` holds the parsed numbers behind it. Falco writes FastQC-format output,
+which MultiQC reads with its FastQC module and shows under the heading "Falco"
+(MultiQC 1.35, the version of the pin file). MultiQC renames the Falco stages to
+`QC | raw reads`, `QC | PhiX-filtered reads`, `QC | primer-trimmed reads` and
+`QC | quality-filtered reads`; the renaming rules are in the shipped MultiQC config.
+The quality-filtered rows show the reads `filterAndTrim` kept, which the error models
+are learned from: their number and their mean quality along the read. MultiQC shows
+means only, so binned quality values do not show there: each sample's own Falco page
+shows the common ones, and the error-model section below shows them all.
+
+The last module, "DADA2 error model", shows the report on the two error models in six
+sections: a summary (per read direction the error function and how it was chosen, how
+the learning ended, the change in rounds 1, 2 and the last, and the model code), the
+quality values of the filtered reads, the convergence figure, the fit figures of R1 and
+R2, and the goodness of fit of every error function. Its description says what the
+comparison of the error functions can and cannot show; [the report](../amplicon/error-model.md#the-report)
+explains each section. MultiQC waits for this report but
+not for `check_error_model`, so with `--keep-going` a run that the check stops still gets
+its MultiQC report, with this module. A stop before the report (in `choose_error_model`
+or inside `learn_errors`) leaves no MultiQC report; the per-sample Falco reports in
+`stats/falco/` are there all the same.
 
 ### `logs/`, `benchmarks/` and `_aux/`
 
 `logs/` holds the captured stdout/stderr of every rule (except the MIDORI2 conversion,
 `prepare_midori2_coi_sintax`, which writes no log), laid out as
 `logs/<rule>/<sample>.log` for per-sample rules and `logs/<rule>.log` for the
-rest. It is the first place to look when a rule fails.
+rest. It is the first place to look when a rule fails. `logs/learn_errors.log` holds
+DADA2's `selfConsist step` lines, one per round of error learning, with MetaFlux's line
+for each round (the change of the model, the lowest change so far, the seconds the round
+took) and, at the end, how each learning ended and the two model codes; follow a long
+learning with `tail -f`. `logs/check_error_model.log` holds the full text of a stop
+before denoising, or the verdict. `logs/error_model_report.log` holds one line per read
+direction and error function with the main numbers of the goodness of fit, and every
+warning of the report (a figure it could not draw, for example).
+`logs/choose_error_model.log` holds the quality values of every sample and read
+direction, the choice of error function with its reason, and the full text of a stop
+there. `logs/trim_primers/{sample}.log` opens with one line per read direction that says
+whether the last base of every read was removed, with the longest read and the reason
+(see [the extra last cycle](../amplicon/overview.md#the-extra-last-cycle)), followed by
+Cutadapt's reports.
 
 `benchmarks/` holds Snakemake's runtime and memory measurements, but only for the
 two rules that declare them: `rm_phix` and `trim_primers`.
@@ -305,7 +367,7 @@ refdb/cache/probe_{type}_{reference-tag}_{primer-hash}.amplicons.fa.gz
 ```
 
 The filename carries the marker, the reference it was probed against (for 16S also
-the lineages left out of the statistics; for rpoB `_excl-second-site`, because products
+the lineages left out of the statistics; for 16S and rpoB `_excl-second-site`, because products
 that hold a second forward-primer site are left out), and a hash of both primer
 sequences, so the probe is skipped on every later run with the same marker and primers —
 including runs writing to a different `out_dir`. Changing a primer changes the hash and

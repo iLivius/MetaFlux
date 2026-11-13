@@ -173,7 +173,7 @@ genomes in each database used.
 Cite these for a COI run, with the version of the set of bacterial COI homologues that was used.
 
 89. Leray, M., Knowlton, N. & Machida, R. J. (2022). MIDORI2: a collection of quality controlled, preformatted, and regularly updated reference databases for taxonomic assignment of eukaryotic mitochondrial sequences. *Environmental DNA* 4:894–907. https://doi.org/10.1002/edn3.303 (release GB273, UNIQ NUC_SP SINTAX file and taxonomy snapshot: https://doi.org/10.5281/zenodo.22685701)
-90. Antonielli, L. (2026). Bacterial and archaeal COI homologues from GTDB R232: a reference set for off-target screening (Version gtdb-r232.v1). *Zenodo*. https://doi.org/10.5281/zenodo.23820760 (identity B of the off-target guard, and the list of MIDORI2 records it matched, those judged bacterial being left out by the conversion; how it was built is on [Bacterial COI homologues (reference set)](../amplicon/markers/bacterial-cox1.md))
+90. Antonielli, L. (2026). Bacterial and archaeal COI homologues from GTDB R232: a reference set for off-target screening (Version gtdb-r232.v2). *Zenodo*. https://doi.org/10.5281/zenodo.24189850 (identity B of the off-target guard, and the list of MIDORI2 records it matched, those judged bacterial being left out by the conversion; how it was built is on [Bacterial COI homologues (reference set)](../amplicon/markers/bacterial-cox1.md))
 91. Parks, D. H., Chaumeil, P.-A., Mussig, A. J., Rinke, C., Chuvochina, M. & Hugenholtz, P. (2026). GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245 archaeal genomes. *Nucleic Acids Research* 54(D1):D743–D754. https://doi.org/10.1093/nar/gkaf1040 (the paper of GTDB release 10, R226; GTDB is the source of the set of bacterial COI homologues, which is built from release R232)
 92. Elbrecht, V., et al. (2019). Validation of COI metabarcoding primers for terrestrial arthropods. *PeerJ* 7:e7745. https://doi.org/10.7717/peerj.7745 (the insect mock used to validate COI; see [Test datasets](test-datasets.md))
 
@@ -187,3 +187,12 @@ MetaFlux is released under the
 [MIT License](https://github.com/iLivius/MetaFlux/blob/main/LICENSE). Third-party
 tools invoked by the workflow are distributed under their own licenses (a mix of
 MIT, BSD, and GPL/LGPL); see each tool's repository.
+
+One function of DADA2 1.38.0, `makeBinnedQualErrfun` (the binned fit of the error model,
+written by DADA2's authors), ships unchanged with MetaFlux in
+`workflow/scripts/amplicon/vendor/`, because MetaFlux runs DADA2 1.34.0, which does not
+have it yet. That file stays under DADA2's license: DADA2's DESCRIPTION declares LGPL-2,
+and the license text shipped with that DADA2 release, the GNU LGPL version 3, is copied
+next to it as `LICENSE.dada2`. The example error function
+`.test/custom_error_functions/binned_from_counts.R` carries a second unchanged copy of
+it, under the same license. DADA2 itself is reference 2 above.

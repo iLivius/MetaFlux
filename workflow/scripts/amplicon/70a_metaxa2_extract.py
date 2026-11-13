@@ -31,7 +31,7 @@ Metaxa2 called all 8 mitochondrial.
 Output: seqs_extracted.fasta (cleaned, trimmed sequences) and
 seqtab_extracted_head_names.txt (the matching read-count table, subset to the
 ASVs Metaxa2 could extract) are read next by dada_length_filter
-(60d_dada_length_filter.py), which applies the ASV length window.
+(60h_dada_length_filter.py), which applies the ASV length window.
 metaxa2_origin.tsv (one row per extracted ASV: asv_id, origin) is read by
 assign_taxonomy (see above). Metaxa2's own raw output files are kept under the
 working prefix directory for QC.

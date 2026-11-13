@@ -8,6 +8,312 @@ Zenodo; the concept DOI in the README always resolves to the newest one.
 
 ## 2.7.0 — [To be settled before release: the date]
 
+### DADA2's error model: learned in its own step, checked before denoising, shown in the report
+
+DADA2 denoises with an error model per read direction, learned from the reads in rounds
+until a round gives back a table it has seen before. Up to v2.6.1 `dada_seqtab` learned
+the two models and denoised with them in one step, and went on with a model whatever way
+its learning had ended. Now:
+
+- **Learning is a step of its own, `learn_errors`.** It writes the two models as DADA2
+  returned them (`05.dada2/error_model_R1.rds` and `_R2.rds`), which `dada_seqtab` reads,
+  and a record of how their learning ended (`stats/dada2/error_model.json`): the rounds,
+  the change of the model in each round, how the loop ended, and a code for each model,
+  such as `R2:7ebe3bed` (the read direction and the start of an md5 sum of the model's
+  numbers). R1 is learned before R2 with the same seed, as before, so the same reads give
+  the same models.
+- **`amplicon.dada2.learn_errors.max_consist` is 200** (it was 999): an upper limit on
+  the rounds, not a speed setting. Of 194 learning runs on real data, 186 converged
+  within 8 rounds and the slowest took 101.
+- **An early stop, `max_flat_rounds: 20`.** On some libraries the model keeps changing by
+  tiny amounts for a hundred rounds or more. MetaFlux now ends the learning when the
+  change in a round is less than 1/1000 of the change in round 1 and the lowest change so
+  far fell by less than 10 % over the last 20 rounds (`0` switches the rule off).
+  Calibrated by replaying four learning runs round by round, all with the loess fit: it
+  ended a 101-round run at round 42, where denoising that sample with the stopped model
+  changed 0.02 % of its reads, and a COI library with reads of both strands in one file at
+  round 32; over every value tested (5 to 50) the largest change was 0.04 % of the reads.
+  Six learning runs replayed with the binned fit (next section) agree: the rule ended one
+  95-round run at round 49, where the stopped model changed 0.007 % of the reads (at most
+  0.02 % over every value tested), and no run reached the cap.
+- **A check before denoising, `check_error_model`.** A model ended by the cap or by the
+  early stop has not converged, and the numbers alone cannot tell a slow but healthy
+  library from one with faulty reads (a library with reads of both strands in one file
+  looked just like a healthy one). The run now stops before any denoising, prints what to
+  check in the reads and in the report, and the line that accepts this model by its code:
+  `accept_unconverged: ["R2:7ebe3bed"]` under `amplicon.dada2.learn_errors`. With the line
+  in the run config the run goes on without learning again, and a later model with
+  another code stops it again. The verdict is written to
+  `stats/dada2/error_model_check.txt`. A stop deletes nothing: the tables of an earlier
+  run in the folder stay until the run goes on.
+- **A report on the models, in every amplicon run, `error_model_report`.** Before the
+  check, so that it exists when the check stops the run: for each read direction a fit
+  figure (the error rates counted at each quality score for the 12 kinds of misread, the
+  model, the other error functions refitted on the same counts, and the nominal rate of
+  the quality score), a convergence figure (the change in each round, with DADA2's stop,
+  the early stop and the cap marked), the quality values of the filtered reads, DADA2's
+  own error plots as before, and four tables with the goodness of fit of each error
+  function, the rates and the rounds (`stats/dada2/error_model_*`). The same report forms
+  a new MultiQC module, "DADA2 error model". The comparison refits only the smoothing step
+  on the counts behind the model used, so it shows how closely each function describes
+  those counts, not which function would give the better ASVs.
+- **The documentation** has a new page, "DADA2 error model", and the troubleshooting entry
+  "DADA2's error model never converges" is rewritten for the check.
+
+For maintainers: the denoising script is now `60g_dada_seqtab.R` and the ASV length filter
+`60h_dada_length_filter.py`; 60c to 60f are the new steps.
+
+### Binned quality scores: the error function is chosen from the reads
+
+NovaSeq, NextSeq, MiSeq i100 and other recent Illumina instruments write only a few
+quality values (for example 9, 20 and 34), and DADA2's author recommends a binned error
+function for them, `makeBinnedQualErrfun`, instead of the loess fit DADA2 uses by default.
+
+- **`amplicon.dada2.learn_errors.error_model: auto | loess | binned`.** `dada_filter` now
+  counts the quality values in the first 100,000 filtered reads of each file (a new file
+  per sample, `stats/dada2/{sample}.quality_values.json`; `filter_stats.json` is
+  unchanged), and the new step `choose_error_model` pools the samples with at least 1,000
+  filtered reads. Under `auto`, 3 to 10 distinct values above Q2 with gaps between them
+  give the binned fit, anchored on the values the reads carry, and 20 or more the loess
+  fit, for R1 and R2 separately. The values are read from the reads, never from an
+  instrument table. The choice goes to `stats/dada2/error_model_choice.json`, every
+  sample's values to `stats/dada2/quality_values.tsv`.
+- **The run stops before learning** when the reads carry fewer than three values above
+  Q2 (as files re-encoded by ENA do), when one sample does, and, under `auto`, when
+  samples of different instruments are mixed, or when 11 to 19 values, or 3 to 10 that
+  include neighbours, leave the kind open. Each message says how to go on;
+  `error_model: loess` turns the last two into warnings.
+  `binned` set on continuous values stops; `loess` set on binned values warns and goes on.
+- **Neighbouring quality values are not binned.** No instrument table has two
+  neighbouring values (NovaSeq 6000: 11, 25, 37), but MiSeq reads filtered with a
+  `trunc_q` of 28 to 30 keep only the 8 to 10 values above it, all neighbours; counted
+  as 3 to 10 values, they would get the binned fit without a word. Under `auto` such
+  values stop the run, with a message that names `trunc_q`; with a function set in the
+  config they give a warning. Neighbours that only arise between samples of two binned
+  tables (a NovaSeq X writes 40 or, on some software versions, 41) count as two binned
+  tables.
+- **`makeBinnedQualErrfun` ships with MetaFlux**, copied unchanged from DADA2 1.38.0 into
+  `workflow/scripts/amplicon/vendor/` under DADA2's license, because the function first
+  appeared in DADA2 1.36.0. MetaFlux stays on DADA2 1.34.0: `dada2.yaml` and its pin do not
+  change, and nothing changes for continuous data, which keep the loess fit.
+- **Experimental: your own error function.** `error_model: custom`, with the R file and
+  the function's name under `custom_error_function`, learns both models with an R
+  function of your own, written as DADA2's `errorEstimationFunction` (it takes the table
+  of transition counts and returns error rates of the same shape, so it also works in
+  plain DADA2); named under any other `error_model`, the function is only refitted and
+  drawn in the report, next to loess and binned. The block is checked at start-up, and
+  every table the function returns is checked before DADA2 uses it (shape, names, no
+  missing value, every rate above 0 and at most 1, the rows of each base summing to 1; a
+  rate below 1e-7 gives a warning); the record keeps the function's name, its file, the
+  file's md5 sum and the R packages it loaded. With a wrapper of DADA2's `loessErrfun`,
+  the 16S test set gave the error models, model codes and DADA2 tables of
+  `error_model: loess` byte for byte.
+- **Two example error functions** in `.test/custom_error_functions/`, shown under "Your
+  own error function" in the documentation: `binned_from_counts.R`, DADA2's binned fit
+  with the bins taken from the counts (it carries an unchanged copy of
+  `makeBinnedQualErrfun`, under DADA2's license), and `monotone_gam.R`, a monotone
+  decreasing GAM of the R package scam for each kind of misread. Both also work in plain
+  DADA2.
+- **A conda environment for your own error function, `dada2_custom.yaml`:** the DADA2
+  environment plus the R packages mgcv and scam, for error functions built on GAMs
+  (smooth curves fitted to the counts; scam can force a curve that never rises).
+  `learn_errors` runs in it under `error_model: custom`, and `error_model_report` whenever
+  a function is named; every other step, and every run that names no function of its
+  own, stays in `dada2.yaml` and never builds it. On Linux its pin file holds every build
+  of dada2's pin plus mgcv, nlme and scam, so a model learned in it rests on the same
+  dada2, R and maths libraries. conda-forge has no r-scam for Apple Silicon Macs or Linux
+  on ARM: there the file cannot be built as shipped, and a function that does not use
+  scam runs once the line `- r-scam` is deleted from it. That is why the two packages
+  are not in `dada2.yaml`. For maintainers: this pin is rebuilt from dada2's pin, not
+  solved (`CONTRIBUTING.md` says how).
+- **The default of `error_model` is `auto`:** binned data get the binned fit, so their ASV
+  tables change on purpose; `error_model: loess` keeps the fit of v2.6.1. On three mock data
+  sets, eleven error functions recovered the same true sequences, and the function closest
+  to the counts never gave the fewest spurious ASVs, so `auto` chooses by the kind of
+  quality values, not by fit.
+
+### Falco on the filtered reads
+
+Falco now also profiles the reads DADA2's `filterAndTrim` keeps, a fourth stage,
+`filtered` (`stats/falco/{sample}_R{1,2}_filtered/`), shown in MultiQC as
+`QC | quality-filtered reads`: the reads the error models are learned from. MultiQC shows
+the mean quality along the read, which hides binned values; each sample's own Falco page
+draws them as box plots on their common values, and the error-model report lists them
+all. One more Falco job per sample and read direction, seconds each.
+
+### The samples the error models learn from: the same in every language setting; R1 paired with R2 by name
+
+- **`learn_errors` sorts the filtered files byte by byte.** `learnErrors` learns from
+  whole samples drawn in random order from the sorted list, so the order decides which
+  samples the model is learned from. Up to v2.6.1 the list was sorted alphabetically in
+  the language setting (locale) of the shell, and for sample names that mix capitals and
+  small letters, or `-`, `_` and `.`, that order differs between `LANG`/`LC_ALL=C`
+  (common on clusters and in containers) and a UTF-8 setting: learning a folder again
+  from another shell could give another model, and now, with models checked by their
+  code, a second stop after a code had been accepted. For such names a run can draw other
+  samples than v2.6.1 did in a UTF-8 shell; names that sort alike in every setting, as
+  those of the test sets do, draw the same samples as before.
+- **`dada_seqtab` pairs each R1 file with the R2 file of the same name.** It paired the
+  two sorted lists by position, which under `LANG`/`LC_ALL=C` swapped the R2 files of
+  samples named like `Soil` and `Soil_R2`: the job then stopped with DADA2's error
+  "Non-corresponding derep-class and dada-class objects.", or, when the two samples had
+  the same number of filtered reads, merged each sample's R1 reads with the other's R2
+  reads without an error. The row order of the tables is unchanged; it still follows the
+  language setting, as up to v2.6.1, and so does the numbering of ASVs with equal read
+  counts.
+
+### The 16S length probe: products that start at a look-alike of the forward primer
+
+The probe that sizes the amplicon (`expected_length: auto`) cuts the products out of SILVA
+with Cutadapt, which keeps the leftmost place where the forward primer matches within the
+error rate. The 17-mer 341F (`CCTACGGGNGGCWGCAG`, the V3-V4 primer of Illumina's 16S
+protocol) also matches, with 2 mismatches, a stretch in V2 of *Pseudomonas*,
+*Acinetobacter*, *Stenotrophomonas* and their relatives, so on SILVA 144 6.3 % of the
+341F/805R products started there, 583 bp long instead of 427 bp, and put p95 at 582 bp.
+Every 2 x 300 run with these primers stopped at `pick_trunclen` on the defaults, although
+its reads were long enough.
+
+- **The 16S marker pack now sets `probe_exclude_second_site: true`**, the third pass the
+  rpoB pack already had: products that still hold a second whole forward-primer site are
+  left out of the length statistics (they stay in the amplicons FASTA), for both SILVA
+  releases. On SILVA 144, 341F/805R: p95 582 -> 429 bp; 799F/1175R (V5-V7, the 16S test
+  set): 0.69 % of the products, p95 386 -> 385 bp; 515F/806R (V4): 0.15 %, p95 255 bp
+  either way. On SILVA 138.2, 799F/1175R: 0.61 %, p95 384 bp either way, q1 375 -> 374 bp
+  (the lower edge of the `auto` ASV length window moves from 325 to 324 bp). The probe
+  JSON gains `n_excluded_second_site`, and the cache name ends in `_excl-second-site`.
+  For 341F/805R the `auto` ASV length window becomes [353, 479] bp instead of [353, 632].
+- **The stop at the overlap check names the numbers and the settings.** Under each
+  `resolve_policy` the message now says how far the reads reach after primer removal
+  (R1 + R2), what merging needs (expected amplicon length + `amplicon.min_overlap`), where
+  the expected length came from (`amplicon.expected_length`, or the probe statistic with
+  its exact key, `amplicon.probe_length_stat.16S` for 16S and gyrB), and what to check.
+  It used to give only the deficit and two headrooms.
+
+### Automatic truncLen: what the cut is based on, short off-target products, and a second method
+
+`pick_trunclen` picks one `truncLen` per read direction in `trunc_len.mode: auto`. Three
+changes:
+
+- **The log says what the cut is based on.** It names the quality values of the
+  primer-trimmed reads (read from the first 10,000 reads of each file) and their kind,
+  binned or continuous, by the same rule as the choice of the error function; what
+  `q_threshold` means on them (on 9, 20, 34 data, the default 20 cuts where at least a
+  quarter of the bases carry 9); and whether each cut came from quality or from the
+  read-length limit. It warns when `q_threshold` equals one of the binned values, as the
+  default does on NextSeq 1000/2000 600-cycle data, or lies above the highest. No cut
+  changes.
+- **A short off-target product no longer sets the read-length limit.** The length that
+  `min_read_coverage_pct` of a sample's reads reach is now counted over the reads at least
+  half the expected amplicon length long; shorter reads come from a primer dimer or an
+  unspecific product, and the ASV length window would remove them anyway. Up to v2.6.1 one
+  sample with more than 5 % of such reads could cap the whole run too short to merge, and
+  the run stopped at the overlap check: on a 78-sample NextSeq 16S soil study, 13 samples
+  carried 5 to 40 % of their reads in a 150-165 bp product. The study now gets 272/280.
+  The log lists every sample's limit and the share of its reads left out. A sample with
+  more than half of its reads below the floor keeps the old limit, with a warning. ITS is
+  unchanged. On the eight MiSeq test libraries every `truncLen` is the same as before.
+- **A second method, `trunc_len.method: simulate`** (the default stays `quality`). It
+  replays `filterAndTrim` with the run's own `trunc_q`, maxN and `max_ee` on 20,000 read
+  pairs per sample spread over each whole file, finds for each read the longest cut at
+  which it still passes, and takes the R1/R2 cuts that keep the most pairs while leaving
+  `expected_length + min_overlap + simulate_extra_overlap` (new key, 20 bp) bases; of the
+  cut pairs within 0.5 points of the most, the longest. It reads the same quality values
+  as the filter, so binning does not matter to it, and it sees reads with an N at a cycle
+  that varies from tile to tile, which no quality summary shows. The quality rule's cut is
+  logged next to it, with the share of the sampled pairs each keeps. `trunclen.json` keeps
+  its fields (`resolved_via: simulate`). ITS stays with the quality rule. On the test
+  sets it changed the cuts of every library but ITS; the section "The simulate method"
+  of "Amplicon length and truncation" gives the cuts, the reads kept and the ASVs on
+  mock communities.
+- **The documentation** ("Amplicon length and truncation" and the configuration reference)
+  describes all three.
+
+### Primer trimming: the extra last sequencing cycle is removed from untruncated reads
+
+An Illumina run sequences one cycle more than the read length it is set up for (2 × 151,
+2 × 251, 2 × 301): the extra cycle serves the phasing correction of the cycle before it,
+and its own calls are poor. On the MiSeq test sets the last base of R2 agrees with the
+base the other mate reads at the same place of the template in 60 to 86 % of the pairs,
+against 96 to 98 % one cycle earlier; in the ITS2 yeast mocks, where the template carries
+a T, R2's cycle 301 reads C in 79 % of the pairs. ITS reads are not truncated, so that
+base reached DADA2, survived denoising where most reads of a sequence carry the same
+wrong call, and made `mergePairs`, which accepts no mismatch in the overlap, reject the
+pairs of that sequence.
+
+- **`amplicon.cutadapt.trim_final_cycle: auto | true | false`** (new key, default `auto`).
+  `trim_primers` removes the last base of every read before it searches for the primers
+  (Cutadapt's `--cut -1` and `-U -1`, in the 5′ call of both passes). `auto` does so for
+  each sample and read direction that DADA2 does not truncate (ITS; the other markers only
+  with `trunc_len.mode: manual` and a cut of 0) and whose longest read, among the first
+  10,000, is 76, 101, 151, 251 or 301 bp; `true` always; `false` never, as up to v2.6.1.
+  The decision, with the longest read and the reason, opens
+  `logs/trim_primers/{sample}.log`. It is made by a new program,
+  `workflow/scripts/amplicon/30a_final_cycle.py`, an input of the rule.
+- **ITS2 yeast mocks** (six samples): with the removal alone, retention rises from 16.0
+  to 33.7 % of the raw read pairs, and *S. paradoxus* (4 samples) and the *S. uvarum*
+  group (2 samples), whose pairs did not merge, are found. With the new window floor for
+  ITS (next section) as well: 18 ASVs instead of 12, retention 62.2 %, and every expected
+  ITS2 type found in every sample (26 of 26, against 12). `max_mismatch: 1` on top adds
+  2 ASVs, 2.8 points of retention and no expected type, so its default stays 0.
+- **Why `auto` leaves truncated reads alone.** Forced on the other MiSeq test sets, the
+  removal changed no final table of 16S and gyrB (the cut removes the base anyway) and
+  cost reads where the cut sits at the read-length limit: on 18S the R1 cut moved from
+  271 to 274 bp, and the final table lost 1.2 % of its reads and 38 of its 1,262 ASVs,
+  with merging at 98 % either way; on a copy of the rpoB set with binned quality scores,
+  one of the 19 strains (42 reads).
+- **Primer trimming of the ITS2 test library** (20,000 pairs of SRR20648181) keeps the
+  same pairs with and without the cut, and no trimmed read holds cycle 301. 45 % of the
+  reads, those that run into the far primer, are unchanged and 50 to 55 % are one base
+  shorter; 0.2 % of the R1 and 4.6 % of the R2 reads end a few bases earlier or later,
+  because the chance matches of a few bases of the far primer at the very end of a read
+  now fall on other reads. Where the base is kept, the trimmed reads are those of v2.6.1,
+  byte for byte.
+- **The documentation** (the amplicon overview, "The extra last cycle"; the ITS page and
+  its new "Validation" section; the test datasets; the configuration and output
+  references) describes it.
+
+### The ASV length window for ITS
+
+- **With ITSx extraction, the floor of the `auto` window is the shortest ITS region in
+  the probe reference** (38 bp for ITS2, 17 bp for ITS1), without `window_margin`. ITSx
+  reports a region only where it finds the 5.8S boundary, and a boundary it misses on
+  the other side leaves rRNA on the region, so a short region is a short ITS, not a
+  fragment. Up to v2.6.1 the floor was q1 minus the margin, as for the other markers
+  (125 bp for ITS2), and it removed the yeasts with the shortest ITS2 of the ITS2 test
+  set (63-78 bp), 64 % of the reads after chimera removal. The `source` of the window in
+  `asv_length_stats.json` reads `auto:ITS_probe_min_p95+50`. The ceiling, the other
+  markers and ITS without extraction are unchanged.
+
+### COI: version 2 of the set of bacterial COI homologues
+
+- **COI runs use `bacterial_cox1_gtdb-r232.v2`** (Zenodo DOI 10.5281/zenodo.24189850)
+  instead of `gtdb-r232.v1`: deeper searches against MIDORI2, records 80-90 % identical
+  examined in lineages that read TGA as tryptophan, and a chimera rule for animal COI
+  records that carry a stretch of an endosymbiont gene. 242,696 whole genes and 31,709
+  fragments; its MIDORI2 list examines 500 GB273 records and removes 236 (187 distinct
+  sequences), against 186 and 170 in version 1. The release README lists the changes.
+- **The MIDORI2 conversion removes records by sequence.** The list now gives the SHA-1 of
+  each record's sequence, and `prepare_midori2_coi_sintax` leaves out every record that
+  carries a removed sequence, under whatever name MIDORI2 files it. On GB273 it leaves out
+  236 of 3,213,682 records, as the build of the set does. A list from before version 2
+  (without `sequence_sha1`) stops the run. A list made from the same MIDORI2 file whose
+  removed sequences are not all in it stops it too; a list made from another MIDORI2 file
+  counts the removed sequences the file lacks in the log and the report, and the run goes
+  on.
+- **On the three libraries of the COI insect mock**, the specimens recovered and the reads
+  of the kept ASVs within 97 % of a specimen are unchanged. The off-target guard moves 71
+  ASVs instead of 69: two *Tisiphia* ASVs (5 and 228 reads), which version 1 left among
+  the animal ASVs as *Mycetophila lunata* because MIDORI2 still held a record carrying a
+  *Tisiphia* stretch under that name (KM679400.1). SINTAX names none of the 71 at species
+  level; with version 1 it called 41 of them the stink bug *Picromerus bidens*, after a
+  *Wolbachia* record filed under that name (KR036430.1), which version 2 removes.
+- **What runs again in a COI output folder:** the three files of the set are downloaded
+  into `refdb/coi/bacterial_cox1/gtdb-r232.v2/` and the converted MIDORI2 file is written
+  again. Every step that reads that file runs again: the length probe (`probe_ref` of the
+  COI pack), and with it, where `expected_length: auto`, `pick_trunclen` and every step
+  after it; the reference check, the classification and the COI screens. The files of
+  version 1 stay in `refdb/` and can be deleted.
+
 ### The messages of the COI steps say bacterial COI homologues
 
 COX1 is the name of the mitochondrial gene. The genes of the bacterial and archaeal
@@ -45,40 +351,172 @@ says what the name covers and that file names, settings and output columns keep 
 short form `cox1`. The taxon filter page now quotes the stop of the COI screens in its
 new wording.
 
+### Checks at start-up
+
+- `max_consist` must be a whole number of at least 1 (also written `200.0` or `"200"`).
+  A fraction, which DADA2 cut down without a word, `Inf` or text, which failed at the end
+  of the first round, and `true`/`false` now stop the run with one message. A note at
+  start-up when it is 999, the value of every template up to v2.6.1.
+- `max_flat_rounds` must be a whole number of at least 0; a note when it is not smaller
+  than `max_consist`, because the early stop then can never act.
+- `error_model` must be `auto`, `loess`, `binned` or the experimental `custom`, in any
+  capitals.
+- `trim_final_cycle` must be `auto`, `true` or `false`, in any capitals.
+- `custom_error_function` (experimental): with `error_model: custom`, `file` and `name`
+  must both be set; with any other value, both or neither. The file must exist and be
+  readable, and the name must be one R can give a function.
+- `accept_unconverged` must hold model codes such as `"R2:0a55be94"`, as a list or a
+  single text; `true` or `false` stops the run with a message that says what it takes.
+- A `learn_errors:` or `dada2:` block left empty in a run config (all its lines commented
+  out, as after commenting out `accept_unconverged`) stops the run with a message that
+  names the block. YAML reads such a block as empty, and it replaced the template's whole
+  block, so MetaFlux stopped with a bare Python error.
+- A key written twice in the same block of a file given with `--configfile` stops the
+  run, with the file, the key and both lines. YAML keeps only the last of the two without
+  a word, so a second `amplicon:` block pasted at the end of a run config, for example to
+  add a line a message asks for, replaced the first one whole, and the marker, the primers
+  and the other amplicon settings of the first fell back to the template.
+- `dada_filter` stops with a message that names the filtering settings when no read pair
+  of a sample passes the filter. It used to end with Snakemake's bare "missing output
+  files" error.
+
 ### What runs again in a folder made with v2.6.1
 
-This part will be rewritten at release time, together with the other 2.7.0 changes; for
-now it covers only the changes above.
+The changed wording of the COI steps ("The messages of the COI steps say bacterial COI
+homologues" above) changes comments and messages only; the steps it touches (the read
+tracking, and the taxonomy under `method: sintax`) run again with the other changes below,
+with the same results.
 
-- **After a `git pull`** in the MetaFlux folder that made the output folder: the read
-  tracking (`aggregate_read_counts`) in every amplicon folder, because its script
-  changed (a comment only). In every folder classified with `method: sintax` (the
-  default for 16S, ITS and 18S, the only method for COI) also the taxonomy
-  (`assign_taxonomy`), whose script changed, and the 16S phylogeny where it is switched
-  on. In a COI folder also the download of the set of bacterial COI homologues
-  (`fetch_bacterial_cox1`), once for the shared `refdb/` and only where MetaFlux made
-  that download: its command changed (the text of its error message), so its three
-  files (about 132 MB) are downloaded again; then the MIDORI2 conversion
-  (`prepare_midori2_coi_sintax`), whose script changed, and every step that follows
-  from the converted reference: the reference check, the length probe
-  (`expected_length: auto`, the default), `pick_trunclen`, DADA2, the COI screens
-  (whose script changed too), the taxonomy and the read tracking. The steps up to primer
-  trimming are kept. Shotgun folders run nothing again. The comments changed in the
-  rule files, in `config/config.yaml` and in the COI marker pack make no step run
-  again: for the code of a step, Snakemake looks only at the date of its script or at
-  the text of its shell command or `run:` block.
+- **After a `git pull`** in the MetaFlux folder that made the output folder, in every
+  amplicon folder: `dada_filter` for every sample (it has a new output, the quality values
+  of the filtered reads), Falco on the filtered reads, `choose_error_model`,
+  `learn_errors`, `error_model_report` and `check_error_model` (new), and `dada_seqtab`
+  with every step after it: the extraction where it runs, the length filter, the COI
+  screens, the taxonomy, the read tracking and the phylogeny. MultiQC runs again in both
+  modes, because its settings changed. Also in every amplicon folder: `pick_trunclen` (its
+  script changed: the stop text of the overlap check, the new log lines and the length
+  floor; it also reads the primer-trimmed reads now) and `dada_quality_plots` (a comment
+  in its script changed), and, where `expected_length: auto`, the length probe, once per
+  marker, reference and primer pair (a comment in its script changed; its result is cached
+  in `refdb/cache/` and shared by the folders that use it). Outside 16S the probe gives
+  the same result, and `pick_trunclen` the same cuts on the same primer-trimmed reads.
+  **16S folders with
+  `expected_length: auto`** compute the probe anew under its new name
+  (`..._excl-second-site_...`), once per primer pair and SILVA release, and `pick_trunclen`
+  and every step after it run on the new statistics; where p95 or q1 changed, the cuts and
+  the ASV length window can change, and with them the tables (see "Results" below). Also
+  in every amplicon folder: `trim_primers` for every sample, because its new program
+  (`30a_final_cycle.py`, the decision on the last cycle) is an input newer than the
+  trimmed reads, and with it Falco and the read count of the primer-trimmed reads. The
+  reads it writes change only where the last cycle is removed, under `auto` on ITS. Kept:
+  the read links, the raw read counts, the PhiX removal, Falco of the raw and
+  PhiX-filtered reads and the reference files. In shotgun mode only MultiQC runs again.
 - **From a fresh clone, a release archive or a second worktree**: every step that runs a
-  script, with the steps after it, as at every release ("What runs again in a folder
-  made with v2.5.0" below says why).
-- The steps that run again give the results of v2.6.1, as between any two identical
-  runs; only the messages above read differently. The converted MIDORI2 file has the
-  same content.
-- **To skip the reruns**, give `--rerun-triggers mtime params input software-env` to
-  that run and to every later run on the same output folder.
+  script, with the steps after it, as at every release ("What runs again in a folder made
+  with v2.5.0", under 2.6.0, says why), and `trim_primers` with every step after it, for
+  the same reason as above: its new input is newer than the trimmed reads.
+- **`--rerun-triggers`.** The record, the report and the verdict of the new steps are
+  files a run asks for, and they are missing in a folder made with v2.6.1, so learning,
+  the report, the check and `dada_seqtab` with every step after it run whatever
+  `--rerun-triggers` says. So does `dada_filter`: the choice of the error function reads
+  the quality values it now writes to a file of its own per sample, which such a folder
+  lacks, also under a `--rerun-triggers` set without `code`, such as the
+  `mtime params input software-env` that earlier release notes suggested for skipping
+  reruns. The 16S probe is a missing file too (it has a new name), so it is computed, and
+  `pick_trunclen` runs again on it, whatever `--rerun-triggers` says; `pick_trunclen` also
+  has new parameters (the key of `amplicon.probe_length_stat` its stop text names, the
+  method and the filter settings it replays) and new inputs (the primer-trimmed reads).
+  `trim_primers` runs again under any set that includes `mtime`, because its new input
+  is newer than the trimmed reads, and it has a new parameter (`trim_final_cycle`).
+  Skipping the reruns saves nothing in this release.
+- **Results.** Outside ITS, under `auto`, the primer-trimmed and the filtered reads are
+  those of v2.6.1 (see the end of this item). Where neither the cap nor the early
+  stop acts and the loess fit is used, the models and the tables are those of v2.6.1:
+  full runs with Snakemake of the eight MiSeq test sets (16S, ITS, 18S, gyrB, rpoB and
+  three COI libraries) gave, byte for byte, the tables of v2.6.1: in `05.dada2/`,
+  `seqs.fasta`, `seqtab_head_seqs.txt`, `seqtab_head_names.txt`, `read.counts` and the
+  tables of the extraction and of the length filter; the taxonomy tables of
+  `06.taxonomy/` (all but the raw SINTAX output); `stats/read_tracking.txt`; and the
+  alignment and the tree of the 16S run. The raw working files
+  of Metaxa2 (`05.dada2/metaxa2/seqs.*`), ITSx (`05.dada2/_itsx_tmp/`, and the copy of
+  ITSx's summary, `05.dada2/itsx_extraction.summary.txt`) and SINTAX
+  (`06.taxonomy/_sintax_raw.tsv`) can differ between two identical runs of any version
+  (start times, Metaxa2's own classification, the order in which ITSx and VSEARCH write
+  their results); no table depends on what varies in them. A model that the cap or the
+  early stop ends now stops the run for acceptance instead of being used. Binned data
+  under `auto` get the binned fit, so different tables, on purpose. These comparisons
+  were made before the removal of the last cycle and the new ITS window ("Primer
+  trimming: the extra last sequencing cycle is removed from untruncated reads" and "The
+  ASV length window for ITS" above), which change the ITS tables on purpose. Repeated on
+  the final code: 18S, gyrB, rpoB and the three COI libraries gave the tables of v2.6.1,
+  byte for byte, and 16S differs only by the probe change below. The copies of the rpoB
+  and gyrB sets re-binned in silico, the Zymo D6331 mock and the NIST mix A gave, byte for
+  byte, the tables of the same code without the two changes.
+- **Results of the 16S probe change.** The comparison above was made before it. Run again
+  with Snakemake, the 16S test set (799F/1175R, SILVA 144) gets p95 385 bp instead of
+  386, so `raise_trunc` stops one base earlier: `truncLen` 243/154 instead of 244/154
+  (overlap slack 0 in both). The filter keeps 0.55 % more read pairs (218,313 instead of
+  217,113), and the run ends with
+  237 ASVs after merging instead of 234, 199 in the final table instead of 197, and
+  194,158 final reads instead of 193,097 (+0.55 %); the error models get new codes, and
+  every table from `05.dada2/` on, the taxonomy and the tree differ accordingly. The ASV
+  length window is [324, 435] bp instead of [324, 436]. The Zymo D6331 library
+  (341F/805R, NextSeq 2000) now passes `pick_trunclen` with the template's `p95` (429 bp):
+  with the same cuts as with `q3` (303/259), its error models, model codes, ASVs and read
+  counts are those of the run with `q3`; its ASV length window is [353, 479] bp instead of
+  [353, 632].
+- **Results of the ITS window change.** The comparison above was also made before it.
+  Replayed on the inputs of the length filter of the v2.6.1 ITS run, the window is
+  [38, 343] bp instead of [125, 343], and the filter keeps all 16 ASVs that ITSx
+  extracted instead of 12, with 205,569 reads instead of 74,077. The four ASVs it adds
+  are the short-ITS2 yeasts (*Candida haemulonii*, *Metschnikowia pulcherrima* and a
+  *Dipodascus*); the tables of the length filter, the taxonomy tables and the read
+  tracking of the ITS run differ accordingly. Replayed the same way, the seven other
+  test sets give the outputs of the length filter of v2.6.1 byte for byte. [To be
+  confirmed before release: a full ITS run on the final code, and the ITS results of
+  "Test datasets" and of the ITS page brought in line with it.]
 
 ### What to edit in a config written for v2.6.1
 
-Nothing.
+- `max_consist: 999`, in a run config copied from an older template: change it to 200 or
+  delete the line. With 999 a model that keeps changing runs for days before the check,
+  unless the early stop ends it first; MetaFlux prints a note.
+- A lower `max_consist`, such as the 10 rounds of QIIME 2: the run now stops where it
+  used to go on with a model that had not converged. Raise it, or delete the line.
+- A cluster profile that gives `dada_seqtab` its own resources (a longer run time, for
+  example) needs the same for `learn_errors`, which now does the long part of that work.
+  In the run config, `learn_errors` takes the `dada_seqtab` values of `resources` unless
+  it is named there. `error_model_report` is a short job that uses one thread: unless it
+  is named there, it takes 1 thread and the memory of `dada_quality_plots` (4000 MB in
+  the template).
+- To keep the fit of v2.6.1 on binned data: `error_model: loess`.
+- **New stops that data finished with v2.6.1 can meet.** Under `auto` only: samples from
+  two instruments or two sets of binned values, and 11 to 19 quality values or 3 to 10
+  that include neighbours (MiSeq reads under a `trunc_q` that leaves fewer than 20 of
+  their values);
+  `error_model: loess` turns these into warnings and runs as v2.6.1 did. Under any
+  setting: a sample with rewritten quality values, reads with fewer than three quality
+  values above Q2, and a sample of which the filter keeps no read.
+- A 16S marker pack of your own in `config/markers/`: add `probe_exclude_second_site: true`
+  at its top level (see `workflow/markers/16S.yaml`). Without it the probe keeps the
+  statistics of v2.6.1, and 341F/805R runs still stop at `pick_trunclen`.
+- A `probe_length_stat` of `q3`, or a fixed `expected_length`, set only to get a 341F/805R
+  run past `pick_trunclen`, is no longer needed: the default `p95` now gives 429 bp on
+  SILVA 144.
+- A run that stopped at the overlap check because of a short off-target product and was
+  then finished with `trunc_len.mode: manual` can go back to `auto`.
+- Nothing to add for the new key `cutadapt.trim_final_cycle`: the template supplies
+  `auto`. To keep the primer-trimmed ITS reads of v2.6.1, set `trim_final_cycle: false`
+  under `amplicon.cutadapt` (primer trimming still runs again once, with the same result).
+- `trim_final_cycle: true` with `trunc_len.mode: manual` and a cut at the full length of
+  the primer-trimmed reads: the reads are one base shorter, and `filterAndTrim` discards
+  every read shorter than its cut. Lower the cut by one base.
+- Nothing to add for the new keys `trunc_len.method` and `simulate_extra_overlap`: the
+  template supplies them.
+- A setting MetaFlux asks for in a message goes inside the `amplicon:` block the run
+  config already has; a second `amplicon:` block would replace the first, and the other
+  amplicon settings would be lost. MetaFlux now stops at start-up when it finds one (see
+  "Checks at start-up").
 
 ## 2.6.1 — 2026-11-02
 

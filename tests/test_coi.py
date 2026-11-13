@@ -5,9 +5,14 @@ What is tested
     file with a tiny NCBI taxonomy: the domain moves from k: to d:, the kingdom is
     added from the taxonomy (and left out for a protist), the taxid suffixes go,
     placeholder ranks and interim species names are left out of the header, the
-    records of the removal list are dropped, the report counts all of it, and the
-    log names the files with the main counts. The script stops on a removal list
-    made for another MIDORI2 release, and writes the reason to the log too.
+    sequences the removal list marks "removed" are dropped by the SHA-1 of the
+    sequence (also a copy filed under a name the list does not give, and a sequence
+    written over several lines or in lower case), the report counts all of it, and
+    the log names the files with the main counts. The script stops on a list
+    without sequence_sha1 (a list before gtdb-r232.v2) and on a list made from the
+    same MIDORI2 file whose removed sequences are not all in it, and writes the
+    reason to the log too; a list made from another MIDORI2 file only counts the
+    removed sequences the file lacks.
   - the per-ASV measurements of workflow/scripts/amplicon/80d_coi_screens.py: the
     open reading frames (TAA/TAG only), the frame and length conditions of the
     frame check (an offset of the ASV's start allowed, a frameshift inside not),
@@ -19,6 +24,7 @@ What is tested
     (_coi_length_tolerance): whole codons pass as the same int, anything else stops.
 """
 import gzip
+import hashlib
 
 import pytest
 
@@ -53,10 +59,31 @@ MIDORI2 = (
 )
 
 
-def convert(tmp_path, removal_text):
+def sha1_of(sequence):
+    """SHA-1 of a sequence as the build of the bacterial set writes it (upper case)."""
+    return hashlib.sha1(sequence.upper().encode("ascii")).hexdigest()
+
+
+LIST_HEADER = "record_id\tdecision\tsequence_sha1\tmidori2_file_sha256\n"
+
+
+def removal_rows(rows, made_from):
+    """A removal list in the format of gtdb-r232.v2: one (record, decision, sequence)
+    per row; made_from is the SHA-256 the list says it was made from."""
+    lines = [LIST_HEADER]
+    for record_id, decision, sequence in rows:
+        lines.append(f"{record_id}\t{decision}\t{sha1_of(sequence)}\t{made_from}\n")
+    return "".join(lines)
+
+
+def convert(tmp_path, removal_text, midori2=MIDORI2):
+    """Run the converter on the tiny MIDORI2 file. removal_text is the list, or a
+    function that gets the SHA-256 of the MIDORI2 file and returns the list."""
     fasta = tmp_path / "midori2.fasta.gz"
     with gzip.open(fasta, "wt") as handle:
-        handle.write(MIDORI2)
+        handle.write(midori2)
+    if callable(removal_text):
+        removal_text = removal_text(hashlib.sha256(fasta.read_bytes()).hexdigest())
     out = tmp_path / "out" / "converted.fasta.gz"
     report = tmp_path / "out" / "report.tsv"
     log = tmp_path / "logs" / "prepare_midori2_coi_sintax.log"
@@ -74,11 +101,14 @@ def convert(tmp_path, removal_text):
 
 
 def test_conversion(tmp_path):
-    headers, counts = convert(tmp_path, "record_id\tdecision\nB1.1.<1.>658\tremoved\nA1.1.<1.>658\tlisted\n")
+    headers, counts = convert(tmp_path, lambda file_sha256: removal_rows(
+        [("B1.1.<1.>658", "removed", "GGGG"), ("A1.1.<1.>658", "listed", "ACGTACGT")], file_sha256))
     log_lines = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text().splitlines()
     assert log_lines[0].startswith("[midori2_to_metaflux_sintax] 4 records read from ")
     assert log_lines[1].startswith("[midori2_to_metaflux_sintax] 1 left out as bacterial COI homologues ")
-    assert log_lines[2].startswith("[midori2_to_metaflux_sintax] 3 records written to ")
+    assert log_lines[2] == ("[midori2_to_metaflux_sintax] the list was made from this MIDORI2 file; "
+                            "0 of its 1 removed sequences are not in it")
+    assert log_lines[3].startswith("[midori2_to_metaflux_sintax] 3 records written to ")
     assert headers == [
         ">A1.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Muscidae,g:Musca,s:Musca_domestica;",
         ">A2.1.<1.>658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Muscidae;",
@@ -93,12 +123,52 @@ def test_conversion(tmp_path):
     assert counts["interim species name dropped"] == "2"
 
 
-def test_removal_list_of_another_release_stops(tmp_path):
+def test_a_copy_under_another_name_is_removed_too(tmp_path):
+    # B2 carries B1's sequence, over two lines and in lower case; the list names B1 only.
+    midori2 = MIDORI2 + (
+        ">B2.1.<1.>658;tax=k:Eukaryota_2759,p:Arthropoda_6656,c:Insecta_50557,o:Diptera_7147,"
+        "f:Muscidae_7367,g:Musca_7369,s:Musca domestica_7370;\ngg\ngg\n")
+    headers, counts = convert(tmp_path, lambda file_sha256: removal_rows(
+        [("B1.1.<1.>658", "removed", "GGGG")], file_sha256), midori2=midori2)
+    assert not any(header.startswith((">B1.", ">B2.")) for header in headers)
+    assert counts["records left out: bacterial COI homologue under a eukaryote name"] == "2"
+    assert counts["records left out: same sequence as a removed record, not named in the list"] == "1"
+    assert counts["records written"] == "3"
+
+
+def test_kept_records_keep_their_sequence_lines(tmp_path):
+    convert(tmp_path, lambda file_sha256: removal_rows([("B1.1.<1.>658", "removed", "GGGG")], file_sha256))
+    with gzip.open(tmp_path / "out" / "converted.fasta.gz", "rt") as handle:
+        sequences = [line.rstrip("\n") for line in handle if not line.startswith(">")]
+    assert sequences == ["ACGTACGT", "ACGTACGA", "TTTT"]
+
+
+def test_list_before_v2_stops(tmp_path):
     with pytest.raises(SystemExit) as stop:
-        convert(tmp_path, "record_id\tdecision\nZZ999.1.<1.>658\tremoved\n")
-    assert "belongs to another MIDORI2 release" in str(stop.value)
+        convert(tmp_path, "record_id\tdecision\nB1.1.<1.>658\tremoved\n")
+    assert "has no column 'sequence_sha1'" in str(stop.value)
     log_text = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text()
     assert log_text == str(stop.value) + "\n"
+
+
+def test_list_of_this_file_with_a_missing_sequence_stops(tmp_path):
+    with pytest.raises(SystemExit) as stop:
+        convert(tmp_path, lambda file_sha256: removal_rows(
+            [("B1.1.<1.>658", "removed", "GGGG"), ("ZZ9.1.<1.>658", "removed", "CCCC")], file_sha256))
+    assert "although the list was made from this file" in str(stop.value)
+    log_text = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text()
+    assert log_text == str(stop.value) + "\n"
+
+
+def test_list_of_another_file_counts_missing_sequences_and_goes_on(tmp_path):
+    headers, counts = convert(tmp_path, removal_rows(
+        [("B1.1.<1.>658", "removed", "GGGG"), ("ZZ9.1.<1.>658", "removed", "CCCC")], "0" * 64))
+    assert counts["records left out: bacterial COI homologue under a eukaryote name"] == "1"
+    assert counts["removed sequences in the list"] == "2"
+    assert counts["removed sequences of the list not in this MIDORI2 file"] == "1"
+    log_lines = (tmp_path / "logs" / "prepare_midori2_coi_sintax.log").read_text().splitlines()
+    assert log_lines[2] == ("[midori2_to_metaflux_sintax] the list was made from another MIDORI2 file; "
+                            "1 of its 2 removed sequences are not in it")
 
 
 def test_screen_measurements():

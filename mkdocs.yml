@@ -103,6 +103,7 @@ nav:
           - COI: amplicon/markers/coi.md
           - Bacterial COI homologues (reference set): amplicon/markers/bacterial-cox1.md
       - Amplicon length and truncation: amplicon/length-and-truncation.md
+      - DADA2 error model: amplicon/error-model.md
       - Keeping and discarding taxa: amplicon/taxon-filter.md
       - Phylogeny (16S): amplicon/phylogeny.md
   - Shotgun mode:

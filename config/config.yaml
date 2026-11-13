@@ -166,7 +166,12 @@ amplicon:
   expected_length: auto                       # int | [min,max] | "auto"
                                               # 16S auto: in-silico PCR against SILVA; uses probe_length_stat.16S.
                                               #   Chloroplast, mitochondrial and eukaryote references
-                                              #   are left out of the length statistics.
+                                              #   are left out of the length statistics, and so are
+                                              #   products that still hold a second forward-primer
+                                              #   site (the primer also fitted a look-alike upstream
+                                              #   of its real site): on SILVA 144, 6.3 % of the
+                                              #   341F/805R products (p95 582 -> 429 bp), 0.69 % with
+                                              #   799F/1175R and 0.15 % with 515F/806R.
                                               # ITS auto: length distribution of UNITE UCHIME ITS1/ITS2 sequences.
                                               # 18S auto: in-silico PCR against SILVA-Euk; uses probe_length_stat.18S.
                                               #   V4 primers (TAReuk/Bass/Parfrey/Hadziavdic, 515Y-926R) work with
@@ -198,7 +203,26 @@ amplicon:
   cutadapt:
     max_error_rate: 0.2
     min_length: 50
+    trim_final_cycle: auto                    # auto | true | false
+                                              # Removes the last base of every read before the
+                                              # primers are searched. Illumina runs sequence one
+                                              # cycle more than the read length (2 x 151, 251, 301):
+                                              # that extra cycle serves the phasing correction of
+                                              # the cycle before it, and its own calls are poor (on
+                                              # the MiSeq test sets the last base of R2 agrees with
+                                              # the other mate in 60-86 % of the pairs). It hurts
+                                              # most where nothing truncates it: ITS (truncLen 0,0),
+                                              # where a wrong last base stops pairs from merging.
+                                              # auto: per sample and read direction, when DADA2
+                                              #   does not truncate that direction (ITS; other
+                                              #   markers only with trunc_len.mode: manual and a
+                                              #   cut of 0) and the longest of the first 10,000
+                                              #   reads is 76, 101, 151, 251 or 301 bp.
+                                              # true: always. false: never (as up to v2.6.1).
+                                              # Each decision is written to
+                                              #   logs/trim_primers/{sample}.log.
     # No quality trimming at this stage — DADA2 wants per-cycle Q profiles intact.
+    # (trim_final_cycle is not quality trimming: it cuts the same cycle from every read.)
 
   trunc_len:
     mode: auto                                # auto | manual
@@ -222,6 +246,21 @@ amplicon:
                                               # ceiling collapses to the single shortest read in
                                               # the file. There is no value that switches the
                                               # guard off.
+    method: quality                           # auto mode only: quality | simulate.
+                                              # quality = cut where the median lower quartile
+                                              # of quality falls below q_threshold (above).
+                                              # simulate = replay filterAndTrim (trunc_q, maxN,
+                                              # max_ee of amplicon.dada2) on 20,000 read pairs
+                                              # per sample, spread over each whole file, and take
+                                              # the R1/R2 cuts that keep the most pairs while the
+                                              # pairs still merge; also works on binned quality
+                                              # scores. The quality rule's cut is logged next to it.
+    simulate_extra_overlap: 20                # simulate only: bp of overlap required on top of
+                                              # expected length + min_overlap, so that amplicons
+                                              # a little longer than expected still merge.
+                                              # 0 keeps the most pairs; higher is safer.
+    # In auto mode, reads shorter than half the expected amplicon length are left out
+    # of min_read_coverage_pct (a short off-target product must not set the limit).
     # 16S, 18S, gyrB, rpoB and COI all use the same Q-based picker + overlap constraint.
     # ITS is the one exception: truncLen is overridden to (0, 0) in filterAndTrim —
     # no hard cut is applied; quality is controlled by maxEE and min_len only.
@@ -229,9 +268,14 @@ amplicon:
   # ASV length filter applied AFTER target extraction (Metaxa2/ITSx) so the
   # filtered distribution is directly comparable to the probe distribution.
   # Auto window: [probe_q1 − window_margin, probe_p95 + window_margin].
+  # ITS with extraction on: [probe_min, probe_p95 + window_margin]. The floor is the
+  # shortest ITS region in the UNITE reference (38 bp ITS2, 17 bp ITS1), without the
+  # margin: ITSx has cut each ASV at the 5.8S boundary, so a short region is a short
+  # ITS (yeasts with a 63-78 bp ITS2), not a fragment; q1 − 50 would be 125 bp on ITS2.
   length_filter:
     mode: auto                                # auto | manual
-    window_margin: 50                         # bp added/subtracted from probe q1 (lower) and p95 (upper)
+    window_margin: 50                         # bp added/subtracted from probe q1 (lower) and p95 (upper);
+                                              # ITS with extraction on: added to p95 only
     range: null                               # [min, max] — overrides auto when set; required when mode=manual
 
   extraction:
@@ -347,14 +391,64 @@ amplicon:
       min_len_stat: null
       max_len: null                           # null = no upper length filter (Inf)
 
+    # DADA2's error models, one per read direction: how they are learned, checked
+    # before denoising and reported on is in docs/amplicon/error-model.md.
     learn_errors:
       nbases: 1e8                             # bases sampled for error model (1e8 = DADA2 default)
-      # Most rounds of error learning per read direction (DADA2's default is 10).
-      # Not unlimited: most models settle within 10 rounds and the slowest seen took
-      # about 100. A model that has not settled by the last round is used as it is,
-      # and logs/dada_seqtab.log says "Self-consistency loop terminated before
-      # convergence." On a large library that never settles, 999 rounds can take days.
-      max_consist: 999
+      # Most rounds of error learning per read direction (DADA2's default is 10). An
+      # upper limit, not a speed setting: a model that converges stops at the same
+      # round whatever this is. Most models need fewer than 10 rounds, and the slowest
+      # seen about 100. A model still changing at the cap stops the run before
+      # denoising (see accept_unconverged). The template said 999 up to v2.6.1; a run
+      # config copied from it keeps 999 until the line is changed or deleted.
+      max_consist: 200
+      # Early stop (0 switches it off). MetaFlux ends the learning when the model had
+      # stopped improving: it changed by less than 1/1000 of round 1's change, and the
+      # lowest change so far fell by less than 10 % over the last max_flat_rounds
+      # rounds. Such a model counts as not converged and goes through the same check
+      # as one stopped at the cap (see accept_unconverged). On the libraries replayed
+      # to set it, an early-stopped model changed at most 0.04 % of the reads with the
+      # loess fit and at most 0.02 % with the binned fit.
+      max_flat_rounds: 20
+      # The error function the models are learned with. auto: MetaFlux reads the
+      # quality values of the filtered reads and takes, per read direction, loess
+      # (DADA2's default smooth fit) for continuous values such as a MiSeq writes (20 or
+      # more distinct values), and binned (DADA2's makeBinnedQualErrfun) for binned
+      # values such as NovaSeq and NextSeq write (3 to 10, with gaps between them).
+      # loess or binned: use that function; loess on binned values warns and goes on (it
+      # is the fit of every run up to v2.6.1), binned on continuous values stops. The run
+      # stops before learning when the reads carry fewer than three quality values above
+      # Q2, and under auto also when samples from different instruments are mixed, or
+      # when 11 to 19 values, or 3 to 10 that include neighbours (as MiSeq reads keep
+      # under a trunc_q of 28 to 30), leave the kind open; each stop says how to go on.
+      # See stats/dada2/quality_values.tsv for what each sample carries. custom
+      # (EXPERIMENTAL): learn both models with your own function, named in
+      # custom_error_function below.
+      error_model: auto
+      # EXPERIMENTAL: your own error function, written as DADA2's learnErrors takes it
+      # (errorEstimationFunction): it receives DADA2's table of transition counts (16
+      # rows, A2A to T2T; one column per quality score) and returns a table of error
+      # rates of the same shape. file: the R file that defines it (an absolute path, or
+      # one relative to the folder snakemake is started in); name: the function's name
+      # in that file. With error_model: custom both models are learned with it, and
+      # editing the file makes them be learned again. With any other error_model the
+      # report only refits it next to the other functions, for comparison; editing the
+      # file then draws the report again, and the check, dada_seqtab and every step
+      # after it run again too, with the same models. Leave both empty for no function
+      # of your own. What MetaFlux checks, and an example: "Your own error function" in
+      # docs/amplicon/error-model.md.
+      custom_error_function:
+        file: ""
+        name: ""
+      # The codes of error models you accept although they did not converge, as the
+      # stop message prints them, e.g. ["R2:0a55be94"]. A code names one model: a
+      # rerun of the same folder goes on, a different model stops the run again. Put
+      # the line in the run config of that output folder, inside its existing
+      # amplicon: block (a second amplicon: block would replace the first, and stops
+      # the run at start-up), and never in a config shared by several runs. Read
+      # inside the check, so adding or removing a code makes no step run again. See
+      # docs/troubleshooting.md.
+      accept_unconverged: []
 
     # ── Tier 2: advanced tuning ──
     dada:
@@ -724,10 +818,12 @@ shotgun:
 # ─────────────────────── Resources [shared] ─────────────────────
 # Per-rule threads and mem_mb. Rules read these via threads_for() / mem_mb_for()
 # helpers defined in workflow/rules/shared/00_common.smk. Missing keys fall
-# back to threads_default / mem_mb_default — with TWO exceptions: delete the
+# back to threads_default / mem_mb_default — with these exceptions: delete the
 # phylo_tree or the sylph_sketch line below and that rule falls back to 1, not
 # threads_default, because there the thread count changes the result and not just
-# the runtime.
+# the runtime; learn_errors, which has no line here, takes the dada_seqtab values; and
+# error_model_report, which has none either, takes 1 thread (it uses one) and the
+# dada_quality_plots memory (add a line named after either rule to give it its own).
 resources:
   threads_default: 4
   mem_mb_default: 2000
@@ -741,7 +837,7 @@ resources:
     pick_trunclen: 4
     dada_quality_plots: 4
     dada_filter: 4
-    dada_seqtab: 8
+    dada_seqtab: 8                            # also used by learn_errors unless named here
     dada_length_filter: 2
     target_extract: 8
     assign_taxonomy: 8
@@ -805,9 +901,9 @@ resources:
     # ── amplicon ──
     bowtie2: 4000
     pick_trunclen: 4000
-    dada_quality_plots: 4000
+    dada_quality_plots: 4000                  # also used by error_model_report unless named here
     dada_filter: 2000
-    dada_seqtab: 16000
+    dada_seqtab: 16000                        # also used by learn_errors unless named here
     dada_length_filter: 4000
     target_extract: 8000
     assign_taxonomy: 16000

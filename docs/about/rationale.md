@@ -80,11 +80,12 @@ is set explicitly — which overrides everything below — the ASV length filter
 ignores that choice whenever the probe has run and builds its window from the
 distribution itself, keeping ASVs inside
 `[probe q1 − window_margin, probe p95 + window_margin]`, with
-`length_filter.window_margin` at 50 bp. Changing `probe_length_stat` therefore
+`length_filter.window_margin` at 50 bp (for ITS with extraction on, the floor is the
+probe's `min`, without margin). Changing `probe_length_stat` therefore
 moves the overlap constraint, not the ASV window.
 
 The probe result is cached under `refdb/cache/`. The filename encodes the marker
-type, the reference (for 16S also the lineages left out of the statistics; for rpoB
+type, the reference (for 16S also the lineages left out of the statistics; for 16S and rpoB
 `_excl-second-site`, because products that hold a second forward-primer site are left
 out), and a hash of both primer sequences, so the probe re-runs only when one of those
 actually changes.
@@ -192,7 +193,8 @@ infrastructure around them is about being able to get the same answer again.
   re-does any job that was cut off mid-write.
 - **One version-controlled config.** Every parameter lives in a single YAML file.
   Committing that file alongside the results records exactly what was run — the
-  mode, the marker, the primers, the reference databases, the thresholds.
+  mode, the marker, the primers, the reference databases, the thresholds, and any
+  DADA2 error model accepted by its code although it did not converge.
 - **Fixed random seed.** `amplicon.seed` pins the random-number generator for the
   stochastic steps in the amplicon path. One caveat applies to the `rdp`
   classifier, which breaks exact ties at random; it is written up in

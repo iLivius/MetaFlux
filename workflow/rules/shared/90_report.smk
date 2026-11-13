@@ -20,16 +20,19 @@
 # are told apart.
 #
 # Inputs and scan dirs are mode-dependent: amplicon path adds falco, cutadapt,
-# and bowtie2 (PhiX) logs; shotgun path adds fastp, BBDuk PhiX stats, (when
-# host_genomes is set) BBMap host-removal stats, and then whatever the chosen
-# profiler (shotgun.profiler) writes: the Kraken2 and Bracken reports, the sylph
-# summary table, or both.
+# bowtie2 (PhiX) logs and the section on DADA2's error models; shotgun path adds
+# fastp, BBDuk PhiX stats, (when host_genomes is set) BBMap host-removal stats, and
+# then whatever the chosen profiler (shotgun.profiler) writes: the Kraken2 and
+# Bracken reports, the sylph summary table, or both.
 
 def _multiqc_inputs():
     """Resolve MultiQC inputs based on MODE — only the files actually produced
     by the active workflow are listed here."""
     if MODE == "amplicon":
         out = {
+            # One Falco report per sample, read direction and stage (FALCO_STAGES in
+            # 00_common.smk: raw, nophix when PhiX removal runs, stripped, and filtered,
+            # the reads after filterAndTrim that the error models are learned from).
             "falco": expand(
                 OUT / "stats" / "falco" / "{sample}_R{r}_{stage}" / "fastqc_data.txt",
                 stage=FALCO_STAGES, sample=SAMPLES, r=[1, 2],
@@ -42,6 +45,18 @@ def _multiqc_inputs():
         # bowtie2 PhiX logs exist only when PhiX removal runs.
         if REMOVE_PHIX:
             out["rm_phix_logs"] = expand(LOGS / "rm_phix" / "{sample}_phixFilter.log", sample=SAMPLES)
+        # The "DADA2 error model" section: two tables and four figures that
+        # error_model_report (60_dada2.smk) writes into stats/dada2/multiqc/ (see
+        # _error_model_report_files in 00_common.smk). As inputs they make MultiQC wait
+        # for the report, but not for check_error_model, so with --keep-going a run
+        # that the check stops still gets a MultiQC report with this section, which is
+        # the user's evidence for accepting the model. A stop before the report
+        # (choose_error_model, or learn_errors itself) leaves no MultiQC report.
+        out["error_model"] = [
+            ERROR_MODEL_REPORT[key]
+            for key in ("mqc_summary", "mqc_fit_table", "mqc_fit_r1", "mqc_fit_r2",
+                        "mqc_convergence", "mqc_quality")
+        ]
     else:  # shotgun
         # fastp runs whichever profiler is chosen (shotgun.profiler).
         out = {
@@ -75,6 +90,13 @@ def _multiqc_scan_dirs():
         ]
         if REMOVE_PHIX:
             dirs.append(LOGS / "rm_phix")
+        # The section on DADA2's error models (inputs above). Only this subfolder of
+        # stats/dada2/ is scanned: it holds exactly the six files of the section, and
+        # nothing else in stats/dada2/ (the report's own tables and figures, the
+        # per-sample filter statistics) is meant for MultiQC. The folder always exists
+        # when MultiQC runs, because its files are inputs. multiqc_config.yaml gives
+        # the section its name, descriptions and order.
+        dirs.append(OUT / "stats" / "dada2" / "multiqc")
         return dirs
     # Shotgun. Only folders the chosen profiler actually fills are listed: MultiQC
     # stops with an error on a scan folder that does not exist. The rule records the
@@ -133,9 +155,10 @@ rule multiqc:
     resources:
         mem_mb = lambda wc: mem_mb_for("multiqc"),
     shell:
-        # Falco output is FastQC-format, so MultiQC reports it under the
-        # "FastQC" module — expected behavior. The amplicon side uses regex
-        # renames in multiqc_config.yaml to give each stage a readable label.
+        # Falco output is FastQC-format, so MultiQC reads it with its FastQC
+        # module, which MultiQC 1.35 titles "Falco" when every report comes from
+        # Falco — expected behavior. The amplicon side uses regex renames in
+        # multiqc_config.yaml to give each stage a readable label.
         """
         mkdir -p {params.outdir}
         multiqc {params.scan_dirs} \

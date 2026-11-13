@@ -190,15 +190,44 @@ cluster rather than spread evenly. `100` does not switch the gate off: it requir
 read to reach the cut, so the ceiling drops to the shortest read in the file. On this
 sample that is 79 bp, which then fails the overlap constraint and stops the run.
 
-If more than 5% of a sample's reads belong to an off-target product much shorter than the
-amplicon, the 95% length falls within that product. The run-wide ceiling is set by the strictest sample, so a single such
-sample can cap both reads too short to overlap. In a 78-sample 16S soil study
-sequenced in eight NextSeq 1000/2000 runs, 13 samples had 5 to 40% of their reads in a
-product of 150 to 165 bp, with the mode at 158 bp.
-At 95, each of these samples capped both reads at 158 bp; the sample with 40% kept the
-ceiling at 158 bp for every value down to 60. The picker stopped at the overlap check. The
-log names the sample that set each ceiling. If the short product is not the target, check
-that sample's read-length distribution and set the cuts with `mode: manual`.
+**Short off-target products are left out of the count.** If more than 5% of a sample's
+reads belonged to a product much shorter than the amplicon, the 95% length would fall
+within that product, and because the run-wide ceiling is set by the strictest sample, a
+single such sample would cap both reads too short to overlap. In a 78-sample 16S soil
+study sequenced in eight NextSeq 1000/2000 runs, 13 samples had 5 to 40% of their reads in
+a product of 150 to 165 bp, with the mode at 158 bp. Counted over all reads, each of them
+capped both reads at 158 bp, and the picker stopped at the overlap check.
+
+The gate therefore counts only reads at least **half the expected amplicon length** long.
+The reasoning:
+
+- Cutadapt removes the other primer from a read that runs through the end of its
+  product, so a primer-trimmed read shorter than its sequenced length is its whole
+  product. A read under half the expected length comes from a product less than half as
+  long as the target: a primer dimer or an unspecific product, not the natural length
+  variation of the marker.
+- Such a product could only give an ASV far below the
+  [ASV length window](#the-asv-length-filter), which removes it later anyway.
+- Target reads that do not run through (amplicon longer than the read) are always
+  longer than the floor: R1 and R2 together must exceed the expected length for the pair
+  to merge at all.
+
+On the soil study (expected length 431 bp, floor 216 bp) the gate left out 0 to 40.7% of
+each sample's reads, the 13 samples capped at 272 to 281 bp like the others, and the cuts
+are 272/280. On the eight MiSeq test libraries no `truncLen` changed (the largest share
+left out was 2.7%, in one COI library).
+
+Two exceptions. When more than half of a sample's reads lie below the floor, they are the
+sample rather than a minority product: that sample keeps the limit over all its reads,
+and the log warns (check its primers and `amplicon.expected_length`). ITS has no single
+expected length, so its gate still counts every read.
+
+The log lists every sample's limit and the share of its reads left out:
+
+```text
+[pick_trunclen] R1 read-length limit per sample: the length 95% of its reads reach, not counting reads shorter than 216 bp (half the expected amplicon length: a short off-target product, not the target)
+[pick_trunclen]   CABI-SG-cDNA-2.1_R1_stripped: 281 bp (40.13% of its reads are shorter than 216 bp and were left out)
+```
 
 !!! warning "There is no value that disables this gate"
 
@@ -242,6 +271,14 @@ comes out below 50 bp, which usually means the falco reports are worth a look.
     500/550 (four runs of one NextSeq 500) and the current NovaSeq 6000, which were read from
     FASTQ files.
 
+    The same values decide how DADA2 learns its error model: with `error_model: auto`,
+    MetaFlux counts the distinct values in the filtered reads and takes DADA2's binned fit
+    for 3 to 10 values above Q2 with gaps between them (no table above has two neighbouring
+    values), anchored on the values found in the reads, never on this
+    table (see [DADA2 error model](error-model.md#continuous-and-binned-quality-scores),
+    and the setting `learn_errors.error_model` in
+    [the configuration reference](../reference/configuration.md#dada2-tier-1-operational-parameters)).
+
     On binned data, the lower quartile of a single position in one sample can only take one
     of these values. It drops to a lower value only when at least a quarter of the bases at
     that position are at or below that value. Marginal calls are the bases in the lowest bin above the no-call
@@ -279,6 +316,25 @@ comes out below 50 bp, which usually means the falco reports are worth a look.
     the top value fails at the first position: the quality cut is 0, and the final cuts
     come from `resolve_policy` alone.
 
+    **What the log says.** `pick_trunclen` reads the first 10,000 reads of every
+    primer-trimmed file and logs, per read direction, the quality values found, their
+    kind (binned, continuous, by the same rule as the choice of the error function), what
+    `q_threshold` means on them, and whether each cut came from quality or from the
+    read-length limit. It warns when `q_threshold` equals one of the binned values, as the
+    default does on 9, 20, 34 data, or lies above the highest. None of this changes a cut.
+    On the NextSeq 2000 mock community run:
+
+    ```text
+    [pick_trunclen] R1 quality values (first 10,000 reads of each of the 1 primer-trimmed files): 3 values (9, 20, 34), binned
+    [pick_trunclen] R1 q_threshold 20 on these values: the cut falls where at least a quarter of the bases carry 9 or lower (the values below 20: 9)
+    [pick_trunclen] WARNING: R1 q_threshold 20 equals one of the quality values. A threshold one unit higher (21) would count 20 as low too and ask whether a quarter of the bases carry 20 or lower, a different question that can move the cut by tens of bases (the values above it: 34).
+    [pick_trunclen] R1 quality cut 303 bp is the read-length limit: the median Q1 never fell below 20 within it, so quality did not set this cut
+    ```
+
+    The first 10,000 reads show every value a file uses, but not its quality: a NextSeq
+    writes its files tile by tile. To judge the cut on the reads themselves, see
+    [the simulate method](#the-simulate-method).
+
     **`relax_q` has little effect.** It lowers the threshold one unit at a time down to
     `q_floor` (15 by default). No current three-bin table has a value from 15 to 19.
     Lowering the threshold to the floor therefore moves the cut only past intermediate values
@@ -296,6 +352,9 @@ comes out below 50 bp, which usually means the falco reports are worth a look.
 | `amplicon.trunc_len.resolve_policy` | `raise_trunc` | What to do when the quality-based cuts break the overlap constraint. See below. |
 | `amplicon.trunc_len.manual_r1` | unset | R1 cut in bp, used only when `mode: manual`. |
 | `amplicon.trunc_len.manual_r2` | unset | R2 cut in bp, used only when `mode: manual`. |
+| `amplicon.trunc_len.method` | `quality` | `auto` only. `quality` = the rule described on this page; `simulate` = replay `filterAndTrim` on sampled read pairs, see [the simulate method](#the-simulate-method). |
+| `amplicon.trunc_len.simulate_extra_overlap` | `20` | `simulate` only: bp of overlap required on top of `expected_length + min_overlap`. |
+| `amplicon.dada2.trunc_q`, `max_ee`, `filter.min_len`, `filter.max_len` | see [DADA2](../reference/configuration.md) | Read by `simulate` only, which replays the filter with the run's own settings. |
 | `amplicon.expected_length` | `auto` | Amplicon length used by the overlap constraint. See [where the expected length comes from](#where-the-expected-amplicon-length-comes-from). |
 | `amplicon.min_overlap` | `12` | Overlap the two cuts must leave, in bp. Design constraint only. |
 
@@ -329,7 +388,7 @@ When the slack is negative, `amplicon.trunc_len.resolve_policy` decides what hap
 
 | Policy | What it does | When it gives up |
 |---|---|---|
-| `raise_trunc` *(default)* | Extends the cuts past the quality drop until the deficit is covered, taking each additional base from whichever read has the **better aggregated Q1 at the position it would gain**. See below. | If the combined headroom of R1 and R2 is smaller than the deficit, the run stops with the deficit and both headrooms reported. |
+| `raise_trunc` *(default)* | Extends the cuts past the quality drop until the deficit is covered, taking each additional base from whichever read has the **better aggregated Q1 at the position it would gain**. See below. | If the reads, cut at their ceilings, still do not reach the required length, the run stops. |
 | `relax_q` | Lowers `q_threshold` by 1, re-cuts both directions at the new threshold, and repeats until the constraint holds. | If the threshold reaches `q_floor` without the constraint holding, the run stops. |
 | `error` | Changes nothing and aborts immediately, reporting the deficit in bp. | Always — that is the point of it. |
 
@@ -363,9 +422,133 @@ favour of the more abundant parent, and rejects outright any pair exceeding
     [pick_trunclen] Raised: R1 +30 (mean Q1 of added bases 21.8), R2 +0 (mean Q1 n/a); allocation is quality-weighted, not headroom-weighted
     ```
 
+Each of the three stops prints the numbers behind the check and the settings that feed
+it: how far the reads reach after primer removal, what merging needs, and where the
+expected length came from. A 2×300 bp run whose expected length is the 582 bp of the
+example above stops with:
+
+```text
+[pick_trunclen] ERROR: R1 and R2 cannot be cut so that the pairs still merge. Even at their full usable length (resolve_policy: raise_trunc) the reads reach 562 bp, 32 bp short of the 594 bp that merging needs.
+  Read length available: after primer removal the reads reach at most R1 303 + R2 259 = 562 bp (the length that 95% of each sample's reads reach, amplicon.trunc_len.min_read_coverage_pct; the lines above name the sample that sets each).
+  Merging needs: 582 bp (expected amplicon length) + 12 bp of overlap (amplicon.min_overlap) = 594 bp.
+  Expected amplicon length: 582 bp, the p95 of the lengths of the 607,963 in-silico PCR products of these primers (amplicon.expected_length: auto; amplicon.probe_length_stat.16S: p95). The probe measured q1 403, median 422, q3 427, p95 582 and p99 640 bp.
+  What to check:
+  - If the amplicon between your primers is shorter than 582 bp, set amplicon.expected_length to its length in bp, or choose a lower statistic of the probe under amplicon.probe_length_stat.16S (q3: 427 bp, median: 422 bp).
+  - If 582 bp is right, these reads are too short for R1 and R2 to overlap by 12 bp, and no truncation setting makes the pairs merge.
+```
+
+Under `relax_q` and `error` the first line says how far the quality cuts got instead, and
+a further line names `raise_trunc` when the reads themselves would reach far enough.
+
 Whichever route was taken is recorded as `resolved_via` in `stats/trunclen.json`
 (`primary`, `raise_trunc`, `relax_q` or `manual`), along with `q_threshold_requested`
 and `q_threshold_used` — those two differ only when `relax_q` fired.
+
+## The simulate method
+
+`amplicon.trunc_len.method: simulate` chooses the cuts from the reads themselves instead
+of from a quality summary; this is the idea behind FIGARO. The default stays `quality`.
+
+**When to use it.** On binned quality values the quality rule often cannot fire and
+leaves the cut at the read-length limit. There `simulate` is the recommended method: on
+the binned mock data it found the same true sequences and kept 6-7% more reads in ASVs.
+On MiSeq data the default `quality` keeps the cuts of earlier versions.
+
+**What it does.**
+
+1. From each sample it takes 20,000 read pairs spread evenly over the **whole** file,
+   never its start: a NextSeq writes its reads tile by tile, and in one soil R2 file the
+   first 100,000 reads carried no N while 19.9% of all its reads did.
+2. For each read it finds the longest `truncLen` at which the read still passes
+   `filterAndTrim` with the run's own settings: the read is cut before its first base at
+   `trunc_q` or below, must hold no N (maxN 0), and the expected errors of its first
+   `truncLen` bases must stay within `max_ee` (`max_len`, when set, is applied first).
+   Every one of these conditions only gets harder as the cut grows, so one number per
+   read is enough: a pair passes at (R1, R2) exactly when both cuts are within its two
+   numbers.
+3. Over all sampled pairs it counts the pairs kept at every R1/R2 cut pair and takes the
+   pair that keeps the most while `R1 + R2 >= expected_length + min_overlap +
+   simulate_extra_overlap`. Of the cut pairs within 0.5 points of the most, it takes the
+   one with the longest `R1 + R2`, then the longer R1.
+
+Each sample gives the same number of pairs, so a deeply sequenced sample does not decide
+for the others. The method reads the same quality values as the filter, so binned values
+need no translation, and it sees what no per-position summary shows: whole tiles with an
+N at a cycle that varies from tile to tile. ITS stays with the quality rule, because
+`dada_filter` applies no fixed cut to ITS.
+
+**Why the two extra rules.** The share of pairs kept is often almost flat over a wide
+range of cuts, and the strict maximum then follows differences below the sampling noise
+(about 0.1 to 0.3 points). On a MiSeq COI library with a 205 bp amplicon, R1 34 / R2 183
+kept 99.59% of the pairs and 57 / 200 kept 99.28%; the strict maximum with the 20 bp
+margin was a 42 bp R1. The rule is also pulled towards R2 because R2 has the larger
+`max_ee` (5 against 2). Short, lopsided cuts leave most of the amplicon read by one read
+only, while the overlap is where `mergePairs` checks R1 against R2 and rejects pairs that
+disagree. `simulate_extra_overlap` (20 bp) and the 0.5-point tolerance both buy back
+overlap at a small cost in reads. `0` keeps the most pairs.
+
+**What it logs.** The share of sampled pairs kept by the best cut pair at extra overlaps
+of 0, 10, 20, 30 and 40 bp, the quality rule's cut with the share it keeps, the
+simulated cut, and both shares per sample:
+
+```text
+[pick_trunclen] Simulated filterAndTrim (truncQ 2, maxN 0, maxEE 2/5) on 1,545,764 read pairs from 78 samples (up to 20,000 per sample, spread over each whole file) in 247 s
+[pick_trunclen] Quality rule for comparison: R1=272, R2=280 via primary, keeps 72.13% of the sampled pairs
+[pick_trunclen] Simulated cut: R1=206, R2=264, keeps 77.19% of the sampled pairs (R1 + R2 = 470 bp, need >= 443 + 20 bp extra overlap)
+```
+
+The simulation predicts the filter closely: on the real runs below, the share of pairs
+that `filterAndTrim` kept differed from the predicted share by at most
+0.42 points.
+
+**Measured on the test data.** The cuts of the quality rule and of `simulate`, with the
+share of the sampled read pairs each keeps:
+
+| Library | `quality` | kept | `simulate` | kept |
+|---|--:|--:|--:|--:|
+| 16S V5-V7, MiSeq (6 samples) | 244/154 | 61.8% | 216/204 | 64.9% |
+| 18S V4, MiSeq (4) | 271/239 | 95.2% | 271/259 | 93.8% |
+| ITS2, MiSeq (6) | 209/204 | – | not applied (ITS) | – |
+| gyrB, MiSeq (5) | 150/194 | 95.1% | 137/185 | 95.8% |
+| rpoB, MiSeq (5) | 254/189 | 89.8% | 236/197 | 91.7% |
+| COI BF3/BR2, MiSeq (1) | 249/271 | 71.6% | 184/270 | 84.6% |
+| COI Leray-XT, MiSeq (1) | 258/269 | 84.7% | 178/192 | 96.9% |
+| COI fwhF2/fwhR2n, MiSeq (1) | 203/204 | 88.4% | 63/198 | 99.0% |
+| rpoB, MiSeq re-encoded with 9/20/34 (5) | 264/189 | 80.6% | 235/197 | 88.0% |
+| 16S V3-V4 mock, NextSeq 2000, 9/20/34 (1) | 303/259 | 84.2% | 236/253 | 89.8% |
+| 16S V3-V4 soil, NextSeq 1000/2000, 9/20/34 (78) | 272/280 | 72.1% | 206/264 | 77.2% |
+
+On every library but 18S, `simulate` keeps more pairs; on 18S the quality cut already
+leaves only 4 bp of overlap to spare, and the 20 bp margin costs 1.5 points. The run time
+is a few seconds per library; the 78 soil samples took about 4 minutes, nearly all of it
+spent decompressing the reads.
+
+**ASVs on mock communities.** Full runs up to the ASV table, with both methods and
+otherwise identical settings (error function `auto`). An ASV identical to a true sequence
+of the mock counts as a truth match; every other ASV counts as spurious.
+
+| Mock (true sequences) | Method | Cuts | Reads in ASVs | ASVs | True sequences found | Reads in them | Spurious ASVs | Reads in them |
+|---|---|--:|--:|--:|--:|--:|--:|--:|
+| Zymo D6331, 16S V3-V4, NextSeq 2000 (47) | `quality` | 303/259 | 180,514 | 33 | 18 | 93.38% | 15 | 6.62% |
+| | `simulate` | 236/253 | 191,516 (+6.1%) | 35 | 18 | 93.40% | 17 | 6.60% |
+| rpoB, MiSeq re-encoded 9/20/34 (19) | `quality` | 264/189 | 96,163 | 54 | 19 | 96.86% | 35 | 3.14% |
+| | `simulate` | 235/197 | 103,255 (+7.4%) | 40 | 19 | 97.50% | 21 | 2.50% |
+| rpoB, MiSeq (19) | `quality` | 254/189 | 105,593 | 47 | 19 | 97.42% | 28 | 2.58% |
+| | `simulate` | 236/197 | 107,548 (+1.9%) | 44 | 19 | 97.48% | 25 | 2.52% |
+| COI fwhF2/fwhR2n, MiSeq (374 barcodes) | `quality` | 203/204 | 1,199,935 | 890 | 362 | 98.06% | 528 | 1.94% |
+| | `simulate` | 63/198 | 1,329,856 (+10.8%) | 850 | 365 | 98.09% | 485 | 1.91% |
+
+How the truth was set: for Zymo D6331, the stretch between the primers of every 16S copy
+with exact primer sites; for rpoB, one sequence per isolate, taken from the runs (the
+publication gives no sequences), so only the spurious ASVs can be compared, not which
+true sequences are found; for COI, the 374 reference barcodes of the mock plus the
+extra bulk-sample barcodes, an ASV counting as true when it occurs exactly within one.
+
+On all four mocks `simulate` kept more reads, found the same or more true sequences, put
+the same or a larger share of the reads into them, and gave fewer spurious ASVs on three
+(Zymo: two more, together 0.004% more of the reads). That includes the COI library with
+the lopsided 63/198 cut. Not yet tested: a 16S MiSeq mock, an ITS run (not affected), and
+data from a NovaSeq 6000 or an XLEAP-SBS instrument.
 
 ## Where the expected amplicon length comes from
 
@@ -456,9 +639,19 @@ site are left out of the statistics. The probe then gives p95 395 bp (median 386
 Such a body is left out rather than cut back to its inner site, because the sequence
 alone does not tell which of the two sites a PCR would use.
 
-16S and 18S do not set the field. The same thing happens there, but rarely: 0.6–0.7% of
-the 16S products with 799F/1175R and 0.5% of the 18S products with the TAReuk V4
-primers. Left out, they would move p95 by 1 bp (16S on SILVA 144) and 7 bp (18S).
+In 16S it depends on the forward primer, and the 16S marker pack sets the field too. The
+17-mer 341F (`CCTACGGGNGGCWGCAG`, the V3–V4 primer of Illumina's 16S protocol) also
+matches, with 2 mismatches, `CCTACGGGAGAAAGCAG` in V2 (*E. coli* positions 185–201) of
+*Pseudomonas*, *Acinetobacter*, *Stenotrophomonas*, *Aeromonas*, *Shewanella* and their
+relatives. On SILVA 144, 6.3% of the 341F/805R products start there and still hold the
+real site: 583 bp long instead of 427 bp. p95 leaves only 5% of the products above it,
+so it lands among them, at 582 bp, and a 2×300 bp run, whose reads reach about 562 bp
+after primer removal, stops at `pick_trunclen`. With pass 3 the probe gives p95 429 bp. For 799F/1175R
+(V5–V7) the share is 0.69% on SILVA 144 (p95 386 → 385 bp) and 0.61% on 138.2 (p95 384 bp
+either way), for 515F/806R (V4) 0.15% (p95 255 bp either way).
+
+18S does not set the field. The same thing happens there, but rarely: 0.5% of the 18S
+products with the TAReuk V4 primers. Left out, they would move p95 by 7 bp.
 
 ### `probe_mode: direct` — lengths read straight off the reference
 
@@ -477,7 +670,7 @@ gyrB amplicons rather than full genes, with the same consequence.
 
 | Marker | `probe_mode` | Probe substrate | Reference tag in the cache filename | `probe_length_stat` key read |
 |---|---|---|---|---|
-| 16S | `pcr` | SILVA trainset (chloroplast, mitochondrial and eukaryote products left out of the statistics) | `silva_v144_toGenus_excl-chloroplast-eukaryota-mitochondria` (`silva_v138.2_…` with release 138.2) | `16S` |
+| 16S | `pcr` | SILVA trainset (chloroplast, mitochondrial and eukaryote products, and products that hold a second forward-primer site, left out of the statistics) | `silva_v144_toGenus_excl-chloroplast-eukaryota-mitochondria_excl-second-site` (`silva_v138.2_…` with release 138.2) | `16S` |
 | ITS | `direct` | UNITE UCHIME, pre-extracted ITS1 or ITS2 | `unite_uchime_ITS1` / `unite_uchime_ITS2` | none — ITS never resolves a stat |
 | 18S | `pcr` | SILVA-Eukaryotic 18S v132 | `silva_euk_18s_v132` | `18S` |
 | gyrB | `direct` | DD7RZ8 v6 | `gyrb_dd7rz8_v6` | `16S` (gyrB reuses that key) |
@@ -488,8 +681,8 @@ For 16S, the in-silico products of chloroplast, mitochondrial and eukaryote refe
 are left out of the statistics (marker pack field `probe_exclude_taxa`, written into the
 cache filename). Organelle SSU is often much longer than bacterial 16S between the same
 primers, and SILVA 144 holds eight times more of it than 138.2: for 799F/1175R the
-p95 would be 397 bp with it and is 386 bp without (384 bp with 138.2 either way).
-Since `expected_length` feeds the overlap constraint, those extra 11 bp can push
+p95 would be 390 bp with it and is 385 bp without (384 bp with 138.2 either way).
+Since `expected_length` feeds the overlap constraint, those extra 5 bp can push
 truncLen further into the quality-poor 3' end, where it costs reads, for amplicons the
 taxon filter removes later anyway.
 
@@ -511,7 +704,7 @@ excluded_taxa, n_excluded
 names the reference lineages left out of the statistics (the pack's
 `probe_exclude_taxa`: Chloroplast, Eukaryota and Mitochondria for 16S, none for the
 other markers) and `n_excluded` how many sequences that left out; `n_amplicons` and the
-statistics count the rest. With `probe_exclude_second_site: true` (rpoB) the JSON also
+statistics count the rest. With `probe_exclude_second_site: true` (16S and rpoB) the JSON also
 holds `n_excluded_second_site`, the number of products pass 3 left out because they hold
 a second forward-primer site.
 
@@ -554,7 +747,7 @@ gzipped copy of the reference). It is kept for inspection: it is the direct answ
 ## The ASV length filter
 
 The second length decision happens at the far end of the pipeline, in the
-`dada_length_filter` rule (`workflow/scripts/amplicon/60d_dada_length_filter.py`). By
+`dada_length_filter` rule (`workflow/scripts/amplicon/60h_dada_length_filter.py`). By
 then DADA2 has produced ASVs and, for 16S and ITS, Metaxa2 or ITSx has optionally
 trimmed each ASV down to the marker region. The filter runs **after** extraction, so the
 ASV lengths it sees are directly comparable to the probe distribution — both describe
@@ -565,10 +758,11 @@ The window is chosen by the first of these that applies:
 | Priority | Condition | Window | `source` recorded |
 |---|---|---|---|
 | 1 | `length_filter.range` is set to `[min, max]` | exactly that range | `manual:config_range` |
-| 2 | `length_filter.mode: auto` and a probe JSON exists | `[probe_q1 − window_margin, probe_p95 + window_margin]` | `auto:probe_q1_p95+/-<margin>` |
+| 2 | `length_filter.mode: auto` and a probe JSON exists | `[probe_q1 − window_margin, probe_p95 + window_margin]`; for ITS with extraction on, `[probe_min, probe_p95 + window_margin]` | `auto:probe_q1_p95+/-<margin>`; for ITS with extraction on, `auto:ITS_probe_min_p95+<margin>` |
 | 3 | `length_filter.mode: auto`, no probe JSON, and `trunc_len.mode: auto` — the only mode that records `expected_length` in `stats/trunclen.json` | `expected_length × 0.85` to `expected_length × 1.15`, read from `stats/trunclen.json` | `auto:fallback_expected_length±15pct` |
 
-`amplicon.length_filter.window_margin` defaults to `50` bp and is added on both sides.
+`amplicon.length_filter.window_margin` defaults to `50` bp and is added on both sides
+(for ITS with extraction on, at the top only; see below).
 The window is deliberately asymmetric in its sources: **q1** at the bottom and **p95** at
 the top, so it spans the bulk of the real amplicon distribution.
 
@@ -577,6 +771,14 @@ it reads lengths straight off pre-extracted ITS1/ITS2 subregions, so its upper t
 length variation between fungal lineages, and a p95 ceiling will clip genuinely long ITS
 ASVs, biased towards Basidiomycota. For ITS, check `stats/dada2/asv_length_hist.png`
 against the window and set an explicit `length_filter.range` if long-ITS taxa matter.
+
+For ITS with extraction on, the floor is the probe's `min` (38 bp for ITS2, 17 bp for
+ITS1), without margin: each ASV reaches the filter as the ITS region ITSx cut out of it,
+so a short region is a short ITS, not a fragment. `q1 − window_margin` would put the ITS2
+floor at 125 bp, which removed three yeasts of the [ITS test set](../about/test-datasets.md),
+64 % of its reads after chimera removal (see
+[the ITS page](markers/its.md#region-extraction-with-itsx)). With
+`extraction.enabled: false` the window is built as for the other markers.
 
 !!! warning "A manual `expected_length` with a manual truncation leaves route 3 nothing to read"
 
@@ -659,20 +861,22 @@ holds:
 | `r1`, `r2` | the truncation lengths actually handed to `filterAndTrim` |
 | `mode` | `auto` or `manual` |
 | `amplicon_type` | the marker the run used |
-| `q_threshold_requested` / `q_threshold_used` | differ only when `relax_q` fired |
+| `q_threshold_requested` / `q_threshold_used` | differ only when `relax_q` fired; `q_threshold_used` is `null` under `method: simulate` |
 | `expected_length` | the resolved amplicon length (`null` for ITS) |
 | `expected_length_source` | `manual:int`, `manual:range_max`, `auto:<stat>`, or the ITS placeholder |
 | `min_overlap` | the design overlap the constraint used |
 | `overlap_slack` | bases of margin left over; `null` for ITS |
-| `resolved_via` | `primary`, `raise_trunc`, `relax_q` or `manual` |
-| `aggregation` | `median_across_samples_per_bin` |
+| `resolved_via` | `primary`, `raise_trunc`, `relax_q`, `simulate` or `manual` |
+| `aggregation` | `median_across_samples_per_bin`, or `simulated_filterAndTrim_on_sampled_pairs` under `method: simulate` |
 
 In `manual` mode only `r1`, `r2`, `mode`, `amplicon_type` and `resolved_via` are written,
 since nothing else was computed.
 
-The full reasoning — per-direction primary cuts, coverage ceilings, the sample driving
-each ceiling, the overlap arithmetic, and any policy that fired — is in
-`logs/pick_trunclen.log`.
+The full reasoning — the quality values of the reads and what `q_threshold` means on
+them, each sample's read-length limit and the share of its reads left out, per-direction
+primary cuts and what set each of them, coverage ceilings, the sample driving each
+ceiling, the overlap arithmetic, any policy that fired and, under `method: simulate`, the
+simulated cut next to the quality rule's — is in `logs/pick_trunclen.log`.
 
 ## When `auto` goes wrong
 
@@ -719,6 +923,7 @@ Full symptom and fix in [Troubleshooting](../troubleshooting.md).
 | Page | Read it for |
 |---|---|
 | [Amplicon overview](overview.md) | the whole DADA2 path, step by step |
+| [DADA2 error model](error-model.md) | how the quality values of the filtered reads choose the error function, and the report on the error models |
 | [Markers](markers/index.md) | what each marker's reference databases are and how they differ |
 | [Configuration](../reference/configuration.md) | every config key and its default |
 | [Output files](../reference/output.md) | what else lands in `05.dada2/` and `stats/` |

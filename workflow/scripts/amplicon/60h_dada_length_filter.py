@@ -35,7 +35,9 @@ Inputs (see rule dada_length_filter in 60_dada2.smk):
 Window source priority (how [min_len, max_len] is decided — see
 determine_window() below for the actual logic):
   1. manual_range in config (explicit [min, max])
-  2. auto + probe JSON available → [probe_q1 - margin, probe_p95 + margin]
+  2. auto + probe JSON available → [probe_q1 - margin, probe_p95 + margin];
+     for ITS with extraction on (ITSx ran) the floor is the probe's min
+     instead, without the margin → [probe_min, probe_p95 + margin]
   3. auto + no probe JSON → [expected_length * 0.85, expected_length * 1.15]
 
 Outputs: seqs_lenfilt.fasta and the matching seqtab (both name-keyed and
@@ -175,7 +177,8 @@ def compute_stats(lengths: list[int]) -> dict:
 # ── Window determination ──────────────────────────────────────────────────────
 
 def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
-                     window_margin, log_fn) -> tuple[int, int, str]:
+                     window_margin, log_fn, amp_type,
+                     extraction_enabled) -> tuple[int, int, str]:
     """Work out the [min_len, max_len] window ASVs must fall inside to be kept.
 
     Tries each source in order and returns as soon as one applies (see the
@@ -188,10 +191,47 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
          a window wide enough to hold most of the true distribution, not one
          representative length; window_margin then pads both ends a further
          50 bp (config default) for reference-vs-real-data slack.
+         One exception, ITS with extraction on: there the floor is the probe's
+         min, without the margin (see "The ITS floor" below). The ceiling is
+         p95+margin for every marker.
       3. mode=auto and no probe JSON (expected_length was set manually, so no
          probe ran) -> fall back to trunclen.json's expected_length +/- 15%,
          a cruder but workable substitute.
     Raises if mode is neither 'auto' nor has a manual range (config error).
+
+    amp_type and extraction_enabled come from the rule's params (the marker,
+    and whether target_extract ran before this step); only the ITS floor
+    reads them.
+
+    The ITS floor. ITS length differs a lot between fungi, and some yeasts have
+    a very short ITS2: in the ITS2 test set (PRJNA862334) ITSx cuts out 63 bp
+    for Candida haemulonii and 70 bp for Metschnikowia pulcherrima. On the
+    UNITE ITS2 reference, q1 - margin is 175 - 50 = 125 bp, so the usual floor
+    removed these yeasts, and with them 64 % of that set's reads after chimera
+    removal. With extraction on, each ASV reaching this filter is the ITS1 or
+    ITS2 region that ITSx cut out of it (70b_itsx_extract.py). ITSx always
+    cuts at the 5.8S boundary, which it must find to report the region at all,
+    and at the far boundary (the end of the SSU for ITS1, the start of the LSU
+    for ITS2) when it finds it; when it does not, the region runs on to that
+    end of the ASV. ITS primers sit in the rRNA genes, so both ends of a real
+    amplicon are rRNA: a missing boundary leaves rRNA on the region and makes
+    it longer, never shorter. A short region is therefore a short ITS, not a
+    broken one, and the reference shows how short a real one can be. So the
+    floor is the probe's "min", the shortest region in the reference (38 bp
+    for ITS2 and 17 bp for ITS1 in the UNITE release MetaFlux downloads),
+    without the margin, which would take it below zero.
+    Two things to know about that number. The UNITE records keep about 15 bp
+    of rRNA at each end, and ITSx here keeps none (C. haemulonii: a 93 bp
+    record, a 63 bp region). A 38 bp region therefore matches a 68 bp record:
+    the floor is about 30 bp stricter than the reference itself would ask, and
+    with their anchors taken off 0.15 % of the ITS2 records (0.21 % of the
+    ITS1 records) fall below it. And the minimum is set by a few odd records
+    (four ITS2 records of lichen fungi, 38-41 bp; 62 ITS1 records of 17-19 bp,
+    shorter than the two anchors alone), so the floor guards against
+    fragments rather than marking a biological limit, and it can move with a
+    new UNITE release.
+    With extraction off, the ASVs still carry their rRNA flanks, the reasoning
+    above does not apply, and ITS gets the same window as every other marker.
     """
     margin = int(window_margin)
 
@@ -209,11 +249,26 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
                 pj = json.loads(pj_path.read_text())
 
         if pj is not None:
-            min_len = int(pj["q1"]) - margin
+            # The ceiling is the same for every marker. The floor is q1 - margin,
+            # except for ITS after ITSx (see "The ITS floor" in the docstring).
             max_len = int(pj["p95"]) + margin
-            source = f"auto:probe_q1_p95+/-{margin}"
+            q1_floor = int(pj["q1"]) - margin
             log_fn(f"[dada_length_filter] Probe stats: q1={pj['q1']}, p95={pj['p95']}, "
                    f"median={pj['median']}, n={pj['n_amplicons']}")
+            if amp_type == "ITS" and extraction_enabled:
+                # ITS after ITSx: the shortest region in the reference, no margin.
+                # The log names the rule and the floor every other case would get.
+                min_len = int(pj["min"])
+                source = f"auto:ITS_probe_min_p95+{margin}"
+                reference_name = pj.get("reference_tag", "the probe reference")
+                log_fn(f"[dada_length_filter] ITS floor rule: the floor is the probe's min, "
+                       f"{min_len} bp (the shortest ITS region in {reference_name}), "
+                       f"without window_margin, because ITSx has cut each ASV at the "
+                       f"5.8S boundary; q1 - window_margin would give {q1_floor} bp")
+            else:
+                # Every other marker, and ITS with extraction off: q1 - margin.
+                min_len = q1_floor
+                source = f"auto:probe_q1_p95+/-{margin}"
             return min_len, max_len, source
 
         # Fallback: expected_length from trunclen.json ± 15%
@@ -343,8 +398,10 @@ def main() -> int:
             f"(dropped: {n_pre - n_post} ASVs ITSx/Metaxa2 could not extract)")
 
     # ── Window determination ──────────────────────────────────────────────────
+    # amp_type and extraction_enabled decide whether the ITS floor applies.
     min_len, max_len, source = determine_window(
-        mode, manual_range, probe_json_path, trunclen_json, window_margin, log
+        mode, manual_range, probe_json_path, trunclen_json, window_margin, log,
+        amp_type, extraction_enabled,
     )
     log(f"[dada_length_filter] Filter window: [{min_len}, {max_len}]  (source: {source})")
 

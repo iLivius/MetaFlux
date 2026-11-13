@@ -17,9 +17,25 @@ probe_stat_key:      16S              # which amplicon.probe_length_stat.<key> t
 # mitochondrial SSU (and the few eukaryote outgroup sequences) are amplified in
 # silico by bacterial primers too, often with long insertions; they are not what a
 # 16S survey measures, and the taxonomy filter removes them from the results anyway.
-# With SILVA 144 they move p95 for 799F/1175R from 386 to 397 bp; with 138.2 the
-# value is 384 bp either way.
+# With SILVA 144 they move p95 for 799F/1175R from 385 to 390 bp (with the second-site
+# rule below; from 386 to 397 bp without it); with 138.2 the value is 384 bp either way.
 probe_exclude_taxa:  [Chloroplast, Mitochondria, Eukaryota]
+# Leave out of the length statistics every in-silico product that still holds a
+# second full-length forward-primer site (40a_amplicon_probe.py, pass 3). The probe's
+# cutadapt keeps the leftmost place where the forward primer fits with the mismatches
+# max_error_rate allows, so a look-alike stretch upstream of the real site starts the
+# product too early, and the real site is then still inside it. With the 17-mer 341F
+# (CCTACGGGNGGCWGCAG, the Illumina 16S protocol's V3-V4 primer) that look-alike is
+# CCTACGGGAGAAAGCAG in V2 (E. coli 185-201, 2 mismatches), found in Pseudomonas,
+# Acinetobacter, Stenotrophomonas, Aeromonas, Shewanella and their relatives: on SILVA
+# 144 6.3 % of the 341F/805R products start there, 583 bp long instead of 427 bp, and
+# they put p95 at 582 bp: a 2 x 300 run with these primers then stops at pick_trunclen
+# on the defaults (its reads reach about 562 bp after primer removal, merging asks for
+# 594). Without them p95 is 429 bp. Other pairs: 799F/1175R (V5-V7) 0.69 % of the
+# products on SILVA 144 (p95 386 -> 385 bp) and 0.61 % on 138.2 (p95 384 bp either
+# way); 515F/806R (V4) 0.15 % on SILVA 144 (p95 255 bp either way). Set here at the top
+# level, so both SILVA releases get it.
+probe_exclude_second_site: true
 
 taxonomy_refdb:      silva_train      # rdp path
 taxonomy_species_db: silva_species    # addSpecies (16S only)

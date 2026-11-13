@@ -16,8 +16,8 @@ prepared by the rules in 10_refdb.smk (SILVA for 16S, SILVA-Euk for 18S,
 UNITE UCHIME's ITS1/ITS2 subregion for ITS, DD7RZ8 for gyrB, FROGS for rpoB).
 ``fwd``/``rev`` are this run's primer FASTA files (only used in PCR mode).
 
-PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference
-(three passes for rpoB).
+PCR mode (16S, 18S, rpoB, COI): two-pass cutadapt against the full-length reference
+(three passes for 16S and rpoB).
   Pass 1: ``-g file:fwd`` with ``--discard-untrimmed``
           → keep reference sequences containing the forward primer, trim it off.
   Pass 2: ``-a file:rev_rc`` with ``--discard-untrimmed``
@@ -29,7 +29,7 @@ PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference
           of each reference sequence if it were actually PCR-amplified with
           these two primers.
   Pass 3 (only when the marker pack sets ``probe_exclude_second_site: true``;
-          among the shipped packs, rpoB only): ``-g`` with each forward primer,
+          among the shipped packs, 16S and rpoB): ``-g`` with each forward primer,
           required at its own full length, with ``--discard-trimmed``
           → keep only the amplicon bodies that do NOT hold a second full-length
           forward-primer site. The others are left out of the length statistics;
@@ -42,17 +42,24 @@ PCR mode (16S, 18S, rpoB): two-pass cutadapt against the full-length reference
           body holds a second reverse site. For the forward primer it is the
           site farther from the reverse primer, so the product starts at the
           wrong site and comes out too long.
-          Univ_rpoB_deg_F also matches, with the 4 mismatches that max_error_rate
-          0.2 allows, a stretch about 920 bp upstream of its real site in 7,289 of
-          the 42,995 FROGS genes the two primers amplify (17%, mostly
-          Gammaproteobacteria and Actinomycetes). Those products, most of them
-          1.0-2.0 kb long, pulled p95 to 1,332 bp; without them p95 is 395 bp.
           Which of the two sites a PCR would use cannot be told from the sequence
           alone (the inner site is usually the better match, not always), so such
           a product is left out rather than cut back to the inner site.
-          16S and 18S leave this pass off: the same thing happens there, but
-          rarely (0.5 to 0.7% of the products), and their probe results are kept
-          as they are.
+          rpoB: Univ_rpoB_deg_F also matches, with the 4 mismatches that
+          max_error_rate 0.2 allows, a stretch about 920 bp upstream of its real
+          site in 7,289 of the 42,995 FROGS genes the two primers amplify (17%,
+          mostly Gammaproteobacteria and Actinomycetes). Those products, most of
+          them 1.0-2.0 kb long, pulled p95 to 1,332 bp; without them p95 is 395 bp.
+          16S: how often it happens depends on the forward primer. The 17-mer 341F
+          (CCTACGGGNGGCWGCAG) also fits, with 2 mismatches, CCTACGGGAGAAAGCAG in
+          V2 (E. coli 185-201) of Pseudomonas, Acinetobacter, Stenotrophomonas,
+          Aeromonas, Shewanella and their relatives. On SILVA 144, 6.3% of the
+          341F/805R products start there and still hold the real site, 583 bp
+          long instead of 427 bp; they put p95 at 582 bp, and without them it is
+          429 bp. For 799F/1175R (V5-V7) the share is 0.69% (p95 386 -> 385 bp),
+          for 515F/806R (V4) 0.15% (p95 255 bp either way).
+          18S leaves this pass off: there it is rare (0.5% of the products with
+          the TAReuk V4 primers), and its probe results are kept as they are.
 
 Direct mode (ITS, gyrB): no primer trimming. The reference is ALREADY an
   amplicon-length sequence, whatever marker/DB it comes from — UNITE UCHIME's
@@ -73,8 +80,9 @@ in "_excl-second-site" (set in 00_common.smk).
 Output: the JSON above (``snakemake.output.json``) is read next by
 ``pick_trunclen`` (50a_pick_trunclen.py), which picks one statistic
 (config amplicon.probe_length_stat) as the expected amplicon length for the
-R1+R2 overlap check, and by ``dada_length_filter`` (60d_dada_length_filter.py),
-which uses q1/p95 to size the ASV length-filter window. The amplicons FASTA
+R1+R2 overlap check, and by ``dada_length_filter`` (60h_dada_length_filter.py),
+which uses q1/p95 to size the ASV length-filter window (min/p95 for ITS after
+ITSx extraction). The amplicons FASTA
 (``snakemake.output.amplicons``) is kept for inspection only — nothing reads
 it back in.
 """
@@ -111,13 +119,13 @@ ref_tag     = str(p.ref_tag)
 # probe_exclude_taxa; empty for most markers). For 16S this is Chloroplast,
 # Mitochondria and Eukaryota: organelle and eukaryote SSU amplified in silico by
 # bacterial primers are often much longer (insertions), and SILVA 144 carries
-# about eight times more of them than 138.2 — enough to move p95 from 386 to 397 bp
-# for 799F/1175R, and with it truncLen, although these are exactly the sequences
+# about eight times more of them than 138.2 — enough to move p95 from 385 to 390 bp
+# for 799F/1175R (386 to 397 bp without pass 3), and with it truncLen, although these are exactly the sequences
 # the taxonomy filter removes later. The amplicons FASTA still contains them.
 exclude_taxa = {str(t) for t in (p.exclude_taxa or [])}
 # Whether pass 3 runs: leave out of the statistics every product that holds a second
 # full-length forward-primer site (marker pack field probe_exclude_second_site; true
-# for rpoB only, see the module docstring). Read in 00_common.smk, which also stops
+# for 16S and rpoB, see the module docstring). Read in 00_common.smk, which also stops
 # the run when the field is set on a direct-mode marker.
 exclude_second_site = bool(p.exclude_second_site)
 
@@ -232,7 +240,7 @@ out_amplicons.parent.mkdir(parents=True, exist_ok=True)
 n_products = 0
 n_second_site = 0
 
-# ── Two-pass in-silico PCR (16S, 18S, rpoB), plus pass 3 for rpoB ─
+# ── Two-pass in-silico PCR (16S, 18S, rpoB, COI), plus pass 3 for 16S and rpoB ─
 if probe_mode == "pcr":
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -283,9 +291,10 @@ if probe_mode == "pcr":
             str(pass1),
         ], "pass2 (3' rev_rc)")
 
-        # Pass 3 (packs with probe_exclude_second_site: true, i.e. rpoB): find the
-        # amplicon bodies that still hold a whole forward-primer site, and keep only
-        # the others for the statistics. Why, with the rpoB numbers: module docstring.
+        # Pass 3 (packs with probe_exclude_second_site: true, i.e. 16S and rpoB): find
+        # the amplicon bodies that still hold a whole forward-primer site, and keep only
+        # the others for the statistics. Why, with the 16S and rpoB numbers: module
+        # docstring.
         #   -g          : every forward primer as a 5' search, as in pass 1, each
         #                 passed on its own so that each gets its own min_overlap.
         #   min_overlap : the primer's own length, so only a whole primer site counts.
@@ -393,7 +402,8 @@ if probe_mode == "pcr":
 result["excluded_taxa"] = sorted(exclude_taxa)
 result["n_excluded"] = n_excluded
 # How many products pass 3 left out because they hold a second forward-primer site.
-# Written only when pass 3 ran (rpoB), so the JSON of every other marker stays as it was.
+# Written only when pass 3 ran (16S and rpoB), so the JSON of every other marker stays
+# as it was.
 if exclude_second_site:
     result["n_excluded_second_site"] = n_second_site
 

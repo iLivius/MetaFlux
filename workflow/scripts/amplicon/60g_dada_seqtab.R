@@ -6,21 +6,28 @@
 # Input: every sample's filtered FASTQ pair from 04.filtered/ (one pair per
 # sample, produced by dada_filter.R) plus that sample's filter_stats JSON
 # (reads in/out from the filtering step), collected here across the whole
-# sample set for the final read-tracking table.
+# sample set for the final read-tracking table; the two error models that
+# learn_errors (60d_learn_errors.R) learned from the same filtered reads,
+# 05.dada2/error_model_R1.rds and _R2.rds; and the verdict of check_error_model,
+# stats/dada2/error_model_check.txt, which only exists when the check let the run
+# go on (both models converged, or the user accepted a model by its code). The
+# verdict is copied into the log, so the log says which models the tables were
+# made with.
+#
+# The error model says how often, say, a true A is read as a G at each quality
+# score, separately for R1 and R2. Up to v2.6.1 this script learned it itself
+# (learnErrors) before denoising; learning is now a step of its own, so that a
+# model that did not converge can be checked, and accepted, before any denoising.
+# The models are DADA2's own objects, saved unchanged, so dada() below uses them
+# exactly as it used the objects in memory before.
 #
 # What it does, in order:
-#   1. learnErrors  — learns this run's actual sequencing-error profile (how
-#      often, say, a true A gets read as a G, as a function of quality score)
-#      from the filtered reads themselves, separately for R1 and R2, by
-#      alternating between calling sequence variants and re-estimating error
-#      rates from them until the estimate stops changing much. DADA2 needs
-#      this error model in the next step to tell a real biological sequence
-#      apart from one that is just a sequencing mistake away from another.
+#   1. readRDS      — reads the two saved error models.
 #   2. derepFastq   — dereplication: collapses each sample's reads down to
 #      its unique sequences, each carrying a count (abundance). DADA2 works
 #      on these unique sequences rather than every individual read, which is
 #      what keeps it fast on large samples.
-#   3. dada         — the actual denoising step: using the error model from
+#   3. dada         — the actual denoising step: using the error models of
 #      step 1, decides for each unique sequence whether it looks like a real,
 #      distinct biological sequence (an ASV) or just an error-derived variant
 #      of a more abundant one, and folds the latter into their true parent.
@@ -38,17 +45,17 @@
 #      one more-abundant ASV's first part plus another's second part.
 #
 # Output: the chimera-free ASV table in two flavours (raw sequences as column
-# names, and short ASV_N ids), a FASTA of the ASV sequences, a per-sample
+# names, and short ASV_N ids), a FASTA of the ASV sequences, and a per-sample
 # read-tracking table (stripped -> filtered -> denoised -> merged ->
-# non_chimeric), and diagnostic error-model plots. seqs.fasta and the ASV_N
-# seqtab feed dada_length_filter (60d) next, which applies the post-hoc ASV
-# length window; assign_taxonomy (80a) consumes the length-filtered versions
-# of both further downstream.
+# non_chimeric). seqs.fasta and the ASV_N seqtab feed dada_length_filter (60h)
+# next, which applies the post-hoc ASV length window; assign_taxonomy (80a)
+# consumes the length-filtered versions of both further downstream. The plots
+# of the error models are drawn by error_model_report (60e), before the check.
 
 # ── Load packages and redirect output to the log file ───────────
 if (!requireNamespace("pacman", quietly = TRUE))
   install.packages("pacman", repos = "https://cloud.r-project.org/")
-suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite, ggplot2))
+suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite))
 
 # sink() below redirects everything this script prints from here on —
 # messages, warnings, DADA2's own progress output — into the rule's log file
@@ -57,30 +64,94 @@ log_con <- file(snakemake@log[[1]], open = "wt")
 sink(log_con, type = "output")
 sink(log_con, type = "message")
 
+#' The R2 file of each R1 file, found by name.
+#'
+#' dada_filter writes both files of a sample under one name: {sample}_R1_filt.fastq.gz
+#' and {sample}_R2_filt.fastq.gz, in the same folder. So the R2 partner of an R1 path is
+#' that path with "_R1_filt.fastq.gz" at its end replaced by "_R2_filt.fastq.gz", looked
+#' up among the R2 paths Snakemake handed over, whatever their order.
+#'
+#' @param r1_files The R1 paths, in the order the tables will have.
+#' @param r2_inputs The R2 paths, in any order.
+#' @return The R2 paths, one per R1 file and in the same order; NA where the partner is
+#'   not among r2_inputs.
+r2_partners_of <- function(r1_files, r2_inputs) {
+  partners <- sub("_R1_filt\\.fastq\\.gz$", "_R2_filt.fastq.gz", r1_files)
+  partners[!(partners %in% r2_inputs)] <- NA
+  partners
+}
+
 # ── Read input file paths from Snakemake ─────────────────────────
-# Both lists are sorted independently, by full path. Because an R1 and R2 path
-# for the same sample differ only in that "R1"/"R2" substring (same position,
-# same length), sorting each list alphabetically still lines up corresponding
-# samples at the same index in both — which matters here because sample_names
-# below is derived once from filt_r1's filenames and then reused for filt_r2
-# by POSITION, not by matching filename.
-filt_r1          <- sort(unlist(snakemake@input[["r1"]]))
-filt_r2          <- sort(unlist(snakemake@input[["r2"]]))
+# The R1 files are sorted by full path with R's default sort(), as up to v2.6.1. Their
+# order becomes the row order of the two sequence tables and of the read tracking.
+# sort() follows the alphabetical order of the shell's language setting (locale), so
+# sample names that mix capitals and small letters, or "-", "_" and ".", can come out
+# in one row order under LANG/LC_ALL=C and in another under a UTF-8 setting. That
+# changes the order of the rows and, among ASVs with the same total read count, which
+# one gets the lower ASV_N number (makeSequenceTable keeps such ties in the order the
+# sequences first appear, which follows the rows). The counts stay the same: with the
+# default pool: false every sample is denoised on its own, and with pool: true or
+# "pseudo" the 16S test reads, renamed to sort differently, also gave the same counts
+# in both settings. The sort is kept as it was, so a folder's tables keep the row order
+# and the ASV numbers they had up to v2.6.1. (learn_errors sorts byte by byte instead,
+# because there the order decides which samples the error models are learned from.)
+filt_r1            <- sort(unlist(snakemake@input[["r1"]]))
 filter_stats_files <- unlist(snakemake@input[["filter_stats"]])
 
-# Recover each sample's name from its filtered-R1 filename (dada_filter.R's own
-# naming convention: "{sample}_R1_filt.fastq.gz") and attach it to both file
-# vectors — dada()/mergePairs() use these names to label every result by sample.
+# Each sample's name, from its filtered-R1 file name ("{sample}_R1_filt.fastq.gz").
+# dada() and mergePairs() use these names to label every result by sample.
 sample_names <- sub("_R1_filt\\.fastq\\.gz$", "", basename(filt_r1))
+
+# The R2 file of each sample, found by its name (r2_partners_of above), in the order of
+# the R1 files. Up to v2.6.1 the R2 list was sorted on its own and paired with the R1
+# list by position, which assumed that both lists always sort alike. They do not: for
+# samples named "Soil" and "Soil_R2", LANG/LC_ALL=C sorts the R1 files "Soil, Soil_R2"
+# ("Soil_R1_filt" before "Soil_R2_R1_filt") but the R2 files "Soil_R2, Soil"
+# ("Soil_R2_R2_filt" before "Soil_R2_filt", because a capital R sorts before a small f),
+# so mergePairs would have been handed each sample's R1 reads with the other sample's
+# R2 reads. When the two samples have different numbers of filtered reads (the usual
+# case), mergePairs then stops the job with "Non-corresponding derep-class and
+# dada-class objects." (it compares the number of reads in R1 and R2); when the numbers
+# happen to be equal, it merges the wrong reads without any error. Pairing by name
+# cannot mix up two samples, in any language setting.
+filt_r2 <- r2_partners_of(filt_r1, unlist(snakemake@input[["r2"]]))
+
+# A sample whose R2 file is not among the inputs stops the job with the reason. This
+# should not happen (the rule hands over both files of every sample, as dada_filter
+# names them); it would mean that the two input lists no longer follow one naming. The
+# text goes into the log, then, after the log is closed, onto the terminal, as in
+# learn_errors; the short stop() line makes the job fail.
+if (anyNA(filt_r2)) {
+  missing_samples <- sample_names[is.na(filt_r2)]
+  shown_samples <- paste(head(missing_samples, 10), collapse = ", ")
+  if (length(missing_samples) > 10) {
+    shown_samples <- paste0(shown_samples, " and ", length(missing_samples) - 10, " more")
+  }
+  text <- sprintf(paste0(
+    "[dada_seqtab] STOP: the filtered R2 file of sample(s) %s is not among the inputs of ",
+    "this step. dada_seqtab pairs each <sample>_R1_filt.fastq.gz with the ",
+    "<sample>_R2_filt.fastq.gz of the same name, so that the R1 reads of one sample are ",
+    "never merged with the R2 reads of another, and it cannot go on without the partner. ",
+    "This should not happen; please report it with %s."),
+    shown_samples, snakemake@log[[1]])
+  message(text)                                       # full text into the log
+  sink(type = "message")
+  sink(type = "output")
+  close(log_con)
+  message(text)                                       # full text onto the terminal
+  stop("dada_seqtab stopped: reason above and in its log", call. = FALSE)
+}
+
 names(filt_r1) <- sample_names
 names(filt_r2) <- sample_names
 
 message("[dada_seqtab] ", length(sample_names), " sample(s): ", paste(sample_names, collapse = ", "))
 
 # ── Read parameters from Snakemake ───────────────────────────────
+# No seed here: nothing in this script draws random numbers (dada() is
+# deterministic). The one random step of DADA2, the draw of the samples
+# learnErrors learns from, is in learn_errors, which sets amplicon.seed itself.
 pool          <- snakemake@params[["pool"]]
-nbases        <- as.numeric(snakemake@params[["learn_errors_nbases"]])
-max_consist   <- as.integer(snakemake@params[["learn_errors_max_consist"]])
 omega_a       <- as.numeric(snakemake@params[["omega_a"]])
 min_overlap   <- as.integer(snakemake@params[["merge_min_overlap"]])
 max_mismatch  <- as.integer(snakemake@params[["merge_max_mismatch"]])
@@ -90,11 +161,6 @@ chim_method   <- snakemake@params[["chimera_method"]]
 min_fold      <- as.numeric(snakemake@params[["chimera_min_fold_parent"]])
 allow_one_off <- as.logical(snakemake@params[["chimera_allow_one_off"]])
 threads       <- as.integer(snakemake@threads)
-seed          <- as.integer(snakemake@params[["seed"]])
-
-# learnErrors(randomize=TRUE) draws its nbases sample of reads via R's RNG;
-# fix it so the error model (and everything downstream) is reproducible.
-set.seed(seed)
 
 # YAML false/true → Python False/True → R FALSE/TRUE (logical); "pseudo" → character.
 # The is.character guard converts string "false"/"true" if YAML used quotes.
@@ -104,35 +170,17 @@ if (is.character(pool)) {
 
 # ── Create output directories ────────────────────────────────────
 dir.create(dirname(snakemake@output[["seqtab_seqs"]]),  recursive = TRUE, showWarnings = FALSE)
-dir.create(dirname(snakemake@output[["err_plot_r1"]]), recursive = TRUE, showWarnings = FALSE)
 
-# ── Learn the error model from filtered reads ────────────────────
-# R1 and R2 get separate error models — on Illumina, reverse reads are
+# ── Read the error models learned by learn_errors ────────────────
+# R1 and R2 have separate error models — on Illumina, reverse reads are
 # typically noisier than forward reads (signal quality degrades further into
 # a longer sequencing run), so a single shared model would fit neither well.
-message("[dada_seqtab] Learning error rates (R1, nbases=", nbases, ")...")
-err_r1 <- learnErrors(filt_r1, nbases = nbases, multithread = threads,
-                       randomize = TRUE, MAX_CONSIST = max_consist, verbose = TRUE)
-
-message("[dada_seqtab] Learning error rates (R2, nbases=", nbases, ")...")
-err_r2 <- learnErrors(filt_r2, nbases = nbases, multithread = threads,
-                       randomize = TRUE, MAX_CONSIST = max_consist, verbose = TRUE)
-
-# ── Save error-model diagnostic plots ───────────────────────────
-# plotErrors shows, for each possible base transition (e.g. A misread as G),
-# the observed error frequency by quality score (points) against the learned
-# model (line). nominalQ=TRUE adds a reference line for what the error rate
-# WOULD be if quality scores were taken at face value — comparing the learned
-# line to that reference is a quick check that error learning actually
-# converged to something sensible for this run, rather than something odd.
-# log10 warnings from zero-count quality bins are cosmetic — suppressed.
-p_err_r1 <- suppressWarnings(plotErrors(err_r1, nominalQ = TRUE))
-ggsave(snakemake@output[["err_plot_r1"]],     plot = p_err_r1, device = "png", width = 30, height = 20, units = "cm", dpi = 150)
-ggsave(snakemake@output[["err_plot_r1_pdf"]], plot = p_err_r1, device = "pdf", width = 30, height = 20, units = "cm")
-p_err_r2 <- suppressWarnings(plotErrors(err_r2, nominalQ = TRUE))
-ggsave(snakemake@output[["err_plot_r2"]],     plot = p_err_r2, device = "png", width = 30, height = 20, units = "cm", dpi = 150)
-ggsave(snakemake@output[["err_plot_r2_pdf"]], plot = p_err_r2, device = "pdf", width = 30, height = 20, units = "cm")
-message("[dada_seqtab] Error plots written.")
+# Each .rds file holds what learnErrors returned, unchanged; dada() reads the
+# final table from it. The verdict line says whether each model converged or was
+# accepted by its code (see check_error_model).
+message("[dada_seqtab] error models: ", readLines(snakemake@input[["verdict"]]))
+err_r1 <- readRDS(snakemake@input[["model_r1"]])
+err_r2 <- readRDS(snakemake@input[["model_r2"]])
 
 # ── Dereplicate reads ────────────────────────────────────────────
 message("[dada_seqtab] Dereplicating...")

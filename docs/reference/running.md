@@ -160,7 +160,13 @@ from `shotgun.kraken.memory_mapping` and the actual size of the database's
 `hash.k2d` — 20000 MB with memory mapping on (the database itself is shared through
 the operating system's file cache), otherwise the hash size plus 10 % headroom. With
 a profile, `--jobs` becomes the cap on jobs queued with the scheduler at once —
-the one setting where it does something `--cores` does not.
+the one setting where it does something `--cores` does not. Two amplicon steps are
+never sent to the cluster: `choose_error_model`, which picks the error function before
+DADA2's error learning, and `check_error_model`, the check after it, run on the machine
+Snakemake runs on, so their messages, when they stop the run, reach your terminal. A
+stop inside `learn_errors` itself
+goes, like the output of every cluster job, to the scheduler's log of that job; its
+reason is always at the end of `logs/learn_errors.log` in the output folder.
 
 ## What happens on a re-run
 
@@ -174,17 +180,32 @@ so. Four practical consequences:
   skipped. The files a run asks for are those that make up a complete run: in
   amplicon mode the read files of each stage with their counts and QC, under
   `primers.orientation: mixed` the orientation table of each sample, the truncation
-  lengths, the DADA2 tables, plots and FASTA, the taxonomy tables (in a COI run with the
-  three files of the COI screens), the read tracking and the MultiQC report; in shotgun
+  lengths, the choice of DADA2's error function,
+  the two DADA2 error models with the record of their learning, the report on them
+  and the verdict of the check after it, the DADA2 tables, plots and FASTA, the
+  taxonomy tables (in a COI run with the three files of the COI screens), the read
+  tracking and the MultiQC report; in shotgun
   mode the fastp reports, the Kraken2, k-mer
   evidence, Bracken and sylph files, the OTU table, the read tracking and the MultiQC
   report (for maintainers: the lists are `_amplicon_targets()` and
   `_shotgun_targets()` in `workflow/rules/shared/00_common.smk`). A deleted file that
   is not one of them goes unnoticed: it is made again only when a step that reads it
   has to run anyway, or when the step that writes it runs again. The phylogeny's tree
-  (the run asks for its QC report instead) and Cutadapt's JSON reports (only MultiQC
-  reads them) are two such files; `--forcerun` with the name of the step that writes
-  one makes it again, and the steps after that step run too. An output edited by hand
+  (the run asks for its QC report instead), Cutadapt's JSON reports (only MultiQC
+  reads them) and `stats/dada2/quality_values.tsv` (a table for you, which no step
+  reads) are such files; `--forcerun` with the name of the step that writes one makes
+  it again, and the steps after that step run too. Some deletions cost more than
+  their own step. `pick_trunclen` reads the Falco reports of the primer-trimmed
+  reads, and `choose_error_model` waits for those of the filtered reads, so deleting
+  a sample's Falco folder of either stage (`stats/falco/<sample>_R1_stripped/`, or
+  `_filtered/`) makes the DADA2 steps after them run again, the learning of the error
+  models included. A single file deleted inside such a folder changes nothing at
+  first: the run asks for the folders, not for the files in them, so the file is made
+  again only when a step that reads it runs for another reason (MultiQC reads
+  `fastqc_data.txt` of every stage), and then the same DADA2 steps run again. Every
+  file of the report on the error models, a PDF or one of the copies made for MultiQC
+  included, is a file the run asks for: deleting one draws the report again, and
+  `check_error_model`, `dada_seqtab` and every step after it run again. An output edited by hand
   is not rebuilt, because it is now newer than the files it was made from; the steps
   that read it run again, on the edited file.
 - **A changed command, setting or environment, or a newer script, marks a step out of
@@ -196,7 +217,12 @@ so. Four practical consequences:
   script file's date instead of its text: it runs again whenever the script is newer
   than its outputs. Because the contaminant keep/discard lists reach `assign_taxonomy`
   as rule parameters, editing them re-runs the taxonomy step and the steps after it,
-  and leaves the denoising untouched. `--rerun-triggers mtime params input
+  and leaves the denoising untouched. `amplicon.dada2.learn_errors.accept_unconverged`
+  is the one setting a step reads from the config when it runs rather than as a
+  parameter, so adding or removing a code makes no step run again, and a changed code
+  takes effect only when the check runs again, for example with
+  `--forcerun check_error_model` (see
+  [Troubleshooting](../troubleshooting.md#amplicon-dada2s-error-model-never-converges)). `--rerun-triggers mtime params input
   software-env` leaves out the command and script checks; `--rerun-triggers mtime`
   leaves out everything except the dates of each step's input files, which Snakemake
   always checks. Either holds only for the run it is given to: the records keep the
@@ -211,6 +237,45 @@ so. Four practical consequences:
   with `git pull`.
 - **A dry run shows what would run.** `-n` prints the jobs a re-run would execute,
   each with the reason.
+
+!!! note "Re-running an output folder made with v2.6.1"
+
+    - **After a `git pull` in the MetaFlux folder that made the output folder.** Amplicon
+      mode: `trim_primers` for every sample, because it has a new input, the program that
+      decides whether the last sequencing cycle is removed (see
+      [the extra last cycle](../amplicon/overview.md#the-extra-last-cycle); the reads
+      change only where the cycle is removed, by default on ITS), and with it
+      Falco and the read count of the primer-trimmed reads, `pick_trunclen` and
+      `dada_quality_plots`; `dada_filter` for every sample, because it now also counts the
+      quality values of the filtered reads, into a new file per sample; Falco on the
+      filtered reads, a new stage; the four new steps of DADA2's error model,
+      `choose_error_model`, `learn_errors`, `error_model_report` and `check_error_model`;
+      and `dada_seqtab` with every step after it. The PhiX removal, Falco of the raw and
+      PhiX-filtered reads, the length probe and the reference databases are kept. MultiQC
+      runs again in both modes, because its settings changed; in shotgun mode nothing else
+      does.
+    - **From a fresh clone, a release archive or a second worktree.** Every step that runs
+      a script, with the steps after it, as at every release, and `trim_primers`, whose
+      new input is newer than the trimmed reads.
+    - **`--rerun-triggers mtime params input software-env` saves nothing this time.** The
+      new steps write files the run asks for, and the choice of the error function reads
+      the quality values that `dada_filter` now writes
+      (`stats/dada2/{sample}.quality_values.json`), which the folder lacks. So `dada_filter`,
+      learning, the report, the check and `dada_seqtab` with every step after it run
+      whatever `--rerun-triggers` says. `trim_primers` runs again under this set too,
+      because its new input is newer than the trimmed reads.
+    - **The results.** With the loess fit, and where neither the cap nor the early stop
+      acts, the denoising gives the tables of v2.6.1 (checked on the 16S test set and on a
+      library of the COI insect mock). A model that the cap
+      (`max_consist`, now 200) or the early stop (`max_flat_rounds`, 20) ends now stops the
+      run before denoising, for you to look at it and accept it by its code (see
+      [DADA2 error model](../amplicon/error-model.md#the-check-and-acceptance-by-code)).
+      Binned quality scores get the binned fit under `error_model: auto`, so their tables
+      change on purpose; `error_model: loess` keeps the fit of v2.6.1.
+
+    The 2.7.0 entry of the
+    [CHANGELOG](https://github.com/iLivius/MetaFlux/blob/main/CHANGELOG.md) gives the
+    details, and what to edit in a run config written for v2.6.1.
 
 !!! note "Re-running an output folder made with v2.6.0"
 
@@ -337,7 +402,7 @@ Two caches survive across runs and across output folders as long as they stay on
 disk: reference databases under `refdb/`, and the amplicon-length probe result under
 `refdb/cache/` inside the MetaFlux checkout — that second path is fixed and does
 not follow `references.refdb_root`. The probe's filename encodes the marker, its
-reference (for 16S also the lineages left out of the statistics; for rpoB
+reference (for 16S also the lineages left out of the statistics; for 16S and rpoB
 `_excl-second-site`, because products that hold a second forward-primer site are left
 out), and a hash of both primer sequences, so it is reused whenever those are unchanged
 and recomputed when a primer changes. A fresh clone starts without them (unless

@@ -84,9 +84,9 @@ owns. Paths below are relative to `references.refdb_root` (default `refdb`). Fil
 | rpoB | `rpob_frogs` | `rpob/rpob_refseq_cc_20240707_domain-d_dada2.fa.gz` | probe substrate + `rdp` trainset — *converted* from the FROGS archive (the domain written `d__`) | `rpob.frogs` |
 | COI | `midori2_coi_raw` | `midori2/GB273/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz` | MIDORI2's SINTAX file as published — *extracted* from a `.zip`; the input of `midori2_coi_sintax` | `midori2.raw` |
 | COI | `midori2_taxonomy` | `midori2/GB273/taxonomy/nodes.dmp` (and `names.dmp`) | MIDORI2's NCBI taxonomy snapshot, for the kingdom — *extracted* from a `.zip` | `midori2.taxonomy` |
-| COI | `bacterial_cox1` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz` | identity B of the off-target guard (whole genes) | `bacterial_cox1.fasta` |
-| COI | `bacterial_cox1_fragments` | `bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz` | identity B of the off-target guard (fragments) | `bacterial_cox1.fragments` |
-| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv` | the MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked `removed` (170, judged bacterial) or `listed` (16, kept); the conversion leaves out those marked `removed` | `bacterial_cox1.midori2_list` |
+| COI | `bacterial_cox1` | `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2.fasta.gz` | identity B of the off-target guard (whole genes) | `bacterial_cox1.fasta` |
+| COI | `bacterial_cox1_fragments` | `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_fragments.fasta.gz` | identity B of the off-target guard (fragments) | `bacterial_cox1.fragments` |
+| COI | `bacterial_cox1_midori2_list` | `bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_midori2_gb273_records.tsv` | the MIDORI2 records the set's build examined (500 in GB273), each with the SHA-1 of its sequence and marked `removed` (236 records, 187 sequences, judged bacterial) or `listed` (264, kept); the conversion leaves out every record whose sequence is removed | `bacterial_cox1.midori2_list` |
 | COI | `midori2_coi_sintax` | `midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz` | probe substrate, `sintax` database and identity E of the off-target guard — *converted* from `midori2_coi_raw` with `midori2_taxonomy` and `bacterial_cox1_midori2_list` | `midori2.sintax` |
 
 The 16S rows are those of the default release, SILVA 144; `other-verbatim` becomes
@@ -121,7 +121,7 @@ genes, so the primers bind inside them.
 What survives is the set of amplicons those primers would produce from that reference, and
 their lengths are the distribution. This is the mode for 16S, 18S, rpoB and COI, because
 SILVA, SILVA-Euk, the FROGS rpoB build and MIDORI2 all contain whole genes or whole
-barcodes. For rpoB a third pass leaves
+barcodes. For 16S and rpoB a third pass leaves
 out of the statistics the products that still hold a second forward-primer site (see
 [A primer that matches twice](../length-and-truncation.md#a-primer-that-matches-twice)).
 
@@ -139,12 +139,12 @@ flanking rRNA at each end).
 
 Both modes end at the same place: one JSON of length statistics
 (`n_amplicons`, `min`, `q1`, `median`, `q3`, `p95`, `p99`, `max`, `mean`, `stdev`, plus
-`excluded_taxa` and `n_excluded`, and for rpoB `n_excluded_second_site`) cached
+`excluded_taxa` and `n_excluded`, and for 16S and rpoB `n_excluded_second_site`) cached
 in the pipeline's own `refdb/cache/`, next to the workflow. That directory is fixed at
 the repository root and does not follow `references.refdb_root`, so the cache stays put
 across runs and output directories even when the databases themselves live on a shared
 path. The file is keyed by marker, reference tag (for 16S including the lineages left
-out of the statistics, for rpoB the third pass) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
+out of the statistics, for 16S and rpoB the third pass) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
 single statistic becomes `expected_length` comes from `amplicon.probe_length_stat` — see
 [amplicon length and truncation](../length-and-truncation.md).
 

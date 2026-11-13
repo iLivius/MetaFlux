@@ -15,7 +15,7 @@ agnostic to which classifier actually ran.
 
 Input: seqs (the length-filtered ASV FASTA, seqs_lenfilt.fasta) and
 seqtab_names (its matching read-count table, seqtab_lenfilt_head_names.txt) —
-both produced by dada_length_filter (60d_dada_length_filter.py), i.e. this is
+both produced by dada_length_filter (60h_dada_length_filter.py), i.e. this is
 the FINAL ASV set, nothing upstream of this step still changes which ASVs
 exist. refdb is the marker's SINTAX-formatted reference database (e.g. SILVA
 for 16S, UNITE for ITS — see taxonomy_sintax_db in workflow/markers/*.yaml).

@@ -208,6 +208,10 @@ rule revcomp_primers:
 #   concatenate with pass A. Under orientation=mixed the two 5' calls (-g/-G)
 #   also need at least 10 primer bases (--overlap 10; see below), and the rule
 #   writes one more file, the orientation table (stats/orientation/; see below).
+#   Both 5' calls can also remove the last base of every read first (--cut -1 for
+#   R1, -U -1 for R2): the extra last sequencing cycle, whose calls are poor
+#   (amplicon.cutadapt.trim_final_cycle; see "The extra last cycle" at the end of
+#   this header).
 #
 # Why pass B exists: some library preps come back with reads in mixed
 # orientation — part of a sample's R1 file is actually a reverse read, and part
@@ -261,7 +265,7 @@ rule revcomp_primers:
 # holds sequencer read 1 of the pairs that came in the right way round and
 # sequencer read 2 of the swapped ones (and R2 the other way round). DADA2
 # learns one error model for all R1 reads and one for all R2 reads
-# (dada_seqtab), and pick_trunclen reads one quality profile per direction, so
+# (learn_errors), and pick_trunclen reads one quality profile per direction, so
 # both see a blend of the two sequencing reads instead of one read each. When
 # every pair is swapped, the pass-B part of the output is what orientation:
 # fixed gives on the two input files swapped, less the few pairs the 10-base
@@ -283,8 +287,9 @@ rule revcomp_primers:
 # adds nothing to that difference.
 #
 # No rule reads the table, and MultiQC does not see it (in amplicon mode it
-# scans stats/falco/, stats/cutadapt/ and, with PhiX removal, logs/rm_phix/;
-# see _multiqc_scan_dirs() in 90_report.smk). It is there for two reasons.
+# scans stats/falco/, stats/cutadapt/, stats/dada2/multiqc/ and, with PhiX
+# removal, logs/rm_phix/; see _multiqc_scan_dirs() in 90_report.smk). It is
+# there for two reasons.
 # It shows how each sample's pairs split between the two orientations, which
 # the MultiQC report cannot (it shows pass A alone). And it makes the
 # orientation fix reach every output folder trimmed with mixed by MetaFlux
@@ -303,6 +308,54 @@ rule revcomp_primers:
 # Snakemake's records and --rerun-triggers say. Under fixed the rule has no
 # such output and the run asks for no such file, so nothing changes for fixed
 # folders.
+#
+# The extra last cycle (amplicon.cutadapt.trim_final_cycle). An Illumina run
+# sequences one cycle more than the read length it is set up for (2 x 151, 2 x 251,
+# 2 x 301 cycles): the extra cycle serves the phasing correction of the cycle before
+# it, and its own base calls are poor. On the MiSeq test sets the last base of R2
+# agrees with the base the other mate reads at the same place of the template in 60
+# to 86 % of the pairs, against 96 to 98 % one cycle earlier (30a_final_cycle.py has
+# the numbers). ITS reads are not truncated (truncLen 0, 0), so up to v2.6.1 that
+# base reached DADA2, survived denoising (it is wrong the same way in most reads of a
+# sequence) and made mergePairs, which allows no mismatch where the mates overlap,
+# reject the pairs. On the other markers truncLen decides: a cut below the read length
+# removes the base anyway; a cut at the read-length limit keeps it, but removing it
+# there changes the read lengths pick_trunclen measures and can move the cut itself
+# (on the 18S test set R1 went from 271 to 274 bp, and 1.2 % fewer reads reached the
+# tables, with the same merging rate). So auto acts only on untruncated reads.
+#
+# So, before pass A, the program 30a_final_cycle.py reads the first 10,000 reads of
+# each input file of the sample (R1 and R2, after PhiX removal when it runs) and
+# prints "remove" or "keep": with auto (the default), "remove" when that read
+# direction is not truncated to a fixed length (ITS, whose truncLen is always 0, 0;
+# the other markers only with trunc_len.mode: manual and a cut of 0; see
+# FINAL_CYCLE_TRUNCATION in 00_common.smk) and its longest read is 76, 101, 151, 251
+# or 301 bp, the read lengths of a run with the extra cycle; with true, always; with
+# false, never, as up to v2.6.1. Its two lines, one per read
+# direction with the longest read and the reason, open the log
+# (logs/trim_primers/{sample}.log). "remove" becomes Cutadapt's unconditional cut,
+# --cut -1 for R1 and -U -1 for R2, in the 5' call of pass A and, under mixed, of
+# pass B, which reads the input files again. Cutadapt makes this cut before it looks
+# for any primer, so every later step, Falco, pick_trunclen and DADA2 included, sees
+# reads without the extra cycle.
+#
+# A read shorter than the longest loses its last base too, which then is a real base.
+# That costs at most one base of overlap. When the facility has cut the adapter off a
+# read that ran past the end of a short amplicon, the read ends in the far primer; the
+# 3' call still finds that primer one base short (Cutadapt accepts a 3' primer cut
+# short by the end of the read) and removes it with everything after it, so the read
+# ends where it would have ended without the cut. Any other read ends in the stretch
+# where the two mates overlap, which the other mate reads too, and the overlap is one
+# base shorter.
+# (A full-length read that ran into the adapter loses an adapter base, which the 3'
+# call removes anyway.)
+#
+# The program is an input of the rule, and Snakemake runs a step again when one of its
+# input files is newer than its outputs. So primer trimming, and every step after it,
+# runs again in every output folder trimmed before the program existed (and again
+# after any edit of it), whichever MetaFlux folder the run starts from: the changed
+# command alone would be noticed only with Snakemake's records of the folder (see the
+# orientation table above). No output is added; the decision is in the log only.
 rule trim_primers:
     input:
         # r1/r2 resolve to 02.no_phix when REMOVE_PHIX else the raw FASTQs.
@@ -311,6 +364,11 @@ rule trim_primers:
         rev    = PRIMER_REV,
         fwd_rc = rules.revcomp_primers.output.fwd_rc,
         rev_rc = rules.revcomp_primers.output.rev_rc,
+        # The program that decides whether the last base of every read is removed
+        # (see "The extra last cycle" in the rule header). The shell runs it by this
+        # path; as an input, it makes primer trimming run again in a folder whose
+        # trimmed reads are older than it.
+        final_cycle_program = workflow.basedir + "/scripts/amplicon/30a_final_cycle.py",
     output:
         r1       = OUT / "03.stripped" / "{sample}_R1.fastq.gz",
         r2       = OUT / "03.stripped" / "{sample}_R2.fastq.gz",
@@ -326,6 +384,16 @@ rule trim_primers:
         orientation = ORIENTATION,
         max_err     = config["amplicon"]["cutadapt"]["max_error_rate"],
         min_len     = config["amplicon"]["cutadapt"]["min_length"],
+        # auto, true or false: whether the last base of every read is removed (see
+        # "The extra last cycle" in the rule header); checked at start-up
+        # (TRIM_FINAL_CYCLE, 00_common.smk).
+        trim_final_cycle = TRIM_FINAL_CYCLE,
+        # "truncated" or "untruncated": whether DADA2 cuts R1 and R2 to a fixed length
+        # (FINAL_CYCLE_TRUNCATION, 00_common.smk). With auto, only an untruncated read
+        # direction loses its last base. As params, a change of the marker or of the
+        # manual cuts that turns one into the other makes primer trimming run again.
+        r1_truncation = FINAL_CYCLE_TRUNCATION["R1"],
+        r2_truncation = FINAL_CYCLE_TRUNCATION["R2"],
         # Where the shell writes the orientation table: that output under mixed,
         # an empty text under fixed, where the shell never uses it. The shell
         # cannot name {output.orientation_table} itself, because under fixed the
@@ -390,8 +458,35 @@ rule trim_primers:
             overlap_5p="--overlap 10"
         fi
 
+        # ---- The extra last cycle (amplicon.cutadapt.trim_final_cycle) ----
+        # For each read direction, the program 30a_final_cycle.py reads the first
+        # 10,000 reads of the input file and prints "remove" or "keep" (see "The extra
+        # last cycle" in the rule header); it is told the setting and whether DADA2
+        # truncates that direction to a fixed length. It writes its reason to standard
+        # error, which opens the log: the R1 line replaces an old log (2>), the R2 line
+        # and everything after it are added (2>>, >>). It runs in the Python of the
+        # Cutadapt environment and reads the file itself, because zcat | head would end
+        # zcat with SIGPIPE, which the strict mode of Snakemake's shell (set -euo
+        # pipefail) counts as a failure. If the program fails, the rule stops here with
+        # its message in the log.
+        r1_final_cycle=$(python {input.final_cycle_program} {params.trim_final_cycle} {input.r1} R1 {params.r1_truncation} 2> {log})
+        r2_final_cycle=$(python {input.final_cycle_program} {params.trim_final_cycle} {input.r2} R2 {params.r2_truncation} 2>> {log})
+
+        # "remove" becomes Cutadapt's unconditional cut of the last base: --cut -1 for
+        # R1 (the first input file), -U -1 for R2. Cutadapt makes it before it looks for
+        # a primer. Used unquoted in the two 5' calls, like overlap_5p: empty, it adds
+        # nothing; set, it gives the words of one or both options.
+        final_cycle_cut=""
+        if [ "$r1_final_cycle" = "remove" ]; then
+            final_cycle_cut="--cut -1"
+        fi
+        if [ "$r2_final_cycle" = "remove" ]; then
+            final_cycle_cut="$final_cycle_cut -U -1"
+        fi
+
         # ---- Pass A 5': assume R1=fwd, R2=rev ----
         cutadapt -j {threads} \
+                 $final_cycle_cut \
                  -g file:{input.fwd} -G file:{input.rev} \
                  -e {params.max_err} --pair-filter=any $overlap_5p \
                  --minimum-length {params.min_len} --discard-untrimmed \
@@ -400,7 +495,7 @@ rule trim_primers:
                  -p $tmpdir/{wildcards.sample}_after5p_R2.fq.gz \
                  $tmpdir/{wildcards.sample}_5prime_R1.fastq.gz \
                  $tmpdir/{wildcards.sample}_5prime_R2.fastq.gz \
-                 > {log} 2>&1
+                 >> {log} 2>&1
 
         # Rename 5' output → 3' input so the 3' pass's JSON records '_3prime' as sample.
         mv $tmpdir/{wildcards.sample}_after5p_R1.fq.gz $tmpdir/{wildcards.sample}_3prime_R1.fq.gz
@@ -426,7 +521,11 @@ rule trim_primers:
             # below. Its JSON report goes to the temporary folder, which is deleted
             # at the end: only the orientation table below reads it, and MultiQC
             # never sees it. (Tmp paths use the sample name to avoid clashes.)
+            # It reads the input files again, so it makes the same cut of the last
+            # cycle as pass A: the cut belongs to the file (sequencer read 1 or 2),
+            # whichever primer the read starts with.
             cutadapt -j {threads} \
+                     $final_cycle_cut \
                      -g file:{input.rev} -G file:{input.fwd} \
                      -e {params.max_err} --pair-filter=any $overlap_5p \
                      --minimum-length {params.min_len} --discard-untrimmed \

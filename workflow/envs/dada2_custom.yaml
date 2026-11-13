@@ -1,0 +1,47 @@
+name: dada2_custom
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base
+  - bioconductor-dada2
+  - bioconductor-shortread
+  # 5.1.9 bundles TBB 2020.x needed by bioconda's DADA2; 5.1.11+ bundles oneTBB
+  # which dropped tbb::task and breaks dada2.so at load time.
+  - r-rcppparallel=5.1.9
+  - r-jsonlite
+  - r-pacman
+  - r-ggplot2
+  # Everything above is dada2.yaml, line for line; only the name differs. The two R
+  # packages below are what this environment adds, for an error function of the user's
+  # own (amplicon.dada2.learn_errors.custom_error_function, experimental). MetaFlux's
+  # own scripts use neither of them.
+  #   mgcv fits GAMs (generalised additive models): a smooth curve whose shape is
+  #        learned from the data, here the error rate against the quality score;
+  #   scam fits GAMs whose curve may only fall or only rise, for example error rates
+  #        that never go up as the quality score goes up. mgcv also brings nlme.
+  #
+  # Used only when the run config names such a function: by learn_errors under
+  # error_model: custom, and by error_model_report whenever a function is named
+  # (60_dada2.smk). Every other DADA2 step, and every run without a function of the
+  # user's own, runs in dada2.yaml, so this environment is never built for them.
+  #
+  # Why a file of its own instead of two more lines in dada2.yaml: conda-forge has no
+  # r-scam for Apple Silicon Macs (osx-arm64) or for Linux on ARM (linux-aarch64). In
+  # dada2.yaml, r-scam would stop every amplicon run there; here it stops only a run
+  # that names a function of its own. On those machines, delete the line "- r-scam"
+  # below when the function does not use scam (r-mgcv exists for both).
+  #
+  # On Linux (x86-64) Snakemake installs this environment from
+  # dada2_custom.linux-64.pin.txt: every build of dada2.linux-64.pin.txt plus r-mgcv,
+  # r-nlme and r-scam, so a model learned here rests on the same dada2, R and maths
+  # libraries as one learned in dada2.yaml. When dada2.yaml or its pin changes, change
+  # this file and refresh its pin in the same change (CONTRIBUTING.md says how; a
+  # fresh solve would change the other builds).
+  #
+  # Snakemake identifies this software environment by the full text of this file and
+  # of its pin, comments included. ANY edit therefore counts as new software: in the
+  # finished folders of runs that name a function of their own, learn_errors (under
+  # custom) and error_model_report run again, with every step after them.
+  - r-mgcv
+  - r-scam

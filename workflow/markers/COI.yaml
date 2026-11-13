@@ -87,21 +87,21 @@ references:
     doi:     10.5281/zenodo.22685701
   bacterial_cox1:
     archive: files
-    file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1.fasta.gz
-    url:     https://zenodo.org/records/23820760/files/bacterial_cox1_gtdb-r232.v1.fasta.gz?download=1
-    sha256:  52d5136c697a36f448d5df67592d4d1ee11641f632b7d8baeeb4d678ae70dfc8
-    doi:     10.5281/zenodo.23820760
+    file:    bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2.fasta.gz
+    url:     https://zenodo.org/records/24189850/files/bacterial_cox1_gtdb-r232.v2.fasta.gz?download=1
+    sha256:  3e0780d3a7a3f719737bfd3a869f4465d96a9b64c07479c00ad6b7c03a09594a
+    doi:     10.5281/zenodo.24189850
   bacterial_cox1_fragments:
     archive: files
-    file:    bacterial_cox1/gtdb-r232.v1/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz
-    url:     https://zenodo.org/records/23820760/files/bacterial_cox1_gtdb-r232.v1_fragments.fasta.gz?download=1
-    sha256:  b820a2d87415dd8ef8b5796cce5f565e47585f953bf19cd68a863008b45cc1d7
-    doi:     10.5281/zenodo.23820760
+    file:    bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_fragments.fasta.gz
+    url:     https://zenodo.org/records/24189850/files/bacterial_cox1_gtdb-r232.v2_fragments.fasta.gz?download=1
+    sha256:  199e3080347077a97baa61b70c31a8101e74b959d48cdc1cbdd63937d1cd4113
+    doi:     10.5281/zenodo.24189850
   bacterial_cox1_midori2_list:
     archive: files
-    file:    bacterial_cox1/gtdb-r232.v1/midori2_gb273_bacterial_records.tsv
-    url:     https://zenodo.org/records/23820760/files/midori2_gb273_bacterial_records.tsv?download=1
-    sha256:  6f28c6caa24927561eeefb4eb18e5d81ed77a9aba1aa301729aef416f2587ae9
-    doi:     10.5281/zenodo.23820760
+    file:    bacterial_cox1/gtdb-r232.v2/bacterial_cox1_gtdb-r232.v2_midori2_gb273_records.tsv
+    url:     https://zenodo.org/records/24189850/files/bacterial_cox1_gtdb-r232.v2_midori2_gb273_records.tsv?download=1
+    sha256:  0a0876aded5b7ea4477021aa60d123f43055547cffa3392b2b413168ac4fa974
+    doi:     10.5281/zenodo.24189850
   midori2_coi_sintax:
     file:    midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz

@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
 # Quality-filters and length-trims one sample's read pair before DADA2 denoising.
 #
-# What this is for: the cleanup step between primer trimming and DADA2's own
-# denoising (rule dada_seqtab, next in the chain). It removes reads that are
+# What this is for: the cleanup step between primer trimming and DADA2's own steps:
+# rule learn_errors learns the run's error models from the filtered reads of all
+# samples, and rule dada_seqtab then denoises them. It removes reads that are
 # too low-quality or the wrong length to trust, and cuts every surviving read
 # to a fixed length so all reads entering the denoiser are directly comparable
 # position-by-position (DADA2's error model is learned per-position, so mixed
@@ -23,15 +24,32 @@
 # sum of the per-base error probabilities implied by the quality scores — a
 # read-wide error budget, not a single bad base) or falls outside the
 # [min_len, max_len] length window.
+# When no read pair of the sample passes, filterAndTrim writes no files at all;
+# the script then stops with a message that names the settings that remove reads.
+# Then it counts which quality values the filtered reads carry (the first 100,000
+# reads of each file; count_quality_values below). A MiSeq writes some 30 distinct
+# values, a NovaSeq or NextSeq only 3 to 6 ("binned" quality scores), and that decides
+# which error function DADA2 should learn the error model with.
 #
-# Output: the filtered FASTQ pair (04.filtered/) that dada_seqtab.R denoises
-# next, plus a small JSON with this sample's reads-in/reads-out counts, which
-# dada_seqtab.R reads back in to build the pipeline-wide read-tracking table.
+# Output: the filtered FASTQ pair (04.filtered/), which learn_errors learns the
+# error models from before dada_seqtab denoises it (rule falco also profiles each
+# file for the MultiQC report, stage "filtered"), plus two small JSON files:
+#   - stats/dada2/{sample}.filter_stats.json: this sample's reads-in/reads-out counts,
+#     which dada_seqtab reads back in to build the pipeline-wide read-tracking table
+#     (the same file, field for field, as up to v2.6.1);
+#   - stats/dada2/{sample}.quality_values.json: the quality values found, which
+#     choose_error_model (60c_choose_error_model.py) pools over all samples to pick the
+#     error function. A file of its own rather than a field of filter_stats.json: an
+#     output folder made before this file existed lacks it, and Snakemake then runs
+#     this step again there by itself, whatever --rerun-triggers says, because
+#     choose_error_model, which every run asks for, cannot run without it.
 
 # ── Load packages and redirect output to the log file ───────────
+# ShortRead (in the dada2 environment, which DADA2 itself needs) reads the filtered
+# FASTQ files in chunks for the quality count.
 if (!requireNamespace("pacman", quietly = TRUE))
   install.packages("pacman", repos = "https://cloud.r-project.org/")
-suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite))
+suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite, ShortRead))
 
 # sink() below redirects everything this script prints from here on —
 # messages, warnings, DADA2's own progress output — into the rule's log file
@@ -39,6 +57,28 @@ suppressPackageStartupMessages(pacman::p_load(dada2, jsonlite))
 log_con <- file(snakemake@log[[1]], open = "wt")
 sink(log_con, type = "output")
 sink(log_con, type = "message")
+
+
+#' Stop the job with a text the user can read in full, in the log and on the terminal.
+#'
+#' R's own stop() prints at most about 1,000 characters of its message, so the full
+#' text goes out with message() instead: once into the log (the sinks are still on),
+#' then, after the sinks are closed, once more onto the terminal (on a cluster, into
+#' the scheduler's log of the job). The short stop() line at the end makes the job
+#' fail, which is what stops Snakemake. (60d_learn_errors.R carries the same function;
+#' MetaFlux scripts share no code.)
+#'
+#' @param text The full message, starting with "[dada_filter] STOP:".
+#' @param log_name The log of this job, for the short line, e.g. "logs/dada_filter/S1.log".
+#' @return Never returns.
+stop_with_message <- function(text, log_name) {
+  message(text)                                       # full text into the log
+  sink(type = "message")
+  sink(type = "output")
+  close(log_con)
+  message(text)                                       # full text onto the terminal
+  stop("dada_filter stopped: reason above and in ", log_name, call. = FALSE)
+}
 
 # ── Read inputs and parameters from Snakemake ────────────────────
 sample <- snakemake@wildcards[["sample"]]
@@ -138,7 +178,7 @@ out <- filterAndTrim(
   verbose    = TRUE
 )
 
-# ── Write per-sample read counts to JSON ─────────────────────────
+# ── Per-sample read counts ───────────────────────────────────────
 # out is filterAndTrim's own return value: a matrix with one row per input
 # file pair and reads.in/reads.out columns. This script always passes exactly
 # one sample's pair, so out always has exactly one row — [1L, ...] below.
@@ -147,10 +187,147 @@ reads_out <- as.integer(out[1L, "reads.out"])
 message("[dada_filter] reads in=", reads_in, " out=", reads_out,
         " (", round(100 * reads_out / max(reads_in, 1L), 1), "% retained)")
 
+# ── Stop when no read pair passed ────────────────────────────────
+# When no read pair passes, filterAndTrim writes neither filtered file ("The filter
+# removed all reads: ... not written") and removes any it had started. Without this
+# check the job would end with Snakemake's bare "missing output files" error, which
+# names no cause; this names the settings that remove reads, so the user can either
+# leave the sample out or change them.
+if (!file.exists(filt_r1) || !file.exists(filt_r2)) {
+  max_ee_text  <- paste0("[", paste(max_ee, collapse = ", "), "]")
+  max_len_text <- if (is.infinite(max_len)) "null (no limit)" else as.character(max_len)
+  log_name <- file.path("logs", "dada_filter", paste0(sample, ".log"))
+  stop_with_message(sprintf(paste0(
+    "[dada_filter] STOP: filterAndTrim kept none of the %d read pairs of sample %s, so ",
+    "it wrote no filtered files. The settings that remove reads: truncLen R1=%d, R2=%d ",
+    "(a read shorter than truncLen is dropped), max_ee %s, trunc_q %d, min_len %d, ",
+    "max_len %s. Leave the sample out of the run, or check these settings; ",
+    "filterAndTrim's own lines are in %s."),
+    reads_in, sample, trunc_r1, trunc_r2, max_ee_text, trunc_q, min_len, max_len_text,
+    log_name), log_name)
+}
+
+# ── Count the quality values the filtered reads carry ────────────
+# Why: DADA2 learns its error model from the quality scores of the reads, and the
+# function that fits it should suit the kind of quality values they carry. A MiSeq
+# writes continuous values (filtered MiSeq reads carry 28-32 distinct values, roughly
+# 7 to 38), for which DADA2's usual loess fit is made; a NovaSeq, a NextSeq 1000/2000 or
+# another recent instrument writes "binned" values (only 3 to 6, for example 9, 20 and
+# 34), for which DADA2's author recommends a binned fit. The values differ between
+# instruments, their control software and their kits, so they are read from the reads
+# themselves, never from a table, and from the filtered reads, which are exactly what
+# learn_errors learns from (whatever trunc_q and max_ee did has already happened).
+# Rule choose_error_model pools the counts of all samples and decides.
+# How many reads: the first 100,000 of each file. Every distinct value is visible
+# after about 1,000 reads, and 100,000 reads of 2 x 300 bp take a few seconds (3 to 8 s
+# measured on binned NextSeq 2000 files); a file with fewer reads is read whole.
+QUALITY_SCAN_READS <- 100000L
+
+
+#' Count how many bases carry each quality value in the first reads of a FASTQ file.
+#'
+#' Reads the file in chunks with ShortRead's FastqStreamer, so that a large file is
+#' never held in memory whole. qualityType = "Auto" works out how the quality letters
+#' are encoded (Phred+33 in every current FASTQ) exactly as DADA2's derepFastq does,
+#' and as(quality(chunk), "matrix") turns each read's letters into Phred values, one
+#' row per read; reads shorter than the longest in the chunk are padded with NA, which
+#' is dropped. Draws no random numbers (checked: R's random-number state is the same
+#' before and after). learnErrors runs in another job (learn_errors), which sets the
+#' seed itself, so nothing here could change the samples it draws anyway.
+#'
+#' @param fastq_path A FASTQ file, gzipped or not.
+#' @param max_reads How many reads to look at, from the start of the file.
+#' @param chunk_size How many reads to read at once.
+#' @return list(reads_scanned = the number of reads looked at; values = the distinct
+#'   quality values found, ascending; bases_per_value = the number of bases at each of
+#'   those values, in the same order).
+count_quality_values <- function(fastq_path, max_reads = QUALITY_SCAN_READS, chunk_size = 10000L) {
+  # One counter per Phred value 0..93 (Phred+33 letters reach value 93 at most);
+  # tabulate() counts value q in slot q + 1.
+  bases_per_phred <- numeric(94)
+  reads_scanned <- 0L
+  streamer <- FastqStreamer(fastq_path, n = chunk_size)
+  on.exit(close(streamer))
+  while (reads_scanned < max_reads) {
+    chunk <- yield(streamer, qualityType = "Auto")
+    if (length(chunk) == 0) {
+      break                                            # end of the file
+    }
+    reads_left <- max_reads - reads_scanned
+    if (length(chunk) > reads_left) {
+      chunk <- chunk[seq_len(reads_left)]
+    }
+    phred <- as(quality(chunk), "matrix")
+    phred <- phred[!is.na(phred)]
+    bases_per_phred <- bases_per_phred + tabulate(phred + 1L, nbins = 94L)
+    reads_scanned <- reads_scanned + length(chunk)
+  }
+  values <- which(bases_per_phred > 0) - 1L
+  list(reads_scanned = reads_scanned,
+       values = as.integer(values),
+       bases_per_value = bases_per_phred[values + 1L])
+}
+
+
+#' The quality values of one file, as a short text for the log: "3 values (9, 20,
+#' 34)", or "32 values (7-38)" when there are more than ten.
+#'
+#' @param counted What count_quality_values returned.
+#' @return Character string.
+quality_values_log_text <- function(counted) {
+  values <- counted$values
+  if (length(values) == 0) {
+    return("no values")
+  }
+  if (length(values) > 10) {
+    return(sprintf("%d values (%d-%d)", length(values), min(values), max(values)))
+  }
+  sprintf("%d values (%s)", length(values), paste(values, collapse = ", "))
+}
+
+
+#' One read direction's quality values, as they go into quality_values.json below.
+#'
+#' Vectors are wrapped in I() so that a single value stays a JSON list; the bases are
+#' written per value, as {"9": 2617, "20": 5559, ...}.
+#'
+#' @param counted What count_quality_values returned.
+#' @return A named list.
+quality_values_record <- function(counted) {
+  bases <- as.list(counted$bases_per_value)
+  names(bases) <- as.character(counted$values)
+  list(reads_scanned = counted$reads_scanned,
+       values = I(counted$values),
+       bases_per_value = bases)
+}
+
+
+quality_r1 <- count_quality_values(filt_r1)
+quality_r2 <- count_quality_values(filt_r2)
+message("[dada_filter] quality values in the first ", format(QUALITY_SCAN_READS, big.mark = ","),
+        " filtered reads: R1 ", quality_values_log_text(quality_r1),
+        ", R2 ", quality_values_log_text(quality_r2))
+
+# ── Write the two per-sample JSON files ──────────────────────────
+# filter_stats.json: reads_in and reads_out, for the read-tracking table (dada_seqtab).
+# Written with exactly the call of v2.6.1, so the file keeps its layout byte for byte.
 write(
   toJSON(list(sample = sample, reads_in = reads_in, reads_out = reads_out),
          auto_unbox = TRUE, pretty = TRUE),
   snakemake@output[["stats"]]
+)
+# quality_values.json: the quality values of the filtered reads, for the choice of
+# error function (choose_error_model). scan_limit records how many reads per file were
+# looked at, so the counts can be read correctly later. digits = NA: numbers are
+# written at full precision, never rounded to a few decimals (the counts are whole
+# numbers anyway).
+write(
+  toJSON(list(sample = sample,
+              scan_limit = QUALITY_SCAN_READS,
+              R1 = quality_values_record(quality_r1),
+              R2 = quality_values_record(quality_r2)),
+         auto_unbox = TRUE, pretty = TRUE, digits = NA),
+  snakemake@output[["quality_values"]]
 )
 
 # ── Close log ────────────────────────────────────────────────────

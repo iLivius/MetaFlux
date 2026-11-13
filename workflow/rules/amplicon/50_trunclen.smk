@@ -25,6 +25,23 @@
 #
 # Manual mode (trunc_len.mode: manual) skips all of the above and takes truncLen
 # straight from manual_r1 / manual_r2 in the config.
+#
+# Two more things in auto mode:
+#   - Step 1 leaves out reads shorter than half the expected amplicon length: they
+#     come from a short off-target product (a primer dimer, an unspecific product),
+#     and one sample with many of them would otherwise cap the whole run too short
+#     to merge. The log lists every sample's limit and the share of reads left out.
+#   - The log says which quality values the reads carry (continuous on a MiSeq, a
+#     few "bins" on most newer instruments; read from the first 10,000 reads of each
+#     primer-trimmed file), what q_threshold means on them, and whether each cut came
+#     from quality or from the read-length limit.
+#
+# trunc_len.method: simulate replaces steps 1-3 by a simulation of filterAndTrim on
+# read pairs sampled over each whole file: for each read, the longest cut at which it
+# still passes trunc_q, maxN and max_ee; then the R1/R2 cut pair that keeps the most
+# pairs while leaving expected length + min_overlap + simulate_extra_overlap bases.
+# The quality rule's cut is still computed and logged next to it. That is why the
+# primer-trimmed reads and the filter settings of amplicon.dada2 are inputs here.
 
 rule pick_trunclen:
     input:
@@ -36,6 +53,11 @@ rule pick_trunclen:
             OUT / "stats" / "falco" / "{sample}_R2_stripped" / "fastqc_data.txt",
             sample=SAMPLES,
         ),
+        # The primer-trimmed reads themselves (written by trim_primers): their first
+        # reads tell which quality values the run carries, and method: simulate
+        # replays filterAndTrim on pairs sampled from them.
+        stripped_r1 = expand(OUT / "03.stripped" / "{sample}_R1.fastq.gz", sample=SAMPLES),
+        stripped_r2 = expand(OUT / "03.stripped" / "{sample}_R2.fastq.gz", sample=SAMPLES),
         # probe_json is conditionally included: only when expected_length="auto",
         # so pick_trunclen depends on amplicon_probe, which in turn depends on that
         # marker's probe reference — e.g. fetch_silva_train_raw (16S on SILVA 144) or
@@ -55,7 +77,19 @@ rule pick_trunclen:
         manual_r1       = config["amplicon"]["trunc_len"]["manual_r1"],
         manual_r2       = config["amplicon"]["trunc_len"]["manual_r2"],
         probe_stat      = PROBE_LENGTH_STAT,
+        # which key of amplicon.probe_length_stat the marker reads (gyrB reads 16S);
+        # used only to name that setting in the stop text when the overlap check fails
+        probe_stat_key  = PROBE_STAT_KEY,
         min_read_coverage_pct = config["amplicon"]["trunc_len"]["min_read_coverage_pct"],
+        # quality (the default) or simulate, and the simulate method's safety margin
+        method          = config["amplicon"]["trunc_len"]["method"],
+        simulate_extra_overlap = config["amplicon"]["trunc_len"]["simulate_extra_overlap"],
+        # The filter settings dada_filter hands to filterAndTrim, which the simulate
+        # method replays read by read (maxN is fixed at 0 in dada_filter).
+        trunc_q         = config["amplicon"]["dada2"]["trunc_q"],
+        max_ee          = config["amplicon"]["dada2"]["max_ee"],
+        min_len         = config["amplicon"]["dada2"]["filter"]["min_len"],
+        max_len         = config["amplicon"]["dada2"]["filter"]["max_len"],
     log:
         LOGS / "pick_trunclen.log",
     threads: lambda wc: threads_for("pick_trunclen")

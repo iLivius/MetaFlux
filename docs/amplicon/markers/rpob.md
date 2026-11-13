@@ -169,7 +169,7 @@ The sequences are not changed; the conversion rewrites only the headers.
 The rpoB reference is full-length, so reading its sequence lengths would return the length
 of the gene (about 4 kb), not of the amplicon. The marker pack therefore sets
 `probe_mode: pcr`, the same path used for 16S and 18S: two passes of cutadapt against the
-reference, using the supplied primers. For rpoB a third pass follows.
+reference, using the supplied primers. For rpoB, as for 16S, a third pass follows.
 
 | Pass | What it does |
 |---|---|

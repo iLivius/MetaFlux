@@ -20,25 +20,23 @@ difference between them holds even where the absolute counts have since moved.
 | 16S (V5–V7) | [PRJNA305879](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA305879) — plant-associated bacterial communities, MiSeq 2×300 | 6 of 27 | SRR3032384, SRR3032389, SRR3032393, SRR3032396, SRR3032402, SRR3032405 | 799F / 1175R | SILVA 144 (138.2 selectable) |
 | ITS (ITS2) | [PRJNA862334](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA862334) — yeast mock communities, MiSeq 2×300 | 6 of 36 | SRR20648162, SRR20648163, SRR20648167, SRR20648181, SRR20648185, SRR20648187 | ITS3 / ITS4 | UNITE |
 | 18S (V4) | [PRJDB12231](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJDB12231) — aquatic mesocosms ± calcined dolomite, MiSeq 2×300 | 4 | DRR316761–DRR316764 | TAReuk454FWD1 / TAReukREV3 | PR2 (SILVA-Euk probe) |
-| gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
-| rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
-| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod specimens, MiSeq 2×300 | 1 per primer pair | SRR8082166, SRR8082178, SRR8082148 | BF3 / BR2, mlCOIintF-XT / jgHCO2198 (Leray-XT), fwhF2 / fwhR2n | MIDORI2 GB273 + bacterial COI homologues gtdb-r232.v1 |
+| gyrB | [PRJNA459479](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA459479) — 15-strain mock communities, MiSeq 2×250 | 5 of 40 | SRR7127623–SRR7127625, SRR7127639, SRR7127640 | F64 / R353 | DD7RZ8 v6 |
+| rpoB | [PRJEB81812](https://www.ebi.ac.uk/ena/browser/view/PRJEB81812) — 19-strain synthetic mock, MiSeq 2×300 | 5 of 96 | ERR13956464–ERR13956468 | Univ_rpoB_deg | FROGS RefSeq |
+| COI | [PRJNA488090](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA488090) — insect mock of Elbrecht et al. (2019): bulk abdomens of 374 arthropod specimens, MiSeq 2×300 | 1 per primer pair | SRR8082166, SRR8082178, SRR8082148 | BF3 / BR2, mlCOIintF-XT / jgHCO2198 (Leray-XT), fwhF2 / fwhR2n | MIDORI2 GB273 + bacterial COI homologues gtdb-r232.v2 |
+
+All six sets were sequenced on a MiSeq, whose reads carry continuous quality values:
+nearly every value from 2 to 38. Data with binned quality values are covered by the sets
+under [Binned quality values](#binned-quality-values) below.
 
 The four mock-community sets (ITS, gyrB, rpoB, COI) have known composition, so they check
 taxonomy as well as mechanics. The ITS run (UNITE release 19.02.2025, `method: sintax`)
-recovers four of the expected yeast genera — *Hanseniaspora*, *Rhodotorula*,
-*Debaryomyces*, *Yamadazyma* — but stops at class (Saccharomycetes) for two ASVs that
-between them carry 43% of all reads, one of them alone accounting for 42%. That is the
-largest component of the run. BLAST against NCBI nt and a direct search against the
-UNITE reference used here both place the two sequences at 99% identity or more to
-*Saccharomyces*, most likely *S. cerevisiae*. The reference contains this species, but
-VSEARCH's `--sintax` bootstrap gives no consensus at order, family or genus for these
-sequences, probably because several *Saccharomyces* species have near-identical ITS2 in
-this amplicon. On this mock it is therefore a classification gap for what is probably
-its most abundant species. See
-[the merge-parameter section below](#effect-of-moving-the-merge-parameters-to-dada2s-defaults)
-for how this same gap shows up under the other `dada2.merge` setting too, as a different
-set of ASVs carrying a similar fraction of reads.
+detects every expected ITS2 type in every sample, matched by sequence: 18 ASVs, with 62 %
+of the raw read pairs in the final table. SINTAX stops at class (Saccharomycetes) for 5
+of them, 32 % of the reads: four *Saccharomyces* ASVs, whose species have near-identical
+ITS2 in this amplicon, so that VSEARCH's `--sintax` bootstrap finds no consensus below
+class, and one variant of *Metschnikowia pulcherrima*. The read shares of the yeasts with
+the shortest ITS2 are two to five times their share in the mocks. See
+[the ITS validation](../amplicon/markers/its.md#validation).
 
 The COI runs (MIDORI2 GB273, `method: sintax`, `keep: [k__Metazoa]`) use one library per
 primer pair, each run as one sample. In the BF3/BR2 and fwhF2/fwhR2n libraries every R1
@@ -47,8 +45,8 @@ carries the reverse primer, so their R1 and R2 files were swapped and the runs k
 (BF3/BR2), 355 (Leray-XT) and 362 (fwhF2/fwhR2n) of the 374 specimens are recovered by an
 ASV at least 97 % identical to their barcode (357, 352 and 362 by an identical ASV), and
 the ASVs that match a specimen hold 99.1–99.3 % of the reads of the final tables. The
-off-target guard moves 16–27 bacterial ASVs per run (0.07–0.5 % of the reads), 69 over
-the three runs; SINTAX had called 41 of them a stink bug that is not in the mock.
+off-target guard moves 16–28 bacterial ASVs per run (0.07–0.5 % of the reads), 71 over
+the three runs, none of them named at species level by SINTAX.
 The frame check removes 0.1–0.6 % of the reads, and no specimen lost its only ASV to
 either screen. See [COI](../amplicon/markers/coi.md#validation).
 
@@ -61,6 +59,33 @@ Eukaryota before the `keep: [d__Eukaryota]` filter, splitting into TSAR (53%), O
 within a base of the 381 bp median predicted by in-silico PCR against SILVA-Euk 18S v132,
 the probe reference. Defined 18S mock communities are scarce; the ground-truth work is
 carried by the four mock-community sets.
+
+## Binned quality values
+
+Recent Illumina instruments write only a few quality values, called bins, instead of the
+continuous values of a MiSeq (see [Continuous and binned quality scores](../amplicon/error-model.md#continuous-and-binned-quality-scores)).
+DADA2's error model is fitted differently on them, so three more sets test the amplicon
+path on binned values:
+
+| Set | Dataset | Instrument, read length | Quality values | Samples | Known answer |
+|---|---|---|---|--:|---|
+| 16S V3–V4, ZymoBIOMICS Gut Microbiome Standard (D6331) | [SRR38976716](https://www.ncbi.nlm.nih.gov/sra/SRR38976716), BioProject PRJNA1474435; primers 341F / 805R | NextSeq 2000, R1 321 bp, R2 281 bp | binned: 2, 9, 20, 34 | 1 (240,052 read pairs) | composition per strain (Zymo's manual) and the 16S sequence of every rRNA operon copy |
+| 16S V3–V4, NIST Mosaic Standards Challenge DNA Mix A | [SRR38976714](https://www.ncbi.nlm.nih.gov/sra/SRR38976714), same BioProject and primers | listed as NextSeq 2000; reads of up to 251 bp | continuous: 27 values (2, 12–21, 24–39), matching no Illumina table | 1 (248,774 read pairs) | the strain list only |
+| Re-binned copies of the ITS, gyrB, rpoB and COI sets | the sets in the first table | MiSeq, as the originals | rewritten to three binning tables: NextSeq 2000 (2, 9, 20, 34), NovaSeq 6000 (2, 11, 25, 37), NextSeq 500 (2, 14, 21, 27, 32, 36) | as the originals | as the originals |
+
+Each row tests something different:
+
+- **Zymo D6331** carries the real errors of a binning instrument, on a mock whose 16S
+  sequences are all published, so its ASVs can be scored by exact match. It is the only
+  public binned amplicon mock found.
+- **NIST Mix A** comes from the same BioProject, with the same amplicon and the same
+  settings as the Zymo run, but with continuous quality values: the counterpart of the
+  Zymo run, not a binned test. Where its values come from is not known.
+- **The re-binned copies** keep the bases, the read order and the known composition of
+  the MiSeq sets, and change only the quality values, each replaced by the value the
+  instrument would have written for it. A run on the original and on a copy therefore
+  measures the effect of binning alone. The value ranges of the NextSeq 2000 table are
+  documented by Illumina; those of the NovaSeq 6000 and NextSeq 500 tables are assumed.
 
 ## Shotgun test dataset
 
@@ -154,27 +179,19 @@ pairs are concentrated in rare ASVs. DADA2 sets `maxMismatch = 0` for this reaso
 denoising has corrected sequencing errors, a mismatch left in the overlap suggests that
 the two mates do not belong together.
 
-**ITS loses the most reads, for a biological reason.** ITS2 length varies widely between
-fungal taxa, so with 2×300 reads the longer amplicons in a community overlap by only a
-few bases. Raising the minimum overlap from 10 to 12 bp removes those pairs, and because
-their short overlap lies in the low-quality 3′ ends of both reads, where mismatches are
-most likely, `maxMismatch: 0` removes many of the others. Together the two changes
-removed a third of the merged reads.
+**ITS loses the most reads.** ITS2 length varies widely between fungal taxa, so with
+2×300 reads the longer amplicons in a community overlap by only a few bases. Raising the
+minimum overlap from 10 to 12 bp removes those pairs. `maxMismatch: 0` removes others:
+ITS reads are not truncated, so their overlap includes the last base of R2, which comes
+from the extra sequencing cycle of the run and is often called wrong. Together the two
+changes removed a third of the merged reads.
 
-On this mock it cost no taxa: all four expected genera are still recovered from the 12
-remaining ASVs. The class-only fraction described above (almost certainly *Saccharomyces*)
-does not come from this parameter change either. In a run with the looser 10/2 setting
-(made with v2.2.0) it is 7 separate ASVs rather than 2 (the looser overlap tolerance
-lets more marginal read variants through, so the same underlying signal is split across
-more low-abundance ASVs), carrying 42.5% of that run's final reads, against 43.3% in the
-v2.5.0 run.
-The exact ASVs differ, but the fraction stuck at class level is essentially unchanged —
-this classification gap is a property of the reference and classifier for this organism,
-not of the merge parameters. A defined community of only four confidently-named genera is
-a weak test of that distinction, though — on a richer or more length-variable community
-the same read loss could take real taxa down with it, not just leave them unresolved. If
-an ITS run merges far fewer reads than expected, these are the two parameters to look at
-first, and `min_overlap: 10` with `max_mismatch: 2` is a defensible choice for ITS.
+Since v2.7.0 MetaFlux removes that cycle from ITS reads
+([the extra last cycle](../amplicon/overview.md#the-extra-last-cycle)). It had made
+`max_mismatch: 0` reject the pairs of *S. paradoxus* and of the *S. uvarum* group, which
+the genus-level check of the time missed. With the cycle removed, `max_mismatch: 1` adds
+2 ASVs, 2.8 points of retention and no expected species on this set
+([ITS validation](../amplicon/markers/its.md#validation)).
 
 ## What the two truncation paths are tested on
 
@@ -211,10 +228,10 @@ The full diagnosis is in
 
 The 16S set is the opposite case and runs on `mode: auto` unchanged. Its quality does
 fall away towards the 3′ end, so the picker finds quality-based cuts, but they come out
-too short to leave the 12 bp of overlap the amplicon needs (386 bp, the p95 of
+too short to leave the 12 bp of overlap the amplicon needs (385 bp, the p95 of
 the in-silico products on SILVA 144; 384 bp on SILVA 138.2). That triggers
 `resolve_policy: raise_trunc`, which extends the cuts back out until the pair can
-merge, and the run settles at 244 / 154 with the overlap requirement met exactly
+merge, and the run settles at 243 / 154 with the overlap requirement met exactly
 (242 / 154 on SILVA 138.2).
 
 This makes the set the working test of that resolution path, which is otherwise easy to

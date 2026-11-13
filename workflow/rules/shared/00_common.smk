@@ -125,6 +125,83 @@ if not hasattr(_config_settings, "config"):
 update_config(config, _as_in_a_config_file(dict(_config_settings.config or {})))
 
 
+# ─────────────────── A key written twice in a run config ───────────────────
+# YAML keeps only the last of two keys written in the same block, without a word, and
+# Snakemake reads config files that way (PyYAML's FullLoader, through the yte package).
+# In a run config this happens when a block is pasted a second time. Several messages
+# of MetaFlux ask for one line under amplicon: -> dada2: -> learn_errors:; pasted at the
+# end of the file as a new amplicon: block, that block silently replaces the first one,
+# and every other amplicon setting of the run config falls back to the template.
+# So each file given with --configfile (Snakemake keeps their paths, made absolute, in
+# workflow.overwrite_configfiles) is read once more, before any setting is used, with
+# the same loader plus one check: it stops at the first key written twice in one block.
+# The run then stops with the file, the key and the two lines. The template
+# config/config.yaml is not read here: it is MetaFlux's own file, and a test checks
+# that it has no repeated key. A file this loader cannot read is left alone, because
+# Snakemake has read it already (a JSON file indented with tabs, for one: JSON allows
+# tabs, YAML does not).
+class _RepeatedKey(Exception):
+    """A key written twice in one block of a YAML file: the key and its two lines."""
+
+
+class _LoaderRefusingRepeatedKeys(yaml.FullLoader):
+    """Snakemake's YAML loader, which stops at the first key written twice in a block.
+
+    construct_mapping is the step that turns one block of the file into a Python dict;
+    it runs once per block, nested blocks included. The check runs first, on the keys as
+    written; then PyYAML's own construct_mapping (super()) builds the dict, where the
+    last of two equal keys would win."""
+
+    def construct_mapping(self, node, deep=False):
+        first_line = {}                         # key -> line of its first copy
+        for key_node, value_node in node.value:
+            # `<<: *name` copies the keys of another block in on purpose, and a key
+            # written next to it replaces the copied one: that is no repeat.
+            if key_node.tag == "tag:yaml.org,2002:merge":
+                continue
+            key = self.construct_object(key_node, deep=deep)
+            line = key_node.start_mark.line + 1     # the loader counts lines from 0
+            if key in first_line:
+                raise _RepeatedKey(key, first_line[key], line)
+            first_line[key] = line
+        return super().construct_mapping(node, deep=deep)
+
+
+def _check_no_repeated_keys(config_files):
+    """Stop the run when a config file writes a key twice in the same block.
+
+    Parameters
+    ----------
+    config_files : the paths of the files given with --configfile.
+
+    Returns
+    -------
+    None. Stops with sys.exit, naming the file, the key and both lines, at the first
+    repeated key; a file the loader cannot read is skipped (see the comment above).
+    """
+    for config_file in config_files:
+        try:
+            with open(config_file, encoding="utf-8") as handle:
+                yaml.load(handle, Loader=_LoaderRefusingRepeatedKeys)
+        except _RepeatedKey as repeat:
+            key, first_line, second_line = repeat.args
+            sys.exit(
+                f"[MetaFlux] {config_file}: the key {key!r} is written twice in the same "
+                f"block (lines {first_line} and {second_line}). YAML keeps only the last of "
+                "the two, without a word, so every setting under the first one would be lost: "
+                "a second amplicon: block, for example, replaces the whole first one. Merge "
+                "the two into one block, each setting once, and start MetaFlux again."
+            )
+        except (OSError, UnicodeDecodeError, yaml.YAMLError, TypeError):
+            # Snakemake has read the file already; this check cannot, so it says nothing.
+            # (TypeError: a list or a block used as a key, which no setting is, cannot be
+            # compared with the keys seen before it.)
+            continue
+
+
+_check_no_repeated_keys(workflow.overwrite_configfiles)
+
+
 # ────────────────────────── Mode dispatch ──────────────────────
 # The single config key that decides which half of the workflow exists at all. Every
 # `if MODE == "amplicon":` / `else:` block further down in this file — and the choice
@@ -190,10 +267,20 @@ def threads_for(rule_name: str) -> int:
 
 
 # Same lookup, but with a fallback chosen by the rule instead of threads_default.
-# For almost every rule threads_default is the right thing to land on; the tree
-# search is the exception, because there the thread count changes the RESULT and not
-# just the runtime, so its safe value is 1 rather than whatever the machine's default
-# happens to be. A run config that does name phylo_tree still wins.
+# For almost every rule threads_default is the right thing to land on. Three kinds of
+# rule are the exception:
+#   - the tree search and the sylph sketch, because there the thread count changes
+#     the RESULT and not just the runtime, so their safe value is 1 rather than
+#     whatever the machine's default happens to be;
+#   - learn_errors (60_dada2.smk), which falls back to the value of dada_seqtab
+#     instead. Learning the error model is the heavy half of what dada_seqtab did
+#     alone up to v2.6.1 (DADA2 denoises a subsample of the reads round after round),
+#     so it needs what dada_seqtab gets, and a value a user tuned for dada_seqtab
+#     keeps applying to the learning without a new template line;
+#   - error_model_report (60_dada2.smk), which falls back to 1: it draws figures and
+#     refits a few curves in one thread, whatever it is given, so more threads would
+#     only hold cores that other jobs could use.
+# A run config that names the rule under resources.threads still wins.
 def threads_for_or(rule_name: str, fallback: int) -> int:
     cfg = config.get("resources", {})
     return int(cfg.get("threads", {}).get(rule_name, fallback))
@@ -202,6 +289,17 @@ def threads_for_or(rule_name: str, fallback: int) -> int:
 def mem_mb_for(rule_name: str) -> int:
     cfg = config.get("resources", {})
     return int(cfg.get("mem_mb", {}).get(rule_name, cfg.get("mem_mb_default", 1000)))
+
+
+# The memory twin of threads_for_or: a fallback chosen by the rule instead of
+# mem_mb_default. Used by learn_errors, which takes dada_seqtab's memory (see the
+# comment above threads_for_or for why), and by error_model_report, which takes the
+# memory of dada_quality_plots, the other DADA2 step that only draws figures (4000 MB
+# in the template). A run config that names either rule under resources.mem_mb still
+# wins.
+def mem_mb_for_or(rule_name: str, fallback: int) -> int:
+    cfg = config.get("resources", {})
+    return int(cfg.get("mem_mb", {}).get(rule_name, fallback))
 
 
 # ────────────────────── Marker registry ────────────────────────
@@ -227,9 +325,12 @@ def mem_mb_for(rule_name: str) -> int:
 #   probe_exclude_second_site
 #                       OPTIONAL, pcr mode only, default false. true leaves out of
 #                       the length statistics every in-silico product that still
-#                       holds a second full-length forward-primer site (rpoB: the
-#                       forward primer also matches a look-alike stretch upstream
-#                       of its real site; see 40a_amplicon_probe.py, pass 3).
+#                       holds a second full-length forward-primer site: the forward
+#                       primer also matched a look-alike stretch upstream of its real
+#                       site, and the product starts there. Set for 16S (on SILVA
+#                       144, 6.3 % of the 341F/805R products, 0.69 % with 799F/1175R,
+#                       0.15 % with 515F/806R) and rpoB (17 %); see
+#                       40a_amplicon_probe.py, pass 3.
 #   taxonomy_refdb      reference symbol for the DADA2/RDP training set.
 #   taxonomy_species_db reference symbol for DADA2 addSpecies, or None.
 #   taxonomy_sintax_db  reference symbol for the VSEARCH SINTAX database.
@@ -1065,6 +1166,604 @@ def _coi_length_tolerance(value):
     return number
 
 
+# ── The extra last sequencing cycle (amplicon.cutadapt.trim_final_cycle) ──
+def _trim_final_cycle_setting(value):
+    """Check amplicon.cutadapt.trim_final_cycle and return it as one of the words
+    "auto", "true" or "false".
+
+    What it is for: an Illumina run sequences one cycle more than the read length it is
+    set up for (2 x 151, 2 x 251, 2 x 301 cycles), and the base calls of that extra last
+    cycle are poor. Rule trim_primers (30_preprocess.smk) can remove the last base of
+    every read before Cutadapt looks for the primers: with auto (the default) when the
+    longest read of a sample's R1 or R2 file is 76, 101, 151, 251 or 301 bp, with true
+    always, with false never, as up to v2.6.1. That decision is made per file when the
+    rule runs (workflow/scripts/amplicon/30a_final_cycle.py); here the value is checked.
+    Input: the value as YAML read it from the config. YAML reads true and false (and
+    yes and no) as booleans; the inline --config conversion at the top of this file
+    does the same with a value typed inline.
+    Output: "auto", "true" or "false"; the amplicon block below stores it in
+    TRIM_FINAL_CYCLE, which rule trim_primers passes to the program as a param.
+
+    Accepted: true and false, and the words auto, true and false in any mix of capitals
+    and with spaces around them. Everything else stops the run with one message that
+    names the three values: an empty value (null), a number (1 and 0 included, which
+    YAML does not read as true and false), any other text, a list.
+    """
+    stop_message = ("[MetaFlux] amplicon.cutadapt.trim_final_cycle must be auto, true or "
+                    f"false (the default is auto), got {value!r}")
+
+    if isinstance(value, bool):
+        if value:
+            return "true"
+        return "false"
+    if not isinstance(value, str):
+        sys.exit(stop_message)               # null, a number, a list ...
+    word = value.strip().lower()
+    if word not in ("auto", "true", "false"):
+        sys.exit(stop_message)
+    return word
+
+
+def _read_direction_truncation(amplicon_type, trunc_cfg, direction):
+    """Whether DADA2's filterAndTrim cuts the reads of one direction to a fixed length
+    (truncLen), as "truncated" or "untruncated".
+
+    What it is for: with trim_final_cycle: auto, rule trim_primers removes the extra last
+    sequencing cycle only from a read direction that is not cut to a fixed length (see
+    FINAL_CYCLE_TRUNCATION in the amplicon block below for why).
+    Input: the marker (AMPLICON_TYPE), the trunc_len block of the config (amplicon.
+    trunc_len, template values included) and the read direction, "r1" or "r2".
+    Output: "untruncated" for ITS, whose truncLen 60b_dada_filter.R always sets to 0, 0,
+    and, on the other markers, for trunc_len.mode: manual with a cut of 0 for that
+    direction (0 means no cut in DADA2); "truncated" for every other case: a cut chosen
+    by pick_trunclen (mode auto) or a manual cut above 0. A manual cut that is missing or
+    is not a whole number counts as truncated: pick_trunclen stops the run on it.
+    The mode and the manual cut are read the way pick_trunclen reads them (the exact
+    word "manual"; int() of the cut), so the two always agree.
+    """
+    if amplicon_type == "ITS":
+        return "untruncated"
+    if trunc_cfg.get("mode") != "manual":
+        return "truncated"
+    manual_cut = trunc_cfg.get(f"manual_{direction}")
+    try:
+        manual_cut = int(manual_cut)
+    except (TypeError, ValueError):
+        return "truncated"
+    if manual_cut == 0:
+        return "untruncated"
+    return "truncated"
+
+
+# ── DADA2's error learning (amplicon.dada2.learn_errors) ──
+# Rule learn_errors (60_dada2.smk) fits DADA2's error model, once for the R1 reads and
+# once for the R2 reads, by repeating two steps: denoise a subsample of the reads with
+# the current error rates, then estimate the rates again from the result. The loop
+# ends when a round gives back a table it has seen before (DADA2's own stop, which
+# MetaFlux calls "converged"), when MetaFlux's flat-rounds rule sees that the model has
+# stopped improving, or at a cap on the number of rounds. Rule check_error_model then
+# stops the run before denoising when a model did not converge, unless the user has
+# accepted that model by its code. Which error function the learning uses (DADA2's
+# smooth loess fit for continuous quality values, its binned fit for binned ones) is
+# picked by rule choose_error_model from the reads, unless error_model names one; the
+# experimental value custom learns with an R function of the user's own, named in
+# custom_error_function. The functions below check the five settings of this at
+# start-up and return them in the form the rules pass on; the amplicon block further
+# down stores them in LEARN_ERRORS_MAX_CONSIST, LEARN_ERRORS_MAX_FLAT_ROUNDS,
+# ERROR_MODEL_SETTING, CUSTOM_ERROR_FUNCTION and ACCEPT_UNCONVERGED, and builds
+# ERROR_MODEL_REPORT, the file list of the report.
+def _whole_number(value, minimum, stop_message):
+    """Return `value` as an int when it is a whole number of at least `minimum`.
+
+    Shared by the two round counts below (max_consist, max_flat_rounds), which follow
+    the same rules as the k-mer floor and the COI length tolerance above.
+
+    Parameters
+    ----------
+    value : the setting as YAML read it from the config (or as the inline --config
+        conversion at the top of this file turned it into a value).
+    minimum : the smallest number allowed.
+    stop_message : the text the run stops with when the value is refused.
+
+    Returns
+    -------
+    int. Accepted: a whole number (200), the same written with a decimal point
+    (200.0) or as text (" 200 "), which MetaFlux has always read as that number.
+    Everything else stops the run with `stop_message`: true or false (Python would
+    count them as 1 and 0), an empty value (null), a number with a fraction (2.5, or
+    the text "200.5"), an infinite or missing number (.inf, nan), any other text
+    ("Inf", "abc"), a list, and a number below `minimum`.
+    """
+    # true/false: refused here, because the number checks below would let them
+    # through (Python counts True as the number 1).
+    if isinstance(value, bool):
+        sys.exit(stop_message)
+
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, float) and value.is_integer():
+        number = int(value)                  # 200.0 -> 200 (inf and nan are not whole)
+    elif isinstance(value, str):
+        try:
+            number = int(value)              # "200" or " 200 " -> 200
+        except ValueError:
+            sys.exit(stop_message)
+    else:
+        sys.exit(stop_message)               # 2.5, a list, an empty value (null) ...
+
+    if number < minimum:
+        sys.exit(stop_message)
+    return number
+
+
+def _max_consist_setting(value):
+    """Check amplicon.dada2.learn_errors.max_consist and return it as an int >= 1.
+
+    What it is for: the most rounds learnErrors may run per read direction (DADA2's
+    MAX_CONSIST). Rule learn_errors passes it to the script (60d_learn_errors.R), which
+    used to read it with as.integer(), and that went wrong without a word: 0 or less
+    makes DADA2 hand back its rough starting estimate as the model, a fraction is cut
+    down (2.5 becomes 2), and Inf or text becomes a missing value, which fails at the
+    end of the first round. So the value is checked here instead.
+    Input: the value as YAML read it from the config.
+    Output: the int; the amplicon block stores it in LEARN_ERRORS_MAX_CONSIST.
+    Accepted and refused: as in _whole_number above, with a smallest value of 1.
+    """
+    stop_message = (
+        "[MetaFlux] amplicon.dada2.learn_errors.max_consist must be a whole number of at "
+        f"least 1 (the default is 200), got {value!r}. With 0 or less DADA2 hands back its "
+        "rough starting estimate as the model; a fraction is cut down to a whole number "
+        "without notice, and Inf or text reaches DADA2 as a missing value, which fails at "
+        "the end of the first round."
+    )
+    return _whole_number(value, 1, stop_message)
+
+
+def _max_consist_note(max_consist):
+    """The start-up note for a max_consist of 999, or None for any other value.
+
+    Why: every config template up to v2.6.1 said 999, and the quick start copies the
+    whole template into the run config, so the new default (200) does not reach such a
+    run config: a run-config value beats the template. With 999 a model that keeps
+    changing runs for days before the check after learning can stop the run.
+    Input: the checked int (from _max_consist_setting).
+    Output: the note as text, or None; the amplicon block prints it to the terminal.
+    """
+    if max_consist != 999:
+        return None
+    return (
+        "[MetaFlux] note: amplicon.dada2.learn_errors.max_consist is 999, the value of "
+        "every config template up to v2.6.1, probably copied from one. MetaFlux now stops "
+        "before denoising when an error model did not converge, and with 999 a model that "
+        "keeps changing runs for days before it gets there (about 60 hours per read "
+        "direction at the 3.7 minutes per round measured on one such library), unless the "
+        "flat-rounds rule ends it first. Delete the line from your run config to use the "
+        "new default, 200."
+    )
+
+
+def _max_flat_rounds_setting(value):
+    """Check amplicon.dada2.learn_errors.max_flat_rounds and return it as an int >= 0.
+
+    What it is for: the N of MetaFlux's flat-rounds rule. The learning step ends the
+    loop early when the change between two rounds has fallen at least 1,000 times
+    below round 1's and the lowest change so far fell by less than 10 % over the last
+    N rounds; 0 switches the rule off. Rule learn_errors passes the value to its
+    script, which applies the rule round by round (see 60d_learn_errors.R).
+    Input: the value as YAML read it from the config.
+    Output: the int; the amplicon block stores it in LEARN_ERRORS_MAX_FLAT_ROUNDS.
+    Accepted and refused: as in _whole_number above, with a smallest value of 0.
+    """
+    stop_message = (
+        "[MetaFlux] amplicon.dada2.learn_errors.max_flat_rounds must be a whole number >= 0 "
+        "(the default is 20; 0 switches the early stop off), "
+        f"got {value!r}"
+    )
+    return _whole_number(value, 0, stop_message)
+
+
+def _max_flat_rounds_note(max_flat_rounds, max_consist):
+    """The start-up note for a flat-rounds rule that can never act, or None.
+
+    Why: the rule can stop the learning only in a round after the first N (it needs N
+    earlier rounds to compare with), and there are at most max_consist rounds. With N
+    at or above max_consist it can never act, which is probably not what was meant.
+    0 means "off" and gets no note.
+    Input: the two checked ints.
+    Output: the note as text, or None; the amplicon block prints it to the terminal.
+    """
+    if max_flat_rounds == 0 or max_flat_rounds < max_consist:
+        return None
+    return (
+        f"[MetaFlux] note: amplicon.dada2.learn_errors.max_flat_rounds ({max_flat_rounds}) "
+        f"is not smaller than max_consist ({max_consist}), so the early stop can never act: "
+        f"it needs more than {max_flat_rounds} rounds. Lower max_flat_rounds, or set it to 0 "
+        "to switch the early stop off."
+    )
+
+
+def _accept_unconverged_setting(value):
+    """Check amplicon.dada2.learn_errors.accept_unconverged and return the codes.
+
+    What it is for: rule check_error_model stops the run before denoising when an
+    error model did not converge, and prints the model's code, such as R2:0a55be94
+    (the read direction, a colon, and the first 8 characters of an md5 sum of the
+    model's numbers; see 60d_learn_errors.R). Listing the code here accepts that one
+    model: the run goes on with it, while any other model that does not converge
+    stops the run again.
+    Input: the value as YAML read it from the config: a list of codes, a single code
+    as text, or nothing.
+    Output: a sorted list of codes without duplicates, each normalised to "R" and the
+    direction digit, a colon, then 8 lower-case characters from 0-9 and a-f
+    ("r2:0A55BE94" -> "R2:0a55be94"); the amplicon block stores it in
+    ACCEPT_UNCONVERGED and writes it back into the config, where the check reads it.
+    Refused, with a message that says what is allowed: true or false (an older draft
+    of this setting was an on/off switch, which would accept any model, however
+    often the data change); a block, a number, or a list item that is not a code
+    (R3:..., 7 characters, a dash instead of the colon, a number).
+    """
+    if value is None:
+        return []
+    if isinstance(value, bool):
+        sys.exit(
+            "[MetaFlux] amplicon.dada2.learn_errors.accept_unconverged takes the codes of "
+            "the error models you accept, as the stop message prints them, for example "
+            '["R2:0a55be94"], not true or false. A code names one model, so a later model '
+            "that does not converge stops the run again."
+        )
+    if isinstance(value, str):
+        value = [value]                      # one code given without the brackets
+    if not isinstance(value, list):
+        value = [value]                      # a block or a number: refused below, by name
+
+    codes = set()
+    for item in value:
+        stop_message = (
+            "[MetaFlux] amplicon.dada2.learn_errors.accept_unconverged must be a list of "
+            'model codes such as "R2:0a55be94" (R1 or R2, a colon, then 8 characters from '
+            f"0-9 and a-f), got {item!r}"
+        )
+        if not isinstance(item, str):
+            sys.exit(stop_message)
+        text = item.strip()
+        # The direction is written in capitals (R1, R2) and the md5 characters in lower
+        # case, as the stop message prints them; a code typed in other capitals means
+        # the same model.
+        normalised = text[:2].upper() + text[2:].lower()
+        if not re.fullmatch(r"(R[12]):([0-9a-f]{8})", normalised):
+            sys.exit(stop_message)
+        codes.add(normalised)
+    return sorted(codes)
+
+
+# The error functions a user can choose for DADA2's error learning, by name: the
+# entries of the registry in workflow/scripts/amplicon/60_error_functions.R, in the
+# order the report draws them. loess is DADA2's default smooth fit, made for continuous
+# quality values (MiSeq); binned is DADA2's makeBinnedQualErrfun, made for binned
+# quality values (NovaSeq, NextSeq and other recent instruments). A function is
+# selectable only when it is in all three places: this list, the registry, and the
+# SUITED_CLASS and ON_OTHER_CLASS tables of 60c_choose_error_model.py;
+# tests/test_error_model_settings.py checks that they agree.
+ERROR_FUNCTION_NAMES = ("loess", "binned")
+
+# The word error_model takes for the user's own error function (EXPERIMENTAL). It is not
+# an entry of the registry above: the function lives in an R file of the user's, named in
+# amplicon.dada2.learn_errors.custom_error_function (checked by
+# _custom_error_function_setting below), and learn_errors adds it to the registry when
+# it runs. It suits no particular kind of quality values, so it has no SUITED_CLASS or
+# ON_OTHER_CLASS entry in 60c_choose_error_model.py either.
+CUSTOM_ERROR_MODEL = "custom"
+
+
+def _error_model_setting(value):
+    """Check amplicon.dada2.learn_errors.error_model and return it in lower case.
+
+    What it is for: the error function DADA2 learns the error models with. auto (the
+    default) lets rule choose_error_model pick it per read direction from the quality
+    values of the filtered reads: loess for continuous values, binned for binned ones.
+    A function name makes the run use that function, with a warning (loess on binned
+    values) or a stop (binned on continuous values) when it does not suit the reads.
+    custom (experimental) makes the run use the user's own function, named in
+    custom_error_function, for both read directions.
+    Rule choose_error_model receives the value as a param.
+    Input: the value as YAML read it from the config.
+    Output: "auto", one of ERROR_FUNCTION_NAMES or "custom"; the amplicon block stores
+    it in ERROR_MODEL_SETTING.
+
+    Accepted: auto, a name or custom, in any mix of capitals and with spaces around it
+    ("Auto", " Loess "). Everything else stops the run with one message that names the
+    allowed words: an instrument name ("novaseq": the kind of quality values is read
+    from the reads, never from an instrument), empty text, an empty value (null), true
+    or false, a number.
+    """
+    allowed = ["auto"] + list(ERROR_FUNCTION_NAMES) + [CUSTOM_ERROR_MODEL]
+    stop_message = (
+        "[MetaFlux] amplicon.dada2.learn_errors.error_model must be one of "
+        f"{', '.join(allowed)} (the default is auto), got {value!r}"
+    )
+    if not isinstance(value, str):
+        sys.exit(stop_message)               # null, true/false, a number, a list ...
+    word = value.strip().lower()
+    if word not in allowed:
+        sys.exit(stop_message)
+    return word
+
+
+# Words R keeps for itself (R's help page ?Reserved), which can never be the name of a
+# function. "..." and ..1, ..2 and so on are reserved too; _is_r_name below refuses
+# them by their pattern.
+R_RESERVED_WORDS = (
+    "if", "else", "repeat", "while", "function", "for", "in", "next", "break",
+    "TRUE", "FALSE", "NULL", "Inf", "NaN", "NA",
+    "NA_integer_", "NA_real_", "NA_character_", "NA_complex_",
+)
+
+
+def _is_r_name(text):
+    """True when `text` is a name R can give a function without quotes.
+
+    R's rule for such a name (a "syntactically valid" name): letters, digits, dots and
+    underscores only, starting with a letter, or with a dot that is not followed by a
+    digit, and not one of the words R reserves (R_RESERVED_WORDS above, "..." and ..1,
+    ..2, ...). Only the letters A-Z and a-z are accepted here: R takes accented letters
+    in some language settings only, so a name with them may fail on another computer.
+
+    Parameters
+    ----------
+    text : str, the name as typed in the config, spaces around it removed.
+
+    Returns
+    -------
+    bool.
+    """
+    if text in R_RESERVED_WORDS or text == "..." or re.fullmatch(r"\.\.[0-9]+", text):
+        return False
+    starts_with_letter = re.fullmatch(r"[A-Za-z][A-Za-z0-9._]*", text)
+    # A dot alone, or a dot followed by a letter, a dot or an underscore. A dot followed
+    # by a digit is refused: R reads ".2x" as the number 0.2 followed by x.
+    starts_with_dot = re.fullmatch(r"\.([A-Za-z._][A-Za-z0-9._]*)?", text)
+    return bool(starts_with_letter or starts_with_dot)
+
+
+def _custom_error_function_text(value, key):
+    """One value of the custom_error_function block (file or name) as plain text.
+
+    Parameters
+    ----------
+    value : the value as YAML read it from the config.
+    key : the setting's full name, for the message.
+
+    Returns
+    -------
+    str: "" for an empty value (null, or nothing after the key), otherwise the text
+    without the spaces around it. A value that is not text (a number, a list, true)
+    stops the run with the key named.
+    """
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        sys.exit(f"[MetaFlux] {key} must be text, got {value!r}")
+    return value.strip()
+
+
+def _custom_error_function_setting(block, error_model):
+    """Check amplicon.dada2.learn_errors.custom_error_function (EXPERIMENTAL) and return
+    the user's own error function, or None when the run has none.
+
+    What it is for: a user can write an error function of their own, in the form DADA2's
+    learnErrors takes as its errorEstimationFunction: it receives DADA2's table of
+    transition counts (16 rows, A2A to T2T; one column per quality score) and returns a
+    table of error rates of the same shape. The block names it by the R file that
+    defines it (file) and its name in that file (name). With error_model: custom, rule
+    learn_errors learns both error models with it; with any other error_model, rule
+    error_model_report refits it next to MetaFlux's own functions and draws it in the
+    report, for comparison only. Both rules list the file as an input (learn_errors only
+    under custom), so an edit of the file makes them run again (60_dada2.smk says what
+    else then runs). What only R can check (that the file defines a function of that
+    name, and that the function returns a usable table) is checked by learn_errors and
+    by the report when they run; what can be checked here, before any job, is checked
+    here: a wrong name would otherwise surface only after hours of filtering, as an R
+    error inside learn_errors, and a missing file as Snakemake's bare "missing input
+    files", which does not say which setting is wrong.
+    Input: the block as YAML read it from the config (file and name, or nothing), and
+    error_model as _error_model_setting returned it. An empty block (nothing after
+    custom_error_function:, or "") counts as a block with both values empty.
+    Output: None when file and name are both empty and error_model is not custom.
+    Otherwise a dict, which the amplicon block stores in CUSTOM_ERROR_FUNCTION:
+      file               - the R file as an absolute path. A relative path is read from
+                           the folder snakemake is started in, like every other path of
+                           the config (fastq_dir, out_dir, the primers, the references);
+      file_as_configured - the path as written in the config, for the record;
+      name               - the function's name.
+
+    Refused, each with a message that names the key and says what to do:
+      - a value that is not a block of keys (a path written directly after
+        custom_error_function:, for example);
+      - error_model custom with an empty file, or with an empty name;
+      - with any other error_model, a file without a name or a name without a file
+        (half a block would otherwise be ignored without a word);
+      - a file or a name that is not text (a number, a list);
+      - a file that does not exist, is a folder, or cannot be read;
+      - a name R cannot give a function (_is_r_name above).
+    A complete block while error_model is not custom is allowed: the report then draws
+    the function as a comparison.
+    """
+    key = "amplicon.dada2.learn_errors.custom_error_function"
+    # custom_error_function: with nothing below it, or written as "" (a natural way to
+    # write "none"): the same as a block whose two values are empty.
+    if block is None or block == "":
+        block = {}
+    if not isinstance(block, dict):
+        sys.exit(
+            f"[MetaFlux] {key} must be a block with two keys on the lines below it: file "
+            "(the R file that defines your error function) and name (the function's name in "
+            f"that file); got {block!r}"
+        )
+    file_text = _custom_error_function_text(block.get("file"), f"{key}.file")
+    name_text = _custom_error_function_text(block.get("name"), f"{key}.name")
+
+    # error_model: custom needs both; any other error_model takes the block as a
+    # comparison for the report when both are set, and as nothing when both are empty.
+    if error_model == CUSTOM_ERROR_MODEL:
+        if not file_text:
+            sys.exit(
+                "[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
+                f"{key}.file must give the R file that defines your error function (an "
+                "absolute path, or one relative to the folder snakemake is started in); it "
+                "is empty. Set it, or set error_model back to auto, loess or binned."
+            )
+        if not name_text:
+            sys.exit(
+                "[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
+                f"{key}.name must give the name of your error function in {file_text}; it "
+                "is empty. Set it, or set error_model back to auto, loess or binned."
+            )
+    else:
+        if not file_text and not name_text:
+            return None
+        if not file_text or not name_text:
+            given, missing = ("name", "file") if name_text else ("file", "name")
+            sys.exit(
+                f"[MetaFlux] {key} sets a {given} but no {missing}. Set both, and the "
+                "report draws your error function next to MetaFlux's own for comparison "
+                "(error_model: custom also learns the error models with it), or leave both "
+                "empty."
+            )
+
+    # The file: resolved like every other path of the config, then it must be a file
+    # this user can read (Snakemake would otherwise stop with "missing input files",
+    # which does not say which setting is wrong).
+    path = Path(file_text).resolve()
+    if not path.is_file():
+        sys.exit(
+            f"[MetaFlux] {key}.file: {path} is not an existing file (written in the config "
+            f"as {file_text!r}; a relative path is read from the folder snakemake is "
+            f"started in, here {Path.cwd()})"
+        )
+    try:
+        with open(path, "rb"):
+            pass
+    except OSError as error:
+        sys.exit(f"[MetaFlux] {key}.file: {path} cannot be read ({error.strerror or error})")
+
+    # The name: learn_errors and the report fetch the function by it from the file.
+    if not _is_r_name(name_text):
+        sys.exit(
+            f"[MetaFlux] {key}.name must be the name of an R function as you would type it "
+            "in R, without quotes: the letters a-z and A-Z (no accented letters), digits, "
+            "dots and underscores, starting with a letter or with a dot not followed by a "
+            "digit, and not a word R reserves (such as function, TRUE or NA); got "
+            f"{name_text!r}"
+        )
+    return {"file": str(path), "file_as_configured": file_text, "name": name_text}
+
+
+def _learn_errors_block(amp_cfg):
+    """Return the amplicon.dada2.learn_errors block of the merged config, stopping the
+    run when that block, or the dada2 block above it, is present but empty.
+
+    What it is for: the amplicon block below reads the five settings of DADA2's error
+    learning from this block, and writes the normalised accept_unconverged list back
+    into it, where check_error_model reads it. A block missing from the run config keeps
+    the template's (config/config.yaml is loaded first, and Snakemake merges the run
+    config over it block by block); a block missing from both is created empty here, so
+    the defaults written in the checks apply.
+    Why the stop: YAML reads a block whose lines are all commented out, such as
+        learn_errors:
+          # accept_unconverged: ["R2:0a55be94"]
+    as empty (null, None in Python), and the merge then replaces the template's whole
+    block with that None. Every value of the template under it is lost: nbases, which
+    rule learn_errors reads directly, and for an empty dada2: block also max_ee, trunc_q
+    and the other values rule params read. MetaFlux used to fail a few lines later with a
+    bare Python error ('NoneType' object has no attribute 'get'). The stop text of
+    check_error_model tells users to create a learn_errors: block holding only
+    accept_unconverged, and commenting that one line out later is a natural edit, hence
+    a message that says what happened and what to do.
+    Input: amp_cfg, config["amplicon"] after the merge (a dict).
+    Output: the learn_errors dict, the very one stored in the config (so that what the
+    amplicon block writes into it reaches every job that reads the config); stops the
+    run, naming the block, when amplicon.dada2 or amplicon.dada2.learn_errors is None.
+    """
+    def empty_block_text(dotted_name, key, lost_values):
+        """The stop text for an empty block: its full name, its key, and examples of
+        the template values it throws away."""
+        return (
+            f"[MetaFlux] {dotted_name} is empty in your run config: the {key}: line has no "
+            "setting under it (its lines are commented out, or there are none). YAML reads "
+            f"such a block as empty, and it then replaces the whole {key}: block of "
+            f"config/config.yaml, so the template's values under it, such as {lost_values}, "
+            f"are lost. Delete the {key}: line from your run config, or keep at least one "
+            "setting under it."
+        )
+
+    # The dada2 block: present but empty stops; missing is created empty.
+    if "dada2" in amp_cfg and amp_cfg["dada2"] is None:
+        sys.exit(empty_block_text("amplicon.dada2", "dada2", "max_ee, trunc_q and nbases"))
+    dada2_cfg = amp_cfg.setdefault("dada2", {})
+    # The learn_errors block inside it: the same.
+    if "learn_errors" in dada2_cfg and dada2_cfg["learn_errors"] is None:
+        sys.exit(empty_block_text("amplicon.dada2.learn_errors", "learn_errors", "nbases"))
+    return dada2_cfg.setdefault("learn_errors", {})
+
+
+def _error_model_report_files(out):
+    """The files rule error_model_report (60_dada2.smk) writes, as {key: path}.
+
+    What it is for: one list of the report's files, used in four places so that they
+    cannot drift apart: the rule's outputs (output: **ERROR_MODEL_REPORT), the targets
+    of a run (_amplicon_targets() below), the input of rule check_error_model, which
+    takes the report JSON to make sure the report exists before it runs, and the inputs
+    of rule multiqc (90_report.smk), which takes the six files of the MultiQC section.
+    The script, 60e_error_model_report.R, writes each file under its key.
+    Input: the run's output folder (OUT); the paths are built from it alone, so the
+    tests can call this function with any folder.
+    Output: a dict of 22 Paths, all under out/stats/dada2/:
+      - the tables: the goodness of fit of every error function (fit_tsv), the counted
+        and fitted error rates (rates_tsv), the rounds of learning (rounds_tsv), and
+        the report JSON (report_json), whose warnings check_error_model repeats;
+      - the figures, each as PNG and PDF: the fit of the R1 and the R2 model
+        (fit_png_r1 ...), the convergence of both (convergence_png), the quality values
+        of the filtered reads (quality_png);
+      - DADA2's own plots of the two models (plotErrors), under the names they had when
+        dada_seqtab drew them (dada2_plot_r1 ...);
+      - the MultiQC section, in its own folder stats/dada2/multiqc/, which rule multiqc
+        scans: two tables (mqc_summary, mqc_fit_table) and copies of the four PNG
+        figures (mqc_fit_r1 ...). MultiQC shows a file ending in _mqc.png as an image
+        and names its section after the file, so these copies carry readable names of
+        their own; workflow/multiqc_config.yaml refers to them by those names.
+    """
+    stats_dada2 = Path(out) / "stats" / "dada2"
+    multiqc_dir = stats_dada2 / "multiqc"
+    return {
+        # Tables
+        "fit_tsv":           stats_dada2 / "error_model_fit.tsv",
+        "rates_tsv":         stats_dada2 / "error_model_rates.tsv",
+        "rounds_tsv":        stats_dada2 / "error_model_rounds.tsv",
+        "report_json":       stats_dada2 / "error_model_report.json",
+        # Figures
+        "fit_png_r1":        stats_dada2 / "error_model_fit_R1.png",
+        "fit_pdf_r1":        stats_dada2 / "error_model_fit_R1.pdf",
+        "fit_png_r2":        stats_dada2 / "error_model_fit_R2.png",
+        "fit_pdf_r2":        stats_dada2 / "error_model_fit_R2.pdf",
+        "convergence_png":   stats_dada2 / "error_model_convergence.png",
+        "convergence_pdf":   stats_dada2 / "error_model_convergence.pdf",
+        "quality_png":       stats_dada2 / "error_model_quality_values.png",
+        "quality_pdf":       stats_dada2 / "error_model_quality_values.pdf",
+        # DADA2's own plots
+        "dada2_plot_r1":     stats_dada2 / "filtered_read_R1_error_plot.png",
+        "dada2_plot_r1_pdf": stats_dada2 / "filtered_read_R1_error_plot.pdf",
+        "dada2_plot_r2":     stats_dada2 / "filtered_read_R2_error_plot.png",
+        "dada2_plot_r2_pdf": stats_dada2 / "filtered_read_R2_error_plot.pdf",
+        # The MultiQC section
+        "mqc_summary":       multiqc_dir / "error_model_summary_mqc.tsv",
+        "mqc_fit_table":     multiqc_dir / "error_model_goodness_of_fit_mqc.tsv",
+        "mqc_fit_r1":        multiqc_dir / "error_model_fit_R1_mqc.png",
+        "mqc_fit_r2":        multiqc_dir / "error_model_fit_R2_mqc.png",
+        "mqc_convergence":   multiqc_dir / "error_model_convergence_mqc.png",
+        "mqc_quality":       multiqc_dir / "error_model_quality_values_mqc.png",
+    }
+
+
 # ────────────────────── Amplicon-only globals ──────────────────
 # Runs only when mode: amplicon. Everything from here down to the matching `else:`
 # (shotgun globals) is normally never even evaluated on a shotgun run — this whole
@@ -1255,12 +1954,91 @@ if MODE == "amplicon":
     if ORIENTATION not in ("fixed", "mixed"):
         sys.exit(f"amplicon.primers.orientation must be 'fixed' or 'mixed' (got: {ORIENTATION!r})")
 
+    # ── The extra last sequencing cycle (amplicon.cutadapt.trim_final_cycle) ──
+    # Whether rule trim_primers removes the last base of every read before it looks for
+    # the primers: "auto", "true" or "false", checked by _trim_final_cycle_setting (above
+    # the amplicon block). The rule passes the word to its program
+    # 30a_final_cycle.py, which decides per sample and read direction. A config without
+    # the key gets auto, the template's value.
+    _cutadapt_cfg = amp_cfg.get("cutadapt") or {}
+    TRIM_FINAL_CYCLE = _trim_final_cycle_setting(_cutadapt_cfg.get("trim_final_cycle", "auto"))
+
+    # Whether DADA2 cuts each read direction to a fixed length (truncLen), checked by
+    # _read_direction_truncation (above the amplicon block). With auto, only an
+    # untruncated direction loses its last cycle: only there does the last base reach
+    # the ASVs whatever happens next (ITS; other markers with a manual cut of 0). Where
+    # truncLen is set, the cut decides: below the read length it removes the last base
+    # anyway, and at the read-length limit the removal changes the reads pick_trunclen
+    # measures, so the cut itself can move (on the 18S test set the R1 cut moved from
+    # 271 to 274 and the run kept 1.2 % fewer reads, with the same merging rate).
+    # Output: "truncated" or "untruncated" for R1 and R2; rule trim_primers passes each
+    # to its program 30a_final_cycle.py as a param, so a change re-runs primer trimming.
+    _trunc_cfg = amp_cfg.get("trunc_len") or {}
+    FINAL_CYCLE_TRUNCATION = {
+        "R1": _read_direction_truncation(AMPLICON_TYPE, _trunc_cfg, "r1"),
+        "R2": _read_direction_truncation(AMPLICON_TYPE, _trunc_cfg, "r2"),
+    }
+
     # ── PhiX decontamination toggle (symmetric with shotgun) ──
     # When False, bowtie2 PhiX removal is skipped and Cutadapt reads the raw
     # FASTQs directly. The 'nophix' falco stage / counts / read-tracking column
     # exist only when this is True.
     REMOVE_PHIX  = bool(amp_cfg.get("decontamination", {}).get("remove_phix", True))
-    FALCO_STAGES = ["raw", "nophix", "stripped"] if REMOVE_PHIX else ["raw", "stripped"]
+    # The stages at which rule falco (20_qc.smk) profiles every sample's reads, in
+    # pipeline order: raw (the input files), nophix (after PhiX removal, only when it
+    # runs), stripped (after primer trimming; pick_trunclen reads these reports) and
+    # filtered (after DADA2's filterAndTrim: the reads the error models are learned
+    # from, shown in the MultiQC report). _amplicon_targets() below asks for one Falco
+    # folder per sample, read direction and stage, and rule multiqc (90_report.smk)
+    # takes the report of each.
+    FALCO_STAGES = ["raw", "nophix", "stripped", "filtered"] if REMOVE_PHIX else ["raw", "stripped", "filtered"]
+
+    # ── DADA2 error model (amplicon.dada2.learn_errors) ──
+    # The settings of rules choose_error_model, learn_errors, error_model_report and
+    # check_error_model (60_dada2.smk), checked once here by the functions above the
+    # amplicon block, so that a wrong value stops the run before any job instead of
+    # failing hours later inside DADA2.
+    # _learn_errors_block (above): a run config without these blocks keeps the template's
+    # values (the template is loaded first), a config without them at all gets the
+    # defaults written here, and a block left empty in the run config (all its lines
+    # commented out, which YAML reads as null and which replaces the template's block)
+    # stops the run with a message that names it.
+    _learn_cfg = _learn_errors_block(amp_cfg)
+    LEARN_ERRORS_MAX_CONSIST     = _max_consist_setting(_learn_cfg.get("max_consist", 200))
+    LEARN_ERRORS_MAX_FLAT_ROUNDS = _max_flat_rounds_setting(_learn_cfg.get("max_flat_rounds", 20))
+    ERROR_MODEL_SETTING          = _error_model_setting(_learn_cfg.get("error_model", "auto"))
+    ACCEPT_UNCONVERGED           = _accept_unconverged_setting(_learn_cfg.get("accept_unconverged", []))
+    # The user's own error function (experimental): None, or a dict with its file (an
+    # absolute path), the file as written in the config, and its name
+    # (_custom_error_function_setting above). Rule learn_errors takes the file as an
+    # input and learns with the function only under error_model: custom; rule
+    # error_model_report takes it whenever it is set, and draws the function in the
+    # report. Under the same two conditions each of the two rules runs in the conda
+    # environment dada2_custom.yaml (the DADA2 environment plus the R packages mgcv and
+    # scam) instead of dada2.yaml (60_dada2.smk).
+    CUSTOM_ERROR_FUNCTION        = _custom_error_function_setting(
+        _learn_cfg.get("custom_error_function"), ERROR_MODEL_SETTING)
+    # The accepted codes go back into the config, normalised (sorted, R1/R2 in
+    # capitals, md5 characters in lower case). This is the one setting a job reads from
+    # the config instead of from its params: rule check_error_model reads it inside its
+    # job, from snakemake.config. The reason: Snakemake runs a step again when one of
+    # its params changes. As a param, removing a code after an accepted run (or adding
+    # one for another folder) would make the check run again, and with the code gone it
+    # would stop the run again; read from the config, changing the list makes nothing
+    # run again. `config` here is the same dict Snakemake hands every script job, so
+    # what the check reads is this normalised list, never the raw text of the run config.
+    _learn_cfg["accept_unconverged"] = ACCEPT_UNCONVERGED
+    # Notes, not stops: a max_consist of 999 copied from an old template, and a
+    # flat-rounds N that can never act.
+    for _note in (_max_consist_note(LEARN_ERRORS_MAX_CONSIST),
+                  _max_flat_rounds_note(LEARN_ERRORS_MAX_FLAT_ROUNDS, LEARN_ERRORS_MAX_CONSIST)):
+        if _note:
+            sys.stderr.write(f"{_note}\n")
+    # The files of rule error_model_report, as {key: path} (_error_model_report_files
+    # above): its outputs, part of the run's targets, the report JSON as the input that
+    # makes check_error_model wait for the report, and the six files of the MultiQC
+    # section as inputs of rule multiqc (90_report.smk).
+    ERROR_MODEL_REPORT = _error_model_report_files(OUT)
 
     # ── Amplicon-probe cache ──
     # Cache key = sha256(fwd_primer + "|" + rev_primer)[:12]. Changing primers
@@ -1297,9 +2075,11 @@ if MODE == "amplicon":
         PROBE_REF_TAG += "_excl-" + "-".join(sorted(t.lower() for t in PROBE_EXCLUDE_TAXA))
     # In-silico products that still hold a second full-length forward-primer site are
     # left out of the length statistics when the pack sets probe_exclude_second_site:
-    # true (rpoB; why, and with what numbers, in 40a_amplicon_probe.py, pass 3). It
-    # changes the result, so it goes into the cache file name as well, like the lineage
-    # list above; packs without the field keep their cache names and their results.
+    # true (16S and rpoB; why, and with what numbers, in 40a_amplicon_probe.py, pass 3).
+    # It changes the result, so it goes into the cache file name as well, like the
+    # lineage list above; packs without the field keep their cache names and their
+    # results. (The 16S pack has set it since v2.7.0, so a 16S probe cached by an
+    # earlier version, without "_excl-second-site" in its name, is never reused.)
     # Stops the run when the value is not true/false, or when it is set on a
     # direct-mode marker, whose probe searches for no primer at all.
     PROBE_EXCLUDE_SECOND_SITE = PROFILE.get("probe_exclude_second_site", False)
@@ -1331,6 +2111,10 @@ if MODE == "amplicon":
             f"      {_stat_key}: p95"
         )
     PROBE_LENGTH_STAT = _stat_cfg.get(_stat_key)
+    # The key itself (16S, 18S, rpoB, COI; gyrB reads 16S), handed to pick_trunclen
+    # (50_trunclen.smk) only so that its stop text can name the exact setting to change,
+    # amplicon.probe_length_stat.<key>, which a gyrB user could not guess.
+    PROBE_STAT_KEY = _stat_key
 
     PROBE_JSON         = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.json"
     PROBE_AMPLICONS_FA = PROBE_CACHE_DIR / f"probe_{AMPLICON_TYPE}_{PROBE_REF_TAG}_{PRIMER_HASH}.amplicons.fa.gz"
@@ -3335,7 +4119,8 @@ def _amplicon_targets():
         # Read count summaries
         OUT / "stats" / "01.raw_reads.counts",
         OUT / "stats" / "03.stripped_reads.counts",
-        # Falco QC (per sample, per direction, per stage — 'nophix' only if REMOVE_PHIX)
+        # Falco QC (per sample, per direction, per stage — 'nophix' only if REMOVE_PHIX;
+        # 'filtered' profiles the reads after filterAndTrim, see FALCO_STAGES)
         *expand(OUT / "stats" / "falco" / "{sample}_R{r}_{stage}",
                 stage=FALCO_STAGES, sample=SAMPLES, r=[1, 2]),
         # TruncLen decision
@@ -3348,15 +4133,42 @@ def _amplicon_targets():
         # DADA2 filterAndTrim
         *expand(OUT / "04.filtered" / "{sample}_R1_filt.fastq.gz", sample=SAMPLES),
         *expand(OUT / "04.filtered" / "{sample}_R2_filt.fastq.gz", sample=SAMPLES),
+        # DADA2 error model (rules choose_error_model, learn_errors, error_model_report
+        # and check_error_model in 60_dada2.smk): the choice of error function, the two
+        # models, the record of how their learning ended, the report and the verdict of
+        # the check. The choice and the models are read by later steps anyway; the
+        # record, the report and the verdict are asked for here because Snakemake makes
+        # a missing file only when something asks for it.
+        # The verdict is the important one: as a target it makes sure that an
+        # acceptance takes effect. After a stop, a code added to accept_unconverged
+        # changes no param and no file; the missing verdict, asked for here, makes the
+        # check run again and, through it (dada_seqtab takes the verdict as an input),
+        # dada_seqtab and the steps after it, even when nothing else would make them run.
+        # Not asked for: stats/dada2/quality_values.tsv, the table of every sample's
+        # quality values that choose_error_model writes next to the choice for people
+        # to read (no step reads it). As a target, deleting it would make
+        # choose_error_model run again and, through the choice, the learning and every
+        # step after it; now a deleted copy comes back whenever choose_error_model
+        # runs again for another reason.
+        # In an output folder made with v2.6.1 or earlier these files do not exist, so
+        # the choice, learning, the report, the check and dada_seqtab with every step
+        # after it run once there, whatever --rerun-triggers says. So does dada_filter,
+        # for every sample: the choice needs the quality values it now writes to a file
+        # of its own (stats/dada2/{sample}.quality_values.json), which such a folder
+        # lacks, and Snakemake makes the missing inputs of a step that has to run. That
+        # file is not asked for here: as a target, deleting it would filter that sample
+        # again, and through the new filtered reads learn the models again.
+        OUT / "stats" / "dada2" / "error_model_choice.json",
+        OUT / "05.dada2" / "error_model_R1.rds",
+        OUT / "05.dada2" / "error_model_R2.rds",
+        OUT / "stats" / "dada2" / "error_model.json",
+        *ERROR_MODEL_REPORT.values(),
+        OUT / "stats" / "dada2" / "error_model_check.txt",
         # DADA2 core
         OUT / "05.dada2" / "seqs.fasta",
         OUT / "05.dada2" / "seqtab_head_seqs.txt",
         OUT / "05.dada2" / "seqtab_head_names.txt",
         OUT / "05.dada2" / "read.counts",
-        OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.png",
-        OUT / "stats" / "dada2" / "filtered_read_R2_error_plot.png",
-        OUT / "stats" / "dada2" / "filtered_read_R1_error_plot.pdf",
-        OUT / "stats" / "dada2" / "filtered_read_R2_error_plot.pdf",
         # ASV length distribution stats + filter
         OUT / "stats" / "dada2" / "asv_length_stats.json",
         OUT / "stats" / "dada2" / "asv_length_hist.png",

@@ -1,0 +1,31 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: error_model: custom
+# (EXPERIMENTAL) with an error-function file that does not exist (a typo in the file
+# name). The start-up check must name the setting and the path, instead of Snakemake's
+# "missing input files" later. The runner (.test/run_dry_runs.sh) expects the message
+# fragment on the next line.
+# EXPECT: is not an existing file
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S
+output:
+  out_dir: .test/out/expected_stop_16S_custom_error_function_missing_file
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [d__Bacteria, d__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]
+  dada2:
+    learn_errors:
+      error_model: custom
+      custom_error_function:
+        file: .test/custom_error_functions/loess_wraper.R
+        name: loess_wrapper

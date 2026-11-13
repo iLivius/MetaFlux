@@ -1,0 +1,28 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: a word other than auto,
+# true or false (always) for the removal of the extra last sequencing cycle in primer
+# trimming. The setting takes auto (decide per sample and read direction from the
+# longest read), true or false. The runner (.test/run_dry_runs.sh) expects the message
+# fragment on the next line.
+# EXPECT: trim_final_cycle must be auto, true or false
+mode: amplicon
+input:
+  fastq_dir: .test/data/ITS
+output:
+  out_dir: .test/out/expected_stop_ITS_trim_final_cycle_word
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: ITS
+  its_region: ITS2
+  primers:
+    fwd: .test/primers/ITS/fwd_primer.fasta
+    rev: .test/primers/ITS/rev_primer.fasta
+  cutadapt:
+    trim_final_cycle: always
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [k__Fungi]
+      discard: []
