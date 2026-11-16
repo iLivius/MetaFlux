@@ -384,6 +384,38 @@ report by its name needs the new wording above. No count, threshold or decision 
 - **Tested with Snakemake**: the 16S and ITS test sets with an `out_dir` of 300 bytes gave
   the result tables of the same runs with a short `out_dir`, byte for byte.
 
+### A manual truncation with the automatic length window, and two clearer stops
+
+- **A manual truncation works with a length of your own and the automatic ASV length
+  window.** With `trunc_len.mode: manual`, `expected_length` set to a number or a
+  `[min, max]` range, and `length_filter.mode: auto` (the template's), `dada_length_filter`
+  crashed with a bare `KeyError: 'expected_length'` after the whole DADA2 run. With no
+  probe, its window is the expected length -15 % / +15 %, read from `stats/trunclen.json`,
+  and in manual mode `pick_trunclen` did not write it there; the start-up check caught
+  only the ITS form of this combination. `pick_trunclen` now records the expected length in
+  both modes, resolved the same way (a number as it is, a range as its max, `auto` as the
+  probe's statistic), so `trunclen.json` gains `expected_length` and
+  `expected_length_source` in manual mode. A length it cannot resolve (for example
+  `expected_length: null`) is recorded as `null`, with a note in its log, since the manual
+  cuts do not need it; the length filter then stops with one `ERROR` line that names the
+  settings to change.
+- **`dada_length_filter` stops with an `ERROR` line instead of a Python traceback** when its
+  settings leave it nothing to size the window from: the case above, and a
+  `length_filter.mode` that is neither `auto` nor given a `range`.
+- **The length probe says when all its products came from lineages it leaves out.** When
+  every in-silico product of a probe that leaves lineages out of its statistics (16S:
+  chloroplast, mitochondrial and eukaryote sequences, the pack's `probe_exclude_taxa`)
+  came from those lineages, the probe stopped with "no reference sequences had both
+  primers", which sends the user to check the primers' orientation. The message now gives
+  the number of products and the lineages they came from. The other two texts of this
+  stop are unchanged.
+- **Tested.** With Snakemake, the 16S test set with a manual truncation (243/154, the cuts
+  `auto` chooses on it), `expected_length: 385` and the template's length filter stopped
+  with the `KeyError` before the change and now finishes, with the window [327, 443]. The
+  probe, run with its cutadapt and seqtk on a synthetic reference of chloroplast records,
+  gave the old text before the change and the new one after; on half bacterial records it
+  measures as before.
+
 ### Documentation
 
 After 2.6.1, the online manual was updated to call the set bacterial COI homologues: the
@@ -423,6 +455,11 @@ new wording.
   files" error.
 - Every sample needs its R2 (or `_2`) file, with the extension of its R1 file ("Raw reads
   named `.fq` or `.fq.gz`, and the R2 file of every sample" above).
+- `mode`, `amplicon.type`, `amplicon.its_region`, `amplicon.primers.orientation` and
+  `amplicon.taxonomy.method` left empty, or given a number or `true`/`false`, stop the run
+  with their usual message, which shows the value. They ended with a bare Python
+  `AttributeError`, and an empty `its_region` did so for every marker, although only ITS
+  uses it; for the others it is now ignored.
 
 ### What runs again in a folder made with v2.6.1
 

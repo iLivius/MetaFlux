@@ -214,8 +214,9 @@ lands in it depends on `trunc_len.mode`. Under `auto` the rule computes its usua
 quality-based cuts, skips the merge-overlap constraint, and records
 `"expected_length": null` together with
 `"expected_length_source": "not_applicable:ITS_truncLen_overridden"`. Under `manual` it
-returns before the quality analysis runs at all and writes the configured `r1` and `r2`
-plus `"resolved_via": "manual"`. Either way the
+returns before the quality analysis runs at all and writes the configured `r1` and `r2`,
+the same `expected_length` and `expected_length_source`, and `"resolved_via": "manual"`.
+Either way the
 numbers are QC information, not instructions: `dada_filter` overrides them to `c(0, 0)`.
 
 !!! tip

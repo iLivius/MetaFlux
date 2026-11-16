@@ -209,9 +209,15 @@ _check_no_repeated_keys(workflow.overwrite_configfiles)
 # variable. Checked and failed here, at the very top, so a typo in the config
 # (`mode: amplikon`) stops the run immediately with a clear message instead of
 # surfacing later as a confusing missing-variable error deep in some rule file.
-MODE = config["mode"].lower()
-if MODE not in ("amplicon", "shotgun"):
-    sys.exit(f"config.mode must be 'amplicon' or 'shotgun' (got: {config['mode']!r})")
+# A value that is not text (mode: left empty, which YAML reads as null, a number,
+# true/false) has no lower-case form; it stops here with the same message as a
+# misspelt word, instead of a bare Python AttributeError. The same guard sits on the
+# other words this file compares case-insensitively (amplicon.type, its_region,
+# primers.orientation, taxonomy.method).
+_mode_value = config["mode"]
+if not isinstance(_mode_value, str) or _mode_value.lower() not in ("amplicon", "shotgun"):
+    sys.exit(f"config.mode must be 'amplicon' or 'shotgun' (got: {_mode_value!r})")
+MODE = _mode_value.lower()
 
 # Rule files the Snakefile leaves out of this run (see the include loop there). It
 # stays empty in amplicon mode. In shotgun mode the shotgun block below fills it from
@@ -1924,11 +1930,19 @@ if MODE == "amplicon":
     # gyrb / GYRB / gyrB and all resolve to the shipped pack 'gyrB'.
     _marker_by_ci = {name.upper(): name for name in MARKERS}
     _req_type = amp_cfg["type"]
-    if _req_type.upper() not in _marker_by_ci:
+    # Not text (empty, a number such as 16, a list): no marker can match, same message.
+    if not isinstance(_req_type, str) or _req_type.upper() not in _marker_by_ci:
         sys.exit(f"amplicon.type must be one of {sorted(MARKERS)} (got: {_req_type!r})")
     AMPLICON_TYPE = _marker_by_ci[_req_type.upper()]
 
-    ITS_REGION = amp_cfg.get("its_region", "ITS2").upper()
+    # its_region is read for every marker but only ITS uses it. Text is upper-cased; a
+    # value that is not text is kept as it is: harmless for the other markers, and for
+    # ITS it fails the check below, which shows it as given.
+    _its_region_value = amp_cfg.get("its_region", "ITS2")
+    if isinstance(_its_region_value, str):
+        ITS_REGION = _its_region_value.upper()
+    else:
+        ITS_REGION = _its_region_value
     if AMPLICON_TYPE == "ITS" and ITS_REGION not in ("ITS1", "ITS2"):
         sys.exit(f"amplicon.its_region must be 'ITS1' or 'ITS2' (got: {ITS_REGION!r})")
 
@@ -1950,7 +1964,13 @@ if MODE == "amplicon":
         and _sym in REF_PATHS
     }
 
-    ORIENTATION = amp_cfg["primers"].get("orientation", "fixed").lower()
+    # Text is lower-cased; a value that is not text (empty, true/false) fails the check
+    # with the message, shown as given.
+    _orientation_value = amp_cfg["primers"].get("orientation", "fixed")
+    if isinstance(_orientation_value, str):
+        ORIENTATION = _orientation_value.lower()
+    else:
+        ORIENTATION = _orientation_value
     if ORIENTATION not in ("fixed", "mixed"):
         sys.exit(f"amplicon.primers.orientation must be 'fixed' or 'mixed' (got: {ORIENTATION!r})")
 
@@ -2395,11 +2415,17 @@ if MODE == "amplicon":
         )
 
     # Taxonomy method — validated at parse time
-    TAXONOMY_METHOD = amp_cfg["taxonomy"].get("method", "rdp").lower()
+    # Text is lower-cased; a value that is not text (empty, a number) fails the check
+    # with the message, shown as given.
+    _method_value = amp_cfg["taxonomy"].get("method", "rdp")
+    if isinstance(_method_value, str):
+        TAXONOMY_METHOD = _method_value.lower()
+    else:
+        TAXONOMY_METHOD = _method_value
     if TAXONOMY_METHOD not in ("rdp", "sintax"):
         sys.exit(
             f"amplicon.taxonomy.method must be 'rdp' or 'sintax' "
-            f"(got: {amp_cfg['taxonomy']['method']!r})"
+            f"(got: {_method_value!r})"
         )
     # A marker with no SINTAX reference (gyrB, rpoB) can only be classified by rdp.
     # Catch method: sintax here with a clear message instead of a None-path crash

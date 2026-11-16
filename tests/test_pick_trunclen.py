@@ -31,6 +31,10 @@ What is tested, and why it matters:
     choice of the cut pair, read pairs sampled over the whole file, the same
     trunclen.json keys, the quality rule logged next to it, and ITS left to the
     quality rule.
+  - trunc_len.mode: manual records the expected amplicon length in trunclen.json, resolved
+    as in auto mode (a number, the top of a range, the probe statistic), or null with a
+    note when it cannot be resolved (ITS: null), because dada_length_filter reads it when
+    no probe ran.
 
 The script is run whole with a stand-in snakemake object (run_script in helpers.py) on
 Falco reports written to a temporary folder: one per sample and read direction, with a
@@ -92,14 +96,16 @@ def load_picker():
 
 def run_pick(tmp_path, r1=(250, 250), r2=(250, 250), policy="raise_trunc",
              expected="auto", stat="p95", key="16S", amp_type="16S", probe=None,
-             samples=None, method="quality", q_threshold=20, extra_overlap=20):
+             samples=None, method="quality", q_threshold=20, extra_overlap=20,
+             mode="auto", manual=(None, None)):
     """Write each sample's two Falco reports and two FASTQ files (and the probe JSON for
     auto), run the picker, and return (exit code or None, log text, trunclen.json path).
 
     `samples` is a list of dicts, one per sample, with any of: "r1"/"r2" (length,
     good_until) for the Falco reports, "lengths_r1"/"lengths_r2" (the read-length
     distribution), "reads_r1"/"reads_r2" (the FASTQ reads, see fastq_text). Left out,
-    one sample is made from `r1` and `r2`, with 50 reads of that length at Q30."""
+    one sample is made from `r1` and `r2`, with 50 reads of that length at Q30.
+    `mode` and `manual` are amplicon.trunc_len.mode and its (manual_r1, manual_r2)."""
     if samples is None:
         samples = [{}]
     falco_r1, falco_r2, fastq_r1, fastq_r2 = [], [], [], []
@@ -126,8 +132,8 @@ def run_pick(tmp_path, r1=(250, 250), r2=(250, 250), policy="raise_trunc",
                "stripped_r1": fastq_r1, "stripped_r2": fastq_r2},
         output={"json": str(out_json)},
         params={"amplicon_type": amp_type, "expected_length": expected, "min_overlap": 12,
-                "mode": "auto", "q_threshold": q_threshold, "q_floor": 15,
-                "resolve_policy": policy, "manual_r1": None, "manual_r2": None,
+                "mode": mode, "q_threshold": q_threshold, "q_floor": 15,
+                "resolve_policy": policy, "manual_r1": manual[0], "manual_r2": manual[1],
                 "probe_stat": stat, "probe_stat_key": key, "min_read_coverage_pct": 95,
                 "method": method, "simulate_extra_overlap": extra_overlap,
                 "trunc_q": 2, "max_ee": [2, 5], "min_len": 20, "max_len": None},
@@ -395,3 +401,55 @@ def test_an_unknown_method_stops_with_a_readable_message(tmp_path):
     code, log, _ = run_pick(tmp_path, stat="q3", method="figaro")
     assert code == 2
     assert "amplicon.trunc_len.method must be quality or simulate, got 'figaro'" in log
+
+
+# ── Manual mode records the expected length for the length filter ───────────────────
+# With length_filter.mode: auto and no probe, dada_length_filter sizes its window from
+# trunclen.json's expected_length (-15 % / +15 %). Manual mode used to leave the field
+# out, and that combination crashed there with a bare KeyError after the whole DADA2 run.
+
+
+def test_manual_mode_records_a_length_of_your_own(tmp_path):
+    code, log, out_json = run_pick(tmp_path, expected=385, mode="manual", manual=(243, 154))
+    assert code in (None, 0)
+    assert json.loads(out_json.read_text()) == {
+        "r1": 243, "r2": 154, "mode": "manual", "amplicon_type": "16S",
+        "expected_length": 385, "expected_length_source": "manual:int",
+        "resolved_via": "manual",
+    }
+    assert "expected_length: 385 (source: manual:int)" in log
+
+
+def test_manual_mode_records_the_top_of_a_range(tmp_path):
+    # As in auto mode, a [min, max] range counts as its max.
+    code, _, out_json = run_pick(tmp_path, expected=[320, 360], mode="manual", manual=(243, 154))
+    assert code in (None, 0)
+    record = json.loads(out_json.read_text())
+    assert (record["expected_length"], record["expected_length_source"]) == (360, "manual:range_max")
+
+
+def test_manual_mode_with_auto_reads_the_probe_statistic(tmp_path):
+    code, _, out_json = run_pick(tmp_path, expected="auto", stat="q3", mode="manual",
+                                 manual=(243, 154))
+    assert code in (None, 0)
+    record = json.loads(out_json.read_text())
+    assert (record["expected_length"], record["expected_length_source"]) == (427, "auto:q3")
+
+
+def test_manual_mode_records_null_when_the_length_cannot_be_resolved(tmp_path):
+    # expected_length: null. The manual cuts do not need a length, so the step passes,
+    # and a note says that a length filter without a probe would need one.
+    code, log, out_json = run_pick(tmp_path, expected=None, mode="manual", manual=(243, 154))
+    assert code in (None, 0)
+    record = json.loads(out_json.read_text())
+    assert (record["expected_length"], record["expected_length_source"]) == (None, "unresolved")
+    assert "NOTE: amplicon.expected_length could not be resolved" in log
+
+
+def test_manual_mode_on_its_records_no_length(tmp_path):
+    code, _, out_json = run_pick(tmp_path, expected=None, amp_type="ITS", mode="manual",
+                                 manual=(250, 200))
+    assert code in (None, 0)
+    record = json.loads(out_json.read_text())
+    assert (record["expected_length"], record["expected_length_source"]) == (
+        None, "not_applicable:ITS_truncLen_overridden")

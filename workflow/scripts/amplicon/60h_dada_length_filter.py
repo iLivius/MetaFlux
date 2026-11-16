@@ -196,8 +196,11 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
          p95+margin for every marker.
       3. mode=auto and no probe JSON (expected_length was set manually, so no
          probe ran) -> fall back to trunclen.json's expected_length +/- 15%,
-         a cruder but workable substitute.
-    Raises if mode is neither 'auto' nor has a manual range (config error).
+         a cruder but workable substitute. pick_trunclen writes that field in
+         both trunc_len modes (null when it could not resolve the length).
+    Raises ValueError (config error, printed by main() as an ERROR line) if mode is
+    neither 'auto' nor has a manual range, or if mode=auto finds neither a probe JSON
+    nor an expected length in trunclen.json.
 
     amp_type and extraction_enabled come from the rule's params (the marker,
     and whether target_extract ran before this step); only the ITS floor
@@ -271,8 +274,21 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
                 source = f"auto:probe_q1_p95+/-{margin}"
             return min_len, max_len, source
 
-        # Fallback: expected_length from trunclen.json ± 15%
+        # Fallback: expected_length from trunclen.json ± 15%. pick_trunclen writes the
+        # field in both trunc_len modes; it is null when the length could not be
+        # resolved (for example expected_length: null), and then nothing here can size
+        # the window: stop with the settings to change (main() prints the text as an
+        # ERROR line), not with a bare KeyError or TypeError.
         tl = json.loads(Path(trunclen_json_path).read_text())
+        if tl.get("expected_length") is None:
+            raise ValueError(
+                "length_filter.mode is auto, but nothing can size the window: no probe ran "
+                "(amplicon.expected_length is not 'auto') and stats/trunclen.json holds no "
+                "expected length (its expected_length_source: "
+                f"{tl.get('expected_length_source', 'missing')}). Set amplicon.expected_length "
+                "to a number, a [min, max] range or 'auto', or set length_filter.mode: manual "
+                "with a length_filter.range."
+            )
         exp = int(tl["expected_length"])
         min_len = math.floor(exp * 0.85)
         max_len = math.ceil(exp * 1.15)
@@ -399,10 +415,20 @@ def main() -> int:
 
     # ── Window determination ──────────────────────────────────────────────────
     # amp_type and extraction_enabled decide whether the ITS floor applies.
-    min_len, max_len, source = determine_window(
-        mode, manual_range, probe_json_path, trunclen_json, window_margin, log,
-        amp_type, extraction_enabled,
-    )
+    # determine_window raises ValueError when the settings leave it nothing to size
+    # the window from (mode neither auto nor with a range; auto with no probe and no
+    # expected length). That is a setting to change, not a fault of the code, so the
+    # text goes to the log and the console as one ERROR line and the step stops with
+    # exit 1, instead of a Python traceback.
+    try:
+        min_len, max_len, source = determine_window(
+            mode, manual_range, probe_json_path, trunclen_json, window_margin, log,
+            amp_type, extraction_enabled,
+        )
+    except ValueError as problem:
+        log(f"[dada_length_filter] ERROR: {problem}")
+        log_fh.close()
+        return 1
     log(f"[dada_length_filter] Filter window: [{min_len}, {max_len}]  (source: {source})")
 
     # ── Apply the filter to the filter-source sequences ───────────────────────

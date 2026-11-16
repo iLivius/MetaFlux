@@ -1116,9 +1116,43 @@ def main() -> int:
             log("[pick_trunclen] ERROR: trunc_len.mode=manual but manual_r1/manual_r2 are not set")
             return 2
         log(f"[pick_trunclen] Manual mode: r1={manual_r1} r2={manual_r2}")
+        # The expected amplicon length is recorded in manual mode too. The manual cuts
+        # do not use it, but rule dada_length_filter does: with length_filter.mode: auto
+        # and no probe (amplicon.expected_length set to a number or a [min, max] range),
+        # its window is that length -15 % / +15 %, read from this file. Without it, that
+        # combination crashed in dada_length_filter with a bare KeyError, after the
+        # whole DADA2 run. The length is resolved exactly as in auto mode below
+        # (resolve_expected_length: a number as it is, a range as its max, 'auto' as the
+        # probe's statistic). A value that cannot be resolved does not stop this step,
+        # because the cuts do not need it: it is written as null with a note, and
+        # dada_length_filter stops with its own message only if it needs the value.
+        # ITS never has one (see the ITS branch of auto mode).
+        manual_exp_len = None
+        manual_exp_source = None
+        if amp_type == "ITS":
+            manual_exp_source = "not_applicable:ITS_truncLen_overridden"
+        else:
+            manual_probe_json = None
+            if hasattr(sm.input, "probe_json") and sm.input.probe_json:
+                pj = sm.input.probe_json
+                manual_probe_json = pj[0] if isinstance(pj, list) else pj
+            try:
+                manual_exp_len, manual_exp_source = resolve_expected_length(
+                    expected_length, amp_type, manual_probe_json, log,
+                    probe_stat=probe_stat,
+                )
+                log(f"[pick_trunclen] expected_length: {manual_exp_len} (source: {manual_exp_source}); "
+                    f"the manual cuts do not use it, the length filter can")
+            except (ValueError, FileNotFoundError, KeyError) as problem:
+                manual_exp_source = "unresolved"
+                log(f"[pick_trunclen] NOTE: amplicon.expected_length could not be resolved, so it is "
+                    f"recorded as null ({problem}). The manual cuts do not need it; "
+                    f"length_filter.mode: auto without a probe would.")
         write_json(out_json, {
             "r1": int(manual_r1), "r2": int(manual_r2),
             "mode": "manual", "amplicon_type": amp_type,
+            "expected_length": manual_exp_len,
+            "expected_length_source": manual_exp_source,
             "resolved_via": "manual",
         })
         return 0

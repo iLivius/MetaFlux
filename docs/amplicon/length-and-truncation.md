@@ -614,7 +614,10 @@ distribution. The primer mismatch tolerance is `amplicon.cutadapt.max_error_rate
 
 If no reference sequence carries both primers, the rule fails with a message pointing at
 primer orientation and the error tolerance — a genuine failure, since sizing a window
-from zero amplicons is meaningless.
+from zero amplicons is meaningless. If the primers do give products but every one of them
+belongs to a lineage the marker pack leaves out of the statistics (`probe_exclude_taxa`;
+for 16S Chloroplast, Eukaryota and Mitochondria), the message says that instead, with the
+counts: the primers then amplify mostly organelle or eukaryote sequences of the reference.
 
 #### A primer that matches twice
 
@@ -759,7 +762,7 @@ The window is chosen by the first of these that applies:
 |---|---|---|---|
 | 1 | `length_filter.range` is set to `[min, max]` | exactly that range | `manual:config_range` |
 | 2 | `length_filter.mode: auto` and a probe JSON exists | `[probe_q1 − window_margin, probe_p95 + window_margin]`; for ITS with extraction on, `[probe_min, probe_p95 + window_margin]` | `auto:probe_q1_p95+/-<margin>`; for ITS with extraction on, `auto:ITS_probe_min_p95+<margin>` |
-| 3 | `length_filter.mode: auto`, no probe JSON, and `trunc_len.mode: auto` — the only mode that records `expected_length` in `stats/trunclen.json` | `expected_length × 0.85` to `expected_length × 1.15`, read from `stats/trunclen.json` | `auto:fallback_expected_length±15pct` |
+| 3 | `length_filter.mode: auto` and no probe JSON (`expected_length` set to a number or a `[min, max]` range) | `expected_length × 0.85` to `expected_length × 1.15`, read from `stats/trunclen.json` (in either `trunc_len` mode; a range counts as its max) | `auto:fallback_expected_length±15pct` |
 
 `amplicon.length_filter.window_margin` defaults to `50` bp and is added on both sides
 (for ITS with extraction on, at the top only; see below).
@@ -780,17 +783,17 @@ floor at 125 bp, which removed three yeasts of the [ITS test set](../about/test-
 [the ITS page](markers/its.md#region-extraction-with-itsx)). With
 `extraction.enabled: false` the window is built as for the other markers.
 
-!!! warning "A manual `expected_length` with a manual truncation leaves route 3 nothing to read"
+!!! note "Route 3 with a manual truncation"
 
-    Route 3 takes `expected_length` out of `stats/trunclen.json`, and only
-    `trunc_len.mode: auto` writes that field — in `manual` mode `pick_trunclen` records
-    just `r1`, `r2`, `mode`, `amplicon_type` and `resolved_via`. A run that combines
-    `trunc_len.mode: manual` with a manual `expected_length` and the shipped
-    `length_filter.mode: auto` therefore has neither a probe JSON (route 2) nor an
-    `expected_length` to fall back on, and it fails in `dada_length_filter` — after the
-    whole DADA2 chain and any extraction have already finished. Unlike the ITS case
-    below, nothing catches this combination at start-up. Set `length_filter.range`
-    explicitly whenever `expected_length` is not `auto`, or keep `trunc_len.mode: auto`.
+    Route 3 takes `expected_length` out of `stats/trunclen.json`, which `pick_trunclen`
+    writes in both `trunc_len` modes: in `manual` mode it resolves the length exactly as
+    in `auto` mode, although its manual cuts do not use it. When the length cannot be
+    resolved (for example `expected_length: null`), the field is `null`, and
+    `dada_length_filter` stops with one `ERROR` line that names the settings to change:
+    a number, a range or `auto` for `expected_length`, or `length_filter.mode: manual`
+    with a `range`. Up to v2.6.1 manual mode did not write the field, and a manual
+    truncation with a length of your own and `length_filter.mode: auto` failed in
+    `dada_length_filter` with a bare `KeyError`, after the whole DADA2 chain.
 
 **What the filter produces.** ASVs outside the window are dropped from the FASTA and
 from the count table, and both keyed forms of the table are rewritten:
@@ -863,14 +866,16 @@ holds:
 | `amplicon_type` | the marker the run used |
 | `q_threshold_requested` / `q_threshold_used` | differ only when `relax_q` fired; `q_threshold_used` is `null` under `method: simulate` |
 | `expected_length` | the resolved amplicon length (`null` for ITS) |
-| `expected_length_source` | `manual:int`, `manual:range_max`, `auto:<stat>`, or the ITS placeholder |
+| `expected_length_source` | `manual:int`, `manual:range_max`, `auto:<stat>`, the ITS placeholder, or `unresolved` (manual mode, length not resolvable) |
 | `min_overlap` | the design overlap the constraint used |
 | `overlap_slack` | bases of margin left over; `null` for ITS |
 | `resolved_via` | `primary`, `raise_trunc`, `relax_q`, `simulate` or `manual` |
 | `aggregation` | `median_across_samples_per_bin`, or `simulated_filterAndTrim_on_sampled_pairs` under `method: simulate` |
 
-In `manual` mode only `r1`, `r2`, `mode`, `amplicon_type` and `resolved_via` are written,
-since nothing else was computed.
+In `manual` mode `r1`, `r2`, `mode`, `amplicon_type`, `expected_length`,
+`expected_length_source` and `resolved_via` are written. The cuts are the configured
+ones; the expected length is resolved as in `auto` mode, for the length filter's route 3,
+and is `null` when it cannot be resolved (and for ITS).
 
 The full reasoning — the quality values of the reads and what `q_threshold` means on
 them, each sample's read-length limit and the share of its reads left out, per-direction

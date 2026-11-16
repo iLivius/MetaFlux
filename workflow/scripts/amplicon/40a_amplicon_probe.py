@@ -233,6 +233,44 @@ def pct(sorted_lengths: list[int], p: float) -> int:
     return sorted_lengths[idx]
 
 
+# ── The stop text when the PCR-mode probe has no length left to measure ──
+def no_lengths_message(n_products: int, n_second_site: int, n_excluded: int,
+                       excluded_taxa: list[str]) -> str:
+    """The ERROR text of the PCR-mode probe when no product is left for the statistics.
+
+    Three ways to get there, each with its own text:
+      - no product at all: no reference sequence had both primers;
+      - pass 3 left out every product: each holds a second forward-primer site;
+      - the products left all come from lineages the marker pack leaves out of the
+        statistics (probe_exclude_taxa; for 16S Chloroplast, Eukaryota and
+        Mitochondria), some perhaps after pass 3. This case used to get the first
+        text, which sent the user to check primers and orientation for a probe that
+        had in fact found products.
+    n_products counts every in-silico product; n_second_site and n_excluded are those
+    that pass 3 and the lineage list removed; excluded_taxa is the list itself.
+    The first two texts are word for word those of earlier versions.
+    """
+    if n_products == 0:
+        return ("[amplicon_probe] ERROR: no reference sequences had both primers. "
+                "Check primer sequences against the reference DB orientation and "
+                "primer error tolerance.")
+    if n_second_site == n_products:
+        return (f"[amplicon_probe] ERROR: each of the {n_products} in-silico "
+                "products holds a second full-length forward-primer site, so none is "
+                "left to measure the amplicon length from. Set amplicon.expected_length "
+                "to a number, and length_filter.mode: manual with a range, for these "
+                "primers.")
+    reasons = (f"{n_excluded} come from lineages the marker pack leaves out of the length "
+               f"statistics (probe_exclude_taxa: {', '.join(sorted(excluded_taxa))})")
+    if n_second_site:
+        reasons += f", and {n_second_site} hold a second full-length forward-primer site"
+    return (f"[amplicon_probe] ERROR: the primers gave {n_products} in-silico products, "
+            f"but none is left to measure the amplicon length from: {reasons}. Check that "
+            "the primers target the marker's own organisms, or set "
+            "amplicon.expected_length to a number, and length_filter.mode: manual with a "
+            "range, for these primers.")
+
+
 out_amplicons.parent.mkdir(parents=True, exist_ok=True)
 
 # Filled by pass 3 only (pcr mode, packs with probe_exclude_second_site: true): how
@@ -328,21 +366,11 @@ if probe_mode == "pcr":
         lengths, n_excluded = lengths_for_stats(stats_fasta)
 
     if not lengths:
-        if n_products > 0 and n_second_site == n_products:
-            # Pass 3 left nothing: every product holds a second forward-primer site.
-            log.write(
-                f"\n[amplicon_probe] ERROR: each of the {n_products} in-silico "
-                "products holds a second full-length forward-primer site, so none is "
-                "left to measure the amplicon length from. Set amplicon.expected_length "
-                "to a number, and length_filter.mode: manual with a range, for these "
-                "primers.\n"
-            )
-        else:
-            log.write(
-                "\n[amplicon_probe] ERROR: no reference sequences had both primers. "
-                "Check primer sequences against the reference DB orientation and "
-                "primer error tolerance.\n"
-            )
+        # Every in-silico product: those pass 3 left out (0 without pass 3), plus those
+        # the statistics read (kept or left out by the lineage list). No product left:
+        # the text says which of the three reasons applies (no_lengths_message).
+        n_all_products = n_second_site + len(lengths) + n_excluded
+        log.write(f"\n{no_lengths_message(n_all_products, n_second_site, n_excluded, sorted(exclude_taxa))}\n")
         log.close()
         sys.exit(2)
 

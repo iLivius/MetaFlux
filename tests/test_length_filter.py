@@ -15,6 +15,10 @@ What is tested, and why it matters:
     probe, with Metaxa2 extraction on), 18S, gyrB (a direct-mode probe, like ITS), ITS
     with extraction off (its ASVs then still carry their rRNA flanks), a manual range on
     an ITS run, and the fallback to expected_length when no probe ran.
+  - Settings that leave nothing to size the window from stop the step with one ERROR line
+    and exit 1, not a Python traceback: mode auto with neither a probe nor an expected
+    length in trunclen.json (it is null when pick_trunclen could not resolve one), and a
+    mode that is neither auto nor given a range.
 
 The script is run whole with a stand-in snakemake object (run_script in helpers.py), on
 small files written to a temporary folder: the ASV FASTA before and after extraction, the
@@ -164,14 +168,16 @@ def count_table(n_asvs):
 
 
 def run_filter(tmp_path, amp_type, extraction_enabled, lengths, probe=None,
-               window_margin=50, manual_range=None, expected_length=None):
+               window_margin=50, manual_range=None, expected_length=None,
+               mode="auto", expected_exit=0):
     """Run 60h_dada_length_filter.py once, as rule dada_length_filter would, on ASVs of
     the given `lengths` (the lengths the filter judges: after extraction when it ran).
     `probe` is the probe JSON as a dict, or None for a run without one (expected_length
     set by hand, so the rule hands an empty list). `expected_length` goes into
     trunclen.json, as pick_trunclen writes it (null for ITS).
     Returns (the filter_window of asv_length_stats.json, the names of the kept ASVs,
-    the ASV columns of the kept count table, the log text)."""
+    the ASV columns of the kept count table, the log text). With an `expected_exit`
+    other than 0 (a run that must stop), only the log text is filled in."""
     dada2_dir = tmp_path / "05.dada2"
     # Before extraction the ASVs still carry their rRNA flanks (140 bases here); when
     # extraction is off, the filter judges these very sequences.
@@ -199,14 +205,16 @@ def run_filter(tmp_path, amp_type, extraction_enabled, lengths, probe=None,
                 "seqtab_seqs": str(dada2_dir / "seqtab_lenfilt_head_seqs.txt"),
                 "stats_json": str(stats_json),
                 "hist_png": str(tmp_path / "stats" / "dada2" / "asv_length_hist.png")},
-        params={"mode": "auto", "window_margin": window_margin,
+        params={"mode": mode, "window_margin": window_margin,
                 "manual_range": manual_range, "amp_type": amp_type,
                 "extraction_enabled": extraction_enabled},
         log=[str(log_file)],
     )
     with pytest.raises(SystemExit) as finished:
         run_script(SCRIPT, sm)
-    assert finished.value.code == 0, log_file.read_text()
+    assert finished.value.code == expected_exit, log_file.read_text()
+    if expected_exit != 0:
+        return None, None, None, log_file.read_text()
 
     window = json.loads(stats_json.read_text())["filter_window"]
     kept_names = [line[1:] for line in kept_fasta.read_text().splitlines()
@@ -324,3 +332,23 @@ def test_fallback_without_a_probe_is_unchanged(tmp_path):
     assert window == {"min": 340, "max": 460,
                       "source": "auto:fallback_expected_length±15pct"}
     assert kept == ["ASV_2", "ASV_3", "ASV_4"]
+
+
+# ── Settings that leave nothing to size the window from ────────────────────────────
+
+
+def test_no_probe_and_no_expected_length_stops_with_the_settings_to_change(tmp_path):
+    """mode auto, no probe, and trunclen.json's expected_length null (pick_trunclen could
+    not resolve one): one ERROR line that names what to set, exit 1."""
+    log = run_filter(tmp_path, "16S", True, [340, 400], expected_length=None,
+                     expected_exit=1)[3]
+    assert ("[dada_length_filter] ERROR: length_filter.mode is auto, but nothing can size "
+            "the window") in log
+    assert "length_filter.range" in log
+    assert "Traceback" not in log
+
+
+def test_a_mode_without_a_range_stops_with_an_error_line(tmp_path):
+    log = run_filter(tmp_path, "16S", True, [340, 400], mode="manual", expected_exit=1)[3]
+    assert ("[dada_length_filter] ERROR: length_filter.mode='manual' is not 'auto', and no "
+            "length_filter.range is set.") in log
