@@ -275,14 +275,14 @@ input:
 | `bioproject` | NCBI BioProject accession to fetch from SRA instead of using local files | `null` | Shotgun only. `null` means use whatever is already in `fastq_dir`. |
 | `accession_list` | Restricts a BioProject fetch to named runs | `null` | A YAML list of run accessions. Useful when a BioProject mixes WGS with amplicon or RNA-Seq runs. |
 
-**File naming.** Amplicon mode requires `{sample}_R1.fastq.gz` /
-`{sample}_R2.fastq.gz` and stops with a clear message if it finds SRA-style
-`{sample}_1/_2` naming instead. Shotgun mode accepts either convention and detects
-which one is in use. The reads themselves must be `.fastq.gz` or the uncompressed
-`.fastq`: `fq` and `fq.gz` pass the start-up check but are not resolved by the
-rules afterwards. The extension check only looks at the R1 files — a mixture
-there is rejected rather than half-processed, while a mismatched R2 extension is
-not caught, so the whole directory is best kept consistent.
+**File naming.** Amplicon mode requires `{sample}_R1` / `{sample}_R2` files
+(for example `{sample}_R1.fastq.gz`) and stops with a clear message if it finds
+SRA-style `{sample}_1/_2` naming instead. Shotgun mode accepts either convention and
+detects which one is in use. The reads can be gzipped (`.fastq.gz` or `.fq.gz`) or
+uncompressed (`.fastq` or `.fq`). All R1 files must share one extension, and a
+mixture is rejected at start-up rather than half-processed. Every sample also needs
+its R2 file with that same extension: a missing R2 file, or one with another
+extension, stops the run at start-up with the names of the files not found.
 
 Sample names are taken from the part of the filename before `_R1`/`_1`. Names
 containing any of `* # @ % ^ / ! ? & : ; | < >` or a space are rejected at

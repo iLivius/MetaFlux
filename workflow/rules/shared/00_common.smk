@@ -3849,6 +3849,25 @@ def _discover_local(fastq_dir: Path):
     return list(s1), list(e1), "_1"
 
 
+def _samples_without_r2(fastq_dir: Path, samples, naming: str, extn: str):
+    """The samples of a local run whose second-read file is missing.
+
+    _discover_local finds the samples from their first-read files only
+    ({sample}_R1.<extn>, or {sample}_1.<extn>). Every rule then reads the second-read
+    file under the same naming and with the same extension (raw_fastq() below):
+    {sample}_R2.<extn> next to an _R1 file, {sample}_2.<extn> next to an _1 file.
+    Returns, in the order given, the samples for which that file does not exist; an R2
+    file with another extension counts as missing. Empty when every pair is complete.
+    """
+    second_mate = "_R2" if naming == "_R1" else "_2"
+    missing = []
+    for sample in samples:
+        r2_file = fastq_dir / f"{sample}{second_mate}.{extn}"
+        if not r2_file.exists():
+            missing.append(sample)
+    return missing
+
+
 # Resolve SAMPLES + extension + naming at parse time.
 if MODE == "shotgun" and BIOPROJECT:
     _cache = FASTQ_DIR / f"{BIOPROJECT}_runinfo.csv"
@@ -3874,6 +3893,27 @@ else:
         sys.exit(
             f"[MetaFlux] mode=amplicon requires {{sample}}_R1/_R2 naming; "
             f"found {{sample}}_1/_2 in {FASTQ_DIR}"
+        )
+
+    # Every sample needs its second-read file, named like the first and with the same
+    # extension: the rules build both paths from the naming and the extension found
+    # above (raw_fastq() below), and the glob looked at the first-read files only.
+    # Without this check a missing R2 file showed up only later, and in shotgun mode
+    # badly: under _R1/_R2 naming, the missing "<sample>_R2.fastq.gz" is an output of
+    # rule download_sra, so Snakemake planned an SRA download for the local sample and,
+    # as it does before every job, first deleted the job's existing outputs, among them
+    # the sample's own R1 file.
+    _missing_r2 = _samples_without_r2(FASTQ_DIR, SAMPLES, FASTQ_NAMING, EXTN)
+    if _missing_r2:
+        _second_mate = "_R2" if FASTQ_NAMING == "_R1" else "_2"
+        _expected = [f"{s}{_second_mate}.{EXTN}" for s in _missing_r2]
+        _listed = ", ".join(_expected[:5])
+        if len(_expected) > 5:
+            _listed += f" and {len(_expected) - 5} more"
+        sys.exit(
+            f"[MetaFlux] {len(_missing_r2)} sample(s) in {FASTQ_DIR} have no {_second_mate} file "
+            f"with the extension of their {FASTQ_NAMING} file (.{EXTN}): {_listed} not found. "
+            f"Every sample needs a {FASTQ_NAMING} and a {_second_mate} file with the same extension."
         )
 
 # Sample-name sanity check — snakemake gets unhappy when wildcards contain
@@ -4024,21 +4064,21 @@ if MODE == "shotgun" and RUN_SYLPH:
 # ────────────────────── Path helpers (shared) ──────────────────
 def raw_fastq(sample: str, read: int) -> str:
     """Resolve a sample's raw FASTQ path for read 1 or 2.
-    Honors the run-level naming convention (_R1/_R2 or _1/_2) discovered above,
-    and prefers .gz over plain .fastq."""
+
+    Built from what sample discovery found above: the run's naming (FASTQ_NAMING,
+    _R1/_R2 or _1/_2) and the run's one extension (EXTN: fastq.gz, fq.gz, fastq or
+    fq), so the path names exactly the files discovery saw; the R2 files were checked
+    there as well (_samples_without_r2). In BioProject mode the files do not exist yet:
+    EXTN is then fastq.gz and the naming _R1, which gives the paths rule download_sra
+    writes, so Snakemake runs the download first. Before 2.7.0 the path was always
+    .fastq.gz or .fastq, so .fq and .fq.gz files passed the start-up check and were
+    then not found.
+    """
     if read == 1:
         mate = FASTQ_NAMING
     else:
         mate = "_R2" if FASTQ_NAMING == "_R1" else "_2"
-    gz    = FASTQ_DIR / f"{sample}{mate}.fastq.gz"
-    plain = FASTQ_DIR / f"{sample}{mate}.fastq"
-    # Pre-download (BioProject) the .gz doesn't exist yet — return the .gz path
-    # so download_sra's output declaration aligns with downstream consumers.
-    if gz.exists():
-        return str(gz)
-    if plain.exists():
-        return str(plain)
-    return str(gz)
+    return str(FASTQ_DIR / f"{sample}{mate}.{EXTN}")
 
 
 def raw_r1(sample: str) -> str:

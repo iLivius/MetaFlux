@@ -52,11 +52,9 @@ needs no Kraken2 database.
 Input files are found by pattern, not listed by hand. MetaFlux globs `fastq_dir` for
 `{sample}_R1` / `{sample}_R2` pairs — shotgun also accepts the SRA-style
 `{sample}_1` / `{sample}_2` — and the part before the mate suffix becomes the sample
-name used in every output table. All files must share one extension, and in practice
-that extension has to be `fastq` or `fastq.gz`. The start-up check also lets `fq` and
-`fq.gz` through, but every rule that reads a raw file resolves its path as
-`.fastq.gz` or `.fastq`, so a directory of `.fq.gz` files passes validation and then
-fails later on an input the rules cannot resolve.
+name used in every output table. All files must share one extension: `fastq.gz`,
+`fq.gz`, `fastq` or `fq`. Every sample needs both files, R1 and R2, with that
+extension.
 
 !!! tip "Keep the template, edit a copy"
 
@@ -82,7 +80,8 @@ What is checked before the first job starts:
 
 - `mode` is one of `amplicon` / `shotgun`.
 - `fastq_dir` yields at least one `{sample}_R1` file (or `{sample}_1` in shotgun
-  mode), all with one consistent extension, and sample names without characters
+  mode), all with one consistent extension, each with its `_R2` (or `_2`) file of the
+  same extension, and sample names without characters
   Snakemake cannot use as wildcards (a wildcard is the placeholder — here
   `{sample}` — that a rule is instantiated over, once per sample).
 - Amplicon: `amplicon.type` matches a marker; both primer FASTA files exist;

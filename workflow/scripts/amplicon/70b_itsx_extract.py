@@ -115,21 +115,35 @@ log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
 log = log_path.open("w")
 
-Path(prefix).parent.mkdir(parents=True, exist_ok=True)
-
 # ── Run ITSx ────────────────────────────────────────────────────
+# ITSx runs inside the folder of its own outputs (prefix_dir), with only the last
+# part of the prefix ("seqs") as -o. Why: ITSx names its temporary folder
+# "ITSx_temp_directory__" followed by the -o value with every "/" turned into "-",
+# and creates it as ONE folder name in the folder it is started from. With the full
+# prefix as -o, that name grew with out_dir, and once it passed 255 bytes, the most
+# Linux file systems allow for one name (an out_dir longer than 210 bytes), the folder
+# could not be made: ITSx stopped without region files but exited 0, and the check
+# below then blamed the primers or the ITS region. Started in its output folder with
+# -o "seqs", the name is always "ITSx_temp_directory__seqs", whatever out_dir is, and
+# ITSx deletes the folder when it ends. The output files are the same as before
+# (<prefix>.ITS1.fasta and the others, read below through the full prefix). The input
+# path is made absolute so it still points to the file from inside prefix_dir.
+prefix_dir  = Path(prefix).parent      # <out_dir>/05.dada2/_itsx_tmp
+prefix_name = Path(prefix).name        # "seqs"
+prefix_dir.mkdir(parents=True, exist_ok=True)
+
 cmd = [
     "ITSx",
-    "-i", input_fasta,
-    "-o", prefix,
+    "-i", str(Path(input_fasta).absolute()),
+    "-o", prefix_name,
     "--only_full", "F",
     "-t", "all",
     "--cpu", str(threads),
 ]
-log.write(f"[itsx_extract] Running: {' '.join(cmd)}\n")
+log.write(f"[itsx_extract] Running in {prefix_dir}: {' '.join(cmd)}\n")
 log.write(f"[itsx_extract] Extracting region: {its_region}\n")
 log.flush()
-res = subprocess.run(cmd, stdout=log, stderr=log)
+res = subprocess.run(cmd, stdout=log, stderr=log, cwd=prefix_dir)
 if res.returncode != 0:
     log.write(f"[itsx_extract] ERROR: ITSx exited with code {res.returncode}\n")
     log.close()

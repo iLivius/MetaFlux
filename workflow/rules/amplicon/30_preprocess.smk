@@ -4,7 +4,9 @@
 # ─────────────────── 01.reads/ symlinks (visibility) ───────────
 # Symlinks input FASTQs into 01.reads/. Raw files stay in fastq_dir; downstream
 # rules (rm_phix, falco_raw, count_reads_raw) read from there directly.
-# These symlinks are listed in rule all for visibility only.
+# These symlinks are listed in rule all for visibility only. A link is named
+# {sample}_R{r}.fastq.gz whatever the extension of the file it points to (fastq.gz,
+# fq.gz, fastq or fq), so with uncompressed input it points to a plain FASTQ.
 rule link_reads:
     input:
         fastq = lambda wc: raw_fastq(wc.sample, int(wc.r)),
@@ -31,10 +33,14 @@ rule link_reads:
 # 01 = the raw reads (linked in 01.reads/), 02 = after PhiX removal (02.no_phix/),
 # 03 = after primer trimming (03.stripped/).
 #
-# count_reads_raw handles both .gz and plain .fastq input because the run's raw
-# FASTQs (in fastq_dir) can be either; count_reads_nophix and count_reads_stripped
-# only ever zcat, because their inputs are rm_phix's and trim_primers' outputs,
-# which this pipeline always writes gzipped.
+# count_reads_raw handles both gzipped and plain input because the run's raw FASTQs
+# (in fastq_dir) can be either; count_reads_nophix and count_reads_stripped only
+# ever zcat, because their inputs are rm_phix's and trim_primers' outputs, which
+# this pipeline always writes gzipped. count_reads_raw takes each sample's name
+# from its raw R1 file name: the name without "_R1" and the run's extension, which
+# is one of the four the start-up check accepts (fastq.gz, fq.gz, fastq, fq;
+# ALLOWED_EXTENSIONS in 00_common.smk). The sed pattern covers all four, so the
+# names match the sample names of the other count files whatever the extension.
 
 rule count_reads_raw:
     input:
@@ -56,7 +62,7 @@ rule count_reads_raw:
           fi
           n=$((c / 4))
           total=$((total + n))
-          sample=$(basename "$fq" | sed 's/_R1\.fastq\.gz$//' | sed 's/_R1\.fastq$//')
+          sample=$(basename "$fq" | sed -E 's/_R1\.(fastq|fq)(\.gz)?$//')
           echo "$sample : $n" >> {output.counts}
         done
         echo "Total read count : $total" >> {output.counts}

@@ -81,12 +81,27 @@ log_path = Path(sm.log[0])
 log_path.parent.mkdir(parents=True, exist_ok=True)
 log = log_path.open("w")
 
-Path(prefix).parent.mkdir(parents=True, exist_ok=True)
+# Metaxa2 runs inside the folder of its own outputs (prefix_dir), with only the last
+# part of the prefix ("seqs") as -o. Why: Metaxa2 names its temporary folder
+# "metaxa_temp_directory__" followed by the -o value with every "/" turned into "-",
+# and creates it as ONE folder name in the folder it is started from. With the full
+# prefix as -o, that name grew with out_dir, and once it passed 255 bytes, the most
+# Linux file systems allow for one name (an out_dir longer than 210 bytes), the folder
+# could not be made: Metaxa2 then extracted nothing, still exited 0, and the run
+# failed later in dada_length_filter with a bare KeyError. Started in its output
+# folder with -o "seqs", the name is always "metaxa_temp_directory__seqs", whatever
+# out_dir is, and Metaxa2 deletes the folder when it ends. The output files are the
+# same as before (<prefix>.extraction.fasta and the others, read below through the
+# full prefix). The input path is made absolute so it still points to the file from
+# inside prefix_dir.
+prefix_dir  = Path(prefix).parent      # <out_dir>/05.dada2/metaxa2
+prefix_name = Path(prefix).name        # "seqs"
+prefix_dir.mkdir(parents=True, exist_ok=True)
 
 cmd = [
     "metaxa2",
-    "-i", input_fasta,
-    "-o", prefix,
+    "-i", str(Path(input_fasta).absolute()),
+    "-o", prefix_name,
     "-t", "all",          # search all domain HMM profiles (bacteria/archaea/eukaryote)
     "--cpu", str(threads),
     "--fasta", "T",       # write the extracted-sequence FASTA (*.extraction.fasta)
@@ -95,9 +110,9 @@ cmd = [
                           # bacterial in origin) rather than treating them as unclassifiable
     "--silent", "T",      # suppress Metaxa2's own console output (everything goes to our log)
 ]
-log.write(f"[metaxa2_extract] Running: {' '.join(cmd)}\n")
+log.write(f"[metaxa2_extract] Running in {prefix_dir}: {' '.join(cmd)}\n")
 log.flush()
-res = subprocess.run(cmd, stdout=log, stderr=log)
+res = subprocess.run(cmd, stdout=log, stderr=log, cwd=prefix_dir)
 if res.returncode != 0:
     log.write(f"[metaxa2_extract] ERROR: metaxa2 exited with code {res.returncode}\n")
     log.close()

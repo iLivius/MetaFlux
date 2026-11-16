@@ -53,7 +53,8 @@ analysis you perform yourself — MetaFlux computes no diversity statistics. See
 ## Input
 
 Amplicon mode requires local paired FASTQs named `{sample}_R1.fastq.gz` and
-`{sample}_R2.fastq.gz` in `input.fastq_dir`. Sample names are discovered from those
+`{sample}_R2.fastq.gz` in `input.fastq_dir` (or `.fq.gz`, `.fastq` or `.fq`, one
+extension for all files). Sample names are discovered from those
 filenames at start-up, when Snakemake reads the config and works out which jobs it will
 need. SRA-style `{sample}_1/_2` naming is
 accepted by shotgun mode but rejected here with an explicit error, because the two

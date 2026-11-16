@@ -73,14 +73,11 @@ and detects which one is in use:
 | `{sample}_R1` / `{sample}_R2` | `soil01_R1.fastq.gz` | Illumina/bcl2fastq output, MetaFlux's default |
 | `{sample}_1` / `{sample}_2` | `SRR11605259_1.fastq.gz` | raw `fasterq-dump` output |
 
-Reads must carry the `fastq.gz` extension, or plain `fastq` if uncompressed. `fq` and
-`fq.gz` are accepted by the start-up check but are never resolved afterwards — the
-rules look only for `.fastq.gz` and `.fastq` — and in shotgun mode the missing
-`.fastq.gz` path matches the `download_sra` rule under `_R1`/`_R2` naming, so the run
-tries to fetch each local sample from SRA rather than reporting that the extension is
-unsupported; with `_1`/`_2` naming it stops with a missing-input error instead. The check itself sees
-only the R1 files: a mixture of extensions among them stops the run at start-up, but
-the R2 files are never inspected, so uniformity across the directory is not enforced.
+Reads can be gzipped (`fastq.gz` or `fq.gz`) or uncompressed (`fastq` or `fq`), with
+one extension for the whole directory: a mixture of extensions among the R1 files
+stops the run at start-up. Every sample also needs its R2 (or `_2`) file with the
+same extension; a missing one stops the run at start-up with the names of the files
+not found.
 
 **Direct from NCBI SRA.** Setting `input.bioproject` to a BioProject accession makes
 MetaFlux resolve that project's runs itself:

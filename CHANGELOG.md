@@ -342,6 +342,48 @@ the short form `cox1` (for example `bacterial_cox1_asvs.tsv`, `post_bacterial_co
 output folder, needs a change; only a script that looks up the row of the conversion
 report by its name needs the new wording above. No count, threshold or decision changes.
 
+### Raw reads named `.fq` or `.fq.gz`, and the R2 file of every sample
+
+- **Raw reads with the extension `.fq.gz` or `.fq` work**, in both modes; some sequencing
+  providers deliver reads named so. Up to v2.6.1 they passed the start-up check, but every
+  step that reads the raw reads looked for `.fastq.gz` or `.fastq` only: an amplicon run
+  stopped on a missing input, and a shotgun run under `_R1`/`_R2` naming planned an SRA
+  download for each local sample. The steps now build the path from the extension found
+  at start-up, and the raw read count of amplicon mode (`stats/01.raw_reads.counts`) takes
+  the sample name from file names with any of the four extensions.
+- **Every sample's R2 file is checked at start-up**: it must exist next to the R1 file,
+  with the same extension, and the message names the files not found. Up to v2.6.1 only
+  the R1 files were looked at, and a missing R2 file showed up later. In a shotgun run with
+  local files under `_R1`/`_R2` naming it made Snakemake plan an SRA download for that
+  sample (rule `download_sra` writes `<sample>_R1.fastq.gz` and `<sample>_R2.fastq.gz`),
+  and before a job runs, Snakemake deletes those of its outputs that exist: the sample's
+  own R1 file. On a test sample with the code of this release before the change, the R1
+  file was deleted and the download then failed. A folder with gzipped R1 and uncompressed
+  R2 files (or the reverse), which earlier versions happened to read, now stops at
+  start-up too.
+- **Tested with Snakemake**: the 16S test set read as `.fq.gz` and as uncompressed `.fq`,
+  and the shotgun Zymo D6331 library read as `SRR38976715_1.fq.gz` / `_2.fq.gz`, gave the
+  result tables of the same runs on `.fastq.gz` files, byte for byte.
+
+### Metaxa2 and ITSx with a long output path
+
+- **The extraction (`target_extract`) works whatever the length of `out_dir`.** Metaxa2
+  (16S) and ITSx (ITS) name their temporary folder after the output prefix MetaFlux gives
+  them, with every `/` turned into `-`, and create it as one folder name in the folder they
+  are started from. MetaFlux gave the full path, so with an `out_dir` longer than 210
+  bytes (once made absolute) the name passed the 255 bytes Linux file systems allow for
+  one name. Both tools then exited as if they had succeeded: Metaxa2 extracted nothing and
+  the run stopped later in `dada_length_filter` with a bare `KeyError: 'min'`; under ITS,
+  `target_extract` stopped with a message that blamed the primers or `amplicon.its_region`.
+  Both tools now run inside their output folder (`05.dada2/metaxa2/`, `05.dada2/_itsx_tmp/`)
+  with the short prefix `seqs`, so the name no longer depends on `out_dir`. The output
+  files are those of before; the line `Running in <folder>: ...` of
+  `logs/target_extract.log` names the folder.
+- **Metaxa2's temporary folder is no longer made in the MetaFlux folder** (the folder
+  Snakemake runs from) but in `05.dada2/metaxa2/`; both tools delete it when they end.
+- **Tested with Snakemake**: the 16S and ITS test sets with an `out_dir` of 300 bytes gave
+  the result tables of the same runs with a short `out_dir`, byte for byte.
+
 ### Documentation
 
 After 2.6.1, the online manual was updated to call the set bacterial COI homologues: the
@@ -379,6 +421,8 @@ new wording.
 - `dada_filter` stops with a message that names the filtering settings when no read pair
   of a sample passes the filter. It used to end with Snakemake's bare "missing output
   files" error.
+- Every sample needs its R2 (or `_2`) file, with the extension of its R1 file ("Raw reads
+  named `.fq` or `.fq.gz`, and the R2 file of every sample" above).
 
 ### What runs again in a folder made with v2.6.1
 
@@ -408,8 +452,9 @@ with the same results.
   in every amplicon folder: `trim_primers` for every sample, because its new program
   (`30a_final_cycle.py`, the decision on the last cycle) is an input newer than the
   trimmed reads, and with it Falco and the read count of the primer-trimmed reads. The
-  reads it writes change only where the last cycle is removed, under `auto` on ITS. Kept:
-  the read links, the raw read counts, the PhiX removal, Falco of the raw and
+  reads it writes change only where the last cycle is removed, under `auto` on ITS. Also
+  the raw read count (`count_reads_raw`), whose command now also reads `.fq` and `.fq.gz`
+  names, with the same counts. Kept: the read links, the PhiX removal, Falco of the raw and
   PhiX-filtered reads and the reference files. In shotgun mode only MultiQC runs again.
 - **From a fresh clone, a release archive or a second worktree**: every step that runs a
   script, with the steps after it, as at every release ("What runs again in a folder made
@@ -475,6 +520,10 @@ with the same results.
   test sets give the outputs of the length filter of v2.6.1 byte for byte. [To be
   confirmed before release: a full ITS run on the final code, and the ITS results of
   "Test datasets" and of the ITS page brought in line with it.]
+- **Results of the changes for `.fq` names and long output paths.** Full runs with
+  Snakemake of the eight MiSeq test sets and the Zymo D6331 mock above, and of two shotgun
+  libraries (Zymo D6331 and PRJNA1477390), gave, byte for byte, the result tables of the
+  same runs before these two changes.
 
 ### What to edit in a config written for v2.6.1
 

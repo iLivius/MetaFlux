@@ -32,6 +32,7 @@ input:
   # Local FASTQ dir.
   # Amplicon: filenames must match {sample}_R1.fastq.gz / {sample}_R2.fastq.gz.
   # Shotgun:  {sample}_R1/_R2 OR {sample}_1/_2 (SRA-style) — auto-detected.
+  # Extension fastq.gz, fq.gz, fastq or fq: one for all files, R1 and R2.
   fastq_dir: /path/to/fastq_dir
   # BioProject SRA fetch [shotgun-only].
   # Set bioproject to an NCBI BioProject accession (e.g. PRJNA603575) and
