@@ -350,8 +350,8 @@ rule learn_errors:
     log:
         LOGS / "learn_errors.log",
     conda:
-        # dada2_custom.yaml (dada2.yaml plus mgcv and scam) only when the models are
-        # learned with the user's own function; see "Conda environment" above the rule.
+        # dada2_custom.yaml (dada2.yaml plus mgcv and scam) only for custom or scam
+        # functions; see "Conda environment" above the rule.
         "../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING in ("custom", "scam") else "../../envs/dada2.yaml"
     threads: lambda wc: threads_for_or("learn_errors", threads_for("dada_seqtab"))
     resources:
