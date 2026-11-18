@@ -983,7 +983,7 @@ saveRDS(err_r2, snakemake@output[["model_r2"]])
 # The bases, reads and samples each learning used, from DADA2's own line in the log.
 learned <- read_learned_amounts(snakemake@log[[1]])
 
-# requested is the setting error_model (auto, loess, binned or custom), as
+# requested is the setting error_model (auto, loess, binned, scam or custom), as
 # choose_error_model received it; custom_error_function describes the user's own
 # function when the models were learned with it (null otherwise); the run-level
 # warnings are those of the choice (mixed or unusual quality values, a function set on
