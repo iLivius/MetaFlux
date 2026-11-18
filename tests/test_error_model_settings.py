@@ -231,7 +231,7 @@ def test_error_model_accepts_auto_the_function_names_and_custom(value, expected)
 @pytest.mark.parametrize("value", ["novaseq", "", None, True, 3, ["loess"]])
 def test_error_model_refuses_everything_else(value):
     message = stop_text(checks._error_model_setting, value)
-    assert "error_model must be one of auto, loess, binned, custom" in message
+    assert "error_model must be one of auto, loess, binned, scam, custom" in message
     assert f"got {value!r}" in message
 
 
@@ -305,7 +305,7 @@ def test_custom_needs_a_file(block):
     assert message.startswith("[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
                               f"{BLOCK_KEY}.file must give the R file")
     assert "it is empty" in message
-    assert "set error_model back to auto, loess or binned" in message
+    assert "set error_model back to auto, loess, binned or scam" in message
 
 
 def test_custom_needs_a_name(r_file):
@@ -434,12 +434,14 @@ def registry_names():
 
 def test_the_three_lists_of_error_functions_agree():
     names = registry_names()
-    assert names == ("loess", "binned")
+    assert names == ("loess", "binned", "scam")
     assert names == checks.ERROR_FUNCTION_NAMES
     tables = load_functions(CHOOSE_SCRIPT, ["SUITED_CLASS", "ON_OTHER_CLASS"])
     assert tuple(tables.SUITED_CLASS) == names
     assert tuple(tables.ON_OTHER_CLASS) == names
-    assert set(tables.ON_OTHER_CLASS.values()) <= {"warn", "stop"}
+    assert set(tables.ON_OTHER_CLASS.values()) <= {"warn", "stop", "none"}
+    assert tables.SUITED_CLASS["scam"] == "both"
+    assert tables.ON_OTHER_CLASS["scam"] == "none"
 
 
 def test_the_vendored_block_is_the_original():
@@ -614,19 +616,19 @@ def test_the_custom_function_file_is_an_input_where_it_should_be():
 ENVS = WORKFLOW / "envs"
 
 
-def test_the_two_steps_run_in_dada2_custom_only_when_they_call_the_users_function():
-    # learn_errors calls the user's function only under error_model: custom, the report
-    # whenever one is named (the conditions of the custom_function_file inputs above).
-    # Exactly then each runs in dada2_custom.yaml (dada2.yaml plus the R packages mgcv
-    # and scam), otherwise in dada2.yaml, so a run without such a function never builds
+def test_the_two_steps_use_dada2_custom_for_custom_or_scam():
+    # learn_errors needs r-scam for the built-in scam function and for a user's own
+    # function. The report needs it whenever it refits scam or is given a named function.
+    # Both otherwise stay in dada2.yaml, so runs that use no such function never build
     # the second environment, which conda cannot build as shipped on Apple Silicon Macs
-    # or Linux on ARM (no r-scam there). The dry runs plan both environments, but the
-    # runner does not check which rule gets which, hence this test.
+    # or Linux on ARM (no r-scam there).
     learn_conda = rule_section("learn_errors", "conda")
-    assert ('"../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING == "custom" '
+    assert ('"../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING in ("custom", "scam") '
             'else "../../envs/dada2.yaml"') in learn_conda
     report_conda = rule_section("error_model_report", "conda")
-    assert '"../../envs/dada2_custom.yaml" if CUSTOM_ERROR_FUNCTION else "../../envs/dada2.yaml"' in report_conda
+    assert ('"../../envs/dada2_custom.yaml" '
+            'if (CUSTOM_ERROR_FUNCTION or ERROR_MODEL_SETTING == "scam") '
+            'else "../../envs/dada2.yaml"') in report_conda
     # Every other DADA2 step of the file stays in dada2.yaml, whatever the settings.
     for rule_name in ("dada_quality_plots", "dada_filter", "dada_seqtab"):
         assert rule_section(rule_name, "conda").strip() == '"../../envs/dada2.yaml"'
