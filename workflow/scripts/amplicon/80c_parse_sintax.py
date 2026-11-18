@@ -60,7 +60,9 @@ All outputs use R write.table quoting conventions (character values double-quote
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
 They copy what the rdp path writes with R's write.table(col.names = NA), so the
 tables of both methods have the same format:
-  - the header line starts with an empty quoted cell ("") above the row names;
+  - the header line starts with an empty quoted cell ("") above the row names,
+    except in taxon_seq_table.txt, where that cell reads "asv_id" (see
+    write_taxon_table below);
   - a missing value is a bare NA, without quotes: a rank the classifier did not
     reach (in taxon_seq_table.txt) or a missing metaxa2_origin.
 One reader therefore works for the tables of either method: the pipeline's own
@@ -558,15 +560,18 @@ def write_count_table(path: Path, row_ids: list[str], row_names: list[str]) -> N
 
 
 def write_taxon_table(path: Path, row_ids: list[str]) -> None:
-    """Write taxon_seq_table.txt: one row per ASV, one column per rank, then the
-    sequence. The header starts with an empty quoted cell (""), like the other
-    tables. A rank the classifier reached holds its name as a quoted string. A rank
+    """Write taxon_seq_table.txt: one row per ASV, its ASV ID, one column per rank,
+    then the sequence. Unlike the other tables, the header names the ID column:
+    it starts with "asv_id", not with an empty cell, because readers that guess the
+    header (data.table's fread among them) took the header line of this all-text
+    table for a data row when its first cell was empty. The rdp path writes the same
+    header. A rank the classifier reached holds its name as a quoted string. A rank
     it did not reach (confidence below sintax_cutoff, or the reference gives no name
     at that rank) holds a bare NA, R's missing value, exactly as the rdp path's
     write.table writes it. So is.na() in R and isna() in pandas find the unassigned
     ranks in the same way for both methods. The sequence is quoted."""
     with path.open("w") as fh:
-        fh.write("\t".join([q("")] + [q(c) for c in RANK_NAMES] + [q("sequence")]) + "\n")
+        fh.write("\t".join([q("asv_id")] + [q(c) for c in RANK_NAMES] + [q("sequence")]) + "\n")
         for asv_id in row_ids:
             row  = rank_rows[asv_id]
             vals = []

@@ -288,11 +288,21 @@ Sample names are taken from the part of the filename before `_R1`/`_1`. Names
 containing any of `* # @ % ^ / ! ? & : ; | < >` or a space are rejected at
 start-up, since Snakemake treats those characters specially. Underscores are fine.
 
+In amplicon mode, and in shotgun mode with `profiler: sylph` or `both`, a name that
+looks like a number, a missing value or true/false (`01`, `002`, `1e5`, `NA`, `true`) is
+rejected at start-up too. R and pandas read such a name back as a number or a missing
+value (`002` becomes 2, and `01` and `1` become one sample). MetaFlux's rdp taxonomy
+step and sylph-tax read the names that way, and so do most analyses of the tables
+afterwards. Give every sample a name with a letter in it (`S001_R1.fastq.gz`); SRA run
+accessions such as `SRR10043840` are fine.
+
 **BioProject mode.** When `bioproject` is set, MetaFlux queries NCBI e-utils,
 keeps only runs whose library layout is `PAIRED`, and caches the run table as
 `{bioproject}_runinfo.csv` inside `fastq_dir` so later invocations work offline.
 The `download_sra` rule then fetches each run with `prefetch` plus `fasterq-dump`
-and renames SRA's `_1`/`_2` output to `_R1`/`_R2`.
+and renames SRA's `_1`/`_2` output to `_R1`/`_R2`. The rows of that run table for the
+samples of the run are also written to `sra_runinfo.tsv` in the output folder (see
+[Output files](output.md#statsread_trackingtxt-samplestsv-and-multiqc)).
 
 ---
 

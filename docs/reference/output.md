@@ -150,7 +150,7 @@ it do not depend on that order.
 |---|---|---|
 | `asv_table.txt` | `ASV_#` | one per sample, then `taxonomy` |
 | `asv_table_seqs.txt` | the ASV sequence | one per sample, then `taxonomy` |
-| `taxon_seq_table.txt` | `ASV_#` | one per taxonomic rank, then `sequence` |
+| `taxon_seq_table.txt` | `ASV_#`, in a first column named `asv_id` | one per taxonomic rank, then `sequence` |
 | `asv_table_unfiltered.txt` | `ASV_#`, every ASV that reached the filter | one per sample, then `taxonomy`, `metaxa2_origin`, `filter_status` |
 
 `asv_table_unfiltered.txt` is `asv_table.txt` before the filter, with two more
@@ -193,6 +193,35 @@ columns by name (see [reading the tables in R](#reading-the-tables-in-r)).
     `read.table(..., sep = "\t", header = TRUE, row.names = 1)` in R and
     `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
     extra arguments, `NA` as a missing value.
+
+    One exception: in `taxon_seq_table.txt` the first header cell reads `"asv_id"`
+    instead of `""`. Every other cell of that table is text, and readers that guess
+    whether the first line is a header (`data.table::fread`, for one) took a header with
+    an empty first cell for a data row. The two readers above read the table as before.
+
+!!! note "What stays the same from one version to the next"
+
+    From v2.7.0 on, these properties of the four tables are kept, and any change to them
+    is announced in the CHANGELOG:
+
+    - the format in the note above: R's `write.table(col.names = NA)` conventions, with
+      `asv_id` as the first header cell of `taxon_seq_table.txt`;
+    - the `taxonomy` column right after the sample columns, as the last column of
+      `asv_table.txt` and `asv_table_seqs.txt` (in `asv_table_unfiltered.txt` it is
+      followed by `metaxa2_origin` and `filter_status`);
+    - the rank prefixes of the taxonomy strings: each slot starts with the prefix the
+      marker pack lists for its rank (the table [below](#taxonomy-strings-in-the-final-tables);
+      gyrB's first slot, the gene tag, has none);
+    - the whole species name in the `s__` slot, genus included (its exact form follows
+      the reference, see the table of species slots below);
+    - no confidence values in these tables: each lineage is cut at the last rank that
+      reaches `min_boot` or `sintax_cutoff`, and the values themselves are not written.
+      Under `method: sintax`, VSEARCH's own output, with its confidences, is kept as
+      `_sintax_raw.tsv`, which is not one of the four tables.
+
+    The `ASV_#` IDs are not among them: they number the ASVs of one run, by read count,
+    and the same sequence can get another number in another run or another version.
+    Across runs, match ASVs by their sequence, the row names of `asv_table_seqs.txt`.
 
 The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
 check and, for 16S, the organelle filter) has already been applied when these tables
@@ -393,6 +422,7 @@ out_dir/
 │                        # sylph/ summary (profiler sylph | both)
 ├── multiqc/             # multiqc_report.html + multiqc_data/
 ├── samples.tsv          # sample → source → FASTQ manifest
+├── sra_runinfo.tsv      # BioProject mode only: NCBI's run info of each sample
 └── logs/                # per-rule logs
 ```
 
@@ -516,6 +546,16 @@ ends at `trimmed`.
 `bioproject`, `r1`, `r2` — handy for a downstream R or Python script that should
 not have to re-parse the config or re-glob the FASTQ directory. `source` is
 `local` or `bioproject`.
+
+`sra_runinfo.tsv` is written in BioProject mode only. It holds NCBI's run info for each
+sample, one row per sample in the order of `samples.tsv`: the column `sample` (the run
+accession), then every column of the run info, named and filled as NCBI writes them
+(`Run`, `LibraryName`, `Platform`, `Model`, `BioSample`, `SampleName`, `CenterName` and
+more). MetaFlux fetches that run info at start-up to pick the paired runs, and keeps it as
+`{bioproject}_runinfo.csv` in `fastq_dir`; this table is its part for the samples of the
+run. Use it to start a sample metadata table. NCBI's run info does not include the
+BioSample attributes (habitat, host, place, collection date), so the table does not
+either; they are on each sample's BioSample page.
 
 `multiqc/multiqc_report.html` collects fastp, Kraken2, Bracken and — when PhiX
 removal ran — the BBDuk statistics. BBMap host removal contributes nothing to the

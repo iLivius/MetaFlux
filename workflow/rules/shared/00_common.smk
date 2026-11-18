@@ -3895,9 +3895,13 @@ def _samples_without_r2(fastq_dir: Path, samples, naming: str, extn: str):
 
 
 # Resolve SAMPLES + extension + naming at parse time.
+# SRA_RUNINFO_CSV is the NCBI run info of the BioProject, cached in fastq_dir by
+# _fetch_bioproject_runs; rule sra_runinfo (shotgun 30_preprocess.smk) copies the rows
+# of this run's samples from it to the output folder. None outside BioProject mode.
+SRA_RUNINFO_CSV = None
 if MODE == "shotgun" and BIOPROJECT:
-    _cache = FASTQ_DIR / f"{BIOPROJECT}_runinfo.csv"
-    SAMPLES = _fetch_bioproject_runs(BIOPROJECT, _cache)
+    SRA_RUNINFO_CSV = FASTQ_DIR / f"{BIOPROJECT}_runinfo.csv"
+    SAMPLES = _fetch_bioproject_runs(BIOPROJECT, SRA_RUNINFO_CSV)
     if ACCESSION_LIST:
         SAMPLES = [s for s in SAMPLES if s in set(ACCESSION_LIST)]
     if not SAMPLES:
@@ -3948,51 +3952,85 @@ for _s in SAMPLES:
     if any(c in _s for c in BAD_CHARS):
         sys.exit(f"[MetaFlux] sample '{_s}' has disallowed characters")
 
-# ── Sample names sylph-tax would rewrite (profiler sylph | both) ──
-# sylph-tax reads sylph's profile with pandas, which guesses each column's type. A
-# sample name that looks like a number, a missing value or a true/false word is
-# rewritten on the way, with exit code 0. Tested with sylph-tax 1.9.2 / pandas 3.0.6:
-# samples '01' and '1' were summed into ONE file (relative abundance 200 %), '001'
-# became '1', and 'NA' was dropped. Such names are refused here.
+# ── Sample names read back as numbers (amplicon mode; shotgun with sylph) ──
+# Some readers guess the type of every value, and they rewrite a sample name that
+# looks like a number, a missing value or a true/false word. Two cases are refused
+# here, each with its own message below:
+#   - shotgun.profiler sylph | both: sylph-tax reads sylph's profile with pandas, and
+#     the name is rewritten on the way, with exit code 0. Tested with sylph-tax 1.9.2 /
+#     pandas 3.0.6: samples '01' and '1' were summed into ONE file (relative abundance
+#     200 %), '001' became '1', and 'NA' was dropped.
+#   - mode: amplicon: the rdp taxonomy step (80a_assign_taxonomy.R) reads the sequence
+#     table with data.table's fread, which reads the sample names "01", "1" and "002"
+#     as the numbers 1, 1 and 2, quotes and all (tested with MetaFlux's R environment),
+#     so "002" would come out as sample 2 and "01" and "1" as one name. The tables
+#     MetaFlux writes are read the same way afterwards: pandas (2.3.3 tested) turns the
+#     sample column of stats/read_tracking.txt into numbers, R's read.table names a
+#     count column "01" X01, and a metadata table keyed by such names no longer
+#     matches its samples.
+# Shotgun runs with profiler: kraken2 are not checked here.
 # The number test mirrors pandas, not Python's float(): float() also accepts
 # underscores ('12_3' -> 123.0), but pandas keeps '12_3', '2019_05' or '1_000' as text,
 # so those names are fine. pandas is not pinned by sylph-tax, so the test errs on the
 # safe side (every name that pandas 3 reads as a number is refused, even when it would
-# survive the round trip, like '1').
+# survive the round trip, like '1'). SRA run accessions (SRR10043840) always pass: they
+# start with letters.
+
+# pandas' default missing-value words (read_csv na_values). Several contain
+# characters BAD_CHARS already refuses; they are kept so the list stays complete.
+_PANDAS_NA = {"", "#N/A", "#N/A N/A", "#NA", "-1.#IND", "-1.#QNAN", "-NaN", "-nan", "1.#IND",
+              "1.#QNAN", "<NA>", "N/A", "NA", "NULL", "NaN", "None", "n/a", "nan", "null"}
+
+
+def _pandas_reads_as_number(name):
+    """True for what pandas reads as a number: digits with an optional sign, decimal
+    point and exponent ('007', '+5', '5.', '.5', '1e5'), or inf / infinity / nan in any
+    capitals with an optional sign ('Infinity'). False for '12_3' or 'S001'."""
+    if re.fullmatch(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", name):
+        return True
+    if re.fullmatch(r"[+-]?(inf|infinity|nan)", name, flags=re.IGNORECASE):
+        return True
+    return False
+
+
+def _pandas_rewrites(name):
+    """True when pandas would change this sample name when it reads it back: a missing
+    value word, true/false in any capitals, or a number (_pandas_reads_as_number)."""
+    if name in _PANDAS_NA:
+        return True
+    if name.lower() in ("true", "false"):
+        return True
+    return _pandas_reads_as_number(name)
+
+
+def _names_read_as_numbers(samples):
+    """The sample names, in the order given, that a reader guessing types would rewrite
+    (_pandas_rewrites). Empty when every name is safe. Used by the two checks below."""
+    bad_names = []
+    for name in samples:
+        if _pandas_rewrites(name):
+            bad_names.append(name)
+    return bad_names
+
+
 if MODE == "shotgun" and RUN_SYLPH:
-    # pandas' default missing-value words (read_csv na_values). Several contain
-    # characters BAD_CHARS already refuses; they are kept so the list stays complete.
-    _PANDAS_NA = {"", "#N/A", "#N/A N/A", "#NA", "-1.#IND", "-1.#QNAN", "-NaN", "-nan", "1.#IND",
-                  "1.#QNAN", "<NA>", "N/A", "NA", "NULL", "NaN", "None", "n/a", "nan", "null"}
-
-    def _pandas_reads_as_number(name):
-        """True for what pandas reads as a number: digits with an optional sign, decimal
-        point and exponent ('007', '+5', '5.', '.5', '1e5'), or inf / infinity / nan in any
-        capitals with an optional sign ('Infinity'). False for '12_3' or 'S001'."""
-        if re.fullmatch(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", name):
-            return True
-        if re.fullmatch(r"[+-]?(inf|infinity|nan)", name, flags=re.IGNORECASE):
-            return True
-        return False
-
-    def _pandas_rewrites(name):
-        """True when pandas would change this sample name on the way through sylph-tax."""
-        if name in _PANDAS_NA:
-            return True
-        if name.lower() in ("true", "false"):
-            return True
-        return _pandas_reads_as_number(name)
-
-    _bad_names = []
-    for _s in SAMPLES:
-        if _pandas_rewrites(_s):
-            _bad_names.append(_s)
+    _bad_names = _names_read_as_numbers(SAMPLES)
     if _bad_names:
         sys.exit(f"[MetaFlux] shotgun.profiler: {PROFILER} cannot use these sample names: {_bad_names}. "
                  f"sylph-tax reads sample names with pandas, which rewrites names that look like numbers "
                  f"or missing values (tested: '001' becomes '1', samples '01' and '1' end up summed in one "
                  f"file, 'NA' is dropped). Rename the FASTQ files so each name contains a letter (e.g. "
                  f"001_R1.fastq.gz -> S001_R1.fastq.gz), or use profiler: kraken2.")
+
+if MODE == "amplicon":
+    _bad_names = _names_read_as_numbers(SAMPLES)
+    if _bad_names:
+        sys.exit(f"[MetaFlux] mode: amplicon cannot use these sample names: {_bad_names}. "
+                 f"R and pandas read names that look like numbers or missing values back as numbers "
+                 f"or missing values, MetaFlux's own rdp taxonomy step included (tested: '002' becomes "
+                 f"2, and samples '01' and '1' become one name), so the samples would no longer match "
+                 f"their reads or their metadata. Rename the FASTQ files so each name contains a "
+                 f"letter (e.g. 001_R1.fastq.gz -> S001_R1.fastq.gz).")
 
 # ── Output folders that already hold results of another profiler ──
 # Snakemake decides what to run from the files in out_dir. The trimmed reads both
@@ -4354,6 +4392,10 @@ def _shotgun_targets():
         OUT / "multiqc" / "multiqc_report.html",
         OUT / "samples.tsv",
     ]
+    # BioProject mode only: NCBI's run info of each sample, next to samples.tsv (rule
+    # sra_runinfo in 30_preprocess.smk). Local reads come with no run info.
+    if INPUT_MODE == "bioproject":
+        out.append(OUT / "sra_runinfo.tsv")
     # Per-taxon extracted reads — only added when extract_taxa is non-empty.
     for taxon in EXTRACT_TAXA:
         # Slugify for clean wildcards; map back to the scientific name at runtime.

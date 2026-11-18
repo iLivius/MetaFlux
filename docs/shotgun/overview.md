@@ -107,6 +107,13 @@ output directory, with one row per sample: `sample`, `source` (`local` or
 can read the manifest instead of re-parsing the config or globbing the FASTQ
 directory again.
 
+In BioProject mode, `sra_runinfo.tsv` next to it holds NCBI's run info for each sample:
+the column `sample`, then every column of the run table MetaFlux fetched at start-up
+(run, BioSample, sample name, library, instrument, centre and more), as NCBI writes
+them. It is the start of a sample metadata table. It does not include the BioSample
+attributes (habitat, host, place, collection date), which NCBI's run table does not
+carry.
+
 ## 2. PhiX removal (optional)
 
 *Rule `decontam_phix` — off with `shotgun.decontamination.remove_phix: false`.*
@@ -432,6 +439,7 @@ out_dir/
 │                         # sylph/ summary (profiler sylph | both)
 ├── multiqc/              # multiqc_report.html
 ├── samples.tsv           # sample → source → FASTQ manifest
+├── sra_runinfo.tsv       # BioProject mode only: NCBI's run info of each sample
 └── logs/                 # per-rule logs
 ```
 

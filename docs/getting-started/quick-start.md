@@ -83,7 +83,9 @@ What is checked before the first job starts:
   mode), all with one consistent extension, each with its `_R2` (or `_2`) file of the
   same extension, and sample names without characters
   Snakemake cannot use as wildcards (a wildcard is the placeholder — here
-  `{sample}` — that a rule is instantiated over, once per sample).
+  `{sample}` — that a rule is instantiated over, once per sample). In amplicon mode,
+  and in shotgun mode with sylph, sample names must not look like numbers or missing
+  values either (`01`, `NA`): give them a letter (`S01`).
 - Amplicon: `amplicon.type` matches a marker; both primer FASTA files exist;
   `taxonomy.method` is available for that marker (`gyrB` and `rpoB` have no SINTAX
   reference, so only `rdp` works for them, and `COI` has no `rdp` trainset, so only

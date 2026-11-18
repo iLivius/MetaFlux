@@ -4,7 +4,8 @@
 #   1. download_sra     — only in BioProject mode: fetch FASTQs from SRA instead
 #                          of expecting them already in fastq_dir.
 #   2. samples_manifest  — write a small TSV recording where each sample's reads
-#                          came from.
+#                          came from; in BioProject mode sra_runinfo writes
+#                          NCBI's run info of each sample next to it.
 #   3. decontam_phix     — remove PhiX spike-in reads (BBDuk). Optional.
 #   4. fetch_host_refs / build_host_index / decontam_host — remove host (or any
 #                          other unwanted) DNA by mapping against a reference
@@ -109,6 +110,38 @@ rule samples_manifest:
                 r1 = f"{params.fastq_dir}/{s}{params.naming}.{params.extn}"
                 r2 = f"{params.fastq_dir}/{s}{m2}.{params.extn}"
                 f.write(f"{s}\t{params.mode}\t{params.bioproject}\t{r1}\t{r2}\n")
+
+
+# ──────────────────────── SRA run info (BioProject mode) ───────
+# In BioProject mode MetaFlux asks NCBI once, at start-up, for the run info of every
+# SRA run in the BioProject, and keeps it as <fastq_dir>/<BioProject>_runinfo.csv
+# (SRA_RUNINFO_CSV; _fetch_bioproject_runs in 00_common.smk) to pick the paired runs.
+# This rule copies the rows of this run's samples to the output folder, next to
+# samples.tsv, so that the run accession, BioSample, sample name, library and
+# instrument of each sample travel with the results: the start of a sample metadata
+# table for the analysis that follows, without asking NCBI again. NCBI's run info
+# holds no BioSample attributes (habitat, host, place, date), so neither does this
+# table. Local reads come with no run info: the rule exists in BioProject mode only.
+#   in : SRA_RUNINFO_CSV, the cached run info (comma-separated, as NCBI writes it)
+#   out: sra_runinfo.tsv, one row per sample in samples.tsv order: the column
+#        'sample' (the run accession, the sample name of every MetaFlux table), then
+#        every column of NCBI's run info, named and filled as NCBI writes them.
+#        Requested by rule all; nothing in the pipeline reads it back.
+if INPUT_MODE == "bioproject":
+    rule sra_runinfo:
+        input:
+            runinfo = SRA_RUNINFO_CSV,
+        output:
+            table = OUT / "sra_runinfo.tsv",
+        params:
+            samples = SAMPLES,
+        log:
+            LOGS / "sra_runinfo.log",
+        # Standard library only; the env pins the interpreter instead of using the host's.
+        conda:
+            "../../envs/python_utils.yaml"
+        script:
+            "../../scripts/shotgun/30a_sra_runinfo.py"
 
 
 # ──────────────────────── PhiX removal (BBDuk) ─────────────────

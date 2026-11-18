@@ -416,6 +416,45 @@ report by its name needs the new wording above. No count, threshold or decision 
   gave the old text before the change and the new one after; on half bacterial records it
   measures as before.
 
+### The amplicon tables: a stable format, and a named first column in `taxon_seq_table.txt`
+
+- **The format of the four tables in `06.taxonomy/` is kept from this release on**, for
+  the scripts and tools that read them, and a change to it will be announced here: R's
+  `write.table(col.names = NA)` conventions (tab-separated, text in double quotes, an
+  unquoted `NA` for a missing value), the `taxonomy` column right after the sample
+  columns, the rank prefixes each marker pack lists, the whole species name in the `s__`
+  slot (genus included), and no confidence values. The ASV IDs (`ASV_1`, `ASV_2`, ...)
+  are not part of it: they number the ASVs of one run by read count, and the same
+  sequence can get another number in another run or version; match ASVs across runs by
+  their sequence, the row names of `asv_table_seqs.txt`. See "Output files" in the manual.
+- **`taxon_seq_table.txt` names its first column `asv_id`.** Its header started with an
+  empty cell, as R's `write.table(col.names = NA)` writes it, and since every other cell
+  of this table is text, readers that guess whether the first line is a header
+  (`data.table::fread`, for one) took that line for a data row. The header now starts with
+  `"asv_id"`, under both taxonomy methods; the rows are unchanged, and
+  `read.table(..., header = TRUE, row.names = 1)` in R and
+  `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas read the table as before. The
+  other three tables keep the empty first cell.
+- **Tested with Snakemake**: `assign_taxonomy` run again with the changed code in copies of
+  finished runs of the 16S test set (`method: sintax`, 199 ASVs) and of the gyrB test set
+  (`method: rdp`, 237 ASVs) wrote the other three tables byte for byte as before, and
+  `taxon_seq_table.txt` with only its first header cell changed.
+
+### The SRA run info of each sample (shotgun, BioProject mode)
+
+- **A new file, `sra_runinfo.tsv`, next to `samples.tsv`.** In BioProject mode MetaFlux
+  has always fetched NCBI's run info of the BioProject at start-up, to pick the paired
+  runs, and kept it as `{bioproject}_runinfo.csv` in `fastq_dir`, but nothing of it
+  reached the output folder. The new step `sra_runinfo` writes the rows of the run's
+  samples there: the column `sample`, then every column of the run info, named and filled
+  as NCBI writes them (run, BioSample, sample name, library, instrument, centre and more),
+  one row per sample in the order of `samples.tsv`. It is the start of a sample metadata
+  table. It holds no BioSample attributes (habitat, host, place, collection date): NCBI's
+  run info does not carry them. Runs on local reads are unchanged.
+- **Tested with Snakemake**: a BioProject-mode config for three runs of PRJNA562911 (their
+  run info already cached in `fastq_dir`, so nothing was fetched) planned the step, which
+  wrote one row per run, with the 47 columns of NCBI's run info after `sample`.
+
 ### Documentation
 
 After 2.6.1, the online manual was updated to call the set bacterial COI homologues: the
@@ -460,6 +499,12 @@ new wording.
   with their usual message, which shows the value. They ended with a bare Python
   `AttributeError`, and an empty `its_region` did so for every marker, although only ITS
   uses it; for the others it is now ignored.
+- In amplicon mode, sample names that look like a number, a missing value or true/false
+  (`01`, `002`, `1e5`, `NA`, `true`) stop the run, with the same test as in shotgun runs
+  with sylph. MetaFlux's rdp taxonomy step reads the sequence table with
+  `data.table::fread`, which reads such names back as numbers: `002` came out as sample 2,
+  and `01` and `1` became one name. R and pandas do the same when they read the tables
+  afterwards. Any name with a letter, such as an SRA run accession, passes.
 
 ### What runs again in a folder made with v2.6.1
 
@@ -492,7 +537,10 @@ with the same results.
   reads it writes change only where the last cycle is removed, under `auto` on ITS. Also
   the raw read count (`count_reads_raw`), whose command now also reads `.fq` and `.fq.gz`
   names, with the same counts. Kept: the read links, the PhiX removal, Falco of the raw and
-  PhiX-filtered reads and the reference files. In shotgun mode only MultiQC runs again.
+  PhiX-filtered reads and the reference files. In shotgun mode only MultiQC runs again,
+  and, in BioProject mode, the new step `sra_runinfo` writes its file. (The new first
+  header cell of `taxon_seq_table.txt` comes with the taxonomy, which runs again in every
+  amplicon folder anyway.)
 - **From a fresh clone, a release archive or a second worktree**: every step that runs a
   script, with the steps after it, as at every release ("What runs again in a folder made
   with v2.5.0", under 2.6.0, says why), and `trim_primers` with every step after it, for
@@ -583,6 +631,11 @@ with the same results.
   `error_model: loess` turns these into warnings and runs as v2.6.1 did. Under any
   setting: a sample with rewritten quality values, reads with fewer than three quality
   values above Q2, and a sample of which the filter keeps no read.
+- An amplicon run whose sample names look like numbers (`01_R1.fastq.gz`) now stops at
+  start-up: rename the read files (`S01_R1.fastq.gz`, for example) and run them into a new
+  output folder.
+- A script of your own that reads `taxon_seq_table.txt` and looks for its first column
+  by the empty name: the column is now called `asv_id`.
 - A 16S marker pack of your own in `config/markers/`: add `probe_exclude_second_site: true`
   at its top level (see `workflow/markers/16S.yaml`). Without it the probe keeps the
   statistics of v2.6.1, and 341F/805R runs still stop at `pick_trunclen`.

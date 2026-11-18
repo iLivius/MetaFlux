@@ -58,7 +58,10 @@ extension for all files). Sample names are discovered from those
 filenames at start-up, when Snakemake reads the config and works out which jobs it will
 need. SRA-style `{sample}_1/_2` naming is
 accepted by shotgun mode but rejected here with an explicit error, because the two
-conventions cannot be told apart safely once mixed.
+conventions cannot be told apart safely once mixed. A sample name that looks like a
+number or a missing value (`01`, `002`, `NA`) is rejected too: the rdp taxonomy step,
+like R and pandas in later analyses, would read `002` back as 2, and `01` and `1` as one
+sample. Give such samples a letter (`S002_R1.fastq.gz`); SRA run accessions are fine.
 
 The raw files are never modified. `link_reads` symlinks them into `01.reads/` purely so the
 inputs of a run are visible next to its outputs; every rule that needs raw reads reads

@@ -1,0 +1,25 @@
+# Dry-run config of the CI matrix that MUST STOP at start-up: an amplicon run whose
+# sample names look like numbers. .test/data/16S_digit_names/ holds links to the two
+# 16S test samples under the names 01 and 002. R and pandas read such names back as
+# numbers (MetaFlux's rdp taxonomy step read 002 as 2), so amplicon mode refuses them.
+# The runner (.test/run_dry_runs.sh) expects the message fragment on the next line.
+# EXPECT: mode: amplicon cannot use these sample names: ['002', '01']
+mode: amplicon
+input:
+  fastq_dir: .test/data/16S_digit_names
+output:
+  out_dir: .test/out/expected_stop_16S_digit_sample_names
+references:
+  refdb_root: .test/refdb
+  phix:
+    fasta: .test/refdb/phix/phix.fna
+amplicon:
+  type: 16S
+  primers:
+    fwd: .test/primers/16S/fwd_primer.fasta
+    rev: .test/primers/16S/rev_primer.fasta
+  taxonomy:
+    method: sintax
+    filter:
+      keep: [d__Bacteria, d__Archaea]
+      discard: [o__Chloroplast, f__Mitochondria]

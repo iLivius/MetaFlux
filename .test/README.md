@@ -41,6 +41,7 @@ snakemake -n --cores 1 --configfile .test/config/16S_rdp_silva144.yaml
 | `config/*.yaml` | One config per case that must pass. Each sets only the keys that differ from the template `config/config.yaml`, which Snakemake loads underneath it as in a real run; the header comment of each file says what the case covers. |
 | `config/expected_stop/*.yaml` | Configs that must stop at start-up. Each carries a `# EXPECT:` line with the fragment of the stop message the runner looks for. |
 | `data/<marker>/` | The first 300 read pairs of two samples of each public test dataset (16S, ITS, 18S, gyrB, rpoB; for COI, two slices of 300 pairs of the one mock run) and of two wastewater samples for shotgun mode, as `{sample}_R1/_R2.fastq.gz`. Enough for Snakemake to find the samples; far too few for any result to mean anything. |
+| `data/16S_digit_names/` | Links to the two 16S samples of `data/16S/`, named `01` and `002`, for the expected stop `16S_digit_sample_names`. |
 | `primers/<marker>/` | The forward and reverse primer FASTA of each marker, as used on the full test datasets. |
 | `stubs/kraken2_db/` | A stand-in Kraken2 database folder (see below). |
 | `stubs/sylph/`, `stubs/sylph_taxonomy/` | Stand-in sylph database files and sylph-tax lineage tables (see below). |
@@ -102,6 +103,7 @@ Expected stops (`config/expected_stop/`):
 | `16S_learn_errors_block_empty` | a `learn_errors:` block whose only line (`accept_unconverged`) is commented out, which YAML reads as empty and which would replace the template's whole block | `amplicon.dada2.learn_errors is empty in your run config` |
 | `16S_two_amplicon_blocks` | a second `amplicon:` block pasted at the end of the run config, which YAML would keep instead of the first, losing the marker, the primers and the taxonomy filter without a word | `the key 'amplicon' is written twice in the same block (lines 18 and 29)` |
 | `ITS_trim_final_cycle_word` | a word other than `auto`, `true` or `false` (`always`) for the removal of the extra last sequencing cycle in primer trimming | `trim_final_cycle must be auto, true or false` |
+| `16S_digit_sample_names` | amplicon samples named `01` and `002`, which R and pandas read back as numbers | `mode: amplicon cannot use these sample names: ['002', '01']` |
 
 Settings typed inline with `--config` (after the two groups above, in `run_dry_runs.sh`):
 

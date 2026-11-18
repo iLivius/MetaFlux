@@ -648,7 +648,18 @@ if (identical(prefix_style, "embedded")) {
   }
 }
 taxon_table$sequence <- seqs_sub[rownames(asv_table)]
-write.table(taxon_table, file = snakemake@output[["taxon_seq_table"]], col.names = NA, sep = "\t")
+# The ASV IDs go in a first column of their own, named asv_id, and the table is
+# written without row names. The other three tables keep R's usual layout, where
+# write.table(col.names = NA) leaves the first header cell empty (""). That empty
+# cell made readers that guess the header (data.table's fread among them) take the
+# header line of this all-text table for a data row; asv_id fixes that. The rows,
+# the other columns and the quoting stay exactly as before: text quoted, a rank the
+# classifier did not reach a bare NA. The sintax path (80c_parse_sintax.py) writes
+# the same header.
+taxon_table_out <- data.frame(asv_id = rownames(taxon_table), taxon_table,
+                              check.names = FALSE, stringsAsFactors = FALSE)
+write.table(taxon_table_out, file = snakemake@output[["taxon_seq_table"]],
+            row.names = FALSE, sep = "\t")
 
 # ── Output (d): asv_table_unfiltered.txt — every ASV that reached the filter ──
 # The layout of (a), but for EVERY ASV that entered the filter (organelles and the
