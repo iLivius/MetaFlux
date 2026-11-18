@@ -3,7 +3,7 @@
 # the name of an error function; the kind of quality values is read from the reads,
 # never from an instrument name. The runner (.test/run_dry_runs.sh) expects the message
 # fragment on the next line.
-# EXPECT: error_model must be one of auto, loess, binned
+# EXPECT: error_model must be one of auto, loess, binned, scam
 mode: amplicon
 input:
   fastq_dir: .test/data/16S
