@@ -603,20 +603,48 @@ if (isTRUE(filter_enabled) && n_before_filter > 0L && nrow(asv_table) == 0L) {
        organelle_note)
 }
 
+# ── How the four tables are written ──────────────────────────────────────────
+# Each table's row labels (the ASV IDs, or the sequences in asv_table_seqs.txt) go in
+# a first column of their own, NAMED in the header: "asv_id", or "sequence" in
+# asv_table_seqs.txt. The table is then written without R's row names
+# (row.names = FALSE). Written with row names (col.names = NA), as up to v2.6.1, the
+# header started with an empty cell (""), which some readers mistook for data (see
+# taxon_seq_table.txt below). The rows are written exactly as before: the label
+# quoted, counts as bare numbers, text quoted, a missing value a bare NA.
+# check.names = FALSE keeps the sample names as they are: data.frame() would
+# otherwise turn "Pea-1" into "Pea.1".
+
 # ── Output (a): asv_table.txt — rows=ASV_IDs ─────────────────────────────────
 # The main table: one row per ASV, one column per sample (read counts) plus a
 # taxonomy column. Its sample columns are summed again downstream by rule
 # aggregate_read_counts to build the final stage of read_tracking.txt.
 dir.create(dirname(snakemake@output[["asv_table"]]), recursive = TRUE, showWarnings = FALSE)
-write.table(asv_table, file = snakemake@output[["asv_table"]], col.names = NA, sep = "\t")
+asv_table_out <- data.frame(asv_id = rownames(asv_table), asv_table,
+                            check.names = FALSE, stringsAsFactors = FALSE)
+write.table(asv_table_out, file = snakemake@output[["asv_table"]],
+            row.names = FALSE, sep = "\t")
 
 # ── Output (b): asv_table_seqs.txt — rows=sequences ──────────────────────────
-# Identical to (a), except each row is named by the ASV's actual sequence
+# Identical to (a), except each row is labelled by the ASV's actual sequence
 # instead of its short ASV_N id — for matching these ASVs directly against
 # sequences from another tool or database, without going through the id.
-asv_table_seqs <- asv_table
-rownames(asv_table_seqs) <- seqs_sub[rownames(asv_table)]
-write.table(asv_table_seqs, file = snakemake@output[["asv_table_seqs"]], col.names = NA, sep = "\t")
+# A sequence must label one row only. The extraction step merges ASVs that come out
+# of it with the same sequence (ITSx and Metaxa2 alike), and DADA2's ASVs differ by
+# definition, so a sequence on two rows would mean that something upstream went
+# wrong: stop rather than write such a table.
+row_seqs <- unname(seqs_sub[rownames(asv_table)])
+dup_seqs <- unique(row_seqs[duplicated(row_seqs)])
+if (length(dup_seqs) > 0) {
+  dup_ids <- rownames(asv_table)[row_seqs %in% dup_seqs]
+  stop("[assign_taxonomy] ", length(dup_seqs), " sequence(s) label more than one ASV (",
+       paste(head(dup_ids, 10), collapse = ", "), "): asv_table_seqs.txt needs one row ",
+       "per sequence. The extraction step should have merged these ASVs; please report ",
+       "this with logs/target_extract.log.")
+}
+asv_table_seqs_out <- data.frame(sequence = row_seqs, asv_table,
+                                 check.names = FALSE, stringsAsFactors = FALSE)
+write.table(asv_table_seqs_out, file = snakemake@output[["asv_table_seqs"]],
+            row.names = FALSE, sep = "\t")
 
 # ── Output (c): taxon_seq_table.txt — rows=ASV_IDs, parsed cols + sequence ───
 # Same ASVs and taxonomy as (a), but with the taxonomy split into one column
@@ -648,14 +676,13 @@ if (identical(prefix_style, "embedded")) {
   }
 }
 taxon_table$sequence <- seqs_sub[rownames(asv_table)]
-# The ASV IDs go in a first column of their own, named asv_id, and the table is
-# written without row names. The other three tables keep R's usual layout, where
-# write.table(col.names = NA) leaves the first header cell empty (""). That empty
-# cell made readers that guess the header (data.table's fread among them) take the
-# header line of this all-text table for a data row; asv_id fixes that. The rows,
-# the other columns and the quoting stay exactly as before: text quoted, a rank the
-# classifier did not reach a bare NA. The sintax path (80c_parse_sintax.py) writes
-# the same header.
+# The ASV IDs go in a first column named asv_id, as in the other tables (see "How
+# the four tables are written" above). This table is where the empty first header
+# cell did harm: every other cell of it is text, so readers that guess whether the
+# first line is a header (data.table's fread among them) took the header line for a
+# data row. The rows, the other columns and the quoting stay exactly as before: text
+# quoted, a rank the classifier did not reach a bare NA. The sintax path
+# (80c_parse_sintax.py) writes the same header.
 taxon_table_out <- data.frame(asv_id = rownames(taxon_table), taxon_table,
                               check.names = FALSE, stringsAsFactors = FALSE)
 write.table(taxon_table_out, file = snakemake@output[["taxon_seq_table"]],
@@ -673,8 +700,11 @@ write.table(taxon_table_out, file = snakemake@output[["taxon_seq_table"]],
 asv_table_unfiltered <- asv_table_all
 asv_table_unfiltered$metaxa2_origin <- unname(metaxa2_origin[rownames(asv_table_all)])
 asv_table_unfiltered$filter_status  <- unname(filter_status[rownames(asv_table_all)])
-write.table(asv_table_unfiltered, file = snakemake@output[["asv_table_unfiltered"]],
-            col.names = NA, sep = "\t")
+asv_table_unfiltered_out <- data.frame(asv_id = rownames(asv_table_unfiltered),
+                                       asv_table_unfiltered,
+                                       check.names = FALSE, stringsAsFactors = FALSE)
+write.table(asv_table_unfiltered_out, file = snakemake@output[["asv_table_unfiltered"]],
+            row.names = FALSE, sep = "\t")
 
 message("[assign_taxonomy] DONE. Outputs written to ", dirname(snakemake@output[["asv_table"]]))
 

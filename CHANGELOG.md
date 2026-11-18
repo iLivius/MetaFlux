@@ -416,29 +416,71 @@ report by its name needs the new wording above. No count, threshold or decision 
   gave the old text before the change and the new one after; on half bacterial records it
   measures as before.
 
-### The amplicon tables: a stable format, and a named first column in `taxon_seq_table.txt`
+### The amplicon tables: a stable format, and a named first column
 
 - **The format of the four tables in `06.taxonomy/` is kept from this release on**, for
   the scripts and tools that read them, and a change to it will be announced here: R's
-  `write.table(col.names = NA)` conventions (tab-separated, text in double quotes, an
-  unquoted `NA` for a missing value), the `taxonomy` column right after the sample
-  columns, the rank prefixes each marker pack lists, the whole species name in the `s__`
-  slot (genus included), and no confidence values. The ASV IDs (`ASV_1`, `ASV_2`, ...)
-  are not part of it: they number the ASVs of one run by read count, and the same
-  sequence can get another number in another run or version; match ASVs across runs by
-  their sequence, the row names of `asv_table_seqs.txt`. See "Output files" in the manual.
-- **`taxon_seq_table.txt` names its first column `asv_id`.** Its header started with an
-  empty cell, as R's `write.table(col.names = NA)` writes it, and since every other cell
-  of this table is text, readers that guess whether the first line is a header
-  (`data.table::fread`, for one) took that line for a data row. The header now starts with
-  `"asv_id"`, under both taxonomy methods; the rows are unchanged, and
-  `read.table(..., header = TRUE, row.names = 1)` in R and
-  `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas read the table as before. The
-  other three tables keep the empty first cell.
+  `write.table` conventions (tab-separated, text in double quotes, an unquoted `NA` for a
+  missing value) with the first column named in the header (below), the `taxonomy`
+  column right after the sample columns, the rank prefixes each marker pack lists, the
+  whole species name in the `s__` slot (genus included), and no confidence values. The
+  ASV IDs (`ASV_1`, `ASV_2`, ...) are not part of it: they number the ASVs of one run by
+  read count, and the same sequence can get another number in another run or version;
+  match ASVs across runs by their sequence, the first column of `asv_table_seqs.txt`. See
+  "Output files" in the manual.
+- **Every table names its first column**: `asv_id` in `asv_table.txt`,
+  `taxon_seq_table.txt` and `asv_table_unfiltered.txt`, `sequence` in
+  `asv_table_seqs.txt`, under both taxonomy methods. The header started with an empty
+  cell, as R's `write.table(col.names = NA)` writes it above a column of row names. In
+  `taxon_seq_table.txt`, whose other cells are all text, readers that guess whether the
+  first line is a header (`data.table::fread`, for one) took that line for a data row.
+  The rows are unchanged. `read.table(..., header = TRUE, row.names = 1)` in R and
+  `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas read the tables as before;
+  read as an ordinary column, the first column is now called `asv_id` or `sequence`
+  instead of `X` (R's `read.table`), `V1` (`fread`) or `Unnamed: 0` (pandas). The two
+  tables COI runs add to `06.taxonomy/`, `bacterial_cox1_asvs.tsv` and
+  `coi_asv_flags.tsv`, name theirs `asv_id` too (`coi_screens.tsv` already did).
 - **Tested with Snakemake**: `assign_taxonomy` run again with the changed code in copies of
   finished runs of the 16S test set (`method: sintax`, 199 ASVs) and of the gyrB test set
-  (`method: rdp`, 237 ASVs) wrote the other three tables byte for byte as before, and
-  `taxon_seq_table.txt` with only its first header cell changed.
+  (`method: rdp`, 237 ASVs) wrote the four tables row for row as before, with only the
+  first header cell changed; so did a run of the COI test library amplified with BF3/BR2
+  (28 ASVs moved by the off-target guard), for all six of its tables.
+
+### 16S: ASVs that Metaxa2 trims to one sequence are merged
+
+- **The 16S extraction (`target_extract`, Metaxa2) merges ASVs that come out of it with
+  the same sequence**, as the ITS extraction always did after ITSx: the lowest-numbered
+  ASV of the group (the most abundant) stands for it, with the group's per-sample counts
+  added up, and keeps its own call in `metaxa2_origin.tsv`. Metaxa2 seldom trims a 16S
+  ASV, but it can: on a V4 run of 144 field samples it cut 31 bases off the 3′ end of five
+  ASVs. Two ASVs that differed only in the bases it cuts away would reach the taxonomy
+  with one sequence, and then `method: rdp` stopped at `asv_table_seqs.txt`, on R's
+  "duplicate 'row.names' are not allowed", and `method: sintax` wrote the sequence on two
+  rows of that table. No such pair turned up in the runs checked: in the 16S test runs
+  of this release Metaxa2 trimmed no ASV, and the five ASVs of the V4 run kept sequences
+  of their own.
+- **A new file, `05.dada2/metaxa2_collapse_map.tsv`**, in the layout of
+  `itsx_collapse_map.tsv`: one row per ASV left after merging, with the IDs merged into
+  it, their number and the length of the extracted sequence. Where nothing is merged, the
+  FASTA and the count table of the extraction are written as before, byte for byte.
+- **The taxonomy stops when one sequence labels two ASVs**, under both methods, with a
+  message that names them, instead of writing such a table. After the merge this should
+  not happen.
+- **Tested with Snakemake**, in copies of a finished run of the 16S test set (231 ASVs
+  extracted by Metaxa2):
+  - `target_extract` run again with the changed code wrote the extracted FASTA, its count
+    table and `metaxa2_origin.tsv` byte for byte as before, and a collapse map of 231
+    groups of one;
+  - in a copy whose `ASV_7` had been given the sequence of `ASV_5`, so that Metaxa2
+    returned the two identical, the step merged `ASV_7` into `ASV_5`, adding up their
+    counts, and the taxonomy wrote one row per sequence under both methods, with
+    `stats/read_tracking.txt` as before up to the taxon filter (reads move, none are
+    lost). With the code before the change, the same copy made `method: rdp` stop on
+    "duplicate 'row.names' are not allowed" and `method: sintax` write one sequence on
+    two rows;
+  - run on the output of the code before the change (two ASVs, one sequence), the new
+    taxonomy step stopped with its message under both methods, and none of the four
+    tables was left.
 
 ### The SRA run info of each sample (shotgun, BioProject mode)
 
@@ -538,9 +580,10 @@ with the same results.
   the raw read count (`count_reads_raw`), whose command now also reads `.fq` and `.fq.gz`
   names, with the same counts. Kept: the read links, the PhiX removal, Falco of the raw and
   PhiX-filtered reads and the reference files. In shotgun mode only MultiQC runs again,
-  and, in BioProject mode, the new step `sra_runinfo` writes its file. (The new first
-  header cell of `taxon_seq_table.txt` comes with the taxonomy, which runs again in every
-  amplicon folder anyway.)
+  and, in BioProject mode, the new step `sra_runinfo` writes its file. (The named first
+  header cells come with the taxonomy, and the merge after Metaxa2 with the extraction,
+  which both run again in every amplicon folder anyway; in 16S folders the extraction
+  also writes its new `metaxa2_collapse_map.tsv`.)
 - **From a fresh clone, a release archive or a second worktree**: every step that runs a
   script, with the steps after it, as at every release ("What runs again in a folder made
   with v2.5.0", under 2.6.0, says why), and `trim_primers` with every step after it, for
@@ -609,6 +652,11 @@ with the same results.
   Snakemake of the eight MiSeq test sets and the Zymo D6331 mock above, and of two shotgun
   libraries (Zymo D6331 and PRJNA1477390), gave, byte for byte, the result tables of the
   same runs before these two changes.
+- **Results of the named first column and of the merge after Metaxa2.** The comparisons
+  above were made before both. The four tables of `06.taxonomy/` now differ from those of
+  v2.6.1 in their first header cell only ("The amplicon tables" above). The merge changes
+  nothing where no two ASVs come out of Metaxa2 identical, which was the case in every
+  16S run compared above.
 
 ### What to edit in a config written for v2.6.1
 
@@ -634,8 +682,11 @@ with the same results.
 - An amplicon run whose sample names look like numbers (`01_R1.fastq.gz`) now stops at
   start-up: rename the read files (`S01_R1.fastq.gz`, for example) and run them into a new
   output folder.
-- A script of your own that reads `taxon_seq_table.txt` and looks for its first column
-  by the empty name: the column is now called `asv_id`.
+- A script of your own that reads the tables of `06.taxonomy/` and finds their first
+  column by the stand-in name its reader gave the empty header cell (`X` in R's
+  `read.table`, `V1` in `data.table::fread`, `Unnamed: 0` in pandas): the column is now
+  called `asv_id` (`sequence` in `asv_table_seqs.txt`). Tables read with `row.names = 1`
+  in R or `index_col = 0` in pandas come out as before.
 - A 16S marker pack of your own in `config/markers/`: add `probe_exclude_second_site: true`
   at its top level (see `workflow/markers/16S.yaml`). Without it the probe keeps the
   statistics of v2.6.1, and 341F/805R runs still stop at `pick_trunclen`.

@@ -58,11 +58,12 @@ sets pick up.
 
 All outputs use R write.table quoting conventions (character values double-quoted,
 integer counts unquoted) so downstream scripts are agnostic to the classifier.
-They copy what the rdp path writes with R's write.table(col.names = NA), so the
-tables of both methods have the same format:
-  - the header line starts with an empty quoted cell ("") above the row names,
-    except in taxon_seq_table.txt, where that cell reads "asv_id" (see
-    write_taxon_table below);
+They copy what the rdp path writes with R's write.table(row.names = FALSE), so
+the tables of both methods have the same format:
+  - the first column holds the row labels and its header cell names it:
+    "asv_id" (the ASV IDs) in asv_table.txt, taxon_seq_table.txt and
+    asv_table_unfiltered.txt, "sequence" in asv_table_seqs.txt (up to v2.6.1
+    this cell was empty, "", as R's write.table(col.names = NA) writes it);
   - a missing value is a bare NA, without quotes: a rank the classifier did not
     reach (in taxon_seq_table.txt) or a missing metaxa2_origin.
 One reader therefore works for the tables of either method: the pipeline's own
@@ -547,13 +548,15 @@ def q(s: str) -> str:
     return f'"{s}"'
 
 
-def write_count_table(path: Path, row_ids: list[str], row_names: list[str]) -> None:
+def write_count_table(path: Path, row_ids: list[str], row_names: list[str],
+                      first_column: str) -> None:
     """Write asv_table.txt or asv_table_seqs.txt.
-    Counts are unquoted integers; taxonomy is a quoted string. The header starts
-    with an empty quoted cell ("") above the row names, as R's write.table writes
-    it on the rdp path."""
+    The first column holds the row labels (row_names: the ASV IDs, or the
+    sequences) and its header cell names it (first_column: "asv_id" or
+    "sequence"), as the rdp path writes it. Counts are unquoted integers;
+    taxonomy is a quoted string."""
     with path.open("w") as fh:
-        fh.write("\t".join([q("")] + [q(s) for s in samples] + [q("taxonomy")]) + "\n")
+        fh.write("\t".join([q(first_column)] + [q(s) for s in samples] + [q("taxonomy")]) + "\n")
         for asv_id, row_name in zip(row_ids, row_names):
             vals = counts.get(asv_id, ["0"] * len(samples))
             fh.write("\t".join([q(row_name)] + vals + [q(tax_strings[asv_id])]) + "\n")
@@ -561,11 +564,11 @@ def write_count_table(path: Path, row_ids: list[str], row_names: list[str]) -> N
 
 def write_taxon_table(path: Path, row_ids: list[str]) -> None:
     """Write taxon_seq_table.txt: one row per ASV, its ASV ID, one column per rank,
-    then the sequence. Unlike the other tables, the header names the ID column:
-    it starts with "asv_id", not with an empty cell, because readers that guess the
-    header (data.table's fread among them) took the header line of this all-text
-    table for a data row when its first cell was empty. The rdp path writes the same
-    header. A rank the classifier reached holds its name as a quoted string. A rank
+    then the sequence. As in the other tables, the header names the ID column
+    ("asv_id"). Here the empty first cell of earlier versions did harm: readers that
+    guess the header (data.table's fread among them) took the header line of this
+    all-text table for a data row. The rdp path writes the same header. A rank the
+    classifier reached holds its name as a quoted string. A rank
     it did not reach (confidence below sintax_cutoff, or the reference gives no name
     at that rank) holds a bare NA, R's missing value, exactly as the rdp path's
     write.table writes it. So is.na() in R and isna() in pandas find the unassigned
@@ -587,11 +590,30 @@ def write_taxon_table(path: Path, row_ids: list[str]) -> None:
 
 
 # ── Output (a): asv_table.txt ──────────────────────────────────────────────
-write_count_table(out_asv, filtered_ids, filtered_ids)
+write_count_table(out_asv, filtered_ids, filtered_ids, "asv_id")
 
 # ── Output (b): asv_table_seqs.txt ────────────────────────────────────────
+# A sequence must label one row only. The extraction step merges ASVs that come
+# out of it with the same sequence (ITSx and Metaxa2 alike), and DADA2's ASVs
+# differ by definition, so a sequence on two rows would mean that something
+# upstream went wrong: stop rather than write such a table (the rdp path does
+# the same).
 seq_row_names = [fasta[aid] for aid in filtered_ids]
-write_count_table(out_seqs, filtered_ids, seq_row_names)
+ids_of_seq: dict[str, list[str]] = {}
+for aid, seq in zip(filtered_ids, seq_row_names):
+    ids_of_seq.setdefault(seq, []).append(aid)
+dup_groups = [ids for ids in ids_of_seq.values() if len(ids) > 1]
+if dup_groups:
+    dup_ids: list[str] = []
+    for ids in dup_groups:
+        dup_ids.extend(ids)
+    msg = (f"{len(dup_groups)} sequence(s) label more than one ASV ({', '.join(dup_ids[:10])}): "
+           "asv_table_seqs.txt needs one row per sequence. The extraction step should "
+           "have merged these ASVs; please report this with logs/target_extract.log.")
+    logmsg("ERROR: " + msg)
+    log.close()
+    sys.exit(f"[assign_taxonomy/sintax] {msg}")
+write_count_table(out_seqs, filtered_ids, seq_row_names, "sequence")
 
 # ── Output (c): taxon_seq_table.txt ───────────────────────────────────────
 write_taxon_table(out_taxon, filtered_ids)
@@ -601,10 +623,11 @@ def write_unfiltered_table(path: Path, row_ids: list[str]) -> None:
     """Write asv_table_unfiltered.txt: the layout of asv_table.txt for EVERY ASV
     that reached the filter (organelles and other removed ASVs included), plus two
     columns: metaxa2_origin (Metaxa2's call, or NA) and filter_status (kept, or
-    the step that removed the ASV). NA is written unquoted, as R's write.table
+    the step that removed the ASV). The first column, the ASV IDs, is named
+    "asv_id", as in asv_table.txt. NA is written unquoted, as R's write.table
     writes a missing value, so read.table and pandas both read it as missing."""
     with path.open("w") as fh:
-        fh.write("\t".join([q("")] + [q(s) for s in samples]
+        fh.write("\t".join([q("asv_id")] + [q(s) for s in samples]
                            + [q("taxonomy"), q("metaxa2_origin"), q("filter_status")]) + "\n")
         for asv_id in row_ids:
             vals = counts.get(asv_id, ["0"] * len(samples))
@@ -659,9 +682,10 @@ def species_flag(asv_id: str) -> str:
 if coi_input:
     # (e) bacterial_cox1_asvs.tsv: the ASVs the off-target guard moved out of the
     #     tables above, with their counts, what SINTAX had called them, B, E and
-    #     the closest bacterial gene. Nothing downstream reads it.
+    #     the closest bacterial gene. Nothing downstream reads it. Its first column,
+    #     the ASV IDs, is named asv_id, as in the four tables above.
     with open(sm.output.bacterial_cox1_asvs, "w") as fh:
-        fh.write("\t".join([q("")] + [q(s) for s in samples]
+        fh.write("\t".join([q("asv_id")] + [q(s) for s in samples]
                            + [q(c) for c in ("sintax_taxonomy", "B", "best_bacterial_gene",
                                              "best_bacterial_taxonomy", "E", "best_midori2_record",
                                              "sequence")]) + "\n")
@@ -675,9 +699,10 @@ if coi_input:
     #     identity to MIDORI2), the best record and its species, the species flag
     #     and far_from_midori2 (E below 80 %: an ASV of a lineage MIDORI2 covers
     #     poorly, or a bacterium the bacterial set does not contain; flagged, not
-    #     removed). Nothing downstream reads it.
+    #     removed). Nothing downstream reads it. Its first column, the ASV IDs, is
+    #     named asv_id, as in the four tables above.
     with open(sm.output.coi_asv_flags, "w") as fh:
-        fh.write("\t".join([q(c) for c in ("", "E", "best_midori2_record", "best_midori2_species",
+        fh.write("\t".join([q(c) for c in ("asv_id", "E", "best_midori2_record", "best_midori2_species",
                                            "species_flag", "far_from_midori2")]) + "\n")
         for aid in filtered_ids:
             screen = coi_screens[aid]

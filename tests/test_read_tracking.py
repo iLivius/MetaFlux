@@ -54,9 +54,12 @@ SEQTAB = ('""\t"ASV_1"\t"ASV_2"\t"ASV_3"\n'
           '"S2"\t400\t\t200\n')
 
 # The final ASV table: ASVs in rows, samples and the taxonomy string in columns.
-ASV_TABLE = ('""\t"S1"\t"S2"\t"taxonomy"\n'
+# The first header cell names the ID column, as from v2.7.0 on.
+ASV_TABLE = ('"asv_id"\t"S1"\t"S2"\t"taxonomy"\n'
              '"ASV_1"\t500\t400\t"d__Bacteria;p__Pseudomonadota"\n'
              '"ASV_3"\t\t200\t"d__Bacteria;p__Bacillota"\n')
+# The same table as v2.6.1 and earlier wrote it, with an empty first header cell.
+ASV_TABLE_V261 = ASV_TABLE.replace('"asv_id"', '""', 1)
 
 # The end of a BBDuk log: both lines count reads, so pairs are half of each.
 BBDUK_LOG = ("Input is being processed as paired\n"
@@ -97,6 +100,9 @@ def test_amplicon_parsers_read_each_format(tmp_path):
     assert amplicon.parse_seqtab_rowsums(written(tmp_path / "seqtab.txt", SEQTAB)) == {
         "S1": 800, "S2": 600}
     assert amplicon.parse_asv_table_colsums(written(tmp_path / "asv_table.txt", ASV_TABLE)) == {
+        "S1": 500, "S2": 600}
+    # The parser goes by position, so the empty first cell of older tables reads the same.
+    assert amplicon.parse_asv_table_colsums(written(tmp_path / "old.txt", ASV_TABLE_V261)) == {
         "S1": 500, "S2": 600}
     assert amplicon._unq('"S1"') == "S1"
 

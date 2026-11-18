@@ -117,7 +117,7 @@ The extraction step leaves a per-extractor trail:
 
 | Marker | Extractor | Files in `05.dada2/` |
 |---|---|---|
-| 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter) plus the raw `seqs.*` working files under `metaxa2/` |
+| 16S | Metaxa2 | `metaxa2_extraction.results.txt` (Metaxa2's own summary), `metaxa2_origin.tsv` (Metaxa2's origin call per extracted ASV, read by the organelle filter), `metaxa2_collapse_map.tsv`, plus the raw `seqs.*` working files under `metaxa2/` |
 | ITS | ITSx | `itsx_extraction.summary.txt`, `itsx_collapse_map.tsv`, plus the raw `seqs.*` working files under `_itsx_tmp/` |
 
 Some of the raw working files differ between two identical runs, also of earlier
@@ -127,11 +127,13 @@ start and end times, Metaxa2's own classification in `metaxa2/seqs.taxonomy.txt`
 change in a few rows, and ITSx writes `_itsx_tmp/seqs.graph` in the order its searches
 finish. Leave them out when you compare two runs.
 
-`itsx_collapse_map.tsv` records how ASVs were merged after extraction. Two ASVs can
-differ only in the flanking 5.8S/LSU sequence; once ITSx trims those flanks away the
-remaining ITS1 or ITS2 region is identical, so the ASVs are merged into one and their
-counts are added. Each row of the map is one representative ASV, with the original
-`ASV_#` IDs that went into it.
+`itsx_collapse_map.tsv` and `metaxa2_collapse_map.tsv` record how ASVs were merged
+after extraction. Two ASVs can differ only in the part the extractor cuts away: the
+flanking 5.8S/LSU sequence under ITSx, which always trims, or, now and then, an end of a
+16S ASV that Metaxa2 trims. What remains is then identical, so the ASVs are merged into
+one, the lowest-numbered (the most abundant), and their counts are added. Each row of
+the map is one ASV left after merging, with the original `ASV_#` IDs that went into it;
+most rows of a 16S map hold one ID.
 
 ### `06.taxonomy/`
 
@@ -148,10 +150,10 @@ it do not depend on that order.
 
 | File | Rows | Columns |
 |---|---|---|
-| `asv_table.txt` | `ASV_#` | one per sample, then `taxonomy` |
-| `asv_table_seqs.txt` | the ASV sequence | one per sample, then `taxonomy` |
+| `asv_table.txt` | `ASV_#`, in a first column named `asv_id` | one per sample, then `taxonomy` |
+| `asv_table_seqs.txt` | the ASV sequence, in a first column named `sequence` | one per sample, then `taxonomy` |
 | `taxon_seq_table.txt` | `ASV_#`, in a first column named `asv_id` | one per taxonomic rank, then `sequence` |
-| `asv_table_unfiltered.txt` | `ASV_#`, every ASV that reached the filter | one per sample, then `taxonomy`, `metaxa2_origin`, `filter_status` |
+| `asv_table_unfiltered.txt` | `ASV_#`, in a first column named `asv_id`; every ASV that reached the filter | one per sample, then `taxonomy`, `metaxa2_origin`, `filter_status` |
 
 `asv_table_unfiltered.txt` is `asv_table.txt` before the filter, with two more
 columns. `metaxa2_origin` is Metaxa2's call for the ASV (`mitochondria`,
@@ -183,29 +185,34 @@ columns by name (see [reading the tables in R](#reading-the-tables-in-r)).
 
 !!! note "File format"
 
-    The four tables written by `assign_taxonomy` follow R's
-    `write.table(col.names = NA)` conventions, and the rdp and the sintax path write
-    them in exactly the same format: tab-separated, the header line starts with an
-    empty quoted cell (`""`) for the row-name column, and text values (row names,
-    taxonomy strings, rank names) are wrapped in double quotes. A missing value is an
+    The four tables written by `assign_taxonomy` follow R's `write.table` conventions,
+    and the rdp and the sintax path write them in exactly the same format:
+    tab-separated, with text values (the ASV IDs and sequences, taxonomy strings, rank
+    names) wrapped in double quotes and counts as bare numbers. A missing value is an
     unquoted `NA`, as R writes it: a rank the classifier did not reach in
-    `taxon_seq_table.txt`, and a missing `metaxa2_origin`.
+    `taxon_seq_table.txt`, and a missing `metaxa2_origin`. The first column holds the
+    row labels and its header cell names it: `"asv_id"`, or `"sequence"` in
+    `asv_table_seqs.txt`.
     `read.table(..., sep = "\t", header = TRUE, row.names = 1)` in R and
-    `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them without
-    extra arguments, `NA` as a missing value.
+    `pd.read_csv(..., sep = "\t", index_col = 0)` in pandas both read them, the
+    first column as row labels and `NA` as a missing value. Without `row.names = 1`,
+    R reads the labels as an ordinary first column, named `asv_id` or `sequence`.
 
-    One exception: in `taxon_seq_table.txt` the first header cell reads `"asv_id"`
-    instead of `""`. Every other cell of that table is text, and readers that guess
-    whether the first line is a header (`data.table::fread`, for one) took a header with
-    an empty first cell for a data row. The two readers above read the table as before.
+    Up to v2.6.1 that first header cell was empty (`""`), as R writes it for a column
+    of row names. In `taxon_seq_table.txt`, where every other cell is text, readers
+    that guess whether the first line is a header (`data.table::fread`, for one) took
+    the header line for a data row. The two readers above give the same table from
+    either version. Read as an ordinary column, the first column used to get a
+    stand-in name (`X` in R's `read.table`, `V1` in `fread`, `Unnamed: 0` in pandas);
+    it is now called `asv_id` or `sequence`.
 
 !!! note "What stays the same from one version to the next"
 
     From v2.7.0 on, these properties of the four tables are kept, and any change to them
     is announced in the CHANGELOG:
 
-    - the format in the note above: R's `write.table(col.names = NA)` conventions, with
-      `asv_id` as the first header cell of `taxon_seq_table.txt`;
+    - the format in the note above: R's `write.table` conventions, with the first
+      column named in the header, `asv_id` (`sequence` in `asv_table_seqs.txt`);
     - the `taxonomy` column right after the sample columns, as the last column of
       `asv_table.txt` and `asv_table_seqs.txt` (in `asv_table_unfiltered.txt` it is
       followed by `metaxa2_origin` and `filter_status`);
@@ -221,7 +228,7 @@ columns by name (see [reading the tables in R](#reading-the-tables-in-r)).
 
     The `ASV_#` IDs are not among them: they number the ASVs of one run, by read count,
     and the same sequence can get another number in another run or another version.
-    Across runs, match ASVs by their sequence, the row names of `asv_table_seqs.txt`.
+    Across runs, match ASVs by their sequence, the first column of `asv_table_seqs.txt`.
 
 The contaminant filter (`amplicon.taxonomy.filter.keep` / `.discard`, the best-hit
 check and, for 16S, the organelle filter) has already been applied when these tables
@@ -235,8 +242,8 @@ two.
 | File | Written by | Rows | Contents |
 |---|---|---|---|
 | `coi_screens.tsv` | `coi_screens` | every ASV that reached the filter | the ASV's reads summed over all samples, length, open reading frames, `frame_ok`, `length_ok`, B and the closest bacterial gene with its GTDB taxonomy, E, the closest MIDORI2 record, and the species of every record tied at that identity (joined by a vertical bar; `no_species` stands for a tied record without a formal species name), and the verdict (`frame`, `bacterial`, `pass`); read by `assign_taxonomy`. The verdict applies only the screens that are on, the frame check first (an ASV that fails both is `frame`); for a screen that is off, `frame_ok` and `length_ok` (frame check) or B against E (off-target guard) show what it would have done |
-| `bacterial_cox1_asvs.tsv` | `assign_taxonomy` | the ASVs the off-target guard moved | counts per sample, what SINTAX had called the ASV, B, the closest bacterial gene and its taxonomy, E, the closest MIDORI2 record, the sequence |
-| `coi_asv_flags.tsv` | `assign_taxonomy` | the ASVs of `asv_table.txt` | E, the closest MIDORI2 record, the species of the tied records as in `coi_screens.tsv`, `species_flag` (`ok`, `low_identity`, `shared_sequence`, `no_species`; here `no_species` means that SINTAX called no species) and `far_from_midori2` (1 when E is below 80 %) |
+| `bacterial_cox1_asvs.tsv` | `assign_taxonomy` | the ASVs the off-target guard moved, in a first column named `asv_id` | counts per sample, what SINTAX had called the ASV, B, the closest bacterial gene and its taxonomy, E, the closest MIDORI2 record, the sequence |
+| `coi_asv_flags.tsv` | `assign_taxonomy` | the ASVs of `asv_table.txt`, in a first column named `asv_id` | E, the closest MIDORI2 record, the species of the tied records as in `coi_screens.tsv`, `species_flag` (`ok`, `low_identity`, `shared_sequence`, `no_species`; here `no_species` means that SINTAX called no species) and `far_from_midori2` (1 when E is below 80 %) |
 
 ### `07.phylogeny/`
 

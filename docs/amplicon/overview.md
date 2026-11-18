@@ -662,10 +662,13 @@ Metaxa2 also writes `metaxa2_origin.tsv`, its origin call for each ASV, which th
 taxonomy filter reads in step 9. ASVs the extractor could not resolve are dropped at
 this point.
 
-ITSx also collapses ASVs: distinct ASVs whose extracted subregions come out identical —
-they differed only in the flanks that were just removed — become a single representative,
-and their per-sample counts are summed. The mapping is recorded in
-`itsx_collapse_map.tsv`.
+Both extractors also collapse ASVs: distinct ASVs whose extracted subregions come out
+identical — they differed only in the bases that were just removed — become a single
+representative, the lowest-numbered (most abundant) of them, and their per-sample counts
+are summed. Under ITSx, which always removes the flanks, this is common; under Metaxa2 it
+is rare, because Metaxa2 seldom trims a 16S ASV (on a V4 run of 144 field samples it cut
+31 bases off five ASVs, none of which came out identical to another). The mapping is
+recorded in `itsx_collapse_map.tsv` or `metaxa2_collapse_map.tsv`.
 
 ## 8. ASV length filter
 

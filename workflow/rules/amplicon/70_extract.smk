@@ -31,6 +31,14 @@ if MARKER_EXTRACTOR == "metaxa2":
     # by dada_length_filter (60_dada2.smk). `results` is Metaxa2's own summary
     # report — useful for inspection, but not read by any other rule.
     #
+    # "Little or nothing" is not "never": on a V4 run of 144 field samples,
+    # Metaxa2 cut 31 bases off five ASVs. Two ASVs that differed only in the bases
+    # cut away come out identical, so, as under ITSx below, the script merges each
+    # such group into its lowest-numbered (most abundant) ASV and adds up the
+    # per-sample counts; otherwise one sequence would sit in two rows of every later
+    # table. `collapse_map` records which ASVs went into which, one row per ASV left
+    # (groups of one included), in the layout of ITSx's map; no rule reads it.
+    #
     # `origin` is Metaxa2's own origin call for every extracted ASV, one row per
     # ASV, collected from its per-origin FASTAs (seqs.mitochondria.fasta, ...).
     # Rule assign_taxonomy reads it: with amplicon.taxonomy.filter.organelles:
@@ -50,6 +58,7 @@ if MARKER_EXTRACTOR == "metaxa2":
             seqtab_names = OUT / "05.dada2" / "seqtab_extracted_head_names.txt",
             results      = OUT / "05.dada2" / "metaxa2_extraction.results.txt",
             origin       = METAXA2_ORIGIN_TSV,       # 05.dada2/metaxa2_origin.tsv
+            collapse_map = OUT / "05.dada2" / "metaxa2_collapse_map.tsv",
         params:
             # All raw Metaxa2 outputs (seqs.*) are persisted under this dir for
             # downstream QC / inspection; see 70a_metaxa2_extract.py.

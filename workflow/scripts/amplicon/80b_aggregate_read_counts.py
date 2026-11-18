@@ -103,7 +103,8 @@ def parse_asv_table_colsums(path: Path) -> dict[str, int]:
     result: dict[str, int] = {}
     with path.open() as fh:
         header = fh.readline().rstrip("\n").split("\t")
-        # header[0] empty, header[1:] = sample cols + "taxonomy" (may be R-quoted)
+        # header[0] names the ID column ("asv_id"; empty up to v2.6.1), header[1:] =
+        # sample cols + "taxonomy" (may be R-quoted)
         col_names = [_unq(h) for h in header[1:]]
         sample_cols = col_names[:-1]  # drop 'taxonomy'
         for name in sample_cols:
@@ -118,7 +119,8 @@ def parse_asv_table_colsums(path: Path) -> dict[str, int]:
 def parse_removed_by_status(path: Path, statuses: tuple[str, ...]) -> dict[str, dict[str, int]]:
     """Reads per sample of the ASVs that asv_table_unfiltered.txt labels with each of
     the given filter_status values → {status: {sample: reads}}.
-    Columns: "" (ASV id), samples..., taxonomy, metaxa2_origin, filter_status."""
+    Columns: asv_id (empty up to v2.6.1), samples..., taxonomy, metaxa2_origin,
+    filter_status."""
     result: dict[str, dict[str, int]] = {status: {} for status in statuses}
     with path.open() as fh:
         header = [_unq(h) for h in fh.readline().rstrip("\n").split("\t")]

@@ -28,27 +28,63 @@ nearest SILVA reference is a mitochondrion at 97-99 % identity were
 classified as bacteria (mostly Enterobacterales) and passed every token, while
 Metaxa2 called all 8 mitochondrial.
 
-Output: seqs_extracted.fasta (cleaned, trimmed sequences) and
-seqtab_extracted_head_names.txt (the matching read-count table, subset to the
-ASVs Metaxa2 could extract) are read next by dada_length_filter
-(60h_dada_length_filter.py), which applies the ASV length window.
-metaxa2_origin.tsv (one row per extracted ASV: asv_id, origin) is read by
-assign_taxonomy (see above). Metaxa2's own raw output files are kept under the
-working prefix directory for QC.
+Merging ASVs that come out identical: Metaxa2 usually returns a 16S ASV whole,
+but now and then it trims one (on a V4 run of 144 field samples it cut 31 bases
+off the 3' end of five ASVs). Two ASVs that differed only in the trimmed part
+then come out with the same sequence. They are merged into one, as after ITSx
+(70b_itsx_extract.py): the lowest-numbered ASV of the group represents it (DADA2
+numbers ASVs by decreasing abundance, so it is the most abundant one) and the
+group's per-sample counts are added up. Without the merge, the same sequence
+would sit in two rows of every later table, as two ASVs of one organism.
+
+Output: seqs_extracted.fasta (cleaned, trimmed sequences, one per ASV left after
+merging) and seqtab_extracted_head_names.txt (the matching read-count table,
+subset to the ASVs Metaxa2 could extract, with merged ASVs added up) are read
+next by dada_length_filter (60h_dada_length_filter.py), which applies the ASV
+length window. metaxa2_origin.tsv (one row per ASV left after merging: asv_id,
+origin) is read by assign_taxonomy (see above). metaxa2_collapse_map.tsv (one row
+per ASV left after merging, with the ASV IDs merged into it) is a record for the
+user; no rule reads it. Metaxa2's own raw output files are kept under the working
+prefix directory for QC.
 """
 import subprocess
 import sys
 from pathlib import Path
 
 
-def subset_seqtab_by_ids(in_path: Path, kept_ids: set[str], out_path: Path, log) -> None:
-    """Drop seqtab columns (ASVs) that Metaxa2 did not extract.
+def asv_number(asv_id: str) -> int:
+    """The number of an ASV ID: 12 for ASV_12.
 
-    in_path is the full seqtab_head_names.txt from dada_seqtab.R (every ASV,
-    every sample's read count). kept_ids are the ASV IDs Metaxa2 did extract
-    (built below, while parsing its output FASTA). Any ASV not in kept_ids —
-    Metaxa2 could not confirm it as SSU rRNA in any domain — has its whole
-    column removed, so its read counts drop out of every downstream table.
+    DADA2 numbers its ASVs by decreasing abundance, so the lowest number of a group
+    is its most abundant ASV, which becomes the group's representative. An ID
+    without a number sorts last. The same rule as asv_sort_key in 70b_itsx_extract.py.
+    """
+    try:
+        return int(asv_id.split("_")[-1])
+    except ValueError:
+        return 10**9
+
+
+def merge_seqtab_columns(in_path: Path, representative_of: dict[str, str],
+                         out_path: Path, log) -> None:
+    """Write the read-count table of the extracted ASVs, merged ASVs added up.
+
+    in_path is the full seqtab_head_names.txt from dada_seqtab.R: one row per
+    sample, one column per ASV (every ASV DADA2 made), the header quoted by R.
+    representative_of maps every ASV ID that Metaxa2 extracted to the ID of the
+    ASV that stands for its sequence: itself, or the ASV it was merged into
+    (built below from Metaxa2's output FASTA).
+
+    Column by column, in the order of the input table:
+      - an ASV that Metaxa2 did not extract is left out: Metaxa2 could not
+        confirm it as SSU rRNA in any domain, so its reads drop out of every
+        later table;
+      - a representative keeps its column, in its place, with its own counts
+        plus those of the ASVs merged into it;
+      - an ASV merged into another one is left out: its counts are now in the
+        representative's column.
+    When nothing is merged, the result is the input without the columns of the
+    ASVs Metaxa2 did not extract, written exactly as before the merge existed.
     """
     with in_path.open() as fh:
         raw_header = fh.readline().rstrip("\n")
@@ -56,14 +92,37 @@ def subset_seqtab_by_ids(in_path: Path, kept_ids: set[str], out_path: Path, log)
     header = raw_header.split("\t")
     # R write.table wraps every column name in double quotes; strip them for matching.
     header_clean = [h.strip('"') for h in header]
-    keep_idx = [0] + [i for i, h in enumerate(header_clean[1:], 1) if h in kept_ids]
+
+    # The column positions of the members of each group, listed under the
+    # representative's ID (a group of one is the representative alone).
+    member_columns: dict[str, list[int]] = {}
+    for i in range(1, len(header_clean)):
+        rep = representative_of.get(header_clean[i])
+        if rep is not None:
+            member_columns.setdefault(rep, []).append(i)
+    # The representatives' own columns, in the order of the input table.
+    rep_columns = [i for i in range(1, len(header_clean))
+                   if representative_of.get(header_clean[i]) == header_clean[i]]
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w") as fh:
-        fh.write("\t".join(header[i] for i in keep_idx) + "\n")
+        fh.write("\t".join([header[0]] + [header[i] for i in rep_columns]) + "\n")
         for line in data_lines:
             cols = line.rstrip("\n").split("\t")
-            fh.write("\t".join(cols[i] for i in keep_idx) + "\n")
-    log.write(f"[metaxa2_extract] seqtab: kept {len(keep_idx)-1} / {len(header)-1} ASV columns\n")
+            out_row = [cols[0]]                    # the sample name
+            for i in rep_columns:
+                members = member_columns[header_clean[i]]
+                if len(members) == 1:
+                    out_row.append(cols[i])        # a group of one: the count as written
+                else:
+                    out_row.append(str(sum(int(cols[j]) for j in members)))
+            fh.write("\t".join(out_row) + "\n")
+
+    n_columns = len(header_clean) - 1
+    n_extracted = sum(len(members) for members in member_columns.values())
+    log.write(f"[metaxa2_extract] seqtab: kept {len(rep_columns)} / {n_columns} ASV columns "
+              f"({n_columns - n_extracted} not extracted by Metaxa2, "
+              f"{n_extracted - len(rep_columns)} merged into another ASV)\n")
 
 
 sm = snakemake  # noqa: F821
@@ -74,6 +133,7 @@ output_fasta     = Path(sm.output.seqs)
 seqtab_names_out = Path(sm.output.seqtab_names)
 results_out      = Path(sm.output.results)
 origin_out       = Path(sm.output.origin)        # metaxa2_origin.tsv, see the end of this script
+collapse_map_out = Path(sm.output.collapse_map)  # metaxa2_collapse_map.tsv, see the merge below
 prefix           = str(sm.params.prefix)
 threads          = int(sm.threads)
 
@@ -125,33 +185,95 @@ if not extraction_fasta.exists():
     log.close()
     sys.exit(1)
 
-# Write cleaned FASTA: Metaxa2 writes each header as the ASV ID immediately
-# followed by "|<rRNA subunit tag>", then a space and a free-text description,
-# e.g. ">ASV_12|SSU Bacterial 16S rRNA (253 bp) From domain 1 to 253 on +".
-# Taking the first whitespace token gives "ASV_12|SSU"; splitting that on "|"
+# Read Metaxa2's extraction FASTA: one record per extracted ASV. Metaxa2 writes each
+# header as the ASV ID immediately followed by "|<rRNA subunit tag>", then a space
+# and a free-text description, e.g.
+# ">ASV_12|B Predicted Bacterial  rRNA (253 bp) From domain V4l to V4r on main strand".
+# Taking the first whitespace token gives "ASV_12|B"; splitting that on "|"
 # isolates the plain ASV ID — this is what has to match the seqtab column
-# headers for the subset below.
-kept_ids: set[str] = set()
-kept_order: list[str] = []      # the same IDs in file order, for metaxa2_origin.tsv
-output_fasta.parent.mkdir(parents=True, exist_ok=True)
-with extraction_fasta.open() as fi, output_fasta.open("w") as fo:
-    current_seq: list[str] = []
+# headers below. `extracted` keeps the records in Metaxa2's order (a Python dict
+# keeps the order in which keys were added), and that order is kept in the FASTA
+# written below. An ID listed twice should not happen; if it does, the first record
+# is kept and the log says so.
+extracted: dict[str, str] = {}      # ASV ID -> extracted sequence
+repeated_ids: list[str] = []
+
+
+def add_record(asv_id: str | None, seq_lines: list[str]) -> None:
+    """Store one FASTA record in `extracted`, unless its ID is there already."""
+    if asv_id is None:
+        return
+    if asv_id in extracted:
+        repeated_ids.append(asv_id)
+        return
+    extracted[asv_id] = "".join(seq_lines)
+
+
+with extraction_fasta.open() as fi:
     current_id: str | None = None
+    current_seq: list[str] = []
     for line in fi:
         if line.startswith(">"):
-            if current_id is not None:
-                fo.write(f">{current_id}\n{''.join(current_seq)}\n")
+            add_record(current_id, current_seq)
             current_id = line[1:].split()[0].split("|")[0]
-            if current_id not in kept_ids:
-                kept_order.append(current_id)
-            kept_ids.add(current_id)
             current_seq = []
         else:
             current_seq.append(line.rstrip("\n"))
-    if current_id is not None:
-        fo.write(f">{current_id}\n{''.join(current_seq)}\n")
+    add_record(current_id, current_seq)
 
-log.write(f"[metaxa2_extract] {len(kept_ids)} ASV(s) extracted\n")
+log.write(f"[metaxa2_extract] {len(extracted)} ASV(s) extracted\n")
+if repeated_ids:
+    log.write(f"[metaxa2_extract] WARNING: {len(repeated_ids)} ASV ID(s) listed more than once "
+              f"in {extraction_fasta.name}; the first record of each was kept "
+              f"(first few: {repeated_ids[:5]})\n")
+
+# ── Merge ASVs whose extracted sequences are identical ──────────────────────
+# Group the extracted ASVs by sequence. Each group is represented by its
+# lowest-numbered ASV, the most abundant one (asv_number, above), as after ITSx.
+# Most groups hold one ASV: Metaxa2 seldom trims a 16S ASV, and two ASVs only
+# come out identical when it trimmed away the only bases in which they differed.
+ids_of_sequence: dict[str, list[str]] = {}
+for asv_id, seq in extracted.items():
+    ids_of_sequence.setdefault(seq, []).append(asv_id)
+
+representative_of: dict[str, str] = {}      # every extracted ASV -> its group's representative
+for ids in ids_of_sequence.values():
+    rep = min(ids, key=asv_number)
+    for asv_id in ids:
+        representative_of[asv_id] = rep
+
+# Every group as a list of IDs sorted by number, so its representative comes first;
+# the groups in the order of their representatives' numbers. merged_groups are the
+# groups of two or more ASVs.
+groups = [sorted(ids, key=asv_number) for ids in ids_of_sequence.values()]
+groups.sort(key=lambda group: asv_number(group[0]))
+merged_groups = [group for group in groups if len(group) > 1]
+log.write(f"[metaxa2_extract] merging: {len(extracted)} extracted ASV(s) -> "
+          f"{len(ids_of_sequence)} distinct sequence(s); {len(merged_groups)} group(s) of "
+          f"two or more ASVs merged\n")
+for group in merged_groups:
+    log.write(f"[metaxa2_extract]   {group[0]} <- {', '.join(group)} "
+              f"({len(extracted[group[0]])} bp after extraction)\n")
+
+# The cleaned FASTA: one record per representative, in Metaxa2's order, with the
+# plain ASV ID as header. When nothing is merged, it holds every extracted record,
+# exactly as before the merge existed.
+output_fasta.parent.mkdir(parents=True, exist_ok=True)
+with output_fasta.open("w") as fo:
+    for asv_id, seq in extracted.items():
+        if representative_of[asv_id] == asv_id:
+            fo.write(f">{asv_id}\n{seq}\n")
+
+# The collapse map, in the layout of ITSx's itsx_collapse_map.tsv: one row per
+# representative, groups of one included, by ASV number, with the IDs merged into
+# it (itself first), how many, and the length of the extracted sequence. A record
+# for the user (which ASVs became one after extraction); no rule reads it.
+collapse_map_out.parent.mkdir(parents=True, exist_ok=True)
+with collapse_map_out.open("w") as fo:
+    fo.write("representative\tmerged_asvs\tn_merged\textracted_length\n")
+    for group in groups:
+        fo.write(f"{group[0]}\t{','.join(group)}\t{len(group)}\t{len(extracted[group[0]])}\n")
+log.write(f"[metaxa2_extract] collapse map written -> {collapse_map_out.name}\n")
 
 # Copy Metaxa2's extraction results table: one row per input sequence, with
 # extracted length, rRNA subunit type, completeness, match e-value/score, and
@@ -175,8 +297,8 @@ else:
         "# Extraction itself succeeded (see the extracted FASTA); this QC report is absent.\n"
     )
 
-# Subset seqtab
-subset_seqtab_by_ids(seqtab_names_in, kept_ids, seqtab_names_out, log)
+# The read-count table: the extracted ASVs only, merged ASVs added up.
+merge_seqtab_columns(seqtab_names_in, representative_of, seqtab_names_out, log)
 
 # ── Metaxa2's origin call per ASV → metaxa2_origin.tsv ──────────────────────
 # After extracting, Metaxa2 aligns every extracted region against its own
@@ -193,13 +315,16 @@ subset_seqtab_by_ids(seqtab_names_in, kept_ids, seqtab_names_out, log)
 # listed an ASV in two files, the first call is kept (with a warning in the log),
 # so an ASV listed as an organelle anywhere counts as an organelle.
 #
-# Output: one row per extracted ASV, in the order of Metaxa2's extraction FASTA
-# (a lookup table: nothing depends on the row order), columns asv_id and origin
-# (mitochondria, chloroplast, bacteria, archaea, eukaryota, uncertain; NA when
-# Metaxa2 extracted the sequence but listed it in none of the files). Read by
-# rule assign_taxonomy: the organelle filter (amplicon.taxonomy.filter.organelles)
-# removes the mitochondria and chloroplast ASVs, and every ASV's call goes into the
-# metaxa2_origin column of 06.taxonomy/asv_table_unfiltered.txt.
+# Output: one row per ASV left after merging (the representatives), in the order of
+# Metaxa2's extraction FASTA (a lookup table: nothing depends on the row order),
+# columns asv_id and origin (mitochondria, chloroplast, bacteria, archaea,
+# eukaryota, uncertain; NA when Metaxa2 extracted the sequence but listed it in none
+# of the files). A merged group takes the call of its representative. The ASVs of a
+# group share one sequence, so Metaxa2 should give them all the same call; if it
+# does not, the log says so. Read by rule assign_taxonomy: the organelle filter
+# (amplicon.taxonomy.filter.organelles) removes the mitochondria and chloroplast
+# ASVs, and every ASV's call goes into the metaxa2_origin column of
+# 06.taxonomy/asv_table_unfiltered.txt.
 ORIGINS = ["mitochondria", "chloroplast", "bacteria", "archaea", "eukaryota", "uncertain"]
 origin_of: dict[str, str] = {}
 for origin in ORIGINS:
@@ -230,36 +355,49 @@ for origin in ORIGINS:
 # An ID in an origin file that is not in the extraction FASTA should not happen
 # (the files are built from the same extraction); say so if it ever does. Such an
 # ID is not written, since that ASV was dropped above and never reaches taxonomy.
-not_extracted = sorted(set(origin_of) - kept_ids)
+not_extracted = sorted(set(origin_of) - set(extracted))
 if not_extracted:
     log.write(
         f"[metaxa2_extract] WARNING: {len(not_extracted)} ASV(s) have an origin call but "
         f"are not in {extraction_fasta.name} (first few: {not_extracted[:5]})\n"
     )
 
+# A merged group whose ASVs got different calls: keep the representative's, say so.
+for group in merged_groups:
+    calls = [origin_of.get(asv_id, "NA") for asv_id in group]
+    if len(set(calls)) > 1:
+        listed = ", ".join(f"{asv_id} {call}" for asv_id, call in zip(group, calls))
+        log.write(f"[metaxa2_extract] WARNING: the ASVs merged into {group[0]} have different "
+                  f"origin calls ({listed}); {group[0]} keeps its own, {calls[0]}\n")
+
 origin_out.parent.mkdir(parents=True, exist_ok=True)
 n_per_origin = {origin: 0 for origin in ORIGINS}
 n_no_call = 0
+n_rows = 0
 with origin_out.open("w") as fh:
     fh.write("asv_id\torigin\n")
-    for asv_id in kept_order:
+    for asv_id in extracted:
+        if representative_of[asv_id] != asv_id:
+            continue                    # merged into another ASV: no row of its own
         origin = origin_of.get(asv_id, "NA")
         if origin == "NA":
             n_no_call += 1
         else:
             n_per_origin[origin] += 1
         fh.write(f"{asv_id}\t{origin}\n")
+        n_rows += 1
 summary = ", ".join(f"{origin} {n}" for origin, n in n_per_origin.items())
-log.write(f"[metaxa2_extract] origin calls of the {len(kept_order)} extracted ASV(s): "
+log.write(f"[metaxa2_extract] origin calls of the {n_rows} ASV(s) left after merging: "
           f"{summary}, no call {n_no_call} -> {origin_out.name}\n")
 
 # Keep all Metaxa2 raw outputs (seqs.summary.txt, seqs.hmmer.table, seqs.graph,
 # seqs.extraction.fasta, seqs.extraction.fasta.1, seqs.extraction.results) under
 # the prefix dir for QC / downstream inspection. Final dir layout:
 #   <prefix_dir>/seqs.*  ← raw Metaxa2 working files (persisted)
-#   05.dada2/seqs_extracted.fasta            ← promoted, cleaned headers
+#   05.dada2/seqs_extracted.fasta            ← promoted, cleaned headers, merged ASVs once
 #   05.dada2/metaxa2_extraction.results.txt  ← promoted .extraction.results
 #   05.dada2/metaxa2_origin.tsv              ← origin call per ASV, from seqs.<origin>.fasta
+#   05.dada2/metaxa2_collapse_map.tsv        ← which ASVs were merged into which
 log.write(f"[metaxa2_extract] Keeping raw outputs under: {Path(prefix).parent}\n")
 log.write(f"[metaxa2_extract] DONE.\n")
 log.close()
