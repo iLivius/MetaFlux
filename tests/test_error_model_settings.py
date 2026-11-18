@@ -616,19 +616,19 @@ def test_the_custom_function_file_is_an_input_where_it_should_be():
 ENVS = WORKFLOW / "envs"
 
 
-def test_the_two_steps_run_in_dada2_custom_only_when_they_call_the_users_function():
-    # learn_errors calls the user's function only under error_model: custom, the report
-    # whenever one is named (the conditions of the custom_function_file inputs above).
-    # Exactly then each runs in dada2_custom.yaml (dada2.yaml plus the R packages mgcv
-    # and scam), otherwise in dada2.yaml, so a run without such a function never builds
+def test_the_two_steps_use_dada2_custom_for_custom_or_scam():
+    # learn_errors needs r-scam for the built-in scam function and for a user's own
+    # function. The report needs it whenever it refits scam or is given a named function.
+    # Both otherwise stay in dada2.yaml, so runs that use no such function never build
     # the second environment, which conda cannot build as shipped on Apple Silicon Macs
-    # or Linux on ARM (no r-scam there). The dry runs plan both environments, but the
-    # runner does not check which rule gets which, hence this test.
+    # or Linux on ARM (no r-scam there).
     learn_conda = rule_section("learn_errors", "conda")
-    assert ('"../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING == "custom" '
+    assert ('"../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING in ("custom", "scam") '
             'else "../../envs/dada2.yaml"') in learn_conda
     report_conda = rule_section("error_model_report", "conda")
-    assert '"../../envs/dada2_custom.yaml" if CUSTOM_ERROR_FUNCTION else "../../envs/dada2.yaml"' in report_conda
+    assert ('"../../envs/dada2_custom.yaml" '
+            'if (CUSTOM_ERROR_FUNCTION or ERROR_MODEL_SETTING == "scam") '
+            'else "../../envs/dada2.yaml"') in report_conda
     # Every other DADA2 step of the file stays in dada2.yaml, whatever the settings.
     for rule_name in ("dada_quality_plots", "dada_filter", "dada_seqtab"):
         assert rule_section(rule_name, "conda").strip() == '"../../envs/dada2.yaml"'
