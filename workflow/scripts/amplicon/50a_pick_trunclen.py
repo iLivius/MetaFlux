@@ -390,9 +390,27 @@ def main() -> int:
             log("[pick_trunclen] ERROR: trunc_len.mode=manual but manual_r1/manual_r2 are not set")
             return 2
         log(f"[pick_trunclen] Manual mode: r1={manual_r1} r2={manual_r2}")
+        # Record expected_length in trunclen.json too when it is set: downstream
+        # dada_length_filter (mode=auto, without a probe JSON) reads expected_length
+        # back from this file to compute its fallback +/-15% ASV length window.
+        exp_len = None
+        exp_len_source = None
+        if amp_type == "ITS":
+            exp_len_source = "not_applicable:ITS_truncLen_overridden"
+        elif expected_length is not None:
+            probe_json_path = None
+            if hasattr(sm.input, "probe_json") and sm.input.probe_json:
+                pj = sm.input.probe_json
+                probe_json_path = pj[0] if isinstance(pj, list) else pj
+            exp_len, exp_len_source = resolve_expected_length(
+                expected_length, amp_type, probe_json_path, log,
+                probe_stat=probe_stat,
+            )
         write_json(out_json, {
             "r1": int(manual_r1), "r2": int(manual_r2),
             "mode": "manual", "amplicon_type": amp_type,
+            "expected_length": exp_len,
+            "expected_length_source": exp_len_source,
             "resolved_via": "manual",
         })
         return 0

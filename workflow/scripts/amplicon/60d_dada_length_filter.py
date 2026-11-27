@@ -218,7 +218,15 @@ def determine_window(mode, manual_range, probe_json_path, trunclen_json_path,
 
         # Fallback: expected_length from trunclen.json ± 15%
         tl = json.loads(Path(trunclen_json_path).read_text())
-        exp = int(tl["expected_length"])
+        raw_exp = tl.get("expected_length")
+        if raw_exp is None:
+            raise ValueError(
+                f"length_filter.mode='auto' without a probe JSON needs expected_length in "
+                f"{trunclen_json_path}, but it is missing or null. Set amplicon.expected_length "
+                f"(an integer, a [min, max] range, or 'auto'), or set length_filter.mode='manual' "
+                f"with an explicit length_filter.range."
+            )
+        exp = int(raw_exp)
         min_len = math.floor(exp * 0.85)
         max_len = math.ceil(exp * 1.15)
         return min_len, max_len, "auto:fallback_expected_length±15pct"
