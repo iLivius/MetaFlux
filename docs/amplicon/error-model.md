@@ -14,7 +14,7 @@ The terms used throughout:
 |---|---|
 | transition | a true base read as a base: `A2G` is a true A read as G, `A2A` a true A read correctly; 16 in all, 12 of them misreads |
 | transition counts | how often each transition was seen at each quality score, counted by comparing reads with the ASV they were assigned to |
-| error function | the step that turns the transition counts into a table of error rates, one per transition and quality score (`loess`, `binned`, or `scam`) |
+| error function | the step that turns the transition counts into a table of error rates, one per transition and quality score (`loess` or `binned`) |
 | round | one pass of denoising with the current rates and counting; learning repeats rounds until the rates stop changing |
 | converged | learning ended because a round gave back a table already seen |
 | continuous, binned | quality values written as nearly every score from 2 to 38 (MiSeq), or as a few fixed values such as 9, 20 and 34 (recent instruments) |
@@ -134,12 +134,12 @@ The setting `amplicon.dada2.learn_errors.error_model` picks between them, for R1
 separately, from the number of distinct values above Q2 that the voting samples carry
 together:
 
-| Distinct values above Q2 | Read as | `auto` | `loess` | `binned` | `scam` |
-|---|---|---|---|---|---|
-| fewer than 3 | no quality information | stop | stop | stop | stop |
-| 3 to 10, no two of them neighbours | binned | binned fit | loess fit, with a warning | binned fit | SCAM fit |
-| 3 to 10 with neighbours (such as 29 and 30), or 11 to 19 | undetermined | stop | loess fit, with a warning | binned fit, with a warning | SCAM fit |
-| 20 or more | continuous | loess fit | loess fit | stop | SCAM fit |
+| Distinct values above Q2 | Read as | `auto` | `loess` | `binned` |
+|---|---|---|---|---|
+| fewer than 3 | no quality information | stop | stop | stop |
+| 3 to 10, no two of them neighbours | binned | binned fit | loess fit, with a warning | binned fit |
+| 3 to 10 with neighbours (such as 29 and 30), or 11 to 19 | undetermined | stop | loess fit, with a warning | binned fit, with a warning |
+| 20 or more | continuous | loess fit | loess fit | stop |
 
 No instrument table has fewer than three values above Q2, or 11 to 19 of them, or two
 neighbouring values: binned values always leave gaps (11, 25, 37 on a NovaSeq 6000). One

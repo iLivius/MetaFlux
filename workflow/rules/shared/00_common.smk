@@ -1250,7 +1250,7 @@ def _read_direction_truncation(amplicon_type, trunc_cfg, direction):
 # stopped improving, or at a cap on the number of rounds. Rule check_error_model then
 # stops the run before denoising when a model did not converge, unless the user has
 # accepted that model by its code. Which error function the learning uses (DADA2's
-# smooth loess fit for continuous quality values, its binned fit for binned ones, or SCAM) is
+# smooth loess fit for continuous quality values, its binned fit for binned ones) is
 # picked by rule choose_error_model from the reads, unless error_model names one; the
 # experimental value custom learns with an R function of the user's own, named in
 # custom_error_function. The functions below check the five settings of this at
@@ -1450,7 +1450,7 @@ def _accept_unconverged_setting(value):
 # selectable only when it is in all three places: this list, the registry, and the
 # SUITED_CLASS and ON_OTHER_CLASS tables of 60c_choose_error_model.py;
 # tests/test_error_model_settings.py checks that they agree.
-ERROR_FUNCTION_NAMES = ("loess", "binned", "scam")
+ERROR_FUNCTION_NAMES = ("loess", "binned")
 
 # The word error_model takes for the user's own error function (EXPERIMENTAL). It is not
 # an entry of the registry above: the function lives in an R file of the user's, named in
@@ -1616,13 +1616,13 @@ def _custom_error_function_setting(block, error_model):
                 "[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
                 f"{key}.file must give the R file that defines your error function (an "
                 "absolute path, or one relative to the folder snakemake is started in); it "
-                "is empty. Set it, or set error_model back to auto, loess, binned or scam."
+                "is empty. Set it, or set error_model back to auto, loess or binned."
             )
         if not name_text:
             sys.exit(
                 "[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
                 f"{key}.name must give the name of your error function in {file_text}; it "
-                "is empty. Set it, or set error_model back to auto, loess, binned or scam."
+                "is empty. Set it, or set error_model back to auto, loess or binned."
             )
     else:
         if not file_text and not name_text:

@@ -16,7 +16,7 @@
 #           file: .test/custom_error_functions/monotone_gam.R
 #           name: monotone_gam
 # (a relative path is read from the folder snakemake is started in). With error_model
-# auto, loess, binned or scam and the same custom_error_function block, the models are learned
+# auto, loess or binned and the same custom_error_function block, the models are learned
 # as usual and the report draws this function next to them, refitted on the same counts.
 # In plain DADA2 (with the R package scam installed):
 #   source("monotone_gam.R")
