@@ -27,7 +27,7 @@ Inputs (see rule choose_error_model in 60_dada2.smk):
                    scanned, the distinct values and the bases at each value.
   params         : error_model_requested, the setting amplicon.dada2.learn_errors.
                    error_model as checked at start-up (auto, loess, binned, or the
-                   experimental custom or scam); trunc_q, only to say in a message that a
+                   experimental custom); trunc_q, only to say in a message that a
                    raised trunc_q removed the lower quality values.
 
 Decision, for R1 and R2 separately (decide_direction below):
@@ -128,8 +128,8 @@ AUTO_FUNCTION = {"continuous": "loess", "binned": "binned"}
 # loess on binned values: a warning (it is what MetaFlux did up to v2.6.1, and a user
 # may want to keep it); binned on continuous values: a stop (it would join some 30
 # counted rates with straight lines instead of fitting a curve).
-SUITED_CLASS = {"loess": "continuous", "binned": "binned", "scam": "both"}
-ON_OTHER_CLASS = {"loess": "warn", "binned": "stop", "scam": "none"}
+SUITED_CLASS = {"loess": "continuous", "binned": "binned"}
+ON_OTHER_CLASS = {"loess": "warn", "binned": "stop"}
 # The setting's word for the user's own error function (EXPERIMENTAL; error_model:
 # custom). Not a registry entry, so it has no entry in the two tables above: it is made
 # for no particular kind of quality values, and learn_errors adds it to the registry
@@ -702,9 +702,7 @@ def decide_direction(direction, samples, requested, trunc_q, out, log_path):
     # writes them" (only_together: not every voter carries continuous values on its own).
     # The user's own function (custom) suits no particular kind and never stops here.
     if forced and not custom:
-        on_other_kind = (run_class in ("binned", "continuous")
-                         and SUITED_CLASS[requested] != "both"
-                         and run_class != SUITED_CLASS[requested])
+        on_other_kind = run_class in ("binned", "continuous") and run_class != SUITED_CLASS[requested]
         if on_other_kind and ON_OTHER_CLASS[requested] == "stop":
             only_together = any(voter_class[name] != run_class for name, part in voters)
             stops.append(stop_c7(direction, requested, run_class, declared_above,
@@ -780,9 +778,7 @@ def decide_direction(direction, samples, requested, trunc_q, out, log_path):
         function = requested
         # On the other kind of values: a function that stops there has stopped above,
         # before the warnings (C7); one that warns (loess on binned values) warns here.
-        if (SUITED_CLASS[function] != "both"
-                and run_class in ("binned", "continuous")
-                and run_class != SUITED_CLASS[function]):
+        if run_class in ("binned", "continuous") and run_class != SUITED_CLASS[function]:
             if ON_OTHER_CLASS[function] == "warn":
                 warnings.append(warning_w1(direction, function, run_class, declared_above))
 
