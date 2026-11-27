@@ -197,7 +197,7 @@ localrules: choose_error_model, check_error_model
 # With amplicon.dada2.learn_errors.error_model: auto (the default) the script decides
 # per read direction from the number of distinct values above Q2 in the samples with
 # at least 1,000 filtered reads (3-10 values with gaps between them: binned; 20 or
-# more: continuous); loess or binned set in the config is used as set, with a warning
+# more: continuous); loess, binned or scam set in the config is used as set, with a warning
 # or a stop when it does not suit the reads. It stops the run, before any learning, when the
 # reads carry no usable quality information (fewer than 3 values, as in files
 # re-encoded by ENA), when one sample does, when samples from different instruments are
@@ -306,7 +306,7 @@ rule choose_error_model:
 # there (the comments in dada2_custom.yaml say more). The choice is made when Snakemake
 # reads the workflow, from the setting checked at start-up (ERROR_MODEL_SETTING,
 # 00_common.smk), so a run that learns with loess or binned never builds
-# dada2_custom.yaml. Snakemake counts a change of environment as new software, but
+# dada2_custom.yaml; a run that learns with scam or custom does. Snakemake counts a change of environment as new software, but
 # switching error_model to or from custom makes this step run again anyway: the choice
 # file it reads changes.
 # Threads and memory: dada_seqtab's values unless the run config names
@@ -352,7 +352,7 @@ rule learn_errors:
     conda:
         # dada2_custom.yaml (dada2.yaml plus mgcv and scam) only when the models are
         # learned with the user's own function; see "Conda environment" above the rule.
-        "../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING == "custom" else "../../envs/dada2.yaml"
+        "../../envs/dada2_custom.yaml" if ERROR_MODEL_SETTING in ("custom", "scam") else "../../envs/dada2.yaml"
     threads: lambda wc: threads_for_or("learn_errors", threads_for("dada_seqtab"))
     resources:
         mem_mb = lambda wc: mem_mb_for_or("learn_errors", mem_mb_for("dada_seqtab")),
@@ -440,7 +440,7 @@ rule error_model_report:
     conda:
         # dada2_custom.yaml whenever a function of the user's own is named, whatever
         # error_model says; see "Conda environment" above the rule.
-        "../../envs/dada2_custom.yaml" if CUSTOM_ERROR_FUNCTION else "../../envs/dada2.yaml"
+        "../../envs/dada2_custom.yaml" if (CUSTOM_ERROR_FUNCTION or ERROR_MODEL_SETTING == "scam") else "../../envs/dada2.yaml"
     threads: lambda wc: threads_for_or("error_model_report", 1)
     resources:
         mem_mb = lambda wc: mem_mb_for_or("error_model_report", mem_mb_for("dada_quality_plots")),

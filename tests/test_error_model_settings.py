@@ -231,7 +231,7 @@ def test_error_model_accepts_auto_the_function_names_and_custom(value, expected)
 @pytest.mark.parametrize("value", ["novaseq", "", None, True, 3, ["loess"]])
 def test_error_model_refuses_everything_else(value):
     message = stop_text(checks._error_model_setting, value)
-    assert "error_model must be one of auto, loess, binned, custom" in message
+    assert "error_model must be one of auto, loess, binned, scam, custom" in message
     assert f"got {value!r}" in message
 
 
@@ -305,7 +305,7 @@ def test_custom_needs_a_file(block):
     assert message.startswith("[MetaFlux] amplicon.dada2.learn_errors.error_model is custom, so "
                               f"{BLOCK_KEY}.file must give the R file")
     assert "it is empty" in message
-    assert "set error_model back to auto, loess or binned" in message
+    assert "set error_model back to auto, loess, binned or scam" in message
 
 
 def test_custom_needs_a_name(r_file):
@@ -434,12 +434,14 @@ def registry_names():
 
 def test_the_three_lists_of_error_functions_agree():
     names = registry_names()
-    assert names == ("loess", "binned")
+    assert names == ("loess", "binned", "scam")
     assert names == checks.ERROR_FUNCTION_NAMES
     tables = load_functions(CHOOSE_SCRIPT, ["SUITED_CLASS", "ON_OTHER_CLASS"])
     assert tuple(tables.SUITED_CLASS) == names
     assert tuple(tables.ON_OTHER_CLASS) == names
-    assert set(tables.ON_OTHER_CLASS.values()) <= {"warn", "stop"}
+    assert set(tables.ON_OTHER_CLASS.values()) <= {"warn", "stop", "none"}
+    assert tables.SUITED_CLASS["scam"] == "both"
+    assert tables.ON_OTHER_CLASS["scam"] == "none"
 
 
 def test_the_vendored_block_is_the_original():

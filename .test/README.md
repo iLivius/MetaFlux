@@ -97,7 +97,7 @@ Expected stops (`config/expected_stop/`):
 | `16S_max_consist_zero` | a cap of 0 rounds on DADA2's error learning, which would hand DADA2's rough starting estimate to the denoising | `max_consist must be a whole number of at least 1` |
 | `16S_accept_unconverged_true` | `accept_unconverged: true`, an on/off switch where the setting takes the codes of accepted error models | `accept_unconverged takes the codes` |
 | `16S_max_flat_rounds_fraction` | a fraction (`2.5`) as the number of flat rounds of the early stop | `max_flat_rounds must be a whole number >= 0` |
-| `16S_error_model_word` | an instrument name (`novaseq`) as the error function of DADA2's error learning, which takes `auto`, `loess`, `binned` or `custom` | `error_model must be one of auto, loess, binned` |
+| `16S_error_model_word` | an instrument name (`novaseq`) as the error function of DADA2's error learning, which takes `auto`, `loess`, `binned`, `scam` or `custom` | `error_model must be one of auto, loess, binned, scam` |
 | `16S_custom_error_function_missing_file` | `error_model: custom` with an error-function file that does not exist (a typo in its name) | `is not an existing file` |
 | `16S_custom_error_function_bad_name` | `error_model: custom` with a function name R cannot give a function (`loess-wrapper`, with a dash) | `custom_error_function.name must be the name of an R function` |
 | `16S_learn_errors_block_empty` | a `learn_errors:` block whose only line (`accept_unconverged`) is commented out, which YAML reads as empty and which would replace the template's whole block | `amplicon.dada2.learn_errors is empty in your run config` |

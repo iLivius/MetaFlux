@@ -416,8 +416,9 @@ amplicon:
       # (DADA2's default smooth fit) for continuous values such as a MiSeq writes (20 or
       # more distinct values), and binned (DADA2's makeBinnedQualErrfun) for binned
       # values such as NovaSeq and NextSeq write (3 to 10, with gaps between them).
-      # loess or binned: use that function; loess on binned values warns and goes on (it
-      # is the fit of every run up to v2.6.1), binned on continuous values stops. The run
+      # loess, binned or scam: use that function; loess on binned values warns and goes on (it
+      # is the fit of every run up to v2.6.1), binned on continuous values stops, and scam
+      # works for both kinds. The run
       # stops before learning when the reads carry fewer than three quality values above
       # Q2, and under auto also when samples from different instruments are mixed, or
       # when 11 to 19 values, or 3 to 10 that include neighbours (as MiSeq reads keep
