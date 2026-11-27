@@ -17,6 +17,7 @@ download, which needs unpacking, which needs one of the scripts below).
 | `silva_to_sintax.py` | SILVA 16S DADA2 trainset (the ranks of the chosen release: 7 on 144, 6 on 138.2; stops on more ranks than letters) | VSEARCH SINTAX FASTA, one letter per rank from the 16S marker pack (`d,k,p,c,o,f,g` on 144, `d,p,c,o,f,g` on 138.2) | `convert_silva_sintax` |
 | `frogs_rpob_to_dada2.py` | FROGS rpoB release FASTA (an accession, `Root` and an `[id: N]` tag per rank in every header; the domain written `k__Bacteria`) | DADA2 assignTaxonomy trainset whose header is the 7-rank lineage, with the domain written `d__Bacteria`; stops on any other first rank; headers only | `convert_rpob_to_dada2` |
 | `pr2_utax_domain_first.py` | PR2 18S UTAX FASTA (domain under `k:`, supergroup under `d:`) | VSEARCH SINTAX FASTA with the domain under `d:` and the supergroup under `k:`, the order VSEARCH reads; headers only | `convert_pr2_sintax` |
+| `midori2_to_metaflux_sintax.py` | MIDORI2 COI SINTAX FASTA (domain under `k:`, an NCBI taxid on every name, placeholder ranks, interim species names) | VSEARCH SINTAX FASTA with the domain under `d:` and a kingdom from MIDORI2's NCBI snapshot under `k:`, without taxids, placeholder ranks or interim species names, and without the records whose sequence the MIDORI2 list of the set of bacterial COI homologues marks as removed; writes a report of its counts | `prepare_midori2_coi_sintax` |
 
 ## The reference check
 
@@ -35,7 +36,10 @@ rank and quotes example headers. When it matches, the script writes
   home and transform it here, rather than re-hosting pre-baked copies. The tree is
   reproducible from a clean clone and tracks upstream when a URL is bumped.
 - **Sequence lines are never altered** — only FASTA *headers* are reshaped, so the
-  sequences an ASV is compared against are exactly the upstream ones.
+  sequences an ASV is compared against are exactly the upstream ones. The MIDORI2
+  conversion also leaves out whole records (those whose sequence the list of the set of
+  bacterial COI homologues marks as removed), and copies the sequence lines of the
+  records it keeps unchanged.
 - **One script = one database's quirk.** A transform that is generic (a plain
   DADA2↔SINTAX rank remap) should become a single rank-model-aware converter driven
   by the marker pack's `tax_levels` / `rank_letters` / `rank_prefixes` /

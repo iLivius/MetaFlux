@@ -1,4 +1,4 @@
-# MetaFlux v2.6.1 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.
+# MetaFlux v2.7.0 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.
 #
 # This is the entry point Snakemake actually reads (the file every `snakemake` command
 # ultimately parses), but almost none of the pipeline's logic lives in it. Its only job
@@ -21,7 +21,7 @@
 # are ever loaded into a given run — the other mode's rule files are not even read —
 # so there is no risk of an amplicon rule accidentally firing during a shotgun run:
 #   amplicon → rules/amplicon/*.smk  (DADA2-based multi-marker amplicon workflow:
-#              16S / ITS / 18S / gyrB / rpoB, chosen by amplicon.type in the config)
+#              16S / ITS / 18S / gyrB / rpoB / COI, chosen by amplicon.type in the config)
 #   shotgun  → rules/shotgun/*.smk   (Kraken2 + Bracken and/or sylph, chosen by shotgun.profiler)
 # Shared modules (rules/shared/*.smk) are always included, in both modes.
 
@@ -35,7 +35,7 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-MetaFlux v2.6.1
+MetaFlux v2.7.0
 Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
 
 Livio Antonielli, May 2026

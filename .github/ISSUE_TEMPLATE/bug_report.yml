@@ -17,7 +17,7 @@ body:
     attributes:
       label: MetaFlux version
       description: The banner the run prints, or the output of `git describe --tags`.
-      placeholder: v2.6.1
+      placeholder: v2.7.0
     validations:
       required: true
   - type: dropdown
@@ -72,7 +72,7 @@ body:
     id: log
     attributes:
       label: The log of the failing job
-      description: "`logs/<rule>/<sample>.log` in the output folder, if a job failed."
+      description: "`logs/<rule>.log`, or `logs/<rule>/<sample>.log` for a step that runs once per sample, in the output folder, if a job failed (Snakemake's error message names the file)."
       render: text
   - type: input
     id: environment

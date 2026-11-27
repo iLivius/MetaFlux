@@ -407,11 +407,23 @@ def main() -> int:
         f"q3={stats_post['q3']}, p95={stats_post['p95']}, max={stats_post['max']}, "
         f"mean={stats_post['mean']}, stdev={stats_post['stdev']}")
 
+    # How many ASVs the extraction (ITSx for ITS, Metaxa2 for 16S; rule target_extract)
+    # left, before the length window is applied. Fewer ASVs after extraction does not
+    # mean ASVs were lost: two ASVs that differ only in the flanks the extraction cuts
+    # off become one sequence, and target_extract merges them into one ASV, their reads
+    # added together (05.dada2/itsx_collapse_map.tsv or metaxa2_collapse_map.tsv lists
+    # which went where). Only the others, in which ITSx or Metaxa2 found no marker
+    # region, are left out. logs/target_extract.log gives the two numbers separately;
+    # this line gives their sum. Up to v2.6.1 it called all of them "dropped", which on
+    # the ITS test set meant 14 ASVs that were in fact merged.
     if extraction_enabled:
         n_pre = len(fasta_pre)
         n_post = len(fasta_post)
-        log(f"[dada_length_filter] Extraction kept {n_post} / {n_pre} ASVs "
-            f"(dropped: {n_pre - n_post} ASVs ITSx/Metaxa2 could not extract)")
+        extraction_line = f"[dada_length_filter] After extraction: {n_post} of {n_pre} ASVs"
+        if n_post < n_pre:
+            extraction_line += (f" ({n_pre - n_post} fewer: merged into an identical extracted "
+                                f"sequence, or not extracted; target_extract.log gives both counts)")
+        log(extraction_line)
 
     # ── Window determination ──────────────────────────────────────────────────
     # amp_type and extraction_enabled decide whether the ITS floor applies.

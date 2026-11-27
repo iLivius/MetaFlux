@@ -1770,6 +1770,30 @@ def _error_model_report_files(out):
     }
 
 
+def _primer_fields_set_by_user(amplicon_block):
+    """The primer fields of amplicon.primers ("fwd", "rev") that name a primer file of
+    the user's own, in that order; an empty list when there is none.
+
+    Used by the primer note of shotgun runs (in the shotgun globals below): the note is
+    for a config that names primer files while asking for shotgun mode, which may have
+    been meant as an amplicon run. A field that is empty or null names nothing. A field
+    that still holds a /path/to/ placeholder of the template (config/config.yaml, always
+    loaded under the run config, has /path/to/fwd_primer.fasta and
+    /path/to/rev_primer.fasta) was not set by the user either. Up to v2.6.1 those
+    placeholders counted as set, so the note appeared on nearly every shotgun run.
+    `amplicon_block` is config["amplicon"]; it may be missing (None) or hold no primers."""
+    primers = (amplicon_block or {}).get("primers") or {}
+    fields_set = []
+    for key in ("fwd", "rev"):
+        value = primers.get(key)
+        if not value:
+            continue  # empty or null: nothing set
+        if str(value).startswith("/path/to/"):
+            continue  # the template's placeholder, not a file of the user's own
+        fields_set.append(key)
+    return fields_set
+
+
 # ────────────────────── Amplicon-only globals ──────────────────
 # Runs only when mode: amplicon. Everything from here down to the matching `else:`
 # (shotgun globals) is normally never even evaluated on a shotgun run — this whole
@@ -3056,10 +3080,12 @@ else:  # MODE == "shotgun"
     if RUN_KRAKEN2 and (KRAKEN_DB is None or not KRAKEN_DB.exists()):
         sys.exit(f"[MetaFlux] mode=shotgun requires kraken_db but not found: {KRAKEN_DB}")
 
-    # ── Primer warning (not an error — amplicon section can be filled out
-    # and ignored when running shotgun). ──
-    _amp_primers = config.get("amplicon", {}).get("primers", {})
-    if _amp_primers.get("fwd") or _amp_primers.get("rev"):
+    # ── Primer warning (a note, not an error: a config can hold a full amplicon
+    # section and still be run in shotgun mode, where that section is never read). ──
+    # Only primer fields that name a file of the user's own count: an empty field, or
+    # the template's /path/to/ placeholder, gets no note (_primer_fields_set_by_user,
+    # above the amplicon globals, says why). The text of the note is unchanged.
+    if _primer_fields_set_by_user(config.get("amplicon")):
         sys.stderr.write(
             "[MetaFlux] warning: mode=shotgun but amplicon.primers fields are set — they will be ignored\n"
         )
@@ -4115,7 +4141,7 @@ if MODE == "shotgun":
 else:
     _profiler_part = ""
 sys.stderr.write(
-    f"[MetaFlux v2.6.1] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
+    f"[MetaFlux v2.7.0] mode={MODE}{_profiler_part}, input={INPUT_MODE}, "
     f"{len(SAMPLES)} sample(s) in {FASTQ_DIR}\n"
 )
 # When sylph runs, a second line names its databases (with the taxonomy of each) and

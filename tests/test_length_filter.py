@@ -19,6 +19,9 @@ What is tested, and why it matters:
     and exit 1, not a Python traceback: mode auto with neither a probe nor an expected
     length in trunclen.json (it is null when pick_trunclen could not resolve one), and a
     mode that is neither auto nor given a range.
+  - The log line on the extraction calls the ASVs that are gone after it "fewer" (merged
+    into an identical extracted sequence, or not extracted), not "dropped": on the ITS
+    test set every one of them had been merged.
 
 The script is run whole with a stand-in snakemake object (run_script in helpers.py), on
 small files written to a temporary folder: the ASV FASTA before and after extraction, the
@@ -169,12 +172,15 @@ def count_table(n_asvs):
 
 def run_filter(tmp_path, amp_type, extraction_enabled, lengths, probe=None,
                window_margin=50, manual_range=None, expected_length=None,
-               mode="auto", expected_exit=0):
+               mode="auto", expected_exit=0, gone_in_extraction=0):
     """Run 60h_dada_length_filter.py once, as rule dada_length_filter would, on ASVs of
     the given `lengths` (the lengths the filter judges: after extraction when it ran).
     `probe` is the probe JSON as a dict, or None for a run without one (expected_length
     set by hand, so the rule hands an empty list). `expected_length` goes into
     trunclen.json, as pick_trunclen writes it (null for ITS).
+    `gone_in_extraction` adds that many ASVs to the sequences before extraction only:
+    ASVs that target_extract merged into an identical extracted sequence, or in which
+    ITSx or Metaxa2 found no marker region. The filter only counts them.
     Returns (the filter_window of asv_length_stats.json, the names of the kept ASVs,
     the ASV columns of the kept count table, the log text). With an `expected_exit`
     other than 0 (a run that must stop), only the log text is filled in."""
@@ -182,7 +188,9 @@ def run_filter(tmp_path, amp_type, extraction_enabled, lengths, probe=None,
     # Before extraction the ASVs still carry their rRNA flanks (140 bases here); when
     # extraction is off, the filter judges these very sequences.
     if extraction_enabled:
-        seqs_pre = write_text(dada2_dir / "seqs.fasta", asv_fasta(lengths, extra_bases=140))
+        lengths_before = list(lengths) + [lengths[-1]] * gone_in_extraction
+        seqs_pre = write_text(dada2_dir / "seqs.fasta",
+                              asv_fasta(lengths_before, extra_bases=140))
         seqs = write_text(dada2_dir / "seqs_extracted.fasta", asv_fasta(lengths))
     else:
         seqs_pre = write_text(dada2_dir / "seqs.fasta", asv_fasta(lengths))
@@ -320,6 +328,25 @@ def test_manual_range_wins_on_an_its_run(tmp_path):
     assert window == {"min": 100, "max": 300, "source": "manual:config_range"}
     assert kept == ["ASV_2", "ASV_3"]
     assert "ITS floor rule" not in log
+
+
+def test_the_extraction_line_does_not_call_merged_asvs_dropped(tmp_path):
+    """The log line on the extraction gives the ASVs before and after it. When there are
+    fewer after it, the difference is called "fewer", merged or not extracted, and no
+    longer "dropped ... could not extract": on the ITS test set all 14 such ASVs had
+    been merged into an identical extracted sequence. With no difference, the line
+    carries no explanation."""
+    lengths = [211, 230, 250]
+
+    log = run_filter(tmp_path / "fewer", "ITS", True, lengths, probe=PROBE_ITS2,
+                     gone_in_extraction=2)[3]
+    assert ("[dada_length_filter] After extraction: 3 of 5 ASVs (2 fewer: merged into an "
+            "identical extracted sequence, or not extracted; target_extract.log gives both "
+            "counts)\n") in log
+    assert "could not extract" not in log
+
+    log = run_filter(tmp_path / "same", "ITS", True, lengths, probe=PROBE_ITS2)[3]
+    assert "[dada_length_filter] After extraction: 3 of 3 ASVs\n" in log
 
 
 def test_fallback_without_a_probe_is_unchanged(tmp_path):

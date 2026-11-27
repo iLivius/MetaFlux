@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# MetaFlux v2.6.1 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
+# MetaFlux v2.7.0 — Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow
 # ═══════════════════════════════════════════════════════════════════════
 # TEMPLATE configuration. Replace every `/path/to/...` placeholder with a real path,
 # choose a `mode`, and set the references that mode needs. A convenient pattern is to
@@ -928,9 +928,9 @@ resources:
     build_host_index: 30000                   # BBMap index build for the host reference (masked human ~24-28 GB)
     decontam_host: 30000                      # BBMap mapping vs the host index
     fastp: 8000
-    # kraken2 mem_mb is OVERRIDDEN at parse time in 00_common.smk based on
-    # shotgun.kraken.memory_mapping + actual hash.k2d size. The value here is
-    # an inert fallback used only if KRAKEN_DB is unreadable.
+    # kraken2 mem_mb is not read: 00_common.smk works it out at parse time from
+    # shotgun.kraken.memory_mapping and the size of hash.k2d (20000 MB with memory
+    # mapping on; otherwise hash.k2d + 10 %, or 110000 MB when hash.k2d is not found).
     kraken2: 20000
     kmer_evidence: 2000                       # holds one parsed report in memory (~1-2 MB of text)
     bracken: 4000

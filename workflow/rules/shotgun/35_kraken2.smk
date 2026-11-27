@@ -24,9 +24,11 @@
 #                                and MultiQC (80_stats.smk / 90_report.smk)
 #                                also read it, for classified/unclassified
 #                                read counts.
-#   {sample}_output.txt      -> one line per input read (classified AND
-#                                unclassified), recording which taxid, if
-#                                any, it was assigned to. extract_taxon_reads
+#   {sample}_output.txt      -> one line per input read pair (classified AND
+#                                unclassified; Kraken2 classifies the two
+#                                mates of a pair together, with --paired),
+#                                recording which taxid, if any, the pair was
+#                                assigned to. extract_taxon_reads
 #                                (55_extract_taxa.smk) reads this, alongside
 #                                the R1/R2 fastqs below, to pull out every
 #                                read under a requested taxon.
