@@ -6,7 +6,10 @@ reference the amplicon-length probe measures, which database the classifier uses
 a target-region extractor exists, how many taxonomic ranks the output carries — is
 declared in a small YAML file called a *marker pack*, one per marker, under
 `workflow/markers/`. The rest of the amplicon pipeline is the same code for all six,
-apart from the two COI screens (see [COI](coi.md#the-coi-screens)).
+apart from a few steps tied to a marker by its name rather than by its pack: for ITS,
+the `truncLen` override, the opt-in probe-derived `min_len` and, with ITSx, the floor of
+the ASV length window; for 16S, the optional phylogeny; for COI, the two COI screens
+(see [COI](coi.md#the-coi-screens)).
 
 Marker packs hold facts about the marker, never run settings. Primers, expected lengths,
 truncation values and taxon filters live in the run config; they are the things that change
@@ -15,12 +18,17 @@ from one experiment to the next. A pack is read separately and is never merged i
 
 !!! note
 
-    A pack in `config/markers/` shadows a shipped pack of the same name. Adding a marker
-    is therefore a data-only change — a new pack file, no code edit — as long as its
-    databases are plain downloads: the fetch rule is generated from the `url` the pack
-    gives each reference. A database that arrives as an archive, or whose headers have
-    to be reshaped before a classifier will read them, still needs a rule of its own in
-    `workflow/rules/amplicon/10_refdb.smk`. That is how UNITE, the UNITE UCHIME
+    A pack in `config/markers/` shadows a shipped pack of the same name. A marker with
+    databases of its own also needs a code edit: each reference symbol its pack names in
+    `probe_ref`, `taxonomy_refdb`, `taxonomy_species_db` or `taxonomy_sintax_db` must
+    have an entry in the symbol table `REF_PATHS` of `workflow/rules/shared/00_common.smk`,
+    with the `_ref_path` line that gives it its run-config key. A symbol outside that
+    table stops the run at start-up with a Python `KeyError`, and no fetch rule is
+    generated for it. For a symbol in the table, a plain download needs no rule of its
+    own: the fetch rule is generated from the `url` the pack gives it. A database that
+    arrives as an archive, or whose headers have to be reshaped before a classifier will
+    read them, still needs a rule of its own in `workflow/rules/amplicon/10_refdb.smk`.
+    That is how UNITE, the UNITE UCHIME
     subregions, the SILVA 144 training set (whose kingdom names lose SILVA's `--other`
     suffix), the SILVA SINTAX builds, the 18S PR2 SINTAX file (whose domain moves to the
     letter `d:`), the FROGS rpoB build and the COI files (MIDORI2, its taxonomy snapshot
@@ -144,7 +152,10 @@ in the pipeline's own `refdb/cache/`, next to the workflow. That directory is fi
 the repository root and does not follow `references.refdb_root`, so the cache stays put
 across runs and output directories even when the databases themselves live on a shared
 path. The file is keyed by marker, reference tag (for 16S including the lineages left
-out of the statistics, for 16S and rpoB the third pass) and a hash of the two primer sequences. Change a primer and the probe re-runs; leave it alone and it is reused. Which
+out of the statistics, for 16S and rpoB the third pass) and a hash of the two primer FASTA
+files (the first 12 hex characters of a SHA-256 over both files, header lines included).
+Change either file, even only a header line, and the probe re-runs; leave both as they
+are and it is reused. Which
 single statistic becomes `expected_length` comes from `amplicon.probe_length_stat` — see
 [amplicon length and truncation](../length-and-truncation.md).
 
@@ -180,9 +191,10 @@ explicitly for these four markers has exactly the same effect and avoids the war
 `amplicon.taxonomy.method` chooses between `rdp` (DADA2's naive Bayesian classifier, with
 `min_boot` as the bootstrap cutoff) and `sintax` (VSEARCH, with `sintax_cutoff`). A marker
 can only offer `sintax` if a SINTAX-formatted build of its reference exists. For gyrB and
-rpoB none does — DD7RZ8 and the FROGS release both ship a DADA2 trainset only — so the
-pack leaves `taxonomy_sintax_db` empty and the run stops at start-up rather than failing
-somewhere deep in the taxonomy rule:
+rpoB none does — DD7RZ8 ships a DADA2 trainset only, and the FROGS release a FASTA for its
+own classifier, which MetaFlux converts into a DADA2 trainset — so the pack leaves
+`taxonomy_sintax_db` empty and the run stops at start-up rather than failing somewhere
+deep in the taxonomy rule:
 
 ```text
 [MetaFlux] marker gyrB has no SINTAX reference database, so amplicon.taxonomy.method: sintax is not available for it. Use method: rdp.

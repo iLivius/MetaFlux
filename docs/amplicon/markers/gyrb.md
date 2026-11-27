@@ -116,10 +116,12 @@ its own `p__`/`c__`/… — the species slot stays a GTDB binomial such as
 ## Amplicon length: measured directly, not by in-silico PCR
 
 For 16S, 18S, rpoB and COI the amplicon-length probe runs an in-silico PCR: two passes of
-cutadapt against a full-length reference, keeping the sequences that carry the forward
-primer at the 5′ end and the reverse complement of the reverse primer at the 3′ end. That
-is impossible against DD7RZ8, whose sequences have already had those primer sites cut off
-upstream — the PCR would find nothing to match and return almost no amplicons.
+cutadapt against a full-length reference, keeping the sequences in which the forward
+primer matches and, downstream of it, the reverse complement of the reverse primer, and
+trimming each primer together with the gene sequence beyond it. Neither match is
+anchored, because the primers bind inside whole genes. Against DD7RZ8 this is
+impossible: its sequences have already had those primer sites cut off upstream, so the
+PCR would find nothing to match and return almost no amplicons.
 
 So the gyrB pack sets `probe_mode: direct`: cutadapt is not run at all, and the length
 distribution is read straight from the reference sequences. Measured across the shipped

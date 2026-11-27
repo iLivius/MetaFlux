@@ -26,8 +26,10 @@ snakemake --sdm conda --cores 16 --configfile config/config.yaml
 ```
 
 A dry run (`--dry-run`, or `-n`) builds the job list and prints it without running
-anything or writing any file. Do one before every run: MetaFlux does most of its
-checks while the workflow is read, before any job starts. A dry run therefore
+any job. MetaFlux still does what it does at every start-up: it creates `fastq_dir` if
+it is missing and, in BioProject mode, fetches the run table from NCBI once and caches
+it there. Do a dry run before every run: MetaFlux does most of its checks while the
+workflow is read, before any job starts. A dry run therefore
 catches, among others:
 
 - `mode` set to something other than `amplicon` or `shotgun`;
@@ -36,13 +38,14 @@ catches, among others:
 - a config still using the retired `include_pattern` / `exclude_pattern` filter keys;
 - a keep/discard token that can never match the run's taxonomy strings, such as
   `k__Bacteria` from a config written for MetaFlux v2.4.0 or earlier (now `d__Bacteria`);
-- a marker pack in `config/markers/` written for an older MetaFlux;
+- a marker pack in `config/markers/` written for MetaFlux v2.4.0 or earlier, which has no
+  `reference_values` (a later copy passes, so copy the shipped pack again after an upgrade);
 - ITS combined with `length_filter.mode: auto` but a manual `expected_length`, which would otherwise crash *after* the full DADA2 run.
 
 While reading the workflow, MetaFlux also prints a banner line to stderr:
 
 ```text
-[MetaFlux v2.6.1] mode=amplicon, input=local, 24 sample(s) in /data/fastq
+[MetaFlux v2.7.0] mode=amplicon, input=local, 24 sample(s) in /data/fastq
 ```
 
 Before it, an amplicon run prints a line saying whether the organelle filter is on, and
@@ -154,11 +157,16 @@ finished cleanly is kept and not recomputed.
 (partition, account, how `threads` and `mem_mb` map to `sbatch` arguments), so the
 MetaFlux command line does not change. The per-rule values come from
 `resources.threads.<rule>` and `resources.mem_mb.<rule>` in the config, falling back
-to `threads_default` (4) and `mem_mb_default` (2000) for any rule not listed.
-Kraken2 is the exception: its memory request is computed while the workflow is read,
-from `shotgun.kraken.memory_mapping` and the actual size of the database's
-`hash.k2d` — 20000 MB with memory mapping on (the database itself is shared through
-the operating system's file cache), otherwise the hash size plus 10 % headroom. With
+to `threads_default` (4) and `mem_mb_default` (2000) for most rules not listed. The
+exceptions are described under [Resources](configuration.md#resources-shared):
+`learn_errors`, which has no line in the template, takes the values of `dada_seqtab`
+(8 threads and 16000 MB in the template); `error_model_report` takes 1 thread and the
+memory of `dada_quality_plots`; `phylo_tree` and `sylph_sketch` fall back to 1 thread.
+Two memory requests are computed while the workflow is read: that of Kraken2, from
+`shotgun.kraken.memory_mapping` and the actual size of the database's `hash.k2d` —
+20000 MB with memory mapping on (the database itself is shared through the operating
+system's file cache), otherwise the hash size plus 10 % headroom — and that of
+`sylph_profile` when its entry is `null`, from the size of the sylph database files. With
 a profile, `--jobs` becomes the cap on jobs queued with the scheduler at once —
 the one setting where it does something `--cores` does not. Two amplicon steps are
 never sent to the cluster: `choose_error_model`, which picks the error function before
@@ -250,23 +258,38 @@ so. Four practical consequences:
       quality values of the filtered reads, into a new file per sample; Falco on the
       filtered reads, a new stage; the four new steps of DADA2's error model,
       `choose_error_model`, `learn_errors`, `error_model_report` and `check_error_model`;
-      and `dada_seqtab` with every step after it. The PhiX removal, Falco of the raw and
-      PhiX-filtered reads, the length probe and the reference databases are kept. MultiQC
-      runs again in both modes, because its settings changed; in shotgun mode nothing else
-      does.
+      and `dada_seqtab` with every step after it. Where `expected_length: auto`, the
+      length probe runs again too: in 16S folders under a new name, with new statistics
+      (see [the 16S length probe](../amplicon/markers/16S.md#amplicon-length-probe-probe_mode-pcr));
+      in COI folders on the converted MIDORI2 file, which is made again with version 2 of
+      the set of bacterial COI homologues, so its statistics can change; elsewhere because
+      its script changed, with the same result. So does the raw read count, whose command now
+      also reads `.fq` names, with the same counts. The read links, the PhiX removal, Falco
+      of the raw and PhiX-filtered reads and the reference databases are kept, except in
+      COI folders, which download version 2 of the set of bacterial COI homologues and
+      convert the MIDORI2 file again. MultiQC runs again in both modes, because its
+      settings changed; in shotgun mode nothing else does, except the new step
+      `sra_runinfo` in BioProject mode, which writes its file.
     - **From a fresh clone, a release archive or a second worktree.** Every step that runs
       a script, with the steps after it, as at every release, and `trim_primers`, whose
       new input is newer than the trimmed reads.
-    - **`--rerun-triggers mtime params input software-env` saves nothing this time.** The
-      new steps write files the run asks for, and the choice of the error function reads
-      the quality values that `dada_filter` now writes
-      (`stats/dada2/{sample}.quality_values.json`), which the folder lacks. So `dada_filter`,
-      learning, the report, the check and `dada_seqtab` with every step after it run
-      whatever `--rerun-triggers` says. `trim_primers` runs again under this set too,
-      because its new input is newer than the trimmed reads.
+    - **`--rerun-triggers mtime params input software-env` saves little this time:** the
+      raw read count and, outside 16S and COI folders, the length probe. The new steps
+      write files the run asks for, and the choice of the error function reads the quality
+      values that `dada_filter` now writes (`stats/dada2/{sample}.quality_values.json`),
+      which the folder lacks. So `dada_filter`, learning, the report, the check and
+      `dada_seqtab` with every step after it run whatever `--rerun-triggers` says.
+      `trim_primers` runs again under any set, because its new input is newer than the
+      trimmed reads.
     - **The results.** With the loess fit, and where neither the cap nor the early stop
-      acts, the denoising gives the tables of v2.6.1 (checked on the 16S test set and on a
-      library of the COI insect mock). A model that the cap
+      acts, the tables are those of v2.6.1 except where this release changes them on
+      purpose: the 18S, gyrB and rpoB test sets gave them byte for byte, apart from the
+      first header cell of the four tables of `06.taxonomy/`, now named `asv_id`
+      (`sequence` in `asv_table_seqs.txt`). The tables of 16S folders change with the new
+      length probe where its statistics move (on the 16S test set the R1 cut is one base
+      shorter), those of ITS folders with the removal of the last sequencing cycle and the
+      new floor of the ASV length window, and those of COI folders with version 2 of the
+      set of bacterial COI homologues. A model that the cap
       (`max_consist`, now 200) or the early stop (`max_flat_rounds`, 20) ends now stops the
       run before denoising, for you to look at it and accept it by its code (see
       [DADA2 error model](../amplicon/error-model.md#the-check-and-acceptance-by-code)).

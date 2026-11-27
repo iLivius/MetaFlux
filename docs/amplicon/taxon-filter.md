@@ -109,7 +109,7 @@ amplicon:
 
 | Key | Effect |
 |-----|--------|
-| `enabled` | Master switch. `false` turns the filter off entirely and every classified ASV is written out, whatever `keep` and `discard` contain. |
+| `enabled` | Master switch. `false` turns the filter off entirely and every classified ASV is written out, whatever `keep` and `discard` contain; in COI runs the two COI screens still apply, under their own switches in `amplicon.coi`. |
 | `keep` | Tokens that define what survives. An empty list (or the key left unset) means this direction does nothing — no ASV is dropped for failing to match. |
 | `discard` | Tokens that are then removed from the survivors. An empty list means this direction does nothing. |
 | `discard_min_support` | Best-hit check for `discard`, in percent (0–100). Default `50`; `null` switches it off. See below. |
@@ -175,11 +175,12 @@ this way gets its own log line, as here on the 16S test set
 ([PRJNA305879](../about/test-datasets.md)) under `method: rdp` with SILVA 144:
 
 ```text
-[assign_taxonomy]   ASV_104: best hit f__Mitochondria at 60% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy]   ASV_105: best hit f__Mitochondria at 61% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
 [assign_taxonomy]   ASV_19: best hit f__Mitochondria at 70% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
-[assign_taxonomy]   ASV_198: best hit f__Mitochondria at 54% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
-[assign_taxonomy]   ASV_25: best hit f__Mitochondria at 62% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
-[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 4 more ASV(s) removed
+[assign_taxonomy]   ASV_201: best hit f__Mitochondria at 59% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
+[assign_taxonomy]   ASV_25: best hit f__Mitochondria at 67% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy]   ASV_68: best hit f__Mitochondria at 53% support (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria)
+[assign_taxonomy] Discard filter, best-hit check (support >= 50%): 5 more ASV(s) removed
 ```
 
 The default of 50 means the best hit needs at least half the support at that rank (50
@@ -203,8 +204,8 @@ classifier best hit is a bacterium is reported as a bacterium, so neither
 How much is left for the organelle filter depends on the classifier and the reference.
 On the 16S test set ([PRJNA305879](../about/test-datasets.md)) Metaxa2 calls 29 ASVs
 mitochondrial (28 in the SILVA 138.2 runs, whose ASV set differs slightly). With SILVA
-144 the tokens and the best-hit check remove 26 of them under `sintax` but only 16 under
-`rdp`, which reports 9 of the other 13 as *Enterobacterales*. With SILVA 138.2 both
+144 the tokens and the best-hit check remove 26 of them under `sintax` but only 17 under
+`rdp`, which reports 8 of the other 12 as *Enterobacterales*. With SILVA 138.2 both
 methods remove 18 of the 28; of the other 10, `rdp` reports 8 as *Enterobacterales*, and
 `sintax` stops at phylum, class or order, mostly with a bacterial best hit below that
 rank. Metaxa2, which aligns each ASV against its own reference set, organelles included,
@@ -213,9 +214,9 @@ and release matters much less for which ASVs are kept.
 
 The tokens stay useful next to it. On the 16S test set under `sintax` with SILVA 138.2,
 two ASVs that the classifier placed in *Mitochondria* (one in the reported lineage, one
-through the best-hit check) are called bacterial by Metaxa2; in the SILVA 144 runs, and
-under `rdp` with SILVA 138.2, there are none. The two signals overlap a lot but not
-completely, so the filter uses both.
+through the best-hit check) are called bacterial by Metaxa2; with SILVA 144 there is one
+(through the best-hit check), and under `rdp` none with either release. The two signals
+overlap a lot but not completely, so the filter uses both.
 
 What the filter takes from Metaxa2, and what it does not:
 
@@ -247,12 +248,12 @@ and every ASV that only Metaxa2 caught (16S test set,
 [PRJNA305879](../about/test-datasets.md), `method: sintax`, SILVA 144):
 
 ```text
-[assign_taxonomy/sintax] Organelle filter (Metaxa2 origin): 29 ASV(s), 2984 reads, called mitochondria (29) or chloroplast (0)
-[assign_taxonomy/sintax]   already removed above by the tokens or the best-hit check: 26 ASV(s), 2977 reads (keep 0, discard 20, best-hit check 6)
+[assign_taxonomy/sintax] Organelle filter (Metaxa2 origin): 29 ASV(s), 2996 reads, called mitochondria (29) or chloroplast (0)
+[assign_taxonomy/sintax]   already removed above by the tokens or the best-hit check: 26 ASV(s), 2989 reads (keep 0, discard 20, best-hit check 6)
 [assign_taxonomy/sintax]   removed only by the organelle filter: 3 ASV(s), 7 reads
-[assign_taxonomy/sintax]     ASV_199: mitochondria by Metaxa2, 3 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria;o__Hyphomicrobiales--other)
-[assign_taxonomy/sintax]     ASV_219: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
-[assign_taxonomy/sintax]     ASV_226: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy/sintax]     ASV_202: mitochondria by Metaxa2, 3 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota;c__Alphaproteobacteria;o__Hyphomicrobiales--other)
+[assign_taxonomy/sintax]     ASV_222: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
+[assign_taxonomy/sintax]     ASV_229: mitochondria by Metaxa2, 2 reads (reported as d__Bacteria;k__Pseudomonadati;p__Pseudomonadota)
 ```
 
 ### The table with everything: `asv_table_unfiltered.txt`

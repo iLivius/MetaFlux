@@ -52,7 +52,10 @@ the details, and [Troubleshooting](../troubleshooting.md) for the one case where
 ## 2. Amplicon length measured from the reference
 
 The measured amplicon length drives the overlap check on the truncation cuts, the
-ASV length filter window, and — for ITS only — DADA2's per-read minimum length.
+floor (half of it) below which reads are left out of each sample's read-length limit
+(by default the length 95% of its reads reach), and the ASV length filter window. For
+ITS, which is not truncated, it sets the ASV window, and DADA2's per-read minimum
+length only when `amplicon.dada2.filter.min_len_stat` is set (it is `null` by default).
 Hard-coding it means
 re-deriving a number by hand for every new primer pair. MetaFlux measures it
 instead, from the reference database, using the primers supplied in the config.
@@ -74,15 +77,18 @@ PCR-style probe would therefore recover almost nothing from either reference.
 Both modes produce the same thing: a length distribution summarised as JSON.
 The consumers read it differently. `probe_length_stat` picks which
 statistic of that distribution becomes `expected_length` (`min`, `q1`, `median`,
-`q3`, `p95`, `p99`, `max`; p95 by default), and that number is used only in the
-overlap check on the truncation cuts described above. Unless `length_filter.range`
+`q3`, `p95`, `p99`, `max`; p95 by default). That number is used only by the
+truncation step: in the overlap check on the cuts described above, as the floor
+(half of it) below which reads count as a short off-target product and are left out
+of the read-length limit, and, under `trunc_len.method: simulate`, in the length the
+two cuts must reach together. Unless `length_filter.range`
 is set explicitly — which overrides everything below — the ASV length filter
 ignores that choice whenever the probe has run and builds its window from the
 distribution itself, keeping ASVs inside
 `[probe q1 − window_margin, probe p95 + window_margin]`, with
 `length_filter.window_margin` at 50 bp (for ITS with extraction on, the floor is the
 probe's `min`, without margin). Changing `probe_length_stat` therefore
-moves the overlap constraint, not the ASV window.
+moves the truncation, not the ASV window.
 
 The probe result is cached under `refdb/cache/`. The filename encodes the marker
 type, the reference (for 16S also the lineages left out of the statistics; for 16S and rpoB
@@ -128,9 +134,12 @@ after trimming).
 
 ## 4. Fine-grained resource control
 
-Every rule's CPU and RAM are set in one `resources` block, keyed by rule name,
-with `threads_default` (4) and `mem_mb_default` (2000) covering anything not
-listed:
+Every rule's CPU and RAM are set in one `resources` block, keyed by rule name. A
+rule not listed falls back to `threads_default` (4) and `mem_mb_default` (2000),
+with four exceptions: `phylo_tree` and `sylph_sketch` take 1 thread, because there
+the thread count changes the result; `learn_errors` takes the values of
+`dada_seqtab`; and `error_model_report` takes 1 thread and the memory of
+`dada_quality_plots`.
 
 ```yaml
 resources:
@@ -148,11 +157,14 @@ resources:
 Rules read these through the `threads_for()` and `mem_mb_for()` helpers defined
 in `workflow/rules/shared/00_common.smk`, and the values feed straight into
 Snakemake's cluster executor. The same workflow therefore runs on a laptop or on an
-HPC queue; only the values in the `resources` block change. One value is computed
-rather than read: at start-up, MetaFlux replaces Kraken2's memory request with one
+HPC queue; only the values in the `resources` block change. Two values are computed
+rather than read. At start-up, MetaFlux replaces Kraken2's memory request with one
 derived from `shotgun.kraken.memory_mapping` and the size of the database's
-`hash.k2d` file, because that is the only requirement that depends on which database
-was supplied.
+`hash.k2d` file. When sylph runs and `resources.mem_mb.sylph_profile` is left at
+`null`, MetaFlux sets the memory request of the `sylph_profile` job from the size of
+the sylph database files (1.2 times their size plus 4 GB). These are the requirements
+that depend on which databases
+were supplied.
 
 ## 5. One pipeline, two modes
 

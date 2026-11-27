@@ -18,7 +18,9 @@ problem without a round of questions:
   but keep the keys);
 - the command you ran, and what MetaFlux printed: the `[MetaFlux]` start-up lines and
   the error, or the whole dry-run output if the dry run is what fails;
-- the log of the failing job, `logs/<rule>/<sample>.log` in the output folder;
+- the log of the failing job, in the output folder: `logs/<rule>.log`, or
+  `logs/<rule>/<sample>.log` for a step that runs once per sample (Snakemake's error
+  message names the file);
 - what you expected to happen instead.
 
 Please check the [troubleshooting page](https://iLivius.github.io/MetaFlux/troubleshooting/)

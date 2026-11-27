@@ -30,8 +30,8 @@ under [Binned quality values](#binned-quality-values) below.
 
 The four mock-community sets (ITS, gyrB, rpoB, COI) have known composition, so they check
 taxonomy as well as mechanics. The ITS run (UNITE release 19.02.2025, `method: sintax`)
-detects every expected ITS2 type in every sample, matched by sequence: 18 ASVs, with 62 %
-of the raw read pairs in the final table. SINTAX stops at class (Saccharomycetes) for 5
+detects every expected ITS2 type in every sample, matched by sequence: 18 ASVs, with
+287,568 of the 462,453 raw read pairs (62.2 %) in the final table. SINTAX stops at class (Saccharomycetes) for 5
 of them, 32 % of the reads: four *Saccharomyces* ASVs, whose species have near-identical
 ITS2 in this amplicon, so that VSEARCH's `--sintax` bootstrap finds no consensus below
 class, and one variant of *Metschnikowia pulcherrima*. The read shares of the yeasts with
@@ -211,8 +211,8 @@ discards anything shorter than `truncLen`, 9 of 908,768 pairs were long enough f
 by capping each sample at the length 95% of its reads still reach before quality is
 consulted. On this library it brings the R1 ceiling to 271, and `auto` returns
 **271 / 239** unaided, carrying 90.9% of raw reads through to the ASV table — 828,018
-read pairs reach the length filter, against 828,170 for the hand-picked 270 / 239, a
-difference of 0.02%. (With the recommended `keep: [d__Eukaryota]`, a further 214 pairs
+read pairs pass the length filter, against 828,170 for the hand-picked 270 / 239
+(measured in v2.2.0), a difference of 0.02%. (With the recommended `keep: [d__Eukaryota]`, a further 214 pairs
 leave the final table, in six ASVs that have no domain or the nucleomorph label
 `d__Eukaryota:nucl`.)
 

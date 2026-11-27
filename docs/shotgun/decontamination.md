@@ -97,10 +97,11 @@ adding a second host costs one index build, not a second pass over the reads.
 Host removal runs through three rules, in this order:
 
 1. **`fetch_host_refs`** resolves every entry — downloading URLs, copying local
-   files, gzipping any plain FASTA — and concatenates them into
-   `01.preprocessing/refs/host_combined.fna.gz`. Gzip streams can be joined as they
-   are, so a 3 GB genome is never re-compressed. A local path that does not exist
-   stops the run with a clear error.
+   files, gzipping a local plain FASTA — and concatenates them into
+   `01.preprocessing/refs/host_combined.fna.gz`. A downloaded file is used as it
+   comes, so a URL must point to a gzipped FASTA (`.gz`). Gzip streams can be joined
+   as they are, so a 3 GB genome is never re-compressed. A local path that does not
+   exist stops the run with a clear error.
 2. **`build_host_index`** builds the BBMap index once, under
    `01.preprocessing/refs/bbmap_index/`, and every sample reuses it.
 3. **`decontam_host`** maps each sample against that index and writes the unmapped

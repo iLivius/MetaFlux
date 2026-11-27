@@ -50,7 +50,9 @@ out_dir/
 
 Three files carry the result of an amplicon run: `06.taxonomy/asv_table.txt`
 (ASV × sample counts plus a taxonomy string), `05.dada2/seqs_lenfilt.fasta` (the
-sequences those ASV IDs refer to), and `stats/read_tracking.txt` (how many reads
+sequences those ASV IDs refer to, and also those of the ASVs that the taxon filter and,
+in COI runs, the COI screens remove later; `06.taxonomy/taxon_seq_table.txt` holds the
+sequences of the kept ASVs only), and `stats/read_tracking.txt` (how many reads
 survived each stage, per sample). Next to them, `06.taxonomy/asv_table_unfiltered.txt`
 is the same table before the taxon filter, with the step that removed each ASV.
 Everything else is intermediate data or QC.
@@ -142,7 +144,8 @@ set of ASVs. They differ only in what labels the rows. A fourth,
 `asv_table_unfiltered.txt`, is written by the same rule and holds every ASV that
 reached the filter, the removed ones included (see below).
 
-With `taxonomy.method: sintax` — the shipped default — the directory also holds
+With `taxonomy.method: sintax` (the value set in the template `config/config.yaml`;
+when the key is missing, MetaFlux uses `rdp`), the directory also holds
 `_sintax_raw.tsv`, the raw VSEARCH `--tabbedout` result the parser was fed. It is
 kept for troubleshooting and no rule reads it. Above one thread its lines come in the
 order VSEARCH finishes them, so sort it before comparing two runs; the tables built from
@@ -291,9 +294,9 @@ Two things to know about what is and is not here:
 | `phylogeny/phylogeny_qc.json` | Only when `phylogeny.enabled: true`. Tip accounting, alignment shape, and the long-branch report — or a record of why no tree was built. Written on every enabled run, including a skipped one. Nothing reads it back; it is for you. See [Phylogeny](../amplicon/phylogeny.md#the-long-branch-report). |
 | `dada2/{sample}.filter_stats.json` | Per-sample `filterAndTrim` result, written by `dada_filter`: `reads_in` and `reads_out`, which `dada_seqtab` reads for the read tracking. |
 | `dada2/{sample}.quality_values.json` | The quality values of the sample's filtered reads, written by `dada_filter` and read by `choose_error_model`: per read direction the reads scanned (the first 100,000 of the filtered file, or all of a smaller one), the distinct quality values found and the bases at each (`scan_limit` records the 100,000). |
-| `dada2/error_model_choice.json` | The error function each error model is learned with, written by `choose_error_model`: the setting (`requested`), the thresholds of the decision, and per read direction `quality_class` (`binned`, `continuous` or `undetermined`), `error_function` (`loess` or `binned`, or `custom` for your own function under the experimental `error_model: custom`), `decided_by` (`auto` or `setting`), `quality_values` (the values of the voting samples, Q2 and below included: the anchors of the binned fit), `values_above_q2`, `bases_per_value` (summed over the voting samples), `samples_voting` and `samples_not_voting` (samples with fewer than 1,000 filtered reads do not vote); then the warnings and the values of every sample. Read by `learn_errors`; `error_model_report` takes it as an input, so the report is drawn again when the choice changes. |
+| `dada2/error_model_choice.json` | The error function each error model is learned with, written by `choose_error_model`: the setting (`requested`), `trunc_q` (the setting `amplicon.dada2.trunc_q`, which the messages name when it is above 2), the thresholds of the decision, and per read direction `quality_class` (`binned`, `continuous` or `undetermined`), `error_function` (`loess` or `binned`, or `custom` for your own function under the experimental `error_model: custom`), `decided_by` (`auto` or `setting`), `quality_values` (the values of the voting samples, Q2 and below included: the anchors of the binned fit), `values_above_q2` and `n_values_above_q2` (the values above Q2, and their number), `bases_per_value` (summed over the voting samples), `samples_voting` and `samples_not_voting` (samples with fewer than 1,000 filtered reads do not vote); then the warnings and the values of every sample. Read by `learn_errors`; `error_model_report` takes it as an input, so the report is drawn again when the choice changes. |
 | `dada2/quality_values.tsv` | One row per sample and read direction: reads scanned, whether the sample voted, the number of distinct values above Q2, the values, the kind of quality values on its own, and the bases at or below Q2. Written by `choose_error_model` for you; nothing reads it, and the run does not ask for it, so a deleted copy comes back only when `choose_error_model` runs again. |
-| `dada2/stripped_read_R{1,2}_qual_plot.png` and `.pdf` | Aggregate quality profile of the primer-trimmed reads — the picture behind the `truncLen` choice. |
+| `dada2/stripped_read_R{1,2}_qual_plot.png` and `.pdf` | Aggregate quality profile of the primer-trimmed reads, all samples pooled, drawn by `dada_quality_plots` for a check by eye. Nothing reads them: the automatic `truncLen` choice reads the quality from the Falco tables of the `stripped` stage (above), not from these plots. |
 | `dada2/filtered_read_R{1,2}_error_plot.png` and `.pdf` | The two error models, drawn by `error_model_report` with DADA2's `plotErrors`, as MetaFlux has always drawn them. Points: the error rates counted in the reads `learnErrors` learned from; black line: the model; red line: the rate the quality score promises. The title names the error function (for the binned fit with the quality values it was anchored on) and how the learning ended, for example `R2 error model: loess fit - converged (round 5 repeated its starting table)`, `R2 error model: binned fit on 9, 20, 34 - converged (round 6 repeated its starting table)`, or `NOT converged: flat-rounds rule, round 42 (code R2:7ebe3bed)`. On binned data the binned fit is drawn as straight pieces between those values, bowed on the log axis, with points at averaged quality scores between them (see [Troubleshooting](../troubleshooting.md#amplicon-the-error-plot-shows-straight-segments-between-a-few-quality-values)). For a model ended by the flat-rounds rule, the points are the counts the kept table was fitted to, those of the round before the last. The report's own fit figures (next row) show the same model with more detail. All the report's files are written before the check below, so they exist even when the run stops there. A bad fit here explains a bad ASV set downstream. |
 | `dada2/error_model_fit_R{1,2}.png` and `.pdf` | The fit of each error model, drawn by `error_model_report`: one panel per kind of misread (`A2C`, a true A read as C, to `T2G`), the consensus quality score (the mean quality of identical reads) along the bottom, the error rate up the side on a log scale. Grey points: the rates counted in the reads `learnErrors` drew, sized by the bases at that score; filled at the quality values the reads carry, open at the averaged qualities of identical reads, small triangles at the bottom where no error was counted. Solid line: the model used, in the colour of its error function. Dashed: every other error function MetaFlux offers, refitted on the same counts (cut off at the edge of a panel where it runs outside the range of the points, the model and the nominal line). Black dotted: the nominal rate of the quality score. Ticks along the bottom: the quality values in the filtered reads. The solid line should follow the filled points and fall as quality rises. |
 | `dada2/error_model_convergence.png` and `.pdf` | How the learning of both models ended, drawn by `error_model_report`: per round, how much the model changed (black) and how far that round's starting table is from the final model (grey, dashed, DADA2's `checkConvergence`), on a log scale. A dashed line marks 1/1000 of the change in round 1; a grey band marks DADA2's own stop (a repeat or a cycle) or the window of the flat-rounds rule; vertical lines mark the flat-rounds stop and the cap. |
@@ -311,7 +314,7 @@ Two things to know about what is and is not here:
 order:
 
 ```text
-raw → [nophix] → stripped → filtered → denoised → merged → non_chimeric
+sample → raw → [nophix] → stripped → filtered → denoised → merged → non_chimeric
     → [post_extraction] → post_length_filter
     → [post_frame_check → post_bacterial_cox1] → post_taxonomy_filter
 ```
@@ -365,10 +368,14 @@ or inside `learn_errors`) leaves no MultiQC report; the per-sample Falco reports
 
 ### `logs/`, `benchmarks/` and `_aux/`
 
-`logs/` holds the captured stdout/stderr of every rule (except the MIDORI2 conversion,
-`prepare_midori2_coi_sintax`, which writes no log), laid out as
+`logs/` holds the captured stdout/stderr of the rules, mostly laid out as
 `logs/<rule>/<sample>.log` for per-sample rules and `logs/<rule>.log` for the
-rest. It is the first place to look when a rule fails. `logs/learn_errors.log` holds
+rest; a few rules write none (`link_reads`) or use other names, such as
+`logs/falco/{sample}_R{1,2}_{stage}.log`, `logs/rm_phix/{sample}_phixFilter.log`,
+`logs/count_reads/raw.log`, and `logs/refdb/<rule>.log` for the rules that prepare and
+check the reference databases, the MIDORI2 conversion `prepare_midori2_coi_sintax` among
+them. `logs/count_reads/*.log` and `logs/revcomp_primers.log` are normally empty.
+`logs/` is the first place to look when a rule fails. `logs/learn_errors.log` holds
 DADA2's `selfConsist step` lines, one per round of error learning, with MetaFlux's line
 for each round (the change of the model, the lowest change so far, the seconds the round
 took) and, at the end, how each learning ended and the two model codes; follow a long
@@ -430,7 +437,8 @@ out_dir/
 ├── multiqc/             # multiqc_report.html + multiqc_data/
 ├── samples.tsv          # sample → source → FASTQ manifest
 ├── sra_runinfo.tsv      # BioProject mode only: NCBI's run info of each sample
-└── logs/                # per-rule logs
+├── logs/                # per-rule logs
+└── benchmarks/          # runtime/memory for sylph_profile (profiler sylph | both)
 ```
 
 The result of a shotgun run is `03.abundance/otu_table.tsv` (taxon × sample
@@ -451,7 +459,7 @@ QC and the counts:
 | File | Written by | Contents |
 |---|---|---|
 | `{sample}_fastp.html` / `_fastp.json` | `trim_adapters` | fastp's adapter and quality trimming report. The JSON is also read by MultiQC, by the read-tracking step, and by Bracken (to pick the k-mer distribution matching the post-trim read length). |
-| `{sample}_dephix_stats.txt` | `decontam_phix` | BBDuk PhiX-removal counts. Only when `shotgun.decontamination.remove_phix: true`. |
+| `{sample}_dephix_stats.txt` | `decontam_phix` | BBDuk's statistics: the total reads and the reads that matched PhiX, each mate counted on its own. Read by MultiQC. The read tracking takes its numbers from BBDuk's log (`logs/decontam_phix/{sample}.log`) instead, because BBDuk removes the whole pair when one mate matches. Only when `shotgun.decontamination.remove_phix: true`. |
 | `{sample}_dehost_stats.txt` | `decontam_host` | Surviving non-host pairs after BBMap. Only when `shotgun.decontamination.host_genomes` is non-empty. |
 | `refs/bbmap_index/` | `build_host_index` | The BBMap index of the host reference, built once and reused for every sample. Host removal only. |
 
@@ -517,10 +525,11 @@ under `sylph`. The two sets are never merged.
 | `03.abundance/sylph_table.tsv` | Read pairs per genome and sample, estimated from genome coverage, plus a last row `unassigned`. Each column adds up to `trimmed` in `stats/read_tracking.txt`, except by a few pairs per million in a sample sylph explains to 100 % (see [Reading the numbers](../shotgun/sylph.md#reading-the-numbers)). |
 | `03.abundance/sylph_table.biom` | The same table in BIOM (HDF5) format. |
 | `03.abundance/sylph_table.genome_copies.tsv` | Each genome's share of genome copies (%) among the detected genomes; same rows, no `unassigned`. |
-| `03.abundance/sylph_genomes.tsv` | One row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI. |
+| `03.abundance/sylph_genomes.tsv` | One row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, the number of samples it was detected in, best coverage and ANI. |
 | `03.abundance/sylph_profile.tsv` | sylph's own output, unchanged: one row per sample and genome. |
 | `stats/sylph/sylph_summary.tsv` | One row per sample: read pairs after QC, the share the detected genomes explain, genomes found, flagged genomes. `sylph_summary_mqc.tsv` next to it is the copy MultiQC reads. |
 | `02.classification/sylph/` | The sketches (`sketches/{sample}.paired.sylsp`, kept), sylph-tax's `taxprof/{sample}.sylphmpa` files, and sylph's own log lines for each sample. |
+| `benchmarks/sylph_profile.tsv` | Snakemake's runtime and memory measurement of the `sylph_profile` job. Its memory figure usually misses the peak, so do not size the job from it (see [Limits](../shotgun/sylph.md#limits)). |
 
 How to read these numbers is explained on the [sylph](../shotgun/sylph.md) page.
 

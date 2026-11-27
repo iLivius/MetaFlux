@@ -16,7 +16,9 @@ amplicon:
 
 Everything else is either a path (input reads, output directory, primer FASTAs) or
 tuning. Marker-specific facts — database URLs, rank models, which extractor applies —
-live in the marker packs under `workflow/markers/<type>.yaml` and are never set by hand.
+live in the marker packs under `workflow/markers/<type>.yaml`, not in the run config; a
+pack of the same name in `config/markers/` replaces the shipped one (see
+[Markers](markers/index.md)).
 
 ## The steps at a glance
 
@@ -179,7 +181,7 @@ alone. *Retention* is the share of the raw read pairs that reach the final table
 
 | Test set (read length) | Truncated | Removed by `auto` | Effect of the removal |
 |---|---|---|---|
-| ITS2 yeast mocks (301) | no | yes | retention 16.0 → 33.7 %; *S. paradoxus* detected in 4 of 4 samples and the *S. uvarum* group in 2 of 2, against none |
+| ITS2 yeast mocks (301) | no | yes | retention 16.0 → 33.7 % with the ASV length window of v2.6.1, 44.5 → 62.2 % with that of v2.7.0; *S. paradoxus* detected in 4 of 4 samples and the *S. uvarum* group in 2 of 2, against none |
 | 18S (301) | yes | no | R1 cut 271 → 274 bp; final table −1.2 % reads, −38 ASVs; merging 98 % either way |
 | rpoB (301) | yes | no | final table unchanged; on a copy with binned quality scores, 1 of the 19 strains lost (42 reads) |
 | 16S (301), gyrB (251) | yes | no | final table unchanged |
@@ -233,8 +235,8 @@ So with `mixed`, both 5′ calls need at least 10 bases of their primer (Cutadap
 `--overlap 10`). A read that starts with its primer has all of it, while a chance match
 of 10 bases or more is rare. The 3′ calls keep Cutadapt's default, because a read that
 runs through a short amplicon into the far primer can legitimately end a few bases into
-it. With `fixed` nothing changes: its one pass keeps Cutadapt's default and gives the same
-reads as in v2.5.0.
+it. With `fixed` the 10-base rule does not apply: its one pass keeps Cutadapt's default
+minimum overlap, as in v2.5.0.
 
 #### What the 10 bases cost
 
@@ -255,6 +257,10 @@ loses:
 | 18S, TAReuk454FWD1/TAReukREV3 | [18S test set](../about/test-datasets.md), 4 samples | 908,768 | 2 | 0 | 52 (0.006 %) |
 | 16S, 799F/1175R | [16S test set](../about/test-datasets.md), 6 samples | 347,792 | 0 | 0 | 521 (0.15 %) |
 | ITS, ITS3/ITS4 | [ITS test set](../about/test-datasets.md), 6 samples | 455,764 | 0 | 0 | 517 (0.11 %) |
+
+The table comes from a trimming test made for v2.6.0. Default runs of v2.7.0 on the test
+sets keep the same numbers of pairs with `fixed`, except on gyrB: 318,071 instead of
+318,145.
 
 The pairs still written twice with 10 bases are pairs in which the other orientation's
 primer matches 10 or more of its bases, in 31 of the 33 as a whole primer found inside
@@ -317,14 +323,14 @@ trimmed reads differed only by what the 10 bases cost and what the swap brought 
 pairs dropped and 4 trimmed 3 bases shorter (together 0.15 % of the pairs), and 22 pairs
 that came the other way round in the original files, so `fixed` had dropped them and the
 swap put them the right way round. Nearly all of these fail DADA2's quality filter
-anyway, and the final ASV table differed by 7 of 193,097 reads, in two ASVs. With the
-mates of every second pair swapped instead, the trimmed files held the same pairs in
-another order, the first pass's pairs first, and DADA2 gave the same counts; only ASVs
-with exactly the same counts can then be numbered in another order. With
-`method: sintax`, an ASV that changes its number also changes its place in the
+anyway, and the final ASV table differed by 8 of 194,158 reads (7 fewer, 1 more), in two
+ASVs. With the mates of every second pair swapped instead, the trimmed files held the
+same pairs in another order, the first pass's pairs first, and DADA2 gave the same
+counts; only ASVs with exactly the same counts can then be numbered in another order.
+With `method: sintax`, an ASV that changes its number also changes its place in the
 classifier's input, and VSEARCH bases each ASV's random bootstrap draws on the seed and
-on that place, so a lineage near the confidence cutoff can gain or lose a rank: here 5 of
-226 ASVs, each of 2 to 6 reads, and their counts did not change. Compare such runs by
+on that place, so a lineage near the confidence cutoff can gain or lose ranks: here 3 of
+229 ASVs, each of 2 to 6 reads, and their counts did not change. Compare such runs by
 sequence, not by ASV number.
 
 !!! tip
@@ -481,6 +487,13 @@ position it would gain (ties go to R1); `relax_q` lowers the quality threshold o
 down to
 `trunc_len.q_floor` (default `15`) and re-cuts; `error` stops and reports the shortfall.
 
+The steps above are `trunc_len.method: quality`, the default. With `method: simulate`,
+the cuts come instead from a replay of `filterAndTrim` on 20,000 read pairs per sample:
+the R1/R2 cuts that keep the most pairs while leaving
+`expected_length + min_overlap + simulate_extra_overlap` bases (see
+[the simulate method](length-and-truncation.md#the-simulate-method)). ITS keeps the
+quality rule.
+
 In `manual` mode the quality analysis is skipped and `trunc_len.manual_r1` /
 `manual_r2` are used as given.
 
@@ -489,9 +502,11 @@ In `manual` mode the quality analysis is skipped and `trunc_len.manual_r1` /
     If quality never drops below the threshold, the cut is placed at the length reached by
     `min_read_coverage_pct` (95%) of the reads in the strictest sample, not at the full
     read length, where `filterAndTrim` would discard almost every read. If this setting is
-    lowered, or read lengths vary widely, step 6 can still fail with *"No reads passed the
-    filter"*. In that case, use `mode: manual` with values slightly below the length most
-    reads reach. See
+    lowered, or read lengths vary widely, step 6 can still lose almost every read, and a
+    sample in which `filterAndTrim` keeps no read pair stops the run with
+    `[dada_filter] STOP: filterAndTrim kept none of the ... read pairs of sample ...`,
+    followed by the settings that remove reads. In that case, use `mode: manual` with
+    values slightly below the length most reads reach. See
     [Troubleshooting](../troubleshooting.md#amplicon-automatic-trunclen-can-drop-all-reads-on-very-clean-runs).
 
 ITS is the exception: the cuts are still computed and recorded, but `truncLen` is
@@ -511,9 +526,10 @@ Diagnostic only — it does not feed the truncation decision, which comes from F
 
 **`dada_filter`** runs DADA2's `filterAndTrim` per sample on the reads from `03.stripped/`,
 using the truncation lengths from `stats/trunclen.json`. Filtered reads go to `04.filtered/`,
-and a small per-sample JSON goes to `stats/dada2/` with the in/out counts, which
-`dada_seqtab` collects for read tracking, and the quality values found in the first
-100,000 filtered reads of each file, which `choose_error_model` reads. When no read pair
+and two small per-sample JSON files go to `stats/dada2/`: `{sample}.filter_stats.json`,
+with the in/out counts, which `dada_seqtab` collects for read tracking, and
+`{sample}.quality_values.json`, with the quality values found in the first 100,000
+filtered reads of each file, which `choose_error_model` reads. When no read pair
 of a sample passes, `filterAndTrim` writes no files, and the step stops with a message
 that names the filtering settings. The gates:
 
@@ -526,12 +542,13 @@ that names the filtering settings. The gates:
 
 Ambiguous bases are not tolerated (`maxN = 0`), and DADA2's own PhiX screen is always left
 off here (`rm.phix = FALSE`, hardcoded) — removing PhiX is step 1's job, when step 1 is
-enabled. For ITS, and only when a probe has run (`expected_length: auto`), `min_len` is
-instead derived from the probe distribution using `amplicon.dada2.filter.min_len_stat`
-(default `q1`) — the extracted ITS subregions are shorter than a read, so a probe-derived
-floor is meaningful there, whereas for the other markers the probe describes the full
-amplicon and would drop every read. Without a probe JSON, ITS falls back to the config
-`min_len` like every other marker.
+enabled. For ITS, `min_len` can instead be taken from the probe distribution, at the
+statistic named in `amplicon.dada2.filter.min_len_stat`, when that key is set and a probe
+has run (`expected_length: auto`). The key is `null` by default, so ITS uses the config
+`min_len` like every other marker: a statistic such as `q1` (about 175 bp on UNITE) would
+discard reads of genuinely short ITS amplicons (see
+[ITS](markers/its.md#min_len-and-the-short-tail)). For the other markers the probe
+describes the full amplicon and would drop every read.
 
 The next four steps learn and check DADA2's error models; the page
 [DADA2 error model](error-model.md) describes them in depth, with examples of their
@@ -568,8 +585,9 @@ model says how often each base is read as another at each quality score; the den
 needs it to tell a real variant from a sequencing error of a more abundant sequence. `learnErrors` reads whole samples in random order
 until `amplicon.dada2.learn_errors.nbases` bases are in (default `1e8`), then repeats two
 steps on them: denoise with the current error rates, and estimate the rates again from
-the result. The loop ends when a round gives back a table that already went into an
-earlier round (DADA2's own stop; MetaFlux calls the model *converged*), when the
+the result. The loop ends when a round gives back a table that already went into a
+round, usually the one that went into that same round (DADA2's own stop; MetaFlux calls
+the model *converged*), when the
 flat-rounds rule sees that the model has stopped improving (`max_flat_rounds`, default
 `20`), or at the cap of `max_consist` rounds (default `200`). The step writes the two
 models to `05.dada2/error_model_R{1,2}.rds` and the record of how their learning ended
@@ -722,9 +740,10 @@ The window logic is covered in full on the
 | `rdp` | DADA2 `assignTaxonomy` (naive Bayesian RDP classifier), plus `addSpecies` for 16S | `min_boot` (default `80`) | 16S, ITS, 18S, gyrB, rpoB |
 | `sintax` | `vsearch --sintax` | `sintax_cutoff` (default `0.8`, roughly equivalent to `min_boot: 80`) | 16S, ITS, 18S, COI |
 
-gyrB and rpoB are RDP-only: their reference releases ship a DADA2 training set and no
-SINTAX build, so `method: sintax` is rejected at start-up with a clear message rather than
-failing later. COI is SINTAX-only, for the opposite reason: a DADA2 classifier trained on
+gyrB and rpoB are RDP-only: MetaFlux has a DADA2 training set for each (DD7RZ8 ships
+one; the FROGS release of rpoB ships a FASTA for its own classifier, which MetaFlux
+converts into one) and no SINTAX build, so `method: sintax` is rejected at start-up with
+a clear message rather than failing later. COI is SINTAX-only, for the opposite reason: a DADA2 classifier trained on
 MIDORI2 would need about 225 GB of memory at species level, so `method: rdp` is rejected
 in the same way.
 

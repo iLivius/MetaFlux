@@ -132,7 +132,7 @@ from or written to `~/.config/sylph-tax`.
 | `03.abundance/sylph_table.tsv` | the main table: estimated read pairs per genome and sample, and a last row `unassigned` |
 | `03.abundance/sylph_table.biom` | the same table in BIOM (HDF5) format |
 | `03.abundance/sylph_table.genome_copies.tsv` | each genome's share of genome copies (%) among the detected genomes; same rows, no `unassigned` |
-| `03.abundance/sylph_genomes.tsv` | one row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, best coverage and ANI |
+| `03.abundance/sylph_genomes.tsv` | one row per genome: species name, whether it is a placeholder, the FASTA header of the reference genome, the placeholder-genus flag, the number of samples it was detected in, best coverage and ANI |
 | `03.abundance/sylph_profile.tsv` | sylph's own output, unchanged: one row per sample and genome |
 | `stats/sylph/sylph_summary.tsv` | one row per sample: read pairs after QC, how much of them the detected genomes explain, genomes found, flagged genomes |
 

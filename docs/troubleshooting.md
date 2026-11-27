@@ -23,10 +23,10 @@ to change.
 !!! warning "Symptom"
 
     The run gets through primer trimming and QC, then stops at the DADA2
-    filtering step (rule `dada_filter`) with:
+    filtering step (rule `dada_filter`) with a message that begins:
 
     ```text
-    Error: No reads passed the filter ...
+    [dada_filter] STOP: filterAndTrim kept none of the <N> read pairs of sample <sample>, so it wrote no filtered files. The settings that remove reads: truncLen R1=<cut>, R2=<cut> (a read shorter than truncLen is dropped), ...
     ```
 
 **Cause.** With `amplicon.trunc_len.mode: auto`, the `pick_trunclen` rule reads
@@ -93,9 +93,11 @@ and DADA2 has nothing left to work with.
    the file, which fails the overlap constraint instead.
 2. **Read lengths are ragged enough that even the 95% length is unrepresentative.**
    Heavily pre-trimmed input does this, as do markers whose amplicons genuinely vary
-   in length. `logs/pick_trunclen.log` tells you directly — it prints each sample's
-   longest read alongside the length 95% of its reads reach, and emits a `NOTE` when
-   the gap is 10 bp or more. A very large gap there means the ceiling is being set
+   in length. `logs/pick_trunclen.log` shows it. It lists each sample's read-length
+   limit (the length 95% of its reads reach, not counting reads shorter than half the
+   expected amplicon length). For R1 and for R2 it then names the sample that sets the
+   ceiling, gives that sample's longest read next to its limit, and prints a `NOTE`
+   when the two are 10 bp or more apart. A very large gap there means the ceiling is being set
    from a distribution with a long tail, and a hand-picked value will beat it.
 
 **Fix — set the truncation length by hand.**
@@ -450,10 +452,9 @@ then no longer changes the result:
   random, outside the seed, so a few bootstrap values can differ between identical runs;
   `sintax`, the default, is not affected. Now and then such a tie flips an ASV's whole
   lineage between two identical runs, even its kingdom: on the ITS test set
-  ([PRJNA862334](about/test-datasets.md)), ASV_16 had an orchid as best hit in 8 of 11
-  identical runs and *Saccharomyces* in the other 3. Its kingdom support reached
-  `min_boot: 80` in only one of those three, so `keep: [k__Fungi]` kept the ASV in 1 run
-  and removed it in the other 10.
+  ([PRJNA862334](about/test-datasets.md)), ASV_19 was classified down to the genus
+  *Saccharomyces* in 2 of 11 identical runs. In the other 9 its kingdom support stayed
+  below `min_boot: 80`, so it got no lineage at all and `keep: [k__Fungi]` removed it.
 
 A few raw working files of the extraction step differ between identical runs as well,
 without any effect on the tables: the summaries of Metaxa2 and ITSx carry their start
@@ -631,7 +632,7 @@ before converging:
   that follows the filled points in every panel and falls as the quality score rises. Be
   wary of a line that misses most of the filled points, or that rises with the quality
   score over a wide range of scores. A small upturn at the very top is common: on the
-  models of the eight MiSeq test sets, 289 of the 342 rises of the loess fit lay among
+  models of the eight MiSeq test sets, 288 of the 342 rises of the loess fit lay among
   the five highest quality scores (34 to 38). `rising_steps` in
   `stats/dada2/error_model_fit.tsv` counts the rises, and the same file gives how far the
   line typically lies from the counted rates. DADA2's

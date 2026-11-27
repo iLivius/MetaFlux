@@ -70,7 +70,7 @@ and detects which one is in use:
 
 | Layout | Example | Where it usually comes from |
 |---|---|---|
-| `{sample}_R1` / `{sample}_R2` | `soil01_R1.fastq.gz` | Illumina/bcl2fastq output, MetaFlux's default |
+| `{sample}_R1` / `{sample}_R2` | `soil01_R1.fastq.gz` | MetaFlux's default; files from bcl2fastq or BCL Convert (`soil01_S1_L001_R1_001.fastq.gz`) must be renamed to this form |
 | `{sample}_1` / `{sample}_2` | `SRR11605259_1.fastq.gz` | raw `fasterq-dump` output |
 
 Reads can be gzipped (`fastq.gz` or `fq.gz`) or uncompressed (`fastq` or `fq`), with
@@ -262,7 +262,7 @@ shotgun:
 Bracken's estimates depend on read length, and the database ships pre-computed
 distributions for several lengths (50, 75, 100, 150, 200, 250 and 300 bp). MetaFlux
 reads the mean post-trim read length from the sample's fastp JSON and picks the
-closest available distribution automatically — using a 150 bp distribution on 100 bp
+closest of these seven lengths automatically — using a 150 bp distribution on 100 bp
 reads would bias the redistribution. With `threshold: auto` the minimum read count is
 computed from the sample's classified read pairs in the same step. All three small
 calculations (mean length, closest distribution, threshold) are done with `jq` from the
@@ -433,14 +433,17 @@ out_dir/
 ├── 02.classification/
 │   ├── kraken2/          # Kraken2 reports, per-read output, classified reads, k-mer evidence
 │   └── sylph/            # sylph sketches and sylph-tax files (profiler sylph | both)
-├── 03.abundance/         # Bracken reports, otu_table.tsv / otu_table.biom
+├── 03.abundance/         # Bracken reports, otu_table.tsv / otu_table.biom (profiler kraken2 | both);
+│                         # sylph_profile.tsv, sylph_table.tsv / .biom / .genome_copies.tsv,
+│                         # sylph_genomes.tsv (profiler sylph | both)
 ├── 04.extracted_reads/   # KrakenTools per-taxon reads (only if extract_taxa set)
 ├── stats/                # read_tracking.txt; kmer_evidence/ plots (profiler kraken2 | both);
 │                         # sylph/ summary (profiler sylph | both)
 ├── multiqc/              # multiqc_report.html
 ├── samples.tsv           # sample → source → FASTQ manifest
 ├── sra_runinfo.tsv       # BioProject mode only: NCBI's run info of each sample
-└── logs/                 # per-rule logs
+├── logs/                 # per-rule logs
+└── benchmarks/           # runtime/memory for sylph_profile (profiler sylph | both)
 ```
 
 The cleaned reads themselves are marked temporary: Snakemake deletes the `_dephix`,

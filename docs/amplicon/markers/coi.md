@@ -81,10 +81,13 @@ smaller NUC variant), so MetaFlux ships no trainset for COI.
     `orientation: mixed` is for libraries that really are mixed, with pairs in both
     orientations, and from v2.6.0 on it handles them: it swaps the two mates of each
     reversed pair back, so that DADA2 merges them to the full amplicon. On the BF3/BR2
-    library run both ways, `mixed` on the files as distributed and `fixed` on the swapped
-    files gave the same 595 kept ASVs and the same 361 specimens; `mixed` dropped 509
-    (0.06 %) of the 910,014 pairs that `fixed` keeps after primer trimming, those whose
-    primer Cutadapt found from fewer than 10 bases. See
+    library run both ways with version 1 of the set of bacterial COI homologues, `mixed`
+    on the files as distributed and `fixed` on the swapped files gave the same 595 kept
+    ASVs and the same 361 specimens (with version 2, `fixed` keeps 594 ASVs and recovers
+    the same 361 specimens: the table under [Validation](#validation)); `mixed` dropped 509
+    (0.06 %) of the 910,014
+    pairs that `fixed` keeps after primer trimming, those whose primer Cutadapt found from
+    fewer than 10 bases. See
     [the mixed-orientation second pass](../overview.md#the-mixed-orientation-second-pass).
 
 ## The reference database: MIDORI2
@@ -101,7 +104,7 @@ named, and they cover lineages that the named records do not.
 | Downloaded from | `https://zenodo.org/records/22685701/files/MIDORI2_GB273_SINTAX_sp.zip` (584 MB; member `SINTAX_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz`), and `MIDORI2_GB273_KRAKEN2_taxonomy.zip` (69 MB) from the same record |
 | Checked | MD5 of each zip as Zenodo lists it; SHA-256 of the extracted FASTA as MIDORI2's `release_sha256.txt` lists it |
 | Fetch rules | `fetch_midori2_coi`, `fetch_midori2_taxonomy`, `fetch_bacterial_cox1` |
-| Conversion rule | `prepare_midori2_coi_sintax`. It writes no log: its counts go to the report next to the converted file (next row), and when it stops, its message is printed to stderr with Snakemake's own messages |
+| Conversion rule | `prepare_midori2_coi_sintax`. Its log, `logs/refdb/prepare_midori2_coi_sintax.log` of the run that converts the file, holds the files read and written and the main counts, or the message the conversion stopped with; every count is in the report next to the converted file (next row) |
 | Cached at | `refdb/midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz`, with a report of every count the conversion changed next to it (`…_metaflux_sintax.report.tsv`) |
 
 ### What the conversion changes, and why
@@ -313,7 +316,7 @@ carries the forward primer, ran with `fixed` as distributed.
 - **The offset of the frame check.** In the Leray-XT run, 9 % of the reads, among them
   the only ASVs of 29 specimens, belong to ASVs open in frame 0, most of them one base
   short: their first base went with the primer, which cutadapt cut one base too far for
-  these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (14
+  these templates. In the fwhF2/fwhR2n run the same happened to 3.0 % of the reads (14
   specimens). Without the offset rule the frame check would have removed them.
 - **The off-target guard.** It moved 71 ASVs over the three runs, most closest to
   *Wolbachia* (57), the others to *Rickettsia* (5), *Tisiphia* (5), *Mesenet* (3) and one

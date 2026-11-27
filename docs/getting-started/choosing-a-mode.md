@@ -98,17 +98,20 @@ There is no need to comment anything out. One config file can hold a working set
 for both and be switched with `mode` alone.
 
 The one place this is not silent is primers. Shotgun mode prints a note if
-`amplicon.primers.fwd` or `.rev` carries any value at all, then continues:
+`amplicon.primers.fwd` or `.rev` names a primer file, then continues:
 
 ```text
 [MetaFlux] warning: mode=shotgun but amplicon.primers fields are set — they will be ignored
 ```
 
-The shipped template fills both fields with placeholder paths, and
-`config/config.yaml` is always loaded as a base layer under the `--configfile` given
-on the command line, so the note appears on most shotgun runs even when the run
-config never mentions primers. It can be ignored, or silenced by setting both to
-`null` in the run config.
+The note is there because a config that names primer files may have been meant for an
+amplicon run. `config/config.yaml` is always loaded as a base layer under the
+`--configfile` given on the command line, and the shipped template fills both fields
+with placeholder paths (`/path/to/fwd_primer.fasta` and `/path/to/rev_primer.fasta`).
+Those do not count: a field that is empty, `null` or still holds a `/path/to/`
+placeholder gets no note, so a shotgun run config that never mentions primers runs
+without it. If the note appears and the run is meant to be shotgun, it can be ignored,
+or silenced by setting both fields to `null` in the run config.
 
 !!! warning "The mode must match the data"
 

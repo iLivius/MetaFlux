@@ -89,7 +89,8 @@ and thresholds the distinct count.
 
 ## What MetaFlux writes
 
-Every shotgun run produces these, per sample, whether or not the gate is switched on:
+Every shotgun run in which Kraken2 runs (`profiler: kraken2`, the default, or `both`)
+produces these, per sample, whether or not the gate is switched on:
 
 ```text
 02.classification/kraken2/{sample}_species_evidence.tsv   one row per taxon at the Bracken rank

@@ -168,8 +168,8 @@ ceiling and flags when the gate did real work:
 
 The `NOTE` fires when the gap is 10 bp or more; read it rather than skip it. A large gap means the read lengths are ragged — normal after primer trimming,
 and extreme for markers whose amplicons genuinely vary in length: on the ITS test set
-([PRJNA862334](../about/test-datasets.md)) the gap is 89 bp (run SRR20648167: longest
-read 298 bp, 95% of its reads reach 209 bp).
+([PRJNA862334](../about/test-datasets.md)) the gap is 88 bp (run SRR20648167: longest
+read 297 bp, 95% of its reads reach 209 bp).
 
 **When to change it.** Rarely. A higher percentage gives a shorter cut, because it asks
 for a position that more reads reach; a lower percentage gives a longer cut.
@@ -419,13 +419,15 @@ favour of the more abundant parent, and rejects outright any pair exceeding
     test set ([PRJNA305879](../about/test-datasets.md)) the whole deficit goes to R1:
 
     ```text
-    [pick_trunclen] Raised: R1 +30 (mean Q1 of added bases 21.8), R2 +0 (mean Q1 n/a); allocation is quality-weighted, not headroom-weighted
+    [pick_trunclen] Raised: R1 +29 (mean Q1 of added bases 21.8), R2 +0 (mean Q1 n/a); allocation is quality-weighted, not headroom-weighted
     ```
 
 Each of the three stops prints the numbers behind the check and the settings that feed
 it: how far the reads reach after primer removal, what merging needs, and where the
-expected length came from. A 2×300 bp run whose expected length is the 582 bp of the
-example above stops with:
+expected length came from. A 2×300 bp run whose expected length is 582 bp (the p95 of
+341F/805R on SILVA 144 when the products with a second forward-primer site are counted,
+as with a 16S pack without `probe_exclude_second_site`; see
+[A primer that matches twice](#a-primer-that-matches-twice)) stops with:
 
 ```text
 [pick_trunclen] ERROR: R1 and R2 cannot be cut so that the pairs still merge. Even at their full usable length (resolve_policy: raise_trunc) the reads reach 562 bp, 32 bp short of the 594 bp that merging needs.
@@ -441,8 +443,10 @@ Under `relax_q` and `error` the first line says how far the quality cuts got ins
 a further line names `raise_trunc` when the reads themselves would reach far enough.
 
 Whichever route was taken is recorded as `resolved_via` in `stats/trunclen.json`
-(`primary`, `raise_trunc`, `relax_q` or `manual`), along with `q_threshold_requested`
-and `q_threshold_used` — those two differ only when `relax_q` fired.
+(`primary`, `raise_trunc`, `relax_q`, `manual`, or `simulate` under `method: simulate`),
+along with `q_threshold_requested` and `q_threshold_used`. Under the quality rule those
+two differ only when `relax_q` fired; under `method: simulate`, `q_threshold_used` is
+`null`.
 
 ## The simulate method
 
@@ -498,15 +502,18 @@ simulated cut, and both shares per sample:
 ```
 
 The simulation predicts the filter closely: on the real runs below, the share of pairs
-that `filterAndTrim` kept differed from the predicted share by at most
-0.42 points.
+that `filterAndTrim` kept differed from the predicted share by at most 0.42 points,
+except over the whole 16S test set. There each sample differed by at most 0.42 points
+too, but the samples hold 7,563 to 119,566 primer-trimmed pairs and each gives the
+simulation at most 20,000, so the run as a whole kept 62.8 % at the quality rule's cut
+and 66.2 % at the simulated cut, 0.7 and 1.0 points above the prediction.
 
 **Measured on the test data.** The cuts of the quality rule and of `simulate`, with the
 share of the sampled read pairs each keeps:
 
 | Library | `quality` | kept | `simulate` | kept |
 |---|--:|--:|--:|--:|
-| 16S V5-V7, MiSeq (6 samples) | 244/154 | 61.8% | 216/204 | 64.9% |
+| 16S V5-V7, MiSeq (6 samples) | 243/154 | 62.1% | 216/203 | 65.2% |
 | 18S V4, MiSeq (4) | 271/239 | 95.2% | 271/259 | 93.8% |
 | ITS2, MiSeq (6) | 209/204 | – | not applied (ITS) | – |
 | gyrB, MiSeq (5) | 150/194 | 95.1% | 137/185 | 95.8% |
@@ -837,8 +844,11 @@ What this means in practice:
   therefore a stricter `truncQ` or `maxEE`, never a fixed `truncLen`.
 - `minLen` for ITS is auto-derived from the probe distribution, using the statistic named
   in `amplicon.dada2.filter.min_len_stat`, when that is set (it is `null` by default).
-  The ITS probe measures extracted ITS1/ITS2 lengths, which are below per-read length
-  and therefore a sensible per-read floor. When no probe JSON exists, ITS falls back to
+  The ITS probe measures extracted ITS1/ITS2 lengths, which are below per-read length,
+  so a probe statistic can serve as a per-read floor; it is off by default because `q1`
+  (about 175 bp) lies above roughly a quarter of the UNITE reference and discards reads
+  of genuinely short ITS amplicons (see [ITS](markers/its.md#min_len-and-the-short-tail)).
+  When no probe JSON exists, ITS falls back to
   the fixed `amplicon.dada2.filter.min_len` (default `20`). Every other marker always
   uses that config value, because their probe measures the full amplicon — longer than a
   single read, so using it as a per-read floor would drop everything.
@@ -892,7 +902,10 @@ On a very clean run, per-base quality can stay above `q_threshold` right to the 
 cycle. The picker then has no quality signal to cut on and takes the ceiling instead.
 If that ceiling were the maximum read length, it would sit above where most reads end
 after primer trimming — and since `filterAndTrim` discards every read shorter than
-`truncLen`, the DADA2 step fails with `Error: No reads passed the filter`.
+`truncLen`, almost no read passes the filter; a sample in which none passes stops
+`dada_filter` with
+`[dada_filter] STOP: filterAndTrim kept none of the ... read pairs of sample ...`,
+followed by the settings that remove reads.
 
 This is what `min_read_coverage_pct` prevents. The 18S test set
 ([PRJDB12231](../about/test-datasets.md)) is a real instance: its R1 quality never falls

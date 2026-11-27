@@ -79,7 +79,7 @@ models (see [Choosing the error function](#choosing-the-error-function)), so Met
 reads it from the reads before learning.
 
 A MiSeq writes nearly every quality value from 2 to 38: filtered MiSeq reads carry 28 to
-32 distinct values above Q2 (counted on 56 files of the six test sets). Recent
+32 distinct values above Q2 (counted on 58 files of the eight MiSeq test sets). Recent
 Illumina instruments write only a few values, called *bins*: 9, 20 and 34 on a
 NextSeq 1000/2000 with the 600-cycle kit, for example. The box "Binned quality scores"
 under [choosing the cut from the quality profile](length-and-truncation.md#choosing-the-cut-from-the-quality-profile)
@@ -105,8 +105,10 @@ Three places show the values. The report draws the bases at each value
 (`stats/dada2/error_model_quality_values.png`). The Falco report of each sample's
 filtered reads (`stats/falco/<sample>_R1_filtered/fastqc_report.html`, and `_R2_`) draws
 the quality along the read as box plots, which on binned reads sit flat on the common
-values. The MultiQC report shows only the mean quality at each position of the read, and
-a mean of a few values can fall anywhere between them, so it hides the bins.
+values. The Falco rows of the MultiQC report (`QC | quality-filtered reads`) show only the
+mean quality at each position of the read, and a mean of a few values can fall anywhere
+between them, so they hide the bins; the "DADA2 error model" module of the same report
+repeats the quality-values figure.
 
 ## Choosing the error function
 
@@ -217,12 +219,12 @@ out of the round is from the table that went in, summed over all its cells.
 
 1. **DADA2's own stop (`dada2_repeat`).** A round gives back a table that already went
    into a round. MetaFlux calls such a model *converged*. Usually it is the table that
-   went into the same round: both models of the 16S test set stopped that way, in round
-   five. On slow libraries a few reads can keep switching between two ASVs, so the loop
-   goes round in a circle until a table comes back from several rounds earlier. The
-   slow but healthy runs seen ended in such cycles, of 11, 26 and 49 rounds: the R2
-   model of the BF3/BR2 library of the COI insect mock after 32 rounds, and the R1 and
-   R2 models of a NextSeq 2000 16S run after 38 and 101 rounds.
+   went into the same round: both models of the 16S test set stopped that way, R1 in
+   round six and R2 in round five. On slow libraries a few reads can keep switching
+   between two ASVs, so the loop goes round in a circle until a table comes back from
+   several rounds earlier. The slow but healthy runs seen ended in such cycles, of 11, 26
+   and 49 rounds: the R2 model of the BF3/BR2 library of the COI insect mock after 32
+   rounds, and the R1 and R2 models of a NextSeq 2000 16S run after 38 and 101 rounds.
 2. **The flat-rounds rule (`flat_rounds`),** `max_flat_rounds` (default `20`; `0`
    switches it off). MetaFlux ends the learning when the model has stopped improving:
    the change in a round is less than 1/1000 of the change in round 1, and the lowest
@@ -256,7 +258,7 @@ passed without one. Both models converged, and the run went on.*
 
 **`max_consist` is an upper limit, not a speed setting.** A model that converges stops at
 the same round whatever the limit. Of 194 learning runs on real data, 186 converged within
-8 rounds and the slowest took 101. A round took 2 to 5 seconds on the 16S test set and 38
+8 rounds and the slowest took 101. A round took 2 to 6 seconds on the 16S test set and 38
 minutes on two samples of 1.6 million NextSeq 2000 reads learned together, so on a large
 library the cap alone can take days to reach; the flat-rounds rule is there for that
 case. Up to v2.6.1 the template said `999`; MetaFlux prints a note at start-up when a run
@@ -296,28 +298,30 @@ MiSeq 2×300), the R1 part of the log reads:
 ```text
 [learn_errors] R1: loess fit (loessErrfun, DADA2's default), chosen by auto: 32 distinct quality values above Q2 (7-38)
 [learn_errors] Learning error rates (R1, nbases=1e+08)...
-52975572 total bases in 217113 reads from 6 samples will be used for learning the error rates.
+53050059 total bases in 218313 reads from 6 samples will be used for learning the error rates.
 Initializing error rates to maximum possible estimate.
 selfConsist step 1 ......
 [learn_errors] R1 round 1: change 27.8; 3 s
    selfConsist step 2
-[learn_errors] R1 round 2: change 0.543 (round 1: 27.8; lowest so far 0.543); 5 s
+[learn_errors] R1 round 2: change 0.503 (round 1: 27.8; lowest so far 0.503); 5 s
    selfConsist step 3
-[learn_errors] R1 round 3: change 0.0404 (round 1: 27.8; lowest so far 0.0404); 5 s
+[learn_errors] R1 round 3: change 0.0396 (round 1: 27.8; lowest so far 0.0396); 6 s
    selfConsist step 4
-[learn_errors] R1 round 4: change 0.0141 (round 1: 27.8; lowest so far 0.0141); 5 s
+[learn_errors] R1 round 4: change 0.0077 (round 1: 27.8; lowest so far 0.0077); 5 s
    selfConsist step 5
-[learn_errors] R1 round 5: change 0 (round 1: 27.8; lowest so far 0); 5 s
-Convergence after  5  rounds.
+[learn_errors] R1 round 5: change 0.000687 (round 1: 27.8; lowest so far 0.000687); 5 s
+   selfConsist step 6
+[learn_errors] R1 round 6: change 0 (round 1: 27.8; lowest so far 0); 5 s
+Convergence after  6  rounds.
 ```
 
 and, after R2, how each learning ended:
 
 ```text
-[learn_errors] R1: converged: round 5 gave back the table that went into it.
-[learn_errors] R1: change per round: 27.8, 0.543, 0.0404, 0.0141, 0
-[learn_errors] R1: distance of each round's starting table to the final one: 28, 0.554, 0.0363, 0.0141, 0
-[learn_errors] R1: model code R1:d73e63a3
+[learn_errors] R1: converged: round 6 gave back the table that went into it.
+[learn_errors] R1: change per round: 27.8, 0.503, 0.0396, 0.0077, 0.000687, 0
+[learn_errors] R1: distance of each round's starting table to the final one: 27.8, 0.521, 0.0425, 0.00825, 0.000687, 0
+[learn_errors] R1: model code R1:63596cf3
 ```
 
 When the error function itself fails, the job stops with a line that starts with
@@ -573,12 +577,12 @@ columns.
 
 | Model | Bases at the reads' values | Model ÷ nominal rate at the commonest score | Function | Rising steps | Typical difference: all / read values / averaged |
 |---|---|---|---|---|---|
-| 16S test set, six samples, R1 (MiSeq) | 100 % | 7.4 (Q37) | loess ★ | 20 of 372 | 1.55× |
-| | | | binned | 118 of 372 | 1.00× |
+| 16S test set, six samples, R1 (MiSeq) | 100 % | 7.4 (Q37) | loess ★ | 19 of 372 | 1.56× |
+| | | | binned | 119 of 372 | 1.00× |
 | 16S test set, six samples, R2 | 100 % | 8.3 (Q38) | loess ★ | 6 of 372 | 1.22× |
-| | | | binned | 117 of 372 | 1.00× |
-| 16S test set, one sample learned alone, R1 | 100 % | 21.3 (Q38) | loess ★ | 30 of 372 | 1.49× |
-| | | | binned | 142 of 372 | 1.00× |
+| | | | binned | 118 of 372 | 1.00× |
+| 16S test set, one sample learned alone, R1 | 100 % | 21.8 (Q38) | loess ★ | 29 of 372 | 1.46× |
+| | | | binned | 145 of 372 | 1.00× |
 | ITS test set, six samples, R1 (MiSeq) | 100 % | 7.6 (Q38) | loess ★ | 17 of 372 | 1.47× |
 | | | | binned | 142 of 372 | 1.00× |
 | ITS test set, six samples, R2 | 100 % | 8.1 (Q38) | loess ★ | 5 of 372 | 1.27× |
@@ -647,7 +651,7 @@ the misreads under the binned model (16.4 % and 22.3 % under the loess model).
 
 **What to expect.** Under the loess fit, a smooth curve through the filled points of
 each panel that falls as the quality score rises. In several panels it turns up a little
-at the top: on the models of the eight MiSeq test sets above, 289 of the 342 rising steps
+at the top: on the models of the eight MiSeq test sets above, 288 of the 342 rising steps
 of the loess fit lay among the five highest quality scores (34 to 38). Under the binned fit, straight
 pieces that meet at the quality values the reads carry (drawn bowed on the log scale),
 passing through the filled points, with the open points of the averaged columns on both
@@ -715,7 +719,14 @@ slow library the MultiQC report therefore appears only once the learning has end
   `seqtab_head_seqs.txt`, `seqtab_head_names.txt` and `read.counts`, the tables of the
   extraction and of the length filter; the taxonomy tables of `06.taxonomy/` (all but the
   raw SINTAX output); `stats/read_tracking.txt`; and the alignment and the tree of the
-  16S run. The raw working files of Metaxa2 (`05.dada2/metaxa2/seqs.*`), of ITSx
+  16S run. These runs were made before later changes of v2.7.0. In full runs of v2.7.0,
+  18S, gyrB and rpoB still give these tables byte for byte, except the first header cell
+  of the four taxonomy tables, which is now named (`asv_id` or `sequence`). The tables of
+  16S, ITS and COI differ on purpose: those of 16S through the change to its length
+  probe, those of ITS through the removal of the extra last cycle and the new length
+  window, and those of COI, from the taxonomy step on, through version 2 of the set of
+  bacterial COI homologues. The raw working files of Metaxa2
+  (`05.dada2/metaxa2/seqs.*`), of ITSx
   (`05.dada2/_itsx_tmp/`, and `05.dada2/itsx_extraction.summary.txt`, a copy of ITSx's
   summary) and of SINTAX (`06.taxonomy/_sintax_raw.tsv`) can differ between two identical
   runs of any version: they hold start times, Metaxa2's own classification varies, and

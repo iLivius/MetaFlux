@@ -8,6 +8,12 @@
       "affiliation": "AIT Austrian Institute of Technology"
     }
   ],
+  "contributors": [
+    {
+      "name": "Siani, Roberto",
+      "type": "Researcher"
+    }
+  ],
   "keywords": [
     "metagenomics",
     "amplicon sequencing",

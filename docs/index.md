@@ -4,7 +4,7 @@ MetaFlux is a [Snakemake](https://snakemake.github.io/) workflow that takes raw
 paired-end short reads through to a taxonomically annotated abundance table. It
 covers two kinds of study — marker-gene metabarcoding and shotgun metagenomics — and a
 single key in the config file, `mode`, decides which of the two runs. This site
-documents version **v2.6.1**.
+documents version **v2.7.0**.
 
 MetaFlux belongs to the [BioFlux](https://github.com/stars/iLivius/lists/bioflux)
 family of pipelines.
@@ -54,7 +54,9 @@ snakemake --sdm conda --cores 16 --configfile config/config.yaml
 
 `--sdm conda` (short for `--software-deployment-method`) tells Snakemake to build each
 rule's own conda environment on first run, so only Snakemake itself (version 9 or
-newer) has to be installed by hand.
+newer) has to be installed by hand; the one exception is the system's `unzip`, which
+unpacks the ITS and COI reference downloads (see
+[Installation](getting-started/installation.md)).
 
 Everything else — mode, input and output paths, marker, primers, databases, per-rule CPU
 and memory — lives in `config/config.yaml`. Both modes finish by writing read-tracking

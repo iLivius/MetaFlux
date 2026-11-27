@@ -259,9 +259,11 @@ integer, raise it for deep libraries; lower it if either of the above is a conce
 expect a longer tail of one-read taxa.
 
 The read length Bracken uses is not configurable: it is read per sample from the
-fastp report and matched to the nearest distribution the database ships (50, 75, 100,
-150, 200, 250 or 300 bp). Mixing libraries with very different read lengths in one
-run is fine — each sample is handled on its own.
+fastp report and matched to the nearest of 50, 75, 100, 150, 200, 250 and 300 bp.
+MetaFlux does not check which distributions the database holds, so the database
+needs the `.kmer_distrib` file of that length (the pre-built indexes ship all
+seven). Mixing libraries with very different read lengths in one run is fine — each
+sample is handled on its own.
 
 ## Host genomes
 

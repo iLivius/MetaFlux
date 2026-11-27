@@ -112,17 +112,15 @@ The first message names the fallback pattern, `_1`, because MetaFlux looks for
 `_R1/_R2` first and only reports the failure after the SRA-style names have also
 come up empty — it means neither convention matched anything in that directory.
 
-Two things that check does not do. MetaFlux creates `fastq_dir` if it is missing,
+One thing that check does not do: MetaFlux creates `fastq_dir` if it is missing,
 because BioProject mode downloads into it, so a mistyped path produces the
-`no *_1.* FASTQs found` message above rather than a missing-directory error. And
-mates are matched from R1 only — a missing R2 is reported later by Snakemake as a
-missing input file, not by MetaFlux.
+`no *_1.* FASTQs found` message above rather than a missing-directory error.
 
 The dry-run also prints a one-line summary of what MetaFlux understood; read it before
 committing cores to a run:
 
 ```text
-[MetaFlux v2.6.1] mode=amplicon, input=local, 24 sample(s) in /path/to/fastq_dir
+[MetaFlux v2.7.0] mode=amplicon, input=local, 24 sample(s) in /path/to/fastq_dir
 ```
 
 A sample count that does not match the sequencing run usually means a naming

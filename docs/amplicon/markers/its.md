@@ -291,9 +291,9 @@ some rRNA, so it comes out longer, not shorter.
 
 The minimum comes from a few unusual records, so the floor guards against fragments
 rather than marking a biological limit. The floor of the other markers,
-`q1 − window_margin`, would be 125 bp for ITS2: on the ITS test set it removed
-*Candida haemulonii* (63 bp), *Metschnikowia pulcherrima* (70 bp) and
-*Dipodascus australiensis* (78 bp), 64 % of the reads after chimera removal.
+`q1 − window_margin`, would be 125 bp for ITS2: v2.6.1 used it for ITS, and on the ITS
+test set it removed *Candida haemulonii* (63 bp), *Metschnikowia pulcherrima* (70 bp)
+and *Dipodascus australiensis* (78 bp), 64 % of the reads after chimera removal.
 
 | | |
 |---|---|
@@ -321,7 +321,7 @@ singletons included. One row from the ITS test set
 
 ```text
 representative    merged_asvs         n_merged   extracted_length
-ASV_3             ASV_3,ASV_18        2          232
+ASV_2             ASV_2,ASV_20        2          232
 ```
 
 ASVs from which ITSx cannot extract the requested region are dropped from both the
@@ -354,8 +354,9 @@ The RDP path classifies the *unique* ASV sequences and expands the result back
 afterwards, so no sequence is classified twice. On an ITS run that step finds
 nothing to do: the ITSx collapse above has already merged the ASVs that extraction
 left identical, so `seqs_extracted.fasta` — and the `seqs_lenfilt.fasta` built from
-it — carries one entry per distinct sequence. The de-duplication matters for markers
-whose extractor collapses nothing, 16S with Metaxa2 being the case in point.
+it — carries one entry per distinct sequence. Metaxa2 merges 16S ASVs the same way, and
+without extraction the ASVs are DADA2's own, which are distinct sequences already, so for
+every marker this step is only a guard.
 
 ### Embedded rank prefixes
 
@@ -414,17 +415,17 @@ The two methods write the same form, but they are different classifiers reading 
 different UNITE files, so they do not give the same answers:
 
 - **Depth.** On the ITS test set ([PRJNA862334](../../about/test-datasets.md), a yeast
-  mock, 12 ASVs, UNITE release 19.02.2025), `sintax` at `sintax_cutoff: 0.8` named the
-  species of 8 ASVs and the genus of 2 more. `rdp` at `min_boot: 80` named the species
-  of 1 and stopped at phylum or kingdom for 8; the other 3 got no kingdom at all, so
-  `keep: [k__Fungi]` removed them (in 10 of 11 identical `rdp` runs; ASV_16, below, is
-  the exception).
+  mock, 18 ASVs, UNITE release 19.02.2025), `sintax` at `sintax_cutoff: 0.8` named the
+  species of 10 ASVs and the genus of 3 more, and stopped at class for the other 5.
+  `rdp` at `min_boot: 80` named the species of 5 and the genus of 2 more, and stopped at
+  phylum or kingdom for 9; the other 2 got no kingdom at all, so `keep: [k__Fungi]`
+  removed them (in 9 of 11 identical `rdp` runs; ASV_19, below, is the exception).
 - **Placeholders.** Where UNITE has no name for a rank, the general release (`rdp`)
   carries an *Incertae sedis* placeholder such as `c__Ascomycota_cls_Incertae_sedis`,
-  while the UTAX file (`sintax`) leaves the rank out: the `sintax` string skips it and
-  its cell is `NA`. The 3,701 reference sequences of unknown kingdom read
-  `k__Eukaryota_kgd_Incertae_sedis` in the general release and `k__unidentified` under
-  `sintax`.
+  while the UTAX file (`sintax`) mostly leaves the rank out: the `sintax` string skips it
+  and its cell is `NA`. The 7,625 reference sequences of unknown kingdom read
+  `k__Eukaryota_kgd_Incertae_sedis` in the general release; under `sintax`, 3,701 of them
+  read `k__unidentified` and the other 3,924 keep the placeholder.
 
 ## Keeping and discarding taxa
 
@@ -448,10 +449,9 @@ be added there as genus tokens.
 
 With `method: rdp`, DADA2 breaks ties between equally good references at random, and
 this can change an ASV's whole lineage between identical runs. On the ITS test set,
-ASV_16 had an orchid as best hit in 8 of 11 identical runs and *Saccharomyces* in the
-other 3. Its kingdom support reached `min_boot: 80` in only one of those three, so
-`keep: [k__Fungi]` kept the ASV in 1 run and removed it in the other 10. `sintax` gives
-the same answer every time.
+ASV_19 was classified down to the genus *Saccharomyces* in 2 of 11 identical runs. In
+the other 9 its kingdom support stayed below `min_boot: 80`, so it got no lineage at all
+and `keep: [k__Fungi]` removed it. `sintax` gives the same answer every time.
 
 Each token is matched against a whole rank segment of the taxonomy string, so
 `g__Fusarium` matches a genus named exactly that and never a substring elsewhere in
@@ -484,7 +484,10 @@ shows which ASVs were merged after extraction. The full output layout is in
 
 The six samples of the [ITS test set](../../about/test-datasets.md) (yeast mocks A, B, C
 and F of PRJNA862334, MiSeq, reads of 301 bp) were run with the defaults and `keep: [k__Fungi]`,
-with the two changes of v2.7.0 switched on one at a time. Each ASV was matched to the
+with the two changes of v2.7.0 switched on one at a time. The two middle columns are runs
+of v2.7.0 with one change undone: for *last cycle removed*, the length window of v2.6.1,
+[125, 343] bp, given by hand (`length_filter.mode: manual`); for *short-ITS floor*, the
+last cycle kept (`cutadapt.trim_final_cycle: false`). Each ASV was matched to the
 ITS2 sequences of the species in the mocks, so detection does not depend on the
 classifier.
 
@@ -525,7 +528,7 @@ shares, from 0 (identical) to 1 (nothing in common), with genera assigned by seq
 | A (1) | *C. haemulonii*, *M. pulcherrima* | 40 % | 72.3 % | 0.40 | 0.32 |
 | B (1) | *D. australiensis* | 20 % | 44.8 % | 0.20 | 0.29 |
 | C (2) | *C. haemulonii*, *M. pulcherrima* | 10 % | 47.6 %, 48.1 % | 0.13, 0.15 | 0.38, 0.38 |
-| F (2) | none | 0 % | 0.6 %, 0.5 % | 0.15, 0.90 | 0.16, 0.17 |
+| F (2) | none | 0 % | 0.6 %, 0.5 % | 0.15, 0.90 | 0.06, 0.07 |
 
 The short-ITS2 yeasts get two to five times their share. Their reads add to those of the
 other species instead of replacing them (*S. cerevisiae* in mock C: 14,638 and 12,086

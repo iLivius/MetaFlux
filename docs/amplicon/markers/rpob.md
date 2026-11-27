@@ -173,12 +173,13 @@ reference, using the supplied primers. For rpoB, as for 16S, a third pass follow
 
 | Pass | What it does |
 |---|---|
-| 1 | `-g file:fwd` with `--discard-untrimmed` — keep references carrying the forward primer at the 5′ end, and trim it off |
-| 2 | `-a file:rev_rc` with `--discard-untrimmed` — of those, keep the ones carrying the reverse complement of the reverse primer at the 3′ end, and trim it off |
+| 1 | `-g file:fwd` with `--discard-untrimmed` — keep the references in which the forward primer matches anywhere in the gene (the match is not anchored), and trim it and everything upstream of it |
+| 2 | `-a file:rev_rc` with `--discard-untrimmed` — of those, keep the ones in which the reverse complement of the reverse primer matches, and trim it and everything downstream of it |
 | 3 | the forward primer again, required at its full length, with `--discard-trimmed` — leave out of the statistics the bodies that still hold a second forward-primer site |
 
-The reverse primer is reverse-complemented first (with `seqtk seq -r`) so it can be
-searched for at the 3′ end. What survives both passes is the set of in-silico amplicon
+The reverse primer is reverse-complemented first (with `seqtk seq -r`), because on the
+strand that carries the forward primer it appears as its reverse complement. What
+survives both passes is the set of in-silico amplicon
 bodies; their lengths become the probe distribution. With the `Univ_rpoB_deg` primers the
 recovered bodies are around 387 bp — the amplicon minus the two primers, which cutadapt
 trims off in the two passes above.

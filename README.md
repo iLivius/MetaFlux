@@ -7,7 +7,7 @@ __  /|_/ /_  _ \  __/  __ `/_  /_   __  /_  / / /_  |/_/
 _  /  / / /  __/ /_ / /_/ /_  __/   _  / / /_/ /__>  <
 /_/  /_/  \___/\__/ \__,_/ /_/      /_/  \__,_/ /_/|_|
 
-v2.6.1
+v2.7.0
 ```
 
 **Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow.**
@@ -115,7 +115,9 @@ snakemake --sdm conda --cores 16 --configfile config/config.yaml
 
 Only Snakemake (≥ 9) is installed by hand. `--sdm conda`
 (software-deployment-method) tells Snakemake to build each rule's own conda
-environment on first run, so every other tool is provisioned automatically.
+environment on first run, so every other tool is provisioned automatically, except
+the system's `unzip`, which unpacks the ITS and COI reference downloads and is
+present on most Linux systems.
 
 Always dry-run first: it validates the config, resolves sample names and reference
 paths, and prints the plan without executing anything.
@@ -209,4 +211,7 @@ is why the code and these pages read the way they do.
 
 MetaFlux is released under the [MIT License](LICENSE). Third-party tools invoked by
 the workflow are distributed under their own licenses (a mix of MIT, BSD, and
-GPL/LGPL); see each tool's repository.
+GPL/LGPL); see each tool's repository. One function of DADA2,
+`makeBinnedQualErrfun`, ships unchanged in `workflow/scripts/amplicon/vendor/` (with a
+second copy in `.test/custom_error_functions/binned_from_counts.R`) and stays under
+DADA2's license, the GNU LGPL, whose text is copied next to it as `LICENSE.dada2`.
