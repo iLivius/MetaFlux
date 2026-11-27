@@ -1,0 +1,9 @@
+# Who must review a pull request before it can be merged.
+#
+# GitHub reads this file from the branch a pull request targets. The repository's
+# rulesets (Settings > Rules) require a review from a code owner on main and on the
+# dev/ branches, so every pull request into those branches needs the maintainer's
+# approval, whoever opened it.
+#
+# "*" matches every file in the repository.
+* @iLivius
