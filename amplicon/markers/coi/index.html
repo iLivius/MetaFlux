@@ -1,0 +1,2472 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified short-read multi-marker amplicon and shotgun taxonomic profiling workflow">
+      
+      
+        <meta name="author" content="Livio Antonielli">
+      
+      
+      
+        <link rel="prev" href="../rpob/">
+      
+      
+        <link rel="next" href="../bacterial-cox1/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>COI - MetaFlux</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#coi-mitochondrial-cytochrome-c-oxidase-subunit-i" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="MetaFlux" class="md-header__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaFlux
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              COI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="MetaFlux" class="md-nav__button md-logo" aria-label="MetaFlux" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    MetaFlux
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/iLivius/MetaFlux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    iLivius/MetaFlux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/choosing-a-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Amplicon mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked="">
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Markers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Markers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../its/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ITS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18S/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18S rRNA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gyrb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gyrB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rpob/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rpoB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting up a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-reference-database-midori2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The reference database: MIDORI2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The reference database: MIDORI2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-conversion-changes-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the conversion changes, and why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-reference-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The reference check
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-coi-screens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The COI screens
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The COI screens">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reading-frame-check-ampliconcoiframe_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading-frame check (amplicon.coi.frame_check)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#off-target-guard-ampliconcoiofftarget_guard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Off-target guard (amplicon.coi.offtarget_guard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#species-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Species flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-run-produces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the run produces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bacterial-cox1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bacterial COI homologues (reference set)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../length-and-truncation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Amplicon length and truncation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../taxon-filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keeping and discarding taxa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../phylogeny/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny (16S)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shotgun mode
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shotgun mode
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/sylph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    sylph (alternative profiler)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/decontamination/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decontamination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/confidence-and-threshold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing confidence and threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/kmer-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Species-level k-mer evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../shotgun/read-extraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-taxon read extraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/running/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running MetaFlux
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/rationale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rationale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/test-datasets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test datasets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phylogeny validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation and references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting up a run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-reference-database-midori2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The reference database: MIDORI2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The reference database: MIDORI2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-conversion-changes-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the conversion changes, and why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-reference-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The reference check
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-coi-screens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The COI screens
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The COI screens">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reading-frame-check-ampliconcoiframe_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading-frame check (amplicon.coi.frame_check)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#off-target-guard-ampliconcoiofftarget_guard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Off-target guard (amplicon.coi.offtarget_guard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#species-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Species flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-run-produces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the run produces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/iLivius/MetaFlux/edit/main/docs/amplicon/markers/coi.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="coi-mitochondrial-cytochrome-c-oxidase-subunit-i">COI (mitochondrial cytochrome c oxidase subunit I)<a class="headerlink" href="#coi-mitochondrial-cytochrome-c-oxidase-subunit-i" title="Permanent link">¶</a></h1>
+<p>COI is the animal barcode: the 5′ part of the mitochondrial gene for subunit I of
+cytochrome c oxidase, about 650 bp in the classic barcode, of which metabarcoding primers
+amplify 200–420 bp. It separates most animal species, and it is the standard marker for
+surveys of arthropods, other invertebrates and fish, from bulk samples, Malaise traps or
+environmental DNA.</p>
+<p>The MetaFlux path for COI is the ordinary amplicon path — PhiX removal, primer trimming,
+DADA2 denoising, length filtering, taxonomy — with three things that are specific to COI:</p>
+<ul>
+<li>the reference is <strong>MIDORI2</strong>, converted once into the rank model MetaFlux uses;</li>
+<li>the taxonomy is assigned with <strong>SINTAX only</strong>;</li>
+<li>two <strong>COI screens</strong> run before the taxon filter: a reading-frame check against
+  pseudogenes and nuclear copies of the gene (NUMTs), and an off-target guard that moves
+  bacterial COI homologues, <em>Wolbachia</em> above all, out of the main tables.</li>
+</ul>
+<h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>amplicon.type</code></td>
+<td><code>COI</code></td>
+</tr>
+<tr>
+<td>Reference database</td>
+<td>MIDORI2 release GB273 (Leray et al. 2022), variant UNIQ NUC_SP, SINTAX file; Zenodo version DOI 10.5281/zenodo.22685701</td>
+</tr>
+<tr>
+<td>Role of that database</td>
+<td>taxonomy reference, amplicon-length probe substrate, and identity E of the off-target guard</td>
+</tr>
+<tr>
+<td>Second reference</td>
+<td>the set of bacterial COI homologues <code>bacterial_cox1_gtdb-r232.v1</code>, built from GTDB R232: identity B of the off-target guard, and the list of MIDORI2 records at least 90 % identical to a gene that passes checks 5.1–5.3 of the set's build (186 in GB273), each marked <code>removed</code> (170, bacterial COI homologues under eukaryote names) or <code>listed</code> (16, kept)</td>
+</tr>
+<tr>
+<td>Probe mode</td>
+<td><code>pcr</code> — MIDORI2 holds whole barcodes and whole genes</td>
+</tr>
+<tr>
+<td>Preparation</td>
+<td>download and unzip, then a one-time conversion of the headers (below)</td>
+</tr>
+<tr>
+<td>Classifier</td>
+<td>SINTAX only (<code>amplicon.taxonomy.method: sintax</code>)</td>
+</tr>
+<tr>
+<td>Region extractor</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Rank model</td>
+<td><code>Domain;Kingdom;Phylum;Class;Order;Family;Genus;Species</code></td>
+</tr>
+<tr>
+<td>COI screens</td>
+<td>reading-frame check and off-target guard, both on by default (<code>amplicon.coi</code>)</td>
+</tr>
+<tr>
+<td>Primers</td>
+<td>none are shipped; validated with BF3/BR2, Leray-XT and fwhF2/fwhR2n (below)</td>
+</tr>
+<tr>
+<td>Memory and time</td>
+<td>SINTAX against MIDORI2 holds 8.4 GB at the peak and takes 1 to 1.5 minutes; the COI screens up to 8.6 GB and about a minute (measured on 8 threads; the resources table of the <a href="../../../reference/configuration/">configuration reference</a> has the details)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="setting-up-a-run">Setting up a run<a class="headerlink" href="#setting-up-a-run" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">amplicon</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">amplicon</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">COI</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">primers</span><span class="p">:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">fwd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/BF3.fasta</span><span class="w">           </span><span class="c1"># CCHGAYATRGCHTTYCCHCG</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">rev</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/BR2.fasta</span><span class="w">           </span><span class="c1"># TCDGGRTGNCCRAARAAYCA</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">orientation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fixed</span><span class="w">                </span><span class="c1"># fixed | mixed</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">expected_length</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">probe_length_stat</span><span class="p">:</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">COI</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">p95</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">extraction</span><span class="p">:</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                    </span><span class="c1"># no COI region extractor</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">taxonomy</span><span class="p">:</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sintax</span><span class="w">                    </span><span class="c1"># COI has no rdp trainset</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">      </span><span class="nt">keep</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">[</span><span class="nv">k__Metazoa</span><span class="p p-Indicator">]</span><span class="w">           </span><span class="c1"># animal surveys; leave empty to see everything</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="nt">discard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="nt">coi</span><span class="p">:</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="nt">frame_check</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nt">length_tolerance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="nt">offtarget_guard</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<p><code>method: rdp</code> stops the run at start-up: DADA2's <code>assignTaxonomy</code> would need about
+225 GB of memory to classify against MIDORI2 NUC_SP down to species (about 64 GB for the
+smaller NUC variant), so MetaFlux ships no trainset for COI.</p>
+<div class="admonition warning">
+<p class="admonition-title">Check which read carries which primer</p>
+<p>In some COI libraries every R1 starts with the reverse primer; the BF3/BR2 and
+fwhF2/fwhR2n runs of the insect mock used for validation (below) are two of them.
+With <code>orientation: fixed</code> such a library loses most of its reads at primer trimming,
+but not all. Cutadapt counts a 5′ primer as found when a read starts with the
+primer's last three bases, and the end of each BF3/BR2 primer resembles the start of
+the other, so a <code>fixed</code> run on the BF3/BR2 files as distributed keeps about 13 % of
+the pairs, the wrong way round and with most of a primer still on (0.14 % with
+fwhF2/fwhR2n).</p>
+<p>For a library in which every pair is swapped, swap the two files of each sample
+(R1 ↔ R2) and keep <code>orientation: fixed</code>. That is the recommended way: Cutadapt then
+reads every pair once, and its report in MultiQC describes all the reads.
+<code>orientation: mixed</code> is for libraries that really are mixed, with pairs in both
+orientations, and from v2.6.0 on it handles them: it swaps the two mates of each
+reversed pair back, so that DADA2 merges them to the full amplicon. On the BF3/BR2
+library run both ways, <code>mixed</code> on the files as distributed and <code>fixed</code> on the swapped
+files gave the same 595 kept ASVs and the same 361 specimens; <code>mixed</code> dropped 509
+(0.06 %) of the 910,014 pairs that <code>fixed</code> keeps after primer trimming, those whose
+primer Cutadapt found from fewer than 10 bases. See
+<a href="../../overview/#the-mixed-orientation-second-pass">the mixed-orientation second pass</a>.</p>
+</div>
+<h2 id="the-reference-database-midori2">The reference database: MIDORI2<a class="headerlink" href="#the-reference-database-midori2" title="Permanent link">¶</a></h2>
+<p>MIDORI2 (Leray et al. 2022) collects the mitochondrial protein-coding and rRNA genes of
+eukaryotes from GenBank, release by release, with taxonomy from NCBI. MetaFlux uses its COI
+file for SINTAX in the UNIQ NUC_SP variant: every unique sequence of each species,
+including the records whose species name is incomplete ("sp.", "cf.", BOLD codes). Those
+records add about 1.35 million barcodes, mostly of specimens that were barcoded but not
+named, and they cover lineages that the named records do not.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Downloaded from</td>
+<td><code>https://zenodo.org/records/22685701/files/MIDORI2_GB273_SINTAX_sp.zip</code> (584 MB; member <code>SINTAX_sp/uniq/MIDORI2_UNIQ_NUC_SP_GB273_CO1_SINTAX.fasta.gz</code>), and <code>MIDORI2_GB273_KRAKEN2_taxonomy.zip</code> (69 MB) from the same record</td>
+</tr>
+<tr>
+<td>Checked</td>
+<td>MD5 of each zip as Zenodo lists it; SHA-256 of the extracted FASTA as MIDORI2's <code>release_sha256.txt</code> lists it</td>
+</tr>
+<tr>
+<td>Fetch rules</td>
+<td><code>fetch_midori2_coi</code>, <code>fetch_midori2_taxonomy</code>, <code>fetch_bacterial_cox1</code></td>
+</tr>
+<tr>
+<td>Conversion rule</td>
+<td><code>prepare_midori2_coi_sintax</code>. It writes no log: its counts go to the report next to the converted file (next row), and when it stops, its message is printed to stderr with Snakemake's own messages</td>
+</tr>
+<tr>
+<td>Cached at</td>
+<td><code>refdb/midori2/GB273/midori2_gb273_uniq_nuc_sp_co1_metaflux_sintax.fasta.gz</code>, with a report of every count the conversion changed next to it (<code>…_metaflux_sintax.report.tsv</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-the-conversion-changes-and-why">What the conversion changes, and why<a class="headerlink" href="#what-the-conversion-changes-and-why" title="Permanent link">¶</a></h3>
+<p>A MIDORI2 SINTAX header reads</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&gt;KU746593.1.&lt;1.&gt;658;tax=k:Eukaryota_2759,p:Arthropoda_6656,c:Insecta_50557,o:Diptera_7147,f:Sarcophagidae_7381,g:Sarcophaga_7384,s:Sarcophaga munronis_1806722;
+</code></pre></div>
+<p>and after conversion</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&gt;KU746593.1.&lt;1.&gt;658;tax=d:Eukaryota,k:Metazoa,p:Arthropoda,c:Insecta,o:Diptera,f:Sarcophagidae,g:Sarcophaga,s:Sarcophaga_munronis;
+</code></pre></div>
+<ul>
+<li><strong>The domain moves to <code>d:</code>.</strong> MIDORI2 writes Eukaryota under the letter <code>k:</code>, but
+  VSEARCH reads the letters in a fixed order (<code>d</code> above <code>k</code> above <code>p</code>) and MetaFlux writes
+  <code>d__</code> for a domain and <code>k__</code> for a kingdom.</li>
+<li><strong>A kingdom is added</strong> from MIDORI2's own NCBI taxonomy snapshot: the first ancestor of
+  rank "kingdom" of the record's species (Metazoa, Fungi or Viridiplantae). Protists have
+  no kingdom in NCBI, so their records get no <code>k:</code> field. With the kingdom in place,
+  <code>keep: [k__Metazoa]</code> keeps the animals of a run.</li>
+<li><strong>The NCBI taxid is cut off</strong> every name (<code>Arthropoda_6656</code> → <code>Arthropoda</code>), so that
+  names and filter tokens read as names.</li>
+<li><strong>Placeholder ranks are left out.</strong> Where NCBI has no name at a rank, MIDORI2 fills the
+  slot with a name built from the ranks below (<code>genus_Lepismatidae sp. …</code>). SINTAX would
+  report such a name as a taxon. In the NUC_SP variant, half of the records added over NUC
+  carry a placeholder genus (287,117 placeholder genera against 58,627 real ones in GB273).</li>
+<li><strong>Interim species names are left out of the species rank</strong> ("Sarcophaga sp. BIOUG…",
+  "cf.", "aff."), so that a species column holds only formal binomials. The record keeps
+  its genus and higher ranks.</li>
+<li><strong>Bacterial COI homologues filed under eukaryote names are removed.</strong> MIDORI2 is built from
+  the eukaryotic divisions of GenBank, so a bacterial sequence submitted under an animal's name
+  enters it. The list that comes with the set of bacterial COI homologues marks 170 such records
+  in GB273 for removal, mostly <em>Wolbachia</em>, <em>Tisiphia</em> and other symbionts filed as insects.
+  <a href="../bacterial-cox1/">Bacterial COI homologues (reference set)</a> describes how they were found.</li>
+</ul>
+<p>The conversion stops, rather than guessing, on a header without <code>;tax=</code>, a first field
+that is not <code>k:Eukaryota_&lt;taxid&gt;</code>, a taxid missing from the taxonomy snapshot, or a
+removal list that names records absent from the FASTA (a list made for another MIDORI2
+release).</p>
+<h3 id="the-reference-check">The reference check<a class="headerlink" href="#the-reference-check" title="Permanent link">¶</a></h3>
+<p><code>reference_values</code> in the COI pack allows only Eukaryota in the domain rank and only
+Metazoa, Fungi and Viridiplantae in the kingdom rank. A phylum in the kingdom rank would
+mean that MIDORI2's own file is in use instead of the converted one; the run then stops
+before any classification.</p>
+<h2 id="the-coi-screens">The COI screens<a class="headerlink" href="#the-coi-screens" title="Permanent link">¶</a></h2>
+<p>COI is a protein-coding gene, and two kinds of sequence reach a COI ASV table that are not
+the mitochondrial COI of a eukaryote: pseudogenes and NUMTs, and bacterial COI homologues. Rule
+<code>coi_screens</code> measures both for every ASV and writes <code>06.taxonomy/coi_screens.tsv</code>; the
+taxonomy step applies the decisions <strong>before</strong> keep/discard, so a pseudogene never reaches
+the token lists, and a bacterial ASV that SINTAX called an animal is not kept by
+<code>k__Metazoa</code>. <code>06.taxonomy/asv_table_unfiltered.txt</code> keeps every ASV, with the step that
+took it out (<code>removed_frame</code>, <code>moved_bacterial_cox1</code>), and the read-tracking table has a
+column for each screen (<code>post_frame_check</code>, <code>post_bacterial_cox1</code>).</p>
+<p>With a screen switched off, the rule still measures, and <code>coi_screens.tsv</code> says what the
+screen would have done. Its <code>verdict</code> column applies only the screens that are on, the
+frame check first (an ASV that fails both is <code>frame</code>); for a screen that is off, read
+<code>frame_ok</code> and <code>length_ok</code> (frame check) or compare B with E (off-target guard).</p>
+<h3 id="reading-frame-check-ampliconcoiframe_check">Reading-frame check (<code>amplicon.coi.frame_check</code>)<a class="headerlink" href="#reading-frame-check-ampliconcoiframe_check" title="Permanent link">¶</a></h3>
+<p>Every ASV starts right after the forward primer, so the ASVs of a run share one codon
+phase. MetaFlux takes as the run's reading frame the frame that has no TAA or TAG, the
+stop codons of every animal mitochondrial code, in most reads. The reference length is
+the most frequent length, counted by reads, among the ASVs open in that frame. An ASV
+passes when</p>
+<ul>
+<li>it has no TAA or TAG in the run's frame, or in the frame that an offset of its start
+  gives it, and</li>
+<li>its length is within <code>length_tolerance</code> bases (default 9, three codons) of the reference
+  length.</li>
+</ul>
+<p>The offset matters with primers that match some templates imperfectly. Cutadapt can then
+cut a base before or after the end of the primer, the same way for every read of that
+template, and the ASV starts one base early or late: it is one base longer or shorter, and
+open in the neighbouring frame. On the Leray-XT run of the insect mock (below), whose
+primers carry inosines, this happened to 9 % of the reads, among them the only ASVs of 29
+specimens.
+The frame an offset of <em>d</em> bases gives is the run's frame plus <em>d</em>, so an ASV one base
+short is tested in the frame before the run's. A frameshift inside an ASV, as in a
+pseudogene or an indel artefact, leaves stop codons in both frames, one on each side of the
+shift.</p>
+<p>TGA is not used, because it codes for tryptophan in animal and fungal mitochondria, and
+neither are AGA and AGG, stops in the vertebrate code only, so the check works the same for
+invertebrates and vertebrates. On MIDORI2 GB273 inserts of the three validated primer
+pairs, the frame starting at the second base of the insert is free of TAA and TAG in
+99.3–100 % of genuine records (per group).</p>
+<p>A NUMT that kept its reading frame passes; the check catches the ones with a stop codon or
+a frameshift. Tools that judge NUMTs by abundance and phylogeny, such as metaMATE
+(Andújar et al. 2021), are not part of MetaFlux.</p>
+<h3 id="off-target-guard-ampliconcoiofftarget_guard">Off-target guard (<code>amplicon.coi.offtarget_guard</code>)<a class="headerlink" href="#off-target-guard-ampliconcoiofftarget_guard" title="Permanent link">¶</a></h3>
+<p>Most bacteria that respire oxygen carry COI homologues, and common COI primer pairs
+amplify some of them, <em>Wolbachia</em> and other Rickettsiales of insects above all. MIDORI2
+holds eukaryotes only, so such an ASV can only be assigned to a eukaryote, usually an
+animal, and often with high SINTAX confidence.</p>
+<p>The guard compares every ASV with the cleaned MIDORI2 (identity E) and with the set of
+bacterial COI homologues, whole genes and fragments (identity B). An ASV with <strong>B &gt; E</strong> is moved
+to <code>06.taxonomy/bacterial_cox1_asvs.tsv</code>, with its counts, what SINTAX had called it, B,
+E and its closest bacterial gene. Nothing is deleted, so a <em>Wolbachia</em> infection stays
+visible.</p>
+<ul>
+<li><strong>Search.</strong> VSEARCH <code>--usearch_global --id 0.5 --strand plus --maxaccepts 256
+  --maxrejects 2048</code>, far deeper than VSEARCH's default (1 accept, 32 rejects): with
+  distant sequences the best alignment is often not among the first targets VSEARCH tries.
+  In the development tests this depth recognised the same share of bacterial amplicons as
+  an exhaustive search (94.8 %), and a shallower one (20 accepts, 200 rejects) 2.2 points
+  fewer.</li>
+<li><strong>Identity.</strong> Recounted from the aligned rows over A/C/G/T columns: identical A/C/G/T
+  columns divided by A/C/G/T columns plus internal gap columns. VSEARCH's own identity
+  counts N and other ambiguity codes as identical, and about 9 % of MIDORI2 records
+  contain them. A hit counts only when the columns cover at least 80 % of the ASV.</li>
+<li><strong>Why a comparison and not an identity floor.</strong> Bacterial amplicons and animal sequences
+  whose relatives are missing from MIDORI2 fall in the same range of identities to
+  MIDORI2: a floor that catches 95 % of the bacterial amplicons also removes 36–87 % of the
+  animal sequences whose family is missing. In the final test of the bacterial set, 936
+  bacterial amplicons from genomes not used to build its rules were each compared with their
+  own species left out of the set, as for a bacterium whose species GTDB lacks: the
+  comparison recognised 98.4 % of them (99.9 % for BF3/BR2, 88.2 % for Leray-XT, 93.5 % for
+  fwhF2/fwhR2n), and 96.0 % with the whole genus left out. It moved 0.08 % or less of 10,008
+  eukaryotic inserts whose species, genus, family or order was left out of MIDORI2. How the
+  set was built and tested is on <a href="../bacterial-cox1/">Bacterial COI homologues (reference set)</a>.</li>
+<li><strong>What it cannot catch.</strong> A bacterial lineage that is missing from the set but has a
+  record in MIDORI2 under an animal's name, near-identical to the ASV, stays with the
+  animal: E is then higher than any B. Step 6 of the set removes such records only for
+  the lineages the set contains.</li>
+</ul>
+<h3 id="species-flags">Species flags<a class="headerlink" href="#species-flags" title="Permanent link">¶</a></h3>
+<p><code>06.taxonomy/coi_asv_flags.tsv</code> has one row per ASV of <code>asv_table.txt</code>: E, the best
+MIDORI2 record, the species of every record tied with it at that identity (joined by a
+vertical bar; <code>no_species</code> there stands for a tied record without a formal species name),
+and two flags that add what the SINTAX confidence cannot show.</p>
+<table>
+<thead>
+<tr>
+<th><code>species_flag</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ok</code></td>
+<td>SINTAX called a species, the best MIDORI2 hit is at least 98 % identical, and no record of another named species is as close</td>
+</tr>
+<tr>
+<td><code>low_identity</code></td>
+<td>the best MIDORI2 hit is less than 98 % identical: the species, or a close relative, may be missing from MIDORI2</td>
+</tr>
+<tr>
+<td><code>shared_sequence</code></td>
+<td>a record of another named species is as close as the best one (sister species with shared haplotypes, synonyms, mislabelled records): this amplicon cannot tell them apart</td>
+</tr>
+<tr>
+<td><code>no_species</code></td>
+<td>SINTAX called no species</td>
+</tr>
+</tbody>
+</table>
+<p><code>far_from_midori2</code> is 1 when E is below 80 %: an ASV of a group that MIDORI2 covers
+poorly, or a bacterium that the bacterial set does not contain. It is a flag only.</p>
+<p>Why flags and not a filter: in a leave-out test with MetaFlux's SINTAX settings on 418-bp
+insect sequences, a species present in MIDORI2 was called for 91.4 % of the queries, and
+correctly in 96 % of those calls; with the query's species removed from MIDORI2, 24.2 %
+still received a (wrong) species at confidence 0.8 or more. A 98 % identity limit removed
+only 35 % of those wrong calls, because many of them come from near-identical records of
+other species, and it also removed 1.6 % of the right ones.</p>
+<h2 id="what-the-run-produces">What the run produces<a class="headerlink" href="#what-the-run-produces" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>refdb/cache/probe_COI_midori2_gb273_uniq_nuc_sp_co1_&lt;hash&gt;.json</code></td>
+<td>Probed amplicon-length distribution for the primer pair, from MIDORI2</td>
+</tr>
+<tr>
+<td><code>06.taxonomy/asv_table.txt</code></td>
+<td>Counts per sample and the MIDORI2 taxonomy string, without the ASVs the screens took out</td>
+</tr>
+<tr>
+<td><code>06.taxonomy/asv_table_unfiltered.txt</code></td>
+<td>Every ASV that reached the filter, with <code>filter_status</code> (<code>removed_frame</code>, <code>moved_bacterial_cox1</code> and the statuses of the taxon filter)</td>
+</tr>
+<tr>
+<td><code>06.taxonomy/coi_screens.tsv</code></td>
+<td>Per ASV: its reads summed over all samples, length, open frames, frame and length verdicts, B and the closest bacterial gene, E, the closest MIDORI2 record and the species of the records tied with it, and the verdict of the screens</td>
+</tr>
+<tr>
+<td><code>06.taxonomy/bacterial_cox1_asvs.tsv</code></td>
+<td>The ASVs the off-target guard moved: counts, SINTAX call, B, E, closest bacterial gene and its GTDB taxonomy, sequence</td>
+</tr>
+<tr>
+<td><code>06.taxonomy/coi_asv_flags.tsv</code></td>
+<td>Per kept ASV: E, best MIDORI2 record, the species of the records tied with it, <code>species_flag</code>, <code>far_from_midori2</code></td>
+</tr>
+<tr>
+<td><code>stats/read_tracking.txt</code></td>
+<td>With the columns <code>post_frame_check</code> and <code>post_bacterial_cox1</code></td>
+</tr>
+<tr>
+<td><code>logs/coi_screens.log</code></td>
+<td>The run's reading frame and reference length, and the counts of each screen</td>
+</tr>
+</tbody>
+</table>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">¶</a></h2>
+<p>The three primer-pair runs of the insect mock of Elbrecht et al. (2019) (bulk abdomens of
+374 arthropod specimens; SRR8082166 BF3/BR2, SRR8082178 Leray-XT, SRR8082148
+fwhF2/fwhR2n) were each run as one sample, with the defaults above and
+<code>keep: [k__Metazoa]</code>, and their ASVs were compared with the 374 specimen barcodes. In the
+BF3/BR2 and fwhF2/fwhR2n libraries
+every R1 carries the reverse primer, so their two files were swapped and the runs kept
+<code>orientation: fixed</code>, as the warning above recommends; the Leray-XT library, whose R1
+carries the forward primer, ran with <code>fixed</code> as distributed.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>BF3/BR2</th>
+<th>Leray-XT</th>
+<th>fwhF2/fwhR2n</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>reads after the length filter (ASVs)</td>
+<td>638,878 (804)</td>
+<td>897,924 (767)</td>
+<td>1,199,927 (888)</td>
+</tr>
+<tr>
+<td>reference length, run frame</td>
+<td>418 bp, frame 1</td>
+<td>313 bp, frame 1</td>
+<td>205 bp, frame 1</td>
+</tr>
+<tr>
+<td>removed by the frame check</td>
+<td>177 ASVs, 3,716 reads (0.58 %)</td>
+<td>95, 2,160 (0.24 %)</td>
+<td>64, 1,540 (0.13 %)</td>
+</tr>
+<tr>
+<td>moved by the off-target guard</td>
+<td>27 ASVs, 3,283 reads (0.51 %)</td>
+<td>26, 2,353 (0.26 %)</td>
+<td>16, 895 (0.07 %)</td>
+</tr>
+<tr>
+<td>removed by <code>keep: [k__Metazoa]</code></td>
+<td>5 ASVs, 299 reads (0.05 %)</td>
+<td>5, 107 (0.01 %)</td>
+<td>7, 80 (0.01 %)</td>
+</tr>
+<tr>
+<td>kept</td>
+<td>595 ASVs, 631,580 reads</td>
+<td>641, 893,304</td>
+<td>801, 1,197,412</td>
+</tr>
+<tr>
+<td>reads of kept ASVs within 97 % of a specimen</td>
+<td>99.2 %</td>
+<td>99.3 %</td>
+<td>99.1 %</td>
+</tr>
+<tr>
+<td>specimens recovered at ≥ 97 % (identical)</td>
+<td>361 (357)</td>
+<td>355 (352)</td>
+<td>362 (362)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Nothing a specimen needed was removed.</strong> No specimen that was missed has an ASV within
+  97 % among those the two screens took out, so no specimen lost its only ASV to a
+  screen. The few removed ASVs that match a specimen (14, 3 and 2) belong to specimens
+  that keep another ASV: in BF3/BR2, 11 of them are length variants and 3 are full-length
+  sequences with a stop codon in every frame; the 3 and 2 of the other runs pass the
+  length check (one Leray-XT ASV is two bases longer than the reference) and carry a stop
+  codon in every frame.</li>
+<li><strong>The offset of the frame check.</strong> In the Leray-XT run, 9 % of the reads, among them
+  the only ASVs of 29 specimens, belong to ASVs open in frame 0, most of them one base
+  short: their first base went with the primer, which cutadapt cut one base too far for
+  these templates. In the fwhF2/fwhR2n run the same happened to 3.5 % of the reads (14
+  specimens). Without the offset rule the frame check would have removed them.</li>
+<li><strong>The off-target guard.</strong> It moved 69 ASVs over the three runs, most closest to
+  <em>Wolbachia</em> (57), the others to <em>Rickettsia</em>, <em>Mesenet</em>, <em>Tisiphia</em> and one other
+  bacterium. SINTAX had called 41 of them, with 4,315 reads, the stink bug <em>Picromerus
+  bidens</em>, which is not in the mock, at species level. All 41 are closest to a
+  <em>Wolbachia</em> gene in the bacterial set, and their best MIDORI2 hit is a <em>Wolbachia</em>-like
+  record filed under that name (KR036430.1, no TGA among five tryptophan codons);
+  <code>keep: [k__Metazoa]</code> would have kept them.</li>
+<li><strong>Species flags.</strong> Of the kept ASVs, 53 % (BF3/BR2), 46 % (Leray-XT) and 38 %
+  (fwhF2/fwhR2n) are <code>ok</code>, and <code>low_identity</code> and <code>shared_sequence</code> together flag 9–11 %;
+  the others have no species call, more of them the shorter the amplicon. None is far from
+  MIDORI2.</li>
+<li><strong>Counts near the detection limit move.</strong> When the same library is run again with
+  another setting (split into two samples or run as one, other truncation lengths,
+  another error model), the specimens it gains or loses are recovered by a single ASV of
+  3 to 10 reads, at the limit where DADA2 tells a rare variant from an error. The
+  specimen counts above therefore shift by one or two between such runs, while the shares
+  of reads do not. Specimens that one library recovers and another misses are a
+  different matter: they are missed with thousands of reads elsewhere (in the BF3/BR2
+  library SRR8082166 no kept ASV comes near the barcode of <em>Camponotus pennsylvanicus</em>,
+  while the Leray-XT library gives it 5,295 reads and a second BF3/BR2 library of the
+  same mock, SRR8082198, 633), so the PCR that made the library, not DADA2's detection
+  limit, decides them.</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
+<ul>
+<li>Andújar, C., et al. (2021). Validated removal of nuclear pseudogenes and sequencing
+  artefacts from mitochondrial metabarcode data. <em>Molecular Ecology Resources</em>
+  21:1772–1787. doi:10.1111/1755-0998.13337</li>
+<li>Elbrecht, V., et al. (2019). Validation of COI metabarcoding primers for terrestrial
+  arthropods. <em>PeerJ</em> 7:e7745. doi:10.7717/peerj.7745</li>
+<li>Leray, M., Knowlton, N., Machida, R. J. (2022). MIDORI2: a collection of quality
+  controlled, preformatted, and regularly updated reference databases for taxonomic
+  assignment of eukaryotic mitochondrial sequences. <em>Environmental DNA</em> 4:894–907.
+  doi:10.1002/edn3.303</li>
+</ul>
+<p>The full list, including the tools used at every step, is on
+<a href="../../../about/citation/">Citation and references</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
