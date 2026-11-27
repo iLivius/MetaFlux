@@ -30,9 +30,15 @@ first: the failures worth knowing about are described there with their fix.
   request** form) or a discussion. Many things that look like a missing feature are
   deliberate (the docs usually say why), and a short exchange first saves both sides a
   rewrite.
-- **One change per pull request**, branched from `main`, with a title and description
-  that say what changes for a user. Typos and small documentation fixes do not need an
-  issue first.
+- **One change per pull request**, branched from the development branch of the next
+  version (`dev/vX.Y.Z`) if there is one, otherwise from `main`, with a title and
+  description that say what changes for a user. Typos and small documentation fixes do
+  not need an issue first.
+- **The maintainer reviews and merges every pull request**, including those of people
+  with write access to the repository. Open yours from a fork and keep the box that
+  lets maintainers edit your branch ticked (GitHub ticks it by default), so that a
+  small fix can be made on your branch directly instead of costing another round of
+  review. With write access you can open it from a branch of this repository instead.
 - **Say what runs again.** Snakemake keeps a record of every finished step in
   `.snakemake/` of the folder it runs from: the text of the step's command (comments
   included), its parameters, the list of its input files, and its conda environment
